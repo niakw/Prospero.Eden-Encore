@@ -267,6 +267,7 @@ jobs:
           python3 -B tools/check-audio-upmix-scratch-host.py
           python3 -B tools/check-ps5-title-cache-storage-host.py
           python3 -B tools/check-ps5-shader-local-bounds-host.py
+          python3 -B tools/check-native-audio-pcm-offsets-host.py
           python3 -B tools/check-native-manual-run-isolation.py
           python3 -B tools/check-encore-first-parent-revision.py
           python3 -B tools/check-maintained-opengl-rasterizer.py

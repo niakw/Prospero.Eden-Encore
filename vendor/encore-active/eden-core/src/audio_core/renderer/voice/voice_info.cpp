@@ -8,6 +8,17 @@
 
 namespace AudioCore::Renderer {
 
+namespace {
+// Guard offset products without signed multiplication or wrap-around.
+// Positive sample strides are fixed by the format, and division here is a
+// compile-time constant (2 or 4) in both PCM cases.
+constexpr bool PcmOffsetsWithinBuffer(s32 start, s32 end, u64 bytes, u32 sample_bytes) noexcept {
+    return sample_bytes != 0 && start >= 0 && end >= 0 &&
+           static_cast<u64>(start) <= bytes / sample_bytes &&
+           static_cast<u64>(end) <= bytes / sample_bytes;
+}
+} // namespace
+
 VoiceInfo::VoiceInfo() {
     Initialize();
 }
@@ -178,8 +189,8 @@ void VoiceInfo::UpdateWaveBuffer(std::span<BehaviorInfo::ErrorInfo> error_info,
     switch (sample_format_) {
     case SampleFormat::PcmInt16: {
         constexpr auto byte_size{GetSampleFormatByteSize(SampleFormat::PcmInt16)};
-        if (wave_buffer_internal.start_offset * byte_size > wave_buffer_internal.size ||
-            wave_buffer_internal.end_offset * byte_size > wave_buffer_internal.size) {
+        if (!PcmOffsetsWithinBuffer(wave_buffer_internal.start_offset, wave_buffer_internal.end_offset,
+                                    wave_buffer_internal.size, byte_size)) {
             LOG_ERROR(Service_Audio, "Invalid PCM16 start/end wavebuffer sizes!");
             error_info[0].error_code = Service::Audio::ResultInvalidUpdateInfo;
             error_info[0].address = wave_buffer_internal.address;
@@ -189,8 +200,8 @@ void VoiceInfo::UpdateWaveBuffer(std::span<BehaviorInfo::ErrorInfo> error_info,
 
     case SampleFormat::PcmFloat: {
         constexpr auto byte_size{GetSampleFormatByteSize(SampleFormat::PcmFloat)};
-        if (wave_buffer_internal.start_offset * byte_size > wave_buffer_internal.size ||
-            wave_buffer_internal.end_offset * byte_size > wave_buffer_internal.size) {
+        if (!PcmOffsetsWithinBuffer(wave_buffer_internal.start_offset, wave_buffer_internal.end_offset,
+                                    wave_buffer_internal.size, byte_size)) {
             LOG_ERROR(Service_Audio, "Invalid PCMFloat start/end wavebuffer sizes!");
             error_info[0].error_code = Service::Audio::ResultInvalidUpdateInfo;
             error_info[0].address = wave_buffer_internal.address;
