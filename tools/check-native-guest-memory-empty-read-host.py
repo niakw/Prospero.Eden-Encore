@@ -11,7 +11,8 @@ cmake=(root/"headless/CMakeLists.txt").read_text()
 assert active.count("m_data_span = {};")==1
 assert active.count("m_span_valid = false;")==1
 assert "if (m_size == 0) {" in active
-assert active.index("if (m_size == 0) {")<active.index("m_data_span = {};")<active.index("m_is_data_copy = true;")
+zero_read=active.split("if (m_size == 0) {",1)[1].split("return {};",1)[0]
+assert zero_read.index("m_data_span = {};")<zero_read.index("m_span_valid = false;")<zero_read.index("m_is_data_copy = true;")
 assert 'target_include_directories(core BEFORE PUBLIC "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")' in cmake
 assert 'target_include_directories(video_core BEFORE PRIVATE "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")' in cmake
 compiler=shutil.which("clang++-18") or shutil.which("clang++")
