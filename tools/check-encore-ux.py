@@ -47,7 +47,14 @@ assert 'list.rounded_image(avatar.texture,' in launcher
 assert 'std::future<std::string> profile_avatar_scan_;' in launcher_h
 assert 'virtual std::string profile_avatar() { return {}; }' in ui_preferences
 assert 'sceUserServiceGetForegroundUser(&user_id)' in services
-assert '/system_data/priv/cache/profile/0x' in services
+# The prefix is deliberately constructed only after the foreground user ID
+# has been resolved. Checking the old literal /0x path rejected the safer
+# multi-revision cache lookup without exercising its actual owner boundary.
+assert 'sceUserServiceGetForegroundUser(&user_id)' in services
+assert '"/system_data/priv/cache/profile/"' in services
+assert 'for (const char* prefix : {"0x", "0X", ""})' in services
+assert 'avatar128.dds' in services and 'avatar.png' in services
+assert 'load_avatar_dds(resolved, image)' in services
 assert 'localized_clock(services_.clock(), services_.language_region(prefs_.language))' in launcher
 assert 'list.image(c.textures.brand(), {56.0f, 17.0f, 110.0f, 110.0f}' in launcher
 

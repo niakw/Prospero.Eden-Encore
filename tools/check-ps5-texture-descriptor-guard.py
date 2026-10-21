@@ -37,7 +37,7 @@ with tempfile.TemporaryDirectory(prefix="eden-r312-TIC-") as d:
     # descriptor guard, not silently revert to upstream's permissive logic.
     active = (root / "vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp").read_text()
     active_begin = active.index("bool IsValidEntry(")
-    active_end = active.index("\\nboost::container::small_vector<BufferImageCopy", active_begin)
+    active_end = active.index("\nboost::container::small_vector<BufferImageCopy", active_begin)
     active_fn = active[active_begin:active_end]
     for requirement in (
         "config.format == static_cast<Tegra::Texture::TextureFormat>(0)",
