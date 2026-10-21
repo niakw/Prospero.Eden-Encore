@@ -262,6 +262,7 @@ jobs:
           python3 -B tools/check-vendored-deps.py
           python3 -B tools/check-vendored-overrides.py
           python3 -B tools/check-vendored-hid-resource-source.py
+          python3 -B tools/check-native-hid-cadence-host.py
           python3 -B tools/check-vendored-guest-title-version.py
           python3 -B tools/check-maintained-logging-loader.py
           python3 -B tools/check-maintained-audio-units.py
