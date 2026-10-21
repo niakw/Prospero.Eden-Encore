@@ -19,3 +19,9 @@
 Les recettes `dev` historiques sont volontairement conservées mais non sélectionnées par `make release`. Aucun test matériel PS5 ni validation du freeze FC27 ne sont inférés de cette sélection.
 
 **Compteur de sources moteur restant à optimiser/examiner : 14, inchangé ; 62 fichiers interface à part.** Cette phase fige le profil livré, elle ne marque aucune source moteur comme optimisée.
+
+## Correctif de cohérence du profil final
+
+Le contrôle du chemin de démarrage a montré que `experimental_logical_cpu` et `experimental_frame_probe` étaient activés par défaut par une branche `PS5_NATIVE`, même pour `release`. Désormais, `EDEN_FINAL_RELEASE_PROFILE` est également une définition du binaire principal et interdit leur activation. La sélection par le lanceur et l'état de Safe Launch restent inchangés.
+
+Attention aux chaînes de diagnostic JIT : une traduction native peut garder un message `EDEN_JIT_SPARSE_COMMIT_FAILED` même avec la fonctionnalité désactivée. Le contrôleur de release se fonde donc sur le **CMakeCache final**, le profil sélectionné et son autotest, pas sur la simple absence de ces chaînes. Cela évite de rejeter un binaire correct ou de déclarer un binaire sûr sur une preuve faible.

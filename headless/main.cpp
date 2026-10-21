@@ -882,8 +882,12 @@ int main(int argc, char** argv) {
 #ifdef EDEN_SPARSE_JIT_DEV
             experimental_sparse_jit = true;
 #endif
+#ifndef EDEN_FINAL_RELEASE_PROFILE
+            // Profiling and topology probes are development-only. Production
+            // uses the ordinary scheduler and no periodic Vulkan frame probes.
             experimental_logical_cpu = true;
             experimental_frame_probe = true;
+#endif
         }
 #endif
 #if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)
