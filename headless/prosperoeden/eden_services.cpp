@@ -15,6 +15,7 @@
 #include "mods.h"
 #include "native_directory.h"
 #include "pe/core/strings.hpp"
+#include "pe/gfx/avatar_dds.hpp"
 #include "common/net/net.h"
 #include "network_audit.h"
 #include "radio_input.h"
@@ -1439,19 +1440,32 @@ std::string EdenServices::profile_avatar() {
         user_id == -1 || user_id == 0)
         return {};
 
-    // PS5 local profile artwork is cached by foreground user ID. A local
-    // PNG can be decoded by the existing asynchronous stb_image pipeline.
-    // DDS-only accounts gracefully retain the neutral user silhouette.
+    // Keep the lookup bound to the active user, never enumerate all users.
+    // Some console caches contain only pre-scaled DDS avatars (no PNG).
+    // Prefer the full-colour PNG, then a 128px DDS suitable for the 54px UI.
+    // Directory prefixes vary between local cache revisions.
     for (const char* digits : {"%08x", "%08X"}) {
         char id[16]{};
         if (std::snprintf(id, sizeof(id), digits,
                           static_cast<unsigned>(user_id)) != 8)
             continue;
-        const std::string path =
-            std::string("/system_data/priv/cache/profile/0x") + id + "/avatar.png";
-        if (IsFile(path))
-            return path;
+        for (const char* prefix : {"0x", "0X", ""}) {
+            const std::string root =
+                std::string("/system_data/priv/cache/profile/") + prefix + id + "/";
+            if (IsFile(root + "avatar.png")) {
+                std::fprintf(stderr, "EDEN_PROFILE_AVATAR format=png status=found\\n");
+                return root + "avatar.png";
+            }
+            for (const char* name : {"avatar128.dds", "avatar260.dds",
+                                     "avatar64.dds", "avatar440.dds"}) {
+                if (IsFile(root + name)) {
+                    std::fprintf(stderr, "EDEN_PROFILE_AVATAR format=dds status=found\\n");
+                    return root + name;
+                }
+            }
+        }
     }
+    std::fprintf(stderr, "EDEN_PROFILE_AVATAR status=missing_for_active_user\\n");
 #endif
     return {};
 }
@@ -2143,6 +2157,8 @@ bool EdenServices::load_image(const std::string& path, pe::gfx::Image* image) {
     // Covers have full paths; the launcher's own art is named from its ui folder.
     const std::string resolved =
         !path.empty() && path[0] == '/' ? path : Eden::AppFile("ui/" + path);
+    if (resolved.size() >= 4 && resolved.compare(resolved.size() - 4, 4, ".dds") == 0)
+        return pe::gfx::load_avatar_dds(resolved, image);
     if (pe::gfx::load_tga(resolved, image))
         return true;
 
