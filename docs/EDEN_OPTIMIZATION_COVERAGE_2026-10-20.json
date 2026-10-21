@@ -2149,6 +2149,13 @@
       "evidence": "Previous audit host contract F08: Native writable user/cache/config root and legacy path selection now maintained C++; source parity and selection PASS in preflight #39058024476; hardware startup paths unqualified"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/common/logging.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "F17",
+      "proof_ref": "tools/check-ps5-quiet-log-filter-host.py",
+      "evidence": "Native __OPENORBIS__ logging has only ColorConsoleBackend, disabled by default; filtered LOG calls still performed fmt formatting and timestamp/backend iteration without any active sink. New backend-enabled atomic relaxed early exit before format, preserving toggle, filter and fully enabled output. Source-extracted C++ host ASan/UBSan witness covers off/on/off transitions, native build/console qualification separate."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/common/sparse_large_vector.h",
       "disposition": "historical_host_contract_reviewed",
       "contract_id": "J34",

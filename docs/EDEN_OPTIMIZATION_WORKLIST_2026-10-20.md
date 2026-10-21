@@ -245,3 +245,7 @@ Voir [EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md](EDEN_NATIVE_REMAINING_E
 ## 21 octobre — mapping JIT RX/RW et quatre revues
 
 Voir [EDEN_JIT_ALIAS_LOOKUP_OPTIMIZATION_2026-10-21.md](EDEN_JIT_ALIAS_LOOKUP_OPTIMIZATION_2026-10-21.md). Cache multi-entrées par thread et invalidation générationnelle dans l'allocateur JIT natif ; témoin C++ ASan/UBSan dans la prévalidation. Quatre chemins audio/assert/loader lus sans nouveau correctif. **406/491 traités ; 23 moteur/runtime à traiter ; 62 lanceur séparés ; 85 globalement.** Tests hôte et console restent des preuves indépendantes.
+
+## 21 octobre — journal natif silencieux
+
+Voir [EDEN_NATIVE_QUIET_LOG_REVIEW_2026-10-21.md](EDEN_NATIVE_QUIET_LOG_REVIEW_2026-10-21.md). Le formatage des messages sans backend actif est court-circuité dans le build natif, avec contrôle ASan/UBSan off/on/off. **407/491 pris en charge ; 22 fichiers moteur/runtime encore à traiter ; 62 UI du lanceur séparés ; 84 globalement.** Aucun FPS console prouvé.
