@@ -2140,6 +2140,13 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "vendor/encore-active/eden-core/overrides/core/guest_memory.h",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "M10",
+      "proof_ref": "tools/check-native-guest-memory-empty-read-host.py",
+      "evidence": "Reusable native GuestMemory::Read(addr,0) left m_data_span and m_span_valid from the prior direct or copied read, exposing stale host pointers for empty guest-memory requests. Now clears the span and valid flag before returning empty; nonempty accesses, Safe flush/invalidation, writeback and GPU order untouched. Maintained-header C++20 ASan/UBSan fixture covers direct alias, copy fallback, reuse and scoped zero-size destructor."
+    },
+    {
       "path": "vendor/encore-active/eden-core/overrides/core/hle/service/sockets/encore_guest_network_policy.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "N10",

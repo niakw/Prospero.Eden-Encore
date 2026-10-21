@@ -24,6 +24,8 @@ on:
       - 'tools/check-native-gpu-dirty-gather-host.py'
       - 'tools/check-fastmem-window-bounds-host.py'
       - 'headless/fastmem_handler.cpp'
+      - 'vendor/encore-active/eden-core/overrides/core/guest_memory.h'
+      - 'tools/check-native-guest-memory-empty-read-host.py'
       - 'headless/main.cpp'
       - 'tools/check-native-quiet-shutdown-heap-host.py'
       - 'tools/check-native-fastmem-signal-install-host.py'
@@ -154,6 +156,7 @@ jobs:
           python3 -B tools/check-fastmem-window-bounds-host.py
           python3 -B tools/check-native-fastmem-signal-install-host.py
           python3 -B tools/check-native-quiet-shutdown-heap-host.py
+          python3 -B tools/check-native-guest-memory-empty-read-host.py
           python3 -B tools/check-native-quiet-heap-commit-host.py
           python3 -B tools/check-native-quiet-counters-host.py
           python3 -B tools/check-native-quiet-gpu-report-host.py
