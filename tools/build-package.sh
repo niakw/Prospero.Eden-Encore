@@ -23,6 +23,7 @@ release|release-stage)
     export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=OFF
     export EDEN_FINAL_RELEASE_PROFILE=ON EDEN_DEV_PROFILE_TITLE= EDEN_GPU_PROBE=OFF
     export EDEN_INLINE_EXCLUSIVES=OFF EDEN_DEVICE_FRONTEND=OFF EDEN_HEAP_GUARD=OFF
+    export EDEN_GUEST_WRITE_BRIDGE_DEV=OFF EDEN_UNQUALIFIED_FERMI2D_COPY=OFF
     export EDEN_PACKAGE_DIR="$root/build/release/PPSA99008"
     ;;
 dev)
@@ -32,7 +33,7 @@ dev)
     export EDEN_DEV_VULKAN=ON EDEN_DEV_ROM_ID="$title" EDEN_DEV_PROFILE=ON EDEN_DEV_PROFILE_TITLE="$title"
     # This IS the unified PS5 test build: sparse executable backing is compiled
     # in without a separate user-facing Experimental toggle or JSON opt-in.
-    # Normal release/release-stage packages now also compile sparse support.
+    # The final release excludes sparse and deferred memory-bridge experiments.
     export EDEN_SPARSE_JIT_DEV=ON
     # All-On means the cross-core and bounded successor JIT code is actually
     # compiled into the PS5 test binary, not silently OFF in CMakeCache.txt.
