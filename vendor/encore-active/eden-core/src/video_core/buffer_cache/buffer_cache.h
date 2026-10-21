@@ -199,6 +199,12 @@ void BufferCache<P>::ClearDownload(DAddr device_addr, u64 size) {
 
 template <class P>
 bool BufferCache<P>::DMACopy(GPUVAddr src_address, GPUVAddr dest_address, u64 amount) {
+    // FindBuffer and SynchronizeBuffer accept u32 byte spans. Never truncate
+    // a wider DMA request: the caller can take its ordinary software path.
+    // Reject empty copies before dirty-range bookkeeping as well.
+    if (amount == 0 || amount > static_cast<u64>(~u32{0})) {
+        return false;
+    }
     const std::optional<DAddr> cpu_src_address = gpu_memory->GpuToCpuAddress(src_address);
     const std::optional<DAddr> cpu_dest_address = gpu_memory->GpuToCpuAddress(dest_address);
     if (!cpu_src_address || !cpu_dest_address) {

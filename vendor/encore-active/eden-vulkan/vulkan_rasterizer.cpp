@@ -1385,6 +1385,11 @@ bool AccelerateDMA::BufferClear(GPUVAddr src_address, u64 amount, u32 value) {
 }
 
 bool AccelerateDMA::BufferCopy(GPUVAddr src_address, GPUVAddr dest_address, u64 amount) {
+    // Invalid DMA byte counts have no GPU buffer range; return to the
+    // software path without contending on the guest buffer cache mutex.
+    if (amount == 0 || amount > static_cast<u64>(~u32{0})) {
+        return false;
+    }
     std::scoped_lock lock{buffer_cache.mutex};
     return buffer_cache.DMACopy(src_address, dest_address, amount);
 }

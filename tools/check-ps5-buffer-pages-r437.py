@@ -15,6 +15,12 @@ old_reg = '    const auto size = buffer.SizeBytes();\n    if (insert) {\n       
 new_reg = '    const auto size = buffer.SizeBytes();\n    if (insert) {\n        ::Eden::BufferPages::Mark(buffer.CpuAddr(), size);\n        total_used_memory += Common::AlignUp(size, 1024);'
 assert source.count(old_reg)==1
 expected = '#include "buffer_pages.h"\n' + source.replace(old_reg, new_reg)
+# DMA copy's byte count also reaches FindBuffer(u32); never truncate a
+# >4 GiB span, and do not touch dirty-range bookkeeping on empty copies.
+copy_old = "bool BufferCache<P>::DMACopy(GPUVAddr src_address, GPUVAddr dest_address, u64 amount) {\n    const std::optional<DAddr> cpu_src_address = gpu_memory->GpuToCpuAddress(src_address);"
+copy_new = "bool BufferCache<P>::DMACopy(GPUVAddr src_address, GPUVAddr dest_address, u64 amount) {\n    // FindBuffer and SynchronizeBuffer accept u32 byte spans. Never truncate\n    // a wider DMA request: the caller can take its ordinary software path.\n    // Reject empty copies before dirty-range bookkeeping as well.\n    if (amount == 0 || amount > static_cast<u64>(~u32{0})) {\n        return false;\n    }\n    const std::optional<DAddr> cpu_src_address = gpu_memory->GpuToCpuAddress(src_address);"
+assert expected.count(copy_old) == 1
+expected = expected.replace(copy_old, copy_new)
 # DMA clear's amount is a word count, unlike byte-based cache registration.
 begin = expected.index('bool BufferCache<P>::DMAClear(')
 end = expected.index('\ntemplate <class P>', begin)
