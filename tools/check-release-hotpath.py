@@ -4,22 +4,27 @@ root=Path(__file__).resolve().parents[1]
 cmake=(root/'headless/CMakeLists.txt').read_text()
 main=(root/'headless/main.cpp').read_text()
 perf=(root/'headless/performance.cpp').read_text()
-start=cmake.index('# JIT entry/exit sampling')
-end=cmake.index('write_derived(',start)
-section=cmake[start:end]
-assert 'if(EDEN_DEV_PROFILE)' in section
-# Only JIT entry/exit *profiling* must be DEV-only. The same derived
-# wrapper now has a separate all-game PS5_NATIVE allocation fallback,
-# which is shipping-critical and must NOT be rejected as instrumentation.
-fallback_marker = '    if(PS5_NATIVE)\n        # Do not silently lose a game'
-assert fallback_marker in section
-dev_sampling, native_fallback = section.split(fallback_marker, 1)
-assert 'if(PS5_NATIVE)' not in dev_sampling
-assert 'Performance::SampleCpu' in dev_sampling
-assert 'JitStartup::ConstructWithCapacityFallback' in native_fallback
-start=cmake.index("# Keep Eden's exact mutex/condition-variable idle path")
-end=cmake.index('string(REPLACE "${prefetch_old}"',start)
-assert 'elseif(PS5_NATIVE)' not in cmake[start:end]
+# The runtime is no longer patched from CMake string fragments.
+# Separate complete, maintained A64 source owners must enforce DEV profiling
+# without losing the native allocation fallback in the shipping variant.
+assert 'if(PS5_NATIVE)\n    set(EDEN_G11_PLATFORM native)' in cmake
+assert 'if(EDEN_DEV_PROFILE)\n    set(EDEN_G11_PROFILE dev)\nelse()\n    set(EDEN_G11_PROFILE normal)' in cmake
+assert 'arm_dynarmic_${bits}_${EDEN_G11_PLATFORM}_${EDEN_G11_PROFILE}.cpp' in cmake
+assert 'if(NOT EXISTS "${EDEN_G11_SOURCE}")' in cmake
+assert 'list(REMOVE_ITEM core_sources "${relative}")' in cmake
+assert 'list(APPEND core_sources "${EDEN_G11_SOURCE}")' in cmake
+normal=(root/'vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_native_normal.cpp').read_text()
+dev=(root/'vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_native_dev.cpp').read_text()
+for code in (normal, dev):
+    assert 'JitStartup::ConstructWithCapacityFallback(' in code
+assert 'Performance::SampleCpu(' not in normal
+assert 'Performance::SampleCpu(' in dev
+assert '#include "performance.h"' not in normal
+assert '#include "performance.h"' in dev
+# A final build must be rejected if any experimental JIT or DEV profile is ON.
+assert 'if(EDEN_FINAL_RELEASE_PROFILE)' in cmake
+assert 'if(EDEN_SHARED_JIT OR EDEN_JIT_COMPILE_BATCH OR EDEN_SPARSE_JIT_DEV OR' in cmake
+assert 'EDEN_INLINE_EXCLUSIVES OR EDEN_DEV_PROFILE OR EDEN_DEV_VULKAN OR' in cmake
 start=main.index('// Shipping path: no periodic profiler/watchdog work')
 end=main.index('#endif',start)
 release=main[start:end]
