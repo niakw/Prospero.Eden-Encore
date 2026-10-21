@@ -293,3 +293,7 @@ Voir [EDEN_QUIET_HEAP_COMMIT_2026-10-21.md](EDEN_QUIET_HEAP_COMMIT_2026-10-21.md
 ## 21 octobre — fastmem traps installés de façon transactionnelle
 
 [EDEN_FASTMEM_SIGNAL_INSTALL_2026-10-21.md](EDEN_FASTMEM_SIGNAL_INSTALL_2026-10-21.md) : réparation du cas SIGBUS échoué après SIGSEGV installé et refus d'enregistrer un intervalle JIT vide/débordant/sentinelle. Test C++20 ASan/UBSan source-extrait avec faux `sigaction`. **422/491 pris en charge ; 7 chemins moteur encore à examiner ; 62 UI du lanceur séparés.**
+
+## 21 octobre — sortie de partie silencieuse sans scan de tas périodique
+
+[EDEN_QUIET_NATIVE_SHUTDOWN_HEAP_2026-10-21.md](EDEN_QUIET_NATIVE_SHUTDOWN_HEAP_2026-10-21.md) : `headless/main.cpp` conserve le vidage du tcache local, mais les lectures coûteuses des racines de tas et leur impression sont réservées au profil détaillé. Contrat host C++20 ASan/UBSan compile la section exacte. **423/491 sources traitées ; 6 moteur restants ; 62 lanceur séparés.**

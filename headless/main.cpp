@@ -2405,14 +2405,15 @@ int main(int argc, char** argv) {
         // workers have already joined and returned THEIR private cached blocks.
         // Drain solely the already-freed small blocks; do not unmap Sony mspaces.
         const std::size_t tcache_drained = eden_heap_release_current_tcache();
-        std::printf("EDEN_HEAP_TITLE_CACHE_DRAIN bytes=%zu\n", tcache_drained);
-        // Non-destructive per-mspace ownership snapshot; never unmap from a
-        // merely low global live-byte count or while another thread allocates.
-        eden_heap_report_roots("core_destroyed");
-        // The previous core_destroyed snapshot preceded this thread's TLS
-        // drain. This paired post-drain reading separates deferred allocator
-        // accounting from physically retained mspace backing.
-        ps5_opengl_heap_snapshot("post_cache_drain", 0);
+        // Always release this thread's freed blocks. The following deep
+        // ownership walks/heap reports are observations only, and must not
+        // stall normal return-to-launcher transitions with logging disabled.
+        if (Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)) {
+            std::printf("EDEN_HEAP_TITLE_CACHE_DRAIN bytes=%zu\n", tcache_drained);
+            // Non-destructive per-mspace ownership snapshot; no unmapping.
+            eden_heap_report_roots("core_destroyed");
+            ps5_opengl_heap_snapshot("post_cache_drain", 0);
+        }
 #endif
         if (devices && pad) {
             pad.reset();

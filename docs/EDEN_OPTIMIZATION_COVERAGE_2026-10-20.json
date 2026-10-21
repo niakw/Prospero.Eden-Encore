@@ -492,6 +492,13 @@
       "evidence": "Source inspected: Redirection de logs vers un pipe et écrivain de fond : évite les écritures synchrones du stockage PS5 sur les workers. Le mode détaillé reste facultatif. Reopen if: Backpressure prouvée lors d’un blocage de pipe ou perte de journal."
     },
     {
+      "path": "headless/main.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "U01",
+      "proof_ref": "tools/check-native-quiet-shutdown-heap-host.py",
+      "evidence": "Normal native return-to-launcher path unconditionally called the non-destructive per-mspace root report and heap snapshot after freeing TLS allocator cache, adding potentially slow heap walks/logging between sessions. Now the tcache drain always executes but root/heap reports execute only with detailed_gpu_profile ON. Real source-extracted C++20 ASan/UBSan witness verifies drain+quiet bypass+development reporting. Core shutdown, stop/cancel sequencing, JIT list and memory ownership unchanged; no console timing proof."
+    },
+    {
       "path": "headless/memory_check.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "J08",
