@@ -132,7 +132,9 @@ pending_code=owners-handled
 # it defines global pthread_once/libc shims. Never dismiss it as UI-only.
 shared=set(STATE.get("launcher_global_runtime_exceptions",[]))
 assert shared=={"headless/prosperoeden/runtime_shims.cpp"}
-assert shared<=pending_code
+# The shared runtime shim remains in the engine *classification* even after
+# its code review is complete; it must not be forced to remain outstanding.
+assert shared<=owners
 cmake=(ROOT/"headless/CMakeLists.txt").read_text()
 assert '"${launcher_dir}/runtime_shims.cpp"' in cmake
 launcher_pending={p for p in pending_code if p.startswith(launcher_prefix) and p not in shared}
@@ -161,6 +163,7 @@ for e in entries:
         assert e.get("review_scope") in {
             "host-only-test","startup-shim","shutdown-only",
             "generated-configuration","startup-interface","inactive-experimental",
+            "runtime-abi-interface",
         }
         assert e["path"] not in {r["path"] for r in by_id.values()}
     source_review=ROOT/e["source_review_document"]
