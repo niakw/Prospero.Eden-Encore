@@ -454,6 +454,13 @@
       "evidence": "Précompilation JIT expérimentale, protégée par EDEN_SHARED_JIT_AVAILABLE et opt-in ; chemin absent du rendu standard, historique borné et titre/build contrôlés. Ne pas rendre actif sans qualification de la quiescence JIT. Ouvrir de nouveau si blob modifié ou cas reproductible."
     },
     {
+      "path": "headless/jit-allocator.h",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "J06",
+      "proof_ref": "tools/check-native-jit-alias-lookup-host.py",
+      "evidence": "Real Xbyak allocator writableAddress checked shared mappings unordered_map under mutex for every repeated RX->RW query. Added 8-entry per-thread positive lookup with global generation release on each successful new mapping and retired mapping. Host ASan/UBSan witness exercises production header and real Linux memfd RX/RW, alternating threads, retirement/reuse. Native PS5 FPS and crash qualification separate."
+    },
+    {
       "path": "headless/jit-sparse-commit.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "J05",
@@ -2092,9 +2099,25 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract B03: Former X02 recovery is maintained as exact Encore header with isolated include priority; native exception behavior unproved. CI witness retained. No FPS claim."
     },
     {
+      "path": "vendor/encore-active/eden-core/src/audio_core/sink/sink_details.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "A05",
+      "reviewed_source_git_blob": "0704a78a108d385ecb1e40dea1cad802278e5703",
+      "source_review_document": "docs/EDEN_JIT_ALIAS_LOOKUP_OPTIMIZATION_2026-10-21.md",
+      "evidence": "Le choix des backends et des appareils audio est lié à l'initialisation ; tableau constexpr et sélection bornée, pas dans la synthèse PCM par échantillon. Aucune optimisation par frame justifiée. Réexaminer si l'empreinte Git change ou si un profil d'exécution détecte un chemin chaud."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/common/assert.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "F18",
+      "reviewed_source_git_blob": "af026e17732b284e46968b183feecc743d5c9dd7",
+      "source_review_document": "docs/EDEN_JIT_ALIAS_LOOKUP_OPTIMIZATION_2026-10-21.md",
+      "evidence": "En-tête des assertions : chemin de succès inline sans log, chemin exceptionnel déjà noinline pour ne pas grossir l'IR. Ne pas retirer une garde de sûreté pour une optimisation hypothétique. Réexaminer si l'empreinte Git change ou si un profil d'exécution détecte un chemin chaud."
     },
     {
       "path": "vendor/encore-active/eden-core/src/common/cpu_features.cpp",
@@ -2348,6 +2371,14 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract H21: DEV sync IPC request/thread attribution now maintained, with exact former CMake code parity; the guest's resumed JIT PC after request completion remains unproved. CI witness retained. No FPS claim."
     },
     {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/audio/audio_controller.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "A11",
+      "reviewed_source_git_blob": "e82e46ebba163b094559cf1e9c857d75dbbd5aa7",
+      "source_review_document": "docs/EDEN_JIT_ALIAS_LOOKUP_OPTIMIZATION_2026-10-21.md",
+      "evidence": "Interface de service de contrôle audio et singleton settings lazy avec std::once_flag. Ni mixage audio ni JIT sur ce chemin ; éviter de modifier l'ordre d'initialisation sans repro. Réexaminer si l'empreinte Git change ou si un profil d'exécution détecte un chemin chaud."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/core/hle/service/filesystem/filesystem.cpp",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "F11",
@@ -2503,6 +2534,14 @@
       "proof_ref": "tools/check-vendor-consolidation-debt.py",
       "profile_visibility": "profile_dependent_or_selected",
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract N19: Native socketpair prime and nonblocking interrupt wakeups now maintained as a complete source; exact generator replay, no console behavior proof. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/loader/deconstructed_rom_directory.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "F16",
+      "reviewed_source_git_blob": "b59aff296828492c5e9022ab1eab19244f001c4d",
+      "source_review_document": "docs/EDEN_JIT_ALIAS_LOOKUP_OPTIMIZATION_2026-10-21.md",
+      "evidence": "Les lectures NSO/NACP, allocations et correctifs sont faits durant le chargement d'un titre, non lors du rendu de chaque frame. Garder les vérifications des modules et rouvrir si un chargement réel échoue. Réexaminer si l'empreinte Git change ou si un profil d'exécution détecte un chemin chaud."
     },
     {
       "path": "vendor/encore-active/eden-core/src/core/loader/nso.cpp",
