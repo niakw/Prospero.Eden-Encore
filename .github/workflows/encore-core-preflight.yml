@@ -72,6 +72,7 @@ jobs:
           python3 -B tools/check-ps5-known-empty-graphics-descriptors-host.py
           python3 -B tools/check-ps5-empty-image-stage-host.py
           python3 -B tools/check-ps5-graphics-pipeline-aware-preflight-host.py
+          python3 -B tools/check-ps5-empty-image-view-retirement-host.py
 
       - name: Audit generic graphics, JIT, runtime and filtered game networking
         run: |
