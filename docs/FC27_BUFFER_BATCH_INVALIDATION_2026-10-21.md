@@ -1,6 +1,6 @@
 # Exact CPU/GPU invalidation-target correction — 21 October 2026
 
-**Owned source:** `vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp`,
+**Owned active source and inactive mirror:**\n`vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp`\nremains byte-identical for the three rasterizer invalidation methods;\nthis experimental bridge is not selected in the normal release.\n\n**Owned source:** `vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp`,
 `RasterizerVulkan::InnerInvalidation`. CMake builds the tracked active file
 via `headless/vulkan.cmake`; the **historical generation oracle** in
 `tools/prepare-vulkan-port.py` carries the byte-identical change.

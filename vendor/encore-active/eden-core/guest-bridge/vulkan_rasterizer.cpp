@@ -1062,10 +1062,23 @@ void RasterizerVulkan::InnerInvalidation(std::span<const std::pair<DAddr, std::s
             }
         }
     }
-    {
+    // A never-registered buffer page has no GPU-owned content to invalidate.
+    // A future first registration starts CPU-dirty (WordManager default).
+    // BufferPages::Mark publishes ownership before insertion into page_table.
+    // Unknown/large ranges conservatively retain the original path.
+    bool buffer_may_overlap = false;
+    for (const auto& [addr, size] : sequences) {
+        if (!::Eden::BufferPages::NeverRegistered(addr, size)) {
+            buffer_may_overlap = true;
+            break;
+        }
+    }
+    if (buffer_may_overlap) {
         std::scoped_lock lock{buffer_cache.mutex};
         for (const auto& [addr, size] : sequences) {
-            buffer_cache.WriteMemory(addr, size);
+            if (!::Eden::BufferPages::NeverRegistered(addr, size)) {
+                buffer_cache.WriteMemory(addr, size);
+            }
         }
     }
     {

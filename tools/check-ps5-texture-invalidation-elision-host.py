@@ -32,6 +32,10 @@ def methods(source):
             source.split(end0, 1)[1].split(end1, 1)[0])
 new = methods(raster)
 assert methods(bridge) == new, "inactive bridge invalidation methods drifted"
+assert new[0].count("::Eden::BufferPages::NeverRegistered(addr, size)") == 2
+assert "bool buffer_may_overlap = false;" in new[0]
+assert "if (buffer_may_overlap)" in new[0]
+
 original = methods(pinned)
 assert new != original
 assert new[0].count("::Eden::ImagePages::NeverHeld(addr, size)") == 3
@@ -59,6 +63,7 @@ code = r"""
 #include <span>
 #include <utility>
 #include "image_pages.h"
+#include "buffer_pages.h"
 using DAddr = std::uint64_t;
 using u64 = std::uint64_t;
 namespace VideoCommon {
@@ -125,6 +130,7 @@ int main() {
     assert(x.pipeline_cache.writes == 1 && x.texture_cache.mutex.locks == 0);
 
     ImagePages::Mark(20*p, p);
+    BufferPages::Mark(20*p, p); // Independently registered GPU buffer
     x.InvalidateRegion(20*p, p, tex);
     x.InvalidateRegion(19*p, 2*p, tex);
     assert(x.texture_cache.mutex.locks == 2 && x.texture_cache.writes == 2);
@@ -142,13 +148,14 @@ int main() {
     x.OnCacheInvalidation(0, p);
     assert(x.buffer_cache.writes == 3 && x.pipeline_cache.writes == 3);
 
-    // Entirely unregistered batches skip texture work, but not anything else.
+    // Entirely unregistered batches skip both GPU cache locks; query/shader remain.
     std::array<std::pair<DAddr, std::size_t>, 2> clean{{
         {100*p, p}, {110*p, p}
     }};
     x.InnerInvalidation(clean);
     assert(x.texture_cache.mutex.locks == 5 && x.texture_cache.writes == 5);
-    assert(x.buffer_cache.writes == 5 && x.query_cache.writes == 3);
+    assert(x.buffer_cache.writes == 3 && x.query_cache.writes == 3);
+    assert(x.buffer_cache.mutex.locks == 3);
     assert(x.pipeline_cache.writes == 5);
 
     // A mixed batch keeps the mutex but skips image-free individual ranges.
@@ -157,7 +164,8 @@ int main() {
     }};
     x.InnerInvalidation(mixed);
     assert(x.texture_cache.mutex.locks == 6 && x.texture_cache.writes == 6);
-    assert(x.buffer_cache.writes == 7 && x.query_cache.writes == 5);
+    assert(x.buffer_cache.writes == 4 && x.query_cache.writes == 5);
+    assert(x.buffer_cache.mutex.locks == 4);
     assert(x.pipeline_cache.writes == 7);
 
     // An unknown/large range still gets texture invalidation, unlike a
@@ -167,7 +175,8 @@ int main() {
     }};
     x.InnerInvalidation(uncertain);
     assert(x.texture_cache.mutex.locks == 7 && x.texture_cache.writes == 7);
-    assert(x.buffer_cache.writes == 9 && x.query_cache.writes == 7);
+    assert(x.buffer_cache.writes == 5 && x.query_cache.writes == 7);
+    assert(x.buffer_cache.mutex.locks == 5);
     assert(x.pipeline_cache.writes == 9);
     // A concurrent registration can publish its monotonic page bit after
     // the outer mixed-batch scan, before we own the texture mutex.
@@ -178,11 +187,24 @@ int main() {
     }};
     x.InnerInvalidation(newly_registered);
     assert(x.texture_cache.mutex.locks == 8 && x.texture_cache.writes == 9);
-    assert(x.buffer_cache.writes == 11 && x.query_cache.writes == 9);
+    assert(x.buffer_cache.writes == 6 && x.query_cache.writes == 9);
+    assert(x.buffer_cache.mutex.locks == 6);
     assert(x.pipeline_cache.writes == 11);
+    // Buffer registration may publish after the outer scan but before
+    // acquiring the buffer lock in a mixed batch. Recheck under the mutex.
+    x.buffer_cache.mutex.before_lock = [&] { BufferPages::Mark(160*p, p); };
+    std::array<std::pair<DAddr, std::size_t>, 2> newly_registered_buffer{{
+        {160*p, p}, {20*p, p}
+    }};
+    x.InnerInvalidation(newly_registered_buffer);
+    assert(x.buffer_cache.writes == 8 && x.query_cache.writes == 11);
+    assert(x.pipeline_cache.writes == 13);
+    assert(x.buffer_cache.mutex.locks == 7);
+    assert(x.texture_cache.mutex.locks == 9);
     std::array<std::pair<DAddr, std::size_t>, 0> empty{};
     x.InnerInvalidation(empty);
-    assert(x.texture_cache.mutex.locks == 8 && x.buffer_cache.writes == 11);
+    assert(x.texture_cache.mutex.locks == 9 && x.buffer_cache.writes == 8);
+    assert(x.buffer_cache.mutex.locks == 7);
 }
 """.replace("__EXTRACT__", real_methods)
 compiler = shutil.which("clang++-18") or shutil.which("clang++")
