@@ -46,7 +46,7 @@ assert pinned.count(before)==1
 zero_before="        if (m_size == 0) {\n            m_is_data_copy = true;\n            return {};\n        }"
 zero_after="        if (m_size == 0) {\n            // This object may be reused after a preceding direct alias or\n            // scratch copy. Never expose a stale pointer for an empty command.\n            m_data_span = {};\n            m_span_valid = false;\n            m_is_data_copy = true;\n            return {};\n        }"
 assert pinned.count(zero_before)==1
-expected=pinned.replace("#include <iterator>", "#include <algorithm>\\n#include <iterator>").replace(before,after).replace(zero_before,zero_after)
+expected=pinned.replace("#include <iterator>", "#include <algorithm>\n#include <iterator>").replace(before,after).replace(zero_before,zero_after)
 assert native==expected
 assert "Missing maintained native guest memory bounds" in cmake
 assert 'target_include_directories(core BEFORE PUBLIC "${EDEN_NATIVE_DIRTY_HEADER_ROOT}")' in cmake
