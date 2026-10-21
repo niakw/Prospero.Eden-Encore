@@ -31,6 +31,11 @@ assert logging.count(old_flush) == logging.count(field) == 1
 expected = ("#include <atomic>\n#include <chrono>\n" +
             logging.replace(old_flush, new_flush).replace(
                 field, field + "\n    std::atomic<long long> error_flushed_ms{-1000};"))
+# Native output is console-only; preserve the exact quiet-backend fast path.
+log_entry = "void FmtLogMessageImpl(Class log_class, Level log_level, const char* filename, unsigned int line_num, const char* function, fmt::string_view format, const fmt::format_args& args) {"
+native_guard = "\n#ifdef __OPENORBIS__\n    // Native builds have no file/debugger/logcat backend. When the only\n    // console backend is OFF, do not format messages that nobody can read.\n    // Toggling it back on preserves filtering and the existing log format.\n    if (logging_instance &&\n        !logging_instance->color_console_backend.enabled.load(std::memory_order_relaxed))\n        return;\n#endif"
+assert expected.count(log_entry) == 1
+expected = expected.replace(log_entry, log_entry + native_guard)
 assert (active / "common/logging.cpp").read_text() == expected
 
 assert 'list(APPEND core_sources "${EDEN_MAINTAINED_CODE_LOADER}")' in cmake
