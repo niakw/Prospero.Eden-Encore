@@ -2115,6 +2115,13 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract B03: Former X02 recovery is maintained as exact Encore header with isolated include priority; native exception behavior unproved. CI witness retained. No FPS claim."
     },
     {
+      "path": "vendor/encore-active/eden-core/src/audio_core/renderer/voice/voice_info.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "A04",
+      "proof_ref": "tools/check-native-audio-pcm-offsets-host.py",
+      "evidence": "VoiceInfo UpdateWaveBuffer validated PCM16/PCMFloat start/end sample offsets through mixed-type multiplication, vulnerable to integer overflow/sign conversion and needlessly repeated computation. Added constexpr nonzero-stride helper with signed-negative rejection and 64-bit division bounds equivalent to non-overflowing multiplication. Both PCM branches use it; all DSP mapping and other formats unchanged. Added source-extracted C++20 host ASan/UBSan negative/large/zero/maxS32 arithmetic witness; PS5 audio/frames unqualified."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/audio_core/sink/sink_details.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "A05",

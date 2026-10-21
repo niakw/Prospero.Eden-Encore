@@ -261,3 +261,7 @@ Voir [EDEN_HLE_SLAB_INDEX_FIX_2026-10-21.md](EDEN_HLE_SLAB_INDEX_FIX_2026-10-21.
 ## 21 octobre — Maxwell local constants sans IR dynamique superflu
 
 Voir [EDEN_MAXWELL_LOCAL_IMMEDIATE_IR_2026-10-21.md](EDEN_MAXWELL_LOCAL_IMMEDIATE_IR_2026-10-21.md). Chemin rapide pour les accès à la mémoire locale des shaders dont l'adresse constante est déjà validée ; comparaison et sélections IR inutiles éliminées. Témoin C++ ASan/UBSan existant étendu aux deux chemins. **414/491 fichiers pris en charge ; 15 moteur à examiner ; 62 lanceur séparés ; 77 globalement.**
+
+## 21 octobre — validation PCM sans multiplication susceptible de déborder
+
+Voir [EDEN_AUDIO_PCM_OVERFLOW_GUARD_2026-10-21.md](EDEN_AUDIO_PCM_OVERFLOW_GUARD_2026-10-21.md). Correction des deux branches PCM16/Float, test C++20 ASan/UBSan extrait de l'implémentation et branché en CI. **415/491 traités ; 14 moteur/runtime encore à examiner ; 62 interface séparés ; 76 globalement.** Aucune preuve matérielle FPS/audio revendiquée.
