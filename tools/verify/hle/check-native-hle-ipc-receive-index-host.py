@@ -48,7 +48,9 @@ static constexpr Result ResultCancelled = 11;
 static constexpr Result ResultTimedOut = 12;
 static constexpr Result ResultTerminated = 13;
 static constexpr Result ResultNotFound = 14;
+#ifdef EDEN_IPC_STANDARD_SLOT_CHECK
 static constexpr Result ResultOutOfRange = 15;
+#endif
 #define R_SUCCEEDED(value) ((value) == ResultSuccess)
 #define R_RETURN(value) return (value)
 #define R_THROW(value) return (value)
