@@ -277,3 +277,7 @@ Voir [EDEN_AUDIO_PCM_OVERFLOW_GUARD_2026-10-21.md](EDEN_AUDIO_PCM_OVERFLOW_GUARD
 ## 21 octobre — compteurs invités/graphismes désactivés en mode silencieux
 
 Voir [EDEN_QUIET_GUEST_COUNTER_OPT_2026-10-21.md](EDEN_QUIET_GUEST_COUNTER_OPT_2026-10-21.md). Les compteurs atomiques `CountIdle` et `CountCondition` ne modifient plus les compteurs si le profilage détaillé est coupé, avec témoin C++20 ASan/UBSan du mode OFF/ON. **418/491 fichiers traités ; 11 moteur à examiner ; 62 lanceur séparés.** Gains console non mesurés.
+
+## 21 octobre — allocation du tas sans instrumentation synchrone en release
+
+Voir [EDEN_QUIET_HEAP_COMMIT_2026-10-21.md](EDEN_QUIET_HEAP_COMMIT_2026-10-21.md). `CommitMemoryRange` conserve l'allocation et le zéro mémoire, mais les quatre horodatages et l'écriture noyau sont désormais réservés à `EDEN_DEV_PROFILE` sur la cible `common`. Test source réel C++20 ASan/UBSan en deux profils. **419/491 traités ; 10 moteur restant ; 62 lanceur séparés.**

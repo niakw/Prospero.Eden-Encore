@@ -49,6 +49,7 @@ jobs:
           python3 -B tools/check-eden-audit-verification-matrix.py
           python3 -B tools/audit-eden-progress-state.py
           python3 -B tools/check-eden-optimization-coverage.py
+          python3 -B tools/check-native-quiet-heap-commit-host.py
           python3 -B tools/check-native-quiet-counters-host.py
           python3 -B tools/ci/check-final-one-profile-source.py
           python3 -B tools/check-native-jit-alias-lookup-host.py
