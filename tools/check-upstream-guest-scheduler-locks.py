@@ -3,7 +3,7 @@
 """Source and host contracts for the paired upstream guest scheduler locks.
 
 The source tree is based on a pinned upstream archive: replacing only
-k_thread.h, k_slab_heap.h, and k_scheduler.cpp is intentional. The paired slab patch stays pinned; Encore now uses a cross-host-worker
+k_thread.h, k_slab_heap.h, and k_scheduler.cpp is intentional. The paired slab override stays version-pinned (including its mutex-contained relaxed atomics); Encore uses a cross-host-worker
 binary semaphore for the guest context handoff, replacing owner-bound mutex.
 This is not a runtime FPS or title-deadlock qualification.
 """
@@ -22,7 +22,7 @@ rel = "vendor/encore-active/eden-threading/src/core/hle/kernel"
 directory = root / rel
 expected_hashes = {
     "k_thread.h": "git:e2f359a54cb6b879bdd41f092cf1ea19fb03e4e6",
-    "k_slab_heap.h": "dc6b2bb0180e8521710422ac27e17c069338c01484f32de69f79a7210549e0f3",
+    "k_slab_heap.h": "git:307b8ff131df472cbca0e6eed27d9d142821b8b7",
     "k_scheduler.cpp": "git:6bf49c0165ecac602628679adbb8cee8d8407190",
 }
 sources = {}
@@ -30,7 +30,7 @@ for name, expected_sha in expected_hashes.items():
     path = directory / name
     assert path.exists(), f"Missing vendored file {path}"
     data = path.read_bytes()
-    # Audited modified overlays use exact Git blobs, unchanged slab uses SHA256.
+    # Audited modified overlays use exact Git blobs; legacy SHA256 entries remain supported.
     digest = (hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
               if expected_sha.startswith("git:") else hashlib.sha256(data).hexdigest())
     assert digest == expected_sha.removeprefix("git:"), f"Requalify changed {name}"
@@ -46,6 +46,10 @@ assert "#include <semaphore>" in thread
 assert "std::binary_semaphore m_context_guard{1};" in thread
 assert "std::mutex m_context_guard" not in thread
 assert "std::mutex m_lock;" in slab
+assert "Node* ret = m_head.load(std::memory_order_relaxed);" in slab
+assert "m_head.store(ret->next, std::memory_order_relaxed);" in slab
+assert "node->next = m_head.load(std::memory_order_relaxed);" in slab
+assert "m_head.store(node, std::memory_order_relaxed);" in slab
 assert "std::destroy_at(obj);" in slab
 assert slab.index("std::destroy_at(obj);") < slab.index("BaseHeap::Free(obj);")
 assert "KSlabHeapImpl() = default;" in slab
@@ -152,5 +156,5 @@ with tempfile.TemporaryDirectory(prefix="encore-scheduler-handoff-") as folder:
                     "-pthread", str(cpp), "-o", str(exe)], check=True, env=env, timeout=60)
     subprocess.run([str(exe)], check=True, env=env, timeout=15)
 
-print("PASS maintained guest-context semaphore + unchanged slab patch + CMake selection")
+print("PASS maintained guest-context semaphore + requalified slab mutex atomics + CMake selection")
 print("HOST ONLY: native build and guest gameplay still require qualification")
