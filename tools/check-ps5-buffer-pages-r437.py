@@ -33,17 +33,16 @@ expected = expected[:begin] + clear + expected[end:]
 assert maintained == expected, "R437 maintained header differs from reviewed transforms"
 assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm
-assert r.count('::Eden::BufferPages::NeverRegistered(addr, size)')==7
-# Four newer sites extend the original R437 witnesses: batched and two
-# single-range invalidation paths. None may bypass texture or shader work.
-# The added sites must
-# never bypass shader/texture invalidation or unknown memory.
+assert r.count('::Eden::BufferPages::NeverRegistered(addr, size)')==8
+# Five newer sites extend the original R437 witnesses: the batched path,
+# two single-range invalidations, and CPU unmap. These optimizations must
+# preserve shader/texture invalidation and unknown-memory fallback.
 assert 'bool buffer_may_overlap = false;' in r
 assert 'if (buffer_may_overlap)' in r
 witness=(root/'headless/buffer_pages.h').read_text()
 assert 'registered[word].load(std::memory_order_acquire) & mask' in witness
 assert 'registered[word].fetch_or(mask,std::memory_order_release)' in witness
-assert g.count('::Eden::BufferPages::NeverRegistered(addr, size)')==7
+assert g.count('::Eden::BufferPages::NeverRegistered(addr, size)')==8
 pos=r.index('bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size)')
 body=r[pos:r.index('void RasterizerVulkan::OnCacheInvalidation',pos)]
 assert body.index('::Eden::BufferPages::NeverRegistered') < body.index(
