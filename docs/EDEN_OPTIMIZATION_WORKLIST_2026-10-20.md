@@ -241,3 +241,7 @@ La [revue de quatre unités natives](EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-
 ## 21 octobre — mémo vertex Vulkan + quatre chemins natifs
 
 Voir [EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md](EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md). Correction du mémo de reconnaissance des vertex shaders alternants dans la source Vulkan active et son générateur, avec extension du test hôte existant. Quatre chemins conditionnels (rafraîchissement, budget JIT, liste JIT expérimentale, NPad DEV) examinés sans patch. **401/491 traités, 28 moteur/runtime à examiner, 62 lanceur séparés, 90 globalement.** Une amélioration ciblée source, aucun gain FPS ou freeze console encore prouvé.
+
+## 21 octobre — mapping JIT RX/RW et quatre revues
+
+Voir [EDEN_JIT_ALIAS_LOOKUP_OPTIMIZATION_2026-10-21.md](EDEN_JIT_ALIAS_LOOKUP_OPTIMIZATION_2026-10-21.md). Cache multi-entrées par thread et invalidation générationnelle dans l'allocateur JIT natif ; témoin C++ ASan/UBSan dans la prévalidation. Quatre chemins audio/assert/loader lus sans nouveau correctif. **406/491 traités ; 23 moteur/runtime à traiter ; 62 lanceur séparés ; 85 globalement.** Tests hôte et console restent des preuves indépendantes.
