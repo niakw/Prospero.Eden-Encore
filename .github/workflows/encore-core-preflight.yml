@@ -105,6 +105,7 @@ jobs:
           python3 -B tools/check-native-guest-span-host.py
           python3 -B tools/check-native-guest-range-overflow-host.py
           python3 -B tools/check-fastmem-window-bounds-host.py
+          python3 -B tools/check-native-fastmem-signal-install-host.py
           python3 -B tools/verify/hle/check-native-hle-condvar-access-host.py
           python3 -B tools/verify/hle/check-native-hle-condvar-key-host.py
           python3 -B tools/verify/hle/check-native-hle-arbiter-access-host.py

@@ -11,6 +11,7 @@
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -32,6 +33,14 @@ std::atomic<std::uint64_t> fault_count{0};
 struct sigaction previous_segv{}, previous_bus{};
 std::once_flag install_once;
 bool installed = false;
+
+// The all-ones begin value is reserved while a slot is being published.
+// Registration happens outside the signal handler; reject invalid or
+// wrapping JIT ranges before exposing them to asynchronous fault handling.
+constexpr bool ValidCodeRange(std::uint64_t begin, std::uint64_t size) noexcept {
+    return begin != 0 && begin != ~std::uint64_t{0} &&
+           size != 0 && size <= ~std::uint64_t{0} - begin;
+}
 
 void Forward(int signal, siginfo_t* info, void* context) {
     const struct sigaction& previous = signal == SIGSEGV ? previous_segv : previous_bus;
@@ -68,8 +77,16 @@ bool Install() {
         action.sa_sigaction = Handle;
         action.sa_flags = SA_SIGINFO | SA_RESTART;
         sigemptyset(&action.sa_mask);
-        installed = sigaction(SIGSEGV, &action, &previous_segv) == 0 &&
-                    sigaction(SIGBUS, &action, &previous_bus) == 0;
+        // Both signals must be ours, or neither may be ours. The original
+        // short-circuit installation left SIGSEGV intercepted if SIGBUS failed.
+        if (sigaction(SIGSEGV, &action, &previous_segv) == 0) {
+            if (sigaction(SIGBUS, &action, &previous_bus) == 0) {
+                installed = true;
+            } else if (sigaction(SIGSEGV, &previous_segv, nullptr) != 0) {
+                // Do not continue with a partially installed trap handler.
+                std::abort();
+            }
+        }
         std::printf("EDEN_FASTMEM_HANDLER installed=%d\n", installed ? 1 : 0);
     });
     return installed;
@@ -101,7 +118,7 @@ bool ExceptionHandler::SupportsFastmem() const noexcept {
 }
 
 void ExceptionHandler::SetFastmemCallback(std::function<FakeCall(u64)> cb) {
-    if (!impl || impl->range || !Install()) return;
+    if (!impl || impl->range || !ValidCodeRange(impl->begin, impl->size) || !Install()) return;
     impl->callback = std::move(cb);
     for (auto& range : ranges) {
         std::uint64_t expected = 0;
