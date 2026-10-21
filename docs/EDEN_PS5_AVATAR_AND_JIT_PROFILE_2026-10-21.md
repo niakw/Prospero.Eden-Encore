@@ -9,7 +9,7 @@ seulement les variantes DDS. Le chemin reste **strictement dérivé de
 modification de cache, sans téléchargement et sans dépendance réseau.
 
 La recherche privilégie le PNG et essaie ensuite les variantes DDS 128, 260,
-64 et 440 px. Un décodeur borné (fichier <= 4 MiB, côtés <= 512 px)
+64 et 440 px. Le décodeur du module d'images existant, borné (fichier <= 4 MiB, côtés <= 512 px)
 gère BC1/BC2/BC3 et RGBA/BGRA 32 bits, y compris les en-têtes DX10
 correspondants. Les formats non pris en charge, les fichiers tronqués et
 les erreurs de lecture conservent la silhouette neutre. Lecture et
