@@ -2,7 +2,7 @@
 """ASan/UBSan native-method witness: CPU texture-page unmap lock elision.
 
 Never infer GPU-addressed image mapping from CPU-addressed occupancy.
-Buffer writes and pipeline notifications must still execute.
+Known GPU buffer writes and pipeline notifications must still execute.
 """
 from pathlib import Path
 import shutil
@@ -25,6 +25,7 @@ body = method_pair(main)
 assert body == method_pair(bridge)
 assert body != method_pair(pinned)
 assert body.count("::Eden::ImagePages::NeverHeld(addr, size)") == 1
+assert body.count("::Eden::BufferPages::NeverRegistered(addr, size)") == 1
 assert body.index("::Eden::ImagePages::NeverHeld(addr, size)") < body.index(
     "texture_cache.UnmapMemory(addr, size)")
 assert body.index("texture_cache.UnmapMemory(addr, size)") < body.index(
@@ -48,6 +49,7 @@ cpp = r"""
 #include <cstdint>
 #include <mutex>
 #include "image_pages.h"
+#include "buffer_pages.h"
 using DAddr = std::uint64_t;
 using GPUVAddr = std::uint64_t;
 using u64 = std::uint64_t;
@@ -64,7 +66,7 @@ struct TextureCache {
   void UnmapGPUMemory(std::size_t, GPUVAddr, u64) {++gpu_unmaps;}
 };
 struct BufferCache {
-  std::recursive_mutex mutex;
+  CountingMutex mutex;
   unsigned write_calls{}, gpu_unmaps{};
   void WriteMemory(DAddr, u64) {++write_calls;}
   void UnmapGPUMemory(std::size_t, GPUVAddr, u64) {++gpu_unmaps;}
@@ -87,23 +89,28 @@ int main() {
   RasterizerVulkan x;
   x.UnmapMemory(100*page,page);
   assert(x.texture_cache.cpu_unmaps==0 && x.texture_cache.mutex.locks==0);
-  assert(x.buffer_cache.write_calls==1 && x.pipeline_cache.invalidations==1);
+  assert(x.buffer_cache.write_calls==0 && x.buffer_cache.mutex.locks==0);
+  assert(x.pipeline_cache.invalidations==1);
   // An image ever registered at this CPU page must still be removed.
   Eden::ImagePages::Mark(200*page,page);
+  Eden::BufferPages::Mark(200*page,page);
   x.UnmapMemory(200*page,page);
   x.UnmapMemory(199*page,2*page);
   assert(x.texture_cache.cpu_unmaps==2 && x.texture_cache.mutex.locks==2);
-  assert(x.buffer_cache.write_calls==3 && x.pipeline_cache.invalidations==3);
+  assert(x.buffer_cache.write_calls==2 && x.buffer_cache.mutex.locks==2);
+  assert(x.pipeline_cache.invalidations==3);
   // Unknown, oversized and out-of-range ranges use the legacy mutex.
   x.UnmapMemory(300*page,256*1024+1);
   x.UnmapMemory(Eden::ImagePages::kSpace-2,4);
   assert(x.texture_cache.cpu_unmaps==4 && x.texture_cache.mutex.locks==4);
-  assert(x.buffer_cache.write_calls==5 && x.pipeline_cache.invalidations==5);
+  assert(x.buffer_cache.write_calls==4 && x.buffer_cache.mutex.locks==4);
+  assert(x.pipeline_cache.invalidations==5);
   // GPU unmapping must NEVER consult CPU page witness.
   x.ModifyGPUMemory(7,700*page,page);
   assert(x.texture_cache.gpu_unmaps==1 && x.texture_cache.mutex.locks==5);
   assert(x.buffer_cache.gpu_unmaps==1);
-  assert(x.buffer_cache.write_calls==5 && x.pipeline_cache.invalidations==5);
+  assert(x.buffer_cache.write_calls==4 && x.buffer_cache.mutex.locks==4);
+  assert(x.pipeline_cache.invalidations==5);
 }
 """.replace("__METHODS__",body)
 compiler=shutil.which("clang++-18") or shutil.which("clang++")
