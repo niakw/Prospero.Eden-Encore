@@ -282,20 +282,28 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
     }
 #endif
     gpu_memory->FlushCaching();
-#ifdef PS5_NATIVE
-    if (guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {
-        // CPU guests can have invalidated texture pages during the drain.
-        // Consume those guest remaps before choosing a pipeline/cache views.
-        gpu_memory->FlushCaching();
-    }
-#endif
-
     GraphicsPipeline* pipeline{pipeline_cache.CurrentGraphicsPipeline()};
     if (!pipeline) {
         ::Eden::Performance::RecordGraphicsDrawDrop(
             ::Eden::Performance::GraphicsDrawDrop::NoPipeline);
         return;
     }
+#ifdef PS5_NATIVE
+    // Select the actual shader first: the old 1024-entry preflight could
+    // wait for the GPU worker even when this pipeline writes zero descriptors.
+    // Never hold guest cache locks while waiting. The worker may publish guest
+    // remaps and change the selected pipeline, so reselect after a real drain.
+    if (pipeline->HasDescriptorEntries() &&
+        guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {
+        gpu_memory->FlushCaching();
+        pipeline = pipeline_cache.CurrentGraphicsPipeline();
+        if (!pipeline) {
+            ::Eden::Performance::RecordGraphicsDrawDrop(
+                ::Eden::Performance::GraphicsDrawDrop::NoPipeline);
+            return;
+        }
+    }
+#endif
 #ifdef PS5_NATIVE
     for (unsigned preflight = 0; preflight != 2; ++preflight) {
         if (!guest_descriptor_queue.PreflightLargeGuestDraw(
