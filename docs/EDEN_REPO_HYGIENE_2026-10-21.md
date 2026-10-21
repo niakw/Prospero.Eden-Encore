@@ -16,7 +16,8 @@ Branch: `dev/ps5-sparse-jit`. Review scope: **tracked Git tree**, not local untr
 ## Preventive guard
 
 - `.gitignore` now covers additional native CMake/Ninja intermediates and host coverage/profiling outputs.
-- `tools/ci/check-repo-hygiene.py` rejects these if tracked in first-party paths, validates 12 workflow permission declarations and tracked script references, and forbids reintroducing the redundant background alias while retaining its canonical source.
+- `tools/ci/check-repo-hygiene.py` rejects these if tracked in first-party paths **and maintained `vendor/encore-active/` overlays**, validates 12 workflow permission declarations and tracked script references, and forbids reintroducing the redundant background alias while retaining its canonical source.
+- The guard also rejects accidentally tracked console game packages and `prod.keys`/`title.keys` under managed paths. It deliberately excludes immutable `vendor/sources/` and `vendor/objects/` archives from disposal rules.
 
 ## CI/release boundary
 
