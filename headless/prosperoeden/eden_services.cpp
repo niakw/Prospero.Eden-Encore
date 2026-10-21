@@ -15,7 +15,7 @@
 #include "mods.h"
 #include "native_directory.h"
 #include "pe/core/strings.hpp"
-#include "pe/gfx/avatar_dds.hpp"
+#include "pe/gfx/image.hpp"
 #include "common/net/net.h"
 #include "network_audit.h"
 #include "radio_input.h"

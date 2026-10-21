@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-HEADER = ROOT / "headless/prosperoeden/pe/gfx/avatar_dds.hpp"
+HEADER = ROOT / "headless/prosperoeden/pe/gfx/image.cpp"
 SERVICE = (ROOT / "headless/prosperoeden/eden_services.cpp").read_text()
 assert HEADER.exists()
 assert 'sceUserServiceGetForegroundUser(&user_id)' in SERVICE
@@ -38,7 +38,7 @@ with tempfile.TemporaryDirectory(prefix="encore-avatar-") as tmp:
     (p / 'oversized.dds').write_bytes(dds(1024, 4, red, 0x31545844))
     cpp = p / 'fixture.cpp'
     cpp.write_text(r'''
-#include "pe/gfx/avatar_dds.hpp"
+#include "pe/gfx/image.hpp"
 #include <cassert>
 int main(int argc, char** argv) {
     assert(argc == 7);
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
 ''')
     binary = p / 'fixture'
     subprocess.run(['g++', '-std=c++20', '-O1', '-g', '-Wall', '-Wextra',
-                    '-I', str(ROOT / 'headless/prosperoeden'), str(cpp),
+                    '-I', str(ROOT / 'headless/prosperoeden'), str(cpp), str(ROOT / 'headless/prosperoeden/pe/gfx/image.cpp'),
                     '-o', str(binary)], check=True)
     env = dict(os.environ)
     subprocess.run([str(binary), *[str(p / n) for n in

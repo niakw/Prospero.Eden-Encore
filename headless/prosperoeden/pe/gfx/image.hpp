@@ -26,6 +26,9 @@ struct Image
 // format of the launcher's own art and of the covers extracted from games.
 bool load_tga(const std::string &path, Image *image);
 
+// Decoder for tiny foreground-user DDS avatar cache files, strict size and format bounds.
+bool load_avatar_dds(const std::string &path, Image *image);
+
 // Half the size in each direction, averaging 2x2 blocks (alpha-weighted).
 Image halve(const Image &image);
 
