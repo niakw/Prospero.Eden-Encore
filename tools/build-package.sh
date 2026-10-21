@@ -18,16 +18,17 @@ export EDEN_PS5_VULKAN=ON EDEN_VULKAN_DRIVER=RADV
 case $mode in
 release|release-stage)
     export EDEN_DEV_VULKAN=OFF EDEN_DEV_ROM_ID= EDEN_DEV_PROFILE=OFF EDEN_DEV_WAIT_CALLERS=OFF
-    # Enable sparse executable backing by default on this native test branch,
-    # with a per-title alias probe and Safe Launch fallback at runtime.
-    # Cross-core JIT and successor batching stay disabled while a guest
-    # unmapped-execution fault remains under investigation.
-    export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=ON
+    # One final production execution path: no experimental sparse mapper,
+    # cross-core sharing, successor batching or profiling variants.
+    export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=OFF
+    export EDEN_FINAL_RELEASE_PROFILE=ON EDEN_DEV_PROFILE_TITLE= EDEN_GPU_PROBE=OFF
+    export EDEN_INLINE_EXCLUSIVES=OFF EDEN_DEVICE_FRONTEND=OFF EDEN_HEAP_GUARD=OFF
     export EDEN_PACKAGE_DIR="$root/build/release/PPSA99008"
     ;;
 dev)
     title=${2:?a development build boots one title: tools/build-package.sh dev TITLE_ID}
     [[ $title =~ ^[0-9A-Fa-f]{16}$ ]] || { echo "Invalid title ID: $title" >&2; exit 1; }
+    export EDEN_FINAL_RELEASE_PROFILE=OFF
     export EDEN_DEV_VULKAN=ON EDEN_DEV_ROM_ID="$title" EDEN_DEV_PROFILE=ON EDEN_DEV_PROFILE_TITLE="$title"
     # This IS the unified PS5 test build: sparse executable backing is compiled
     # in without a separate user-facing Experimental toggle or JSON opt-in.
