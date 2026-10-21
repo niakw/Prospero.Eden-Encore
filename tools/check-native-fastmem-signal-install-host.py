@@ -54,7 +54,7 @@ int MockSigaction(int which,const struct sigaction* requested,struct sigaction* 
     current_bus=*requested;
     return 0;
 }
-#define sigaction MockSigaction
+#define sigaction(...) MockSigaction(__VA_ARGS__)
 __INSTALL__
 #undef sigaction
 int main(int argc,char** argv) {
