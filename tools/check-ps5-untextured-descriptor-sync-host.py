@@ -20,9 +20,16 @@ assert gate=='''    if (num_image_elements != 0) {
 # Guarding this table sync is legal only when the descriptor count covers
 # every texture, texture buffer, image buffer, and read/write image.
 constructor=src[src.index("GraphicsPipeline::GraphicsPipeline("):src.index("    fragment_has_color0_output",src.index("GraphicsPipeline::GraphicsPipeline("))]
-for kind in ("texture_buffer_descriptors","image_buffer_descriptors",
-             "texture_descriptors","image_descriptors"):
+for kind in ("texture_buffer_descriptors","image_buffer_descriptors"):
     assert "num_image_elements += Shader::NumDescriptors(info->"+kind+");" in constructor
+# Sampled and storage-image counts are now recorded once at pipeline
+# construction and reused both for TIC gate accounting and per-stage cursors.
+assert "const size_t sampled_views = Shader::NumDescriptors(info->texture_descriptors);" in constructor
+assert "const size_t storage_views = Shader::NumDescriptors(info->image_descriptors);" in constructor
+assert "stage_sampled_view_counts[stage] = sampled_views;" in constructor
+assert "stage_storage_view_counts[stage] = storage_views;" in constructor
+assert "num_image_elements += sampled_views;" in constructor
+assert "num_image_elements += storage_views;" in constructor
 # A nontextured pipeline must still proceed into state setup, buffer work,
 # guest descriptor queue handling, and render-target/feedback processing.
 after=src[src.index(sig):src.index("bool GraphicsPipeline::ConfigureDraw(",src.index(sig))]
