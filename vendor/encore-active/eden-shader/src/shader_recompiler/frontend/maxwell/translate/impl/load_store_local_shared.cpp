@@ -103,6 +103,12 @@ IR::U32 LoadLocal(TranslatorVisitor& v, const IR::U32& word_offset, const IR::U3
     if (max_start == 0 || (offset.IsImmediate() && offset.U32() >= max_start)) {
         return v.ir.Imm32(0);
     }
+    // Once a literal byte address passes the bound check, neither the
+    // dynamic compare nor either Select is needed in the compiled shader IR.
+    // Dynamic offsets retain their safe-address clamp before LoadLocal.
+    if (offset.IsImmediate()) {
+        return v.ir.LoadLocal(word_offset);
+    }
     const IR::U1 in_bounds{LocalInBounds(v, offset, max_start)};
     const IR::U32 safe_word_offset{v.ir.Select(in_bounds, word_offset, v.ir.Imm32(0))};
     return IR::U32{v.ir.Select(in_bounds, v.ir.LoadLocal(safe_word_offset), v.ir.Imm32(0))};
