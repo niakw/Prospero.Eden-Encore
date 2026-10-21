@@ -133,7 +133,18 @@ slab_after = """        if (is_initialized) {
         }
         Free(kernel, static_cast<Derived*>(this));"""
 assert slab_pinned.count(slab_before) == 2
-assert slab_active == slab_pinned.replace(slab_before, slab_after)
+# The maintained slab index helpers now use the actual KernelCore accessor
+# and KSlabHeap::GetObjectIndex ABI in all three template variants.
+index_before = "return kernel.SlabHeap<Derived>().GetIndex(static_cast<const Derived*>(this));"
+index_other = "return SlabHeap<Derived>(kernel).GetObjectIndex(static_cast<const Derived*>(this));"
+index_after = "return kernel.SlabHeap<Derived>().GetObjectIndex(static_cast<const Derived*>(this));"
+assert slab_pinned.count(index_before) == 1
+assert slab_pinned.count(index_other) == 2
+expected_slab = (slab_pinned.replace(slab_before, slab_after)
+                 .replace(index_before, index_after)
+                 .replace(index_other, index_after))
+assert slab_active == expected_slab, "Unexpected maintained slab helper drift"
+assert slab_active.count(index_after) == 3
 worker_pinned = (root / "vendor/sources/eden/src/core/hle/kernel/k_worker_task_manager.h").read_text()
 worker_active = (thread_root / "k_worker_task_manager.h").read_text()
 worker_old = "    KWorkerTaskManager();"
