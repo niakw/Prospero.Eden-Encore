@@ -1944,17 +1944,26 @@ void EdenRecordAttributeless(EdenVertexIdentity vertex_hash, const Shader::Info&
 
 // GPU thread: whether the vertex shader reads no attribute, as far as built pipelines tell.
 bool EdenAttributeless(EdenVertexIdentity vertex_hash) {
-    static EdenVertexIdentity last_hash{};
-    static u32 last_generation = ~0u;
-    static bool last_result = false;
+    // The graphics thread owns this bounded memo. Shader builders only update
+    // the set under its mutex and publish a new generation on insertion.
+    // Alternating shader pairs should not lock or tree-search on every draw.
+    struct Lookup {
+        EdenVertexIdentity hash{};
+        u32 generation = ~0u;
+        bool result = false;
+    };
+    static std::array<Lookup, 64> lookups{};
     const u32 generation = eden_attributeless_generation.load(std::memory_order_acquire);
-    if (vertex_hash != last_hash || generation != last_generation) {
-        std::scoped_lock lock{eden_attributeless_mutex};
-        last_hash = vertex_hash;
-        last_generation = generation;
-        last_result = eden_attributeless_vertex.contains(vertex_hash);
-    }
-    return last_result;
+    const size_t slot = (vertex_hash[0] ^ std::rotl(vertex_hash[1], 11)) & (lookups.size() - 1);
+    auto& lookup = lookups[slot];
+    if (lookup.generation == generation && lookup.hash == vertex_hash)
+        return lookup.result;
+    const std::scoped_lock lock{eden_attributeless_mutex};
+    const bool result = eden_attributeless_vertex.contains(vertex_hash);
+    lookup.hash = vertex_hash;
+    lookup.result = result;
+    lookup.generation = generation;
+    return result;
 }
 
 // A static key without attributes (what the loader takes back from the disk cache).

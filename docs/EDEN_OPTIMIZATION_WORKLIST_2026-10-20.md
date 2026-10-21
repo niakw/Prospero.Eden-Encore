@@ -237,3 +237,7 @@ Le compteur principal **exclut les 62 unités de l'interface du lanceur** `headl
 ## 21 octobre — configuration, métadonnées, sauvegardes et sondes
 
 La [revue de quatre unités natives](EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md) vérifie les chemins de settings, imports de sauvegardes, métadonnées et watch DEV. Ces opérations sont associées aux actions de configuration/lancement ou à des sondes explicitement activées, pas à la boucle normale par frame. Chaque chemin reste verrouillé par son Git blob. **396/491 fichiers pris en charge, 33 moteur/runtime encore à traiter, 62 UI du lanceur séparés, 95 globaux.** Zéro correctif moteur ajouté à cette revue.
+
+## 21 octobre — mémo vertex Vulkan + quatre chemins natifs
+
+Voir [EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md](EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md). Correction du mémo de reconnaissance des vertex shaders alternants dans la source Vulkan active et son générateur, avec extension du test hôte existant. Quatre chemins conditionnels (rafraîchissement, budget JIT, liste JIT expérimentale, NPad DEV) examinés sans patch. **401/491 traités, 28 moteur/runtime à examiner, 62 lanceur séparés, 90 globalement.** Une amélioration ciblée source, aucun gain FPS ou freeze console encore prouvé.
