@@ -49,7 +49,10 @@ assert patched[raster_path].count(r_old)==1
 patched[raster_path]=patched[raster_path].replace(r_old,r_new)
 header=patched[header_path]
 raster=patched[raster_path]
-assert "#ifdef PS5_NATIVE\n    template <typename WaitWorker>" in header
+assert "#ifdef PS5_NATIVE\n    // Exact zero-descriptor graphics pipeline:" in header
+assert "void AcquireKnownEmpty(bool use_descriptor_buffer_) noexcept" in header
+assert header.index("void AcquireKnownEmpty(") < header.index("template <typename WaitWorker>")
+assert header.count("template <typename WaitWorker>") == 2
 assert "guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })" in raster
 assert raster.index("PreflightGuestDraw") < raster.index("GraphicsPipeline* const pipeline{pipeline_cache.CurrentGraphicsPipeline()}")
 assert "gpu_memory->FlushCaching();\n    }\n#endif" in raster
