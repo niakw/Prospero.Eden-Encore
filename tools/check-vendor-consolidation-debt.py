@@ -1251,11 +1251,11 @@ astc_previous = astc_maintained.read_text()
 # reviewed delta before comparing against the pinned R428 ASTC git blob.
 # Any other change to the texture owner continues to fail closed.
 tic_begin = astc_previous.index("bool IsValidEntry(")
-tic_end = astc_previous.index("\\nboost::container::small_vector<BufferImageCopy", tic_begin)
+tic_end = astc_previous.index("\nboost::container::small_vector<BufferImageCopy", tic_begin)
 tic_active = astc_previous[tic_begin:tic_end]
 tic_baseline = (root / "vendor/sources/eden/src/video_core/texture_cache/util.cpp").read_text()
 tic_base_start = tic_baseline.index("bool IsValidEntry(")
-tic_base_end = tic_baseline.index("\\nboost::container::small_vector<BufferImageCopy", tic_base_start)
+tic_base_end = tic_baseline.index("\nboost::container::small_vector<BufferImageCopy", tic_base_start)
 tic_baseline = tic_baseline[tic_base_start:tic_base_end]
 expected_tic_native = '''bool IsValidEntry(const Tegra::MemoryManager& gpu_memory, const TICEntry& config) {
 #ifdef PS5_NATIVE
