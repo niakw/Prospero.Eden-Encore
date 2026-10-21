@@ -1286,7 +1286,7 @@ expected_tic_native = '''bool IsValidEntry(const Tegra::MemoryManager& gpu_memor
     const size_t guest_size_bytes = CalculateGuestSizeInBytes(info);
     return gpu_memory.GpuToCpuAddress(address, guest_size_bytes).has_value();
 }'''
-assert tic_active == expected_tic_native, 'native TIC guard unreviewed drift'
+assert tic_active == expected_tic_native + '\n', 'native TIC guard unreviewed drift'
 assert astc_previous.count(tic_active) == 1
 astc_previous = astc_previous.replace(tic_active, tic_baseline)
 astc_layout_edits = [
