@@ -470,7 +470,13 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
     views.reserve(num_image_elements);
     samplers.reserve(num_textures);
 
-    { ::Eden::Performance::CachePhaseTimer cost{::Eden::Performance::CachePhase::TextureDescriptorSync};
+    // No TIC/TSC entries are read by a shader without image/image-buffer
+    // descriptors. Leave dirty table state pending until a later textured
+    // pipeline needs it; framebuffer bindings and shader invalidations are
+    // independent of this table synchronization.
+    if (num_image_elements != 0) {
+        ::Eden::Performance::CachePhaseTimer cost{
+            ::Eden::Performance::CachePhase::TextureDescriptorSync};
         texture_cache.SynchronizeDescriptors(false);
     }
 

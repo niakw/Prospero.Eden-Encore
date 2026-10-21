@@ -1806,6 +1806,21 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
             ('buffer_cache.UpdateGraphicsBuffers(is_indexed);', 'GraphicsBufferUpdate'),
             ('guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer);', 'DescriptorQueueAcquire'),
         ):
+            if name == 'vk_graphics_pipeline' and phase == 'TextureDescriptorSync':
+                # No descriptors: skip TIC/TSC synchronization entirely for this
+                # draw; table changes are consumed on the next textured draw.
+                replacements.append(
+                    ('    ' + expression,
+                     '    // No TIC/TSC entries are read by a shader without image/image-buffer\n'
+                     '    // descriptors. Leave dirty table state pending until a later textured\n'
+                     '    // pipeline needs it; framebuffer bindings and shader invalidations are\n'
+                     '    // independent of this table synchronization.\n'
+                     '    if (num_image_elements != 0) {\n'
+                     '        ::Eden::Performance::CachePhaseTimer cost{\n'
+                     '            ::Eden::Performance::CachePhase::TextureDescriptorSync};\n'
+                     '        ' + expression + '\n'
+                     '    }'))
+                continue
             replacements.append(
                 ('    ' + expression,
                  '    { ::Eden::Performance::CachePhaseTimer cost{::Eden::Performance::CachePhase::' + phase +
