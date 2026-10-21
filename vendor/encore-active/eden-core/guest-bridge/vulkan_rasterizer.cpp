@@ -1029,7 +1029,11 @@ void RasterizerVulkan::InvalidateRegion(DAddr addr, u64 size, VideoCommon::Cache
         std::scoped_lock lock{texture_cache.mutex};
         texture_cache.WriteMemory(addr, size);
     }
-    if ((True(which & VideoCommon::CacheType::BufferCache))) {
+    // A buffer cannot have GPU-owned content before its first registration.
+    // NeverRegistered fails closed for unknown or large ranges; future buffer
+    // registrations start CPU-dirty, so their first upload is unaffected.
+    if (True(which & VideoCommon::CacheType::BufferCache) &&
+        !::Eden::BufferPages::NeverRegistered(addr, size)) {
         std::scoped_lock lock{buffer_cache.mutex};
         buffer_cache.WriteMemory(addr, size);
     }
@@ -1159,7 +1163,9 @@ void RasterizerVulkan::OnCacheInvalidation(DAddr addr, u64 size) {
         std::scoped_lock lock{texture_cache.mutex};
         texture_cache.WriteMemory(addr, size);
     }
-    {
+    // Unowned pages cannot contain stale buffer data. Preserve the
+    // shader invalidation regardless of buffer ownership.
+    if (!::Eden::BufferPages::NeverRegistered(addr, size)) {
         std::scoped_lock lock{buffer_cache.mutex};
         buffer_cache.WriteMemory(addr, size);
     }

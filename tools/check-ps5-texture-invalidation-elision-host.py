@@ -32,7 +32,7 @@ def methods(source):
             source.split(end0, 1)[1].split(end1, 1)[0])
 new = methods(raster)
 assert methods(bridge) == new, "inactive bridge invalidation methods drifted"
-assert new[0].count("::Eden::BufferPages::NeverRegistered(addr, size)") == 2
+assert new[0].count("::Eden::BufferPages::NeverRegistered(addr, size)") == 3
 assert "bool buffer_may_overlap = false;" in new[0]
 assert "if (buffer_may_overlap)" in new[0]
 
@@ -120,10 +120,10 @@ int main() {
     RasterizerVulkan x;
     const auto all = static_cast<VideoCommon::CacheType>(15);
     const auto tex = VideoCommon::CacheType::TextureCache;
-    // Never-owned range: only texture lock/write can be suppressed.
+    // Never-owned range: both image/buffer locks are omitted.
     x.InvalidateRegion(10*p, p, all);
     assert(x.texture_cache.mutex.locks == 0 && x.texture_cache.writes == 0);
-    assert(x.buffer_cache.mutex.locks == 1 && x.buffer_cache.writes == 1);
+    assert(x.buffer_cache.mutex.locks == 0 && x.buffer_cache.writes == 0);
     assert(x.query_cache.writes == 1 && x.pipeline_cache.writes == 1);
     x.InvalidateRegion(0, p, all);
     x.InvalidateRegion(10*p, 0, all);
@@ -138,15 +138,15 @@ int main() {
     x.InvalidateRegion(ImagePages::kSpace - 2, 4, tex);
     assert(x.texture_cache.mutex.locks == 4 && x.texture_cache.writes == 4);
 
-    // OnCacheInvalidation keeps buffer and shader notifications regardless.
+    // OnCacheInvalidation preserves shader notification and known buffer writes.
     x.OnCacheInvalidation(40*p, p);
     assert(x.texture_cache.mutex.locks == 4 && x.texture_cache.writes == 4);
-    assert(x.buffer_cache.writes == 2 && x.pipeline_cache.writes == 2);
+    assert(x.buffer_cache.writes == 0 && x.pipeline_cache.writes == 2);
     x.OnCacheInvalidation(20*p, p);
     assert(x.texture_cache.mutex.locks == 5 && x.texture_cache.writes == 5);
-    assert(x.buffer_cache.writes == 3 && x.pipeline_cache.writes == 3);
+    assert(x.buffer_cache.writes == 1 && x.pipeline_cache.writes == 3);
     x.OnCacheInvalidation(0, p);
-    assert(x.buffer_cache.writes == 3 && x.pipeline_cache.writes == 3);
+    assert(x.buffer_cache.writes == 1 && x.pipeline_cache.writes == 3);
 
     // Entirely unregistered batches skip both GPU cache locks; query/shader remain.
     std::array<std::pair<DAddr, std::size_t>, 2> clean{{
@@ -154,8 +154,8 @@ int main() {
     }};
     x.InnerInvalidation(clean);
     assert(x.texture_cache.mutex.locks == 5 && x.texture_cache.writes == 5);
-    assert(x.buffer_cache.writes == 3 && x.query_cache.writes == 3);
-    assert(x.buffer_cache.mutex.locks == 3);
+    assert(x.buffer_cache.writes == 1 && x.query_cache.writes == 3);
+    assert(x.buffer_cache.mutex.locks == 1);
     assert(x.pipeline_cache.writes == 5);
 
     // A mixed batch keeps the mutex but skips image-free individual ranges.
@@ -164,8 +164,8 @@ int main() {
     }};
     x.InnerInvalidation(mixed);
     assert(x.texture_cache.mutex.locks == 6 && x.texture_cache.writes == 6);
-    assert(x.buffer_cache.writes == 4 && x.query_cache.writes == 5);
-    assert(x.buffer_cache.mutex.locks == 4);
+    assert(x.buffer_cache.writes == 2 && x.query_cache.writes == 5);
+    assert(x.buffer_cache.mutex.locks == 2);
     assert(x.pipeline_cache.writes == 7);
 
     // An unknown/large range still gets texture invalidation, unlike a
@@ -175,8 +175,8 @@ int main() {
     }};
     x.InnerInvalidation(uncertain);
     assert(x.texture_cache.mutex.locks == 7 && x.texture_cache.writes == 7);
-    assert(x.buffer_cache.writes == 5 && x.query_cache.writes == 7);
-    assert(x.buffer_cache.mutex.locks == 5);
+    assert(x.buffer_cache.writes == 3 && x.query_cache.writes == 7);
+    assert(x.buffer_cache.mutex.locks == 3);
     assert(x.pipeline_cache.writes == 9);
     // A concurrent registration can publish its monotonic page bit after
     // the outer mixed-batch scan, before we own the texture mutex.
@@ -187,8 +187,8 @@ int main() {
     }};
     x.InnerInvalidation(newly_registered);
     assert(x.texture_cache.mutex.locks == 8 && x.texture_cache.writes == 9);
-    assert(x.buffer_cache.writes == 6 && x.query_cache.writes == 9);
-    assert(x.buffer_cache.mutex.locks == 6);
+    assert(x.buffer_cache.writes == 4 && x.query_cache.writes == 9);
+    assert(x.buffer_cache.mutex.locks == 4);
     assert(x.pipeline_cache.writes == 11);
     // Buffer registration may publish after the outer scan but before
     // acquiring the buffer lock in a mixed batch. Recheck under the mutex.
@@ -197,14 +197,14 @@ int main() {
         {160*p, p}, {20*p, p}
     }};
     x.InnerInvalidation(newly_registered_buffer);
-    assert(x.buffer_cache.writes == 8 && x.query_cache.writes == 11);
+    assert(x.buffer_cache.writes == 6 && x.query_cache.writes == 11);
     assert(x.pipeline_cache.writes == 13);
-    assert(x.buffer_cache.mutex.locks == 7);
+    assert(x.buffer_cache.mutex.locks == 5);
     assert(x.texture_cache.mutex.locks == 9);
     std::array<std::pair<DAddr, std::size_t>, 0> empty{};
     x.InnerInvalidation(empty);
-    assert(x.texture_cache.mutex.locks == 9 && x.buffer_cache.writes == 8);
-    assert(x.buffer_cache.mutex.locks == 7);
+    assert(x.texture_cache.mutex.locks == 9 && x.buffer_cache.writes == 6);
+    assert(x.buffer_cache.mutex.locks == 5);
 }
 """.replace("__EXTRACT__", real_methods)
 compiler = shutil.which("clang++-18") or shutil.which("clang++")
