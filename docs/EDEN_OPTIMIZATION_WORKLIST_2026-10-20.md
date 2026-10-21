@@ -281,3 +281,7 @@ Voir [EDEN_QUIET_GUEST_COUNTER_OPT_2026-10-21.md](EDEN_QUIET_GUEST_COUNTER_OPT_2
 ## 21 octobre — allocation du tas sans instrumentation synchrone en release
 
 Voir [EDEN_QUIET_HEAP_COMMIT_2026-10-21.md](EDEN_QUIET_HEAP_COMMIT_2026-10-21.md). `CommitMemoryRange` conserve l'allocation et le zéro mémoire, mais les quatre horodatages et l'écriture noyau sont désormais réservés à `EDEN_DEV_PROFILE` sur la cible `common`. Test source réel C++20 ASan/UBSan en deux profils. **419/491 traités ; 10 moteur restant ; 62 lanceur séparés.**
+
+## 21 octobre — source du pont différé exclue du runtime final
+
+[EDEN_DEFERRED_BRIDGE_PRODUCTION_EXCLUSION_2026-10-21.md](EDEN_DEFERRED_BRIDGE_PRODUCTION_EXCLUSION_2026-10-21.md) : `guest-bridge/memory_ps5_standard.cpp` n'est compilé que derrière `EDEN_GUEST_WRITE_BRIDGE_DEV=ON` (DEV), interdit par le profil final. Source liée à un blob et à son contrôle existant, pas de patch C++ ; **420/491 triés ; 9 fichiers moteur prod à traiter ; 62 lanceur séparés.**
