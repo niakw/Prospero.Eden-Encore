@@ -1664,6 +1664,9 @@ adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
      '    }\n'
      '    [[nodiscard]] VkDeviceSize DescriptorRingPreflightSize() const noexcept {\n        // Before reading guest descriptors, these are the only two conditions\n        // sufficient to PROVE the old descriptor allocation cannot be reused.\n        return CanUseDescriptorBuffer() &&\n               (last_descriptor_buffer_generation != descriptor_buffer_ring.CurrentGeneration() ||\n                last_descriptor_payload.size() != num_descriptor_entries)\n                   ? descriptor_buffer_layout.size : 0;\n    }\n'
      '#endif'),
+    # Immutable image-stage presence flag prevents empty helper work on
+    # zero-texture passes without disturbing stage buffer bindings.
+    ("    u32 num_textures{};", "    u32 num_textures{};\n    std::array<bool, NUM_STAGES> stage_has_image_bindings{};"),
     ('#include <atomic>', '#include <atomic>\n#include <memory>'),
 ])
 
@@ -1761,6 +1764,11 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
     ]
     if name == 'vk_graphics_pipeline':
         replacements.extend([
+            # Source-proven no-image stage fast path; only stage metadata is
+            # hoisted. The descriptor queue and image-view cursor are kept
+            # untouched for empty stages, while bindings still execute.
+            ("        stage_infos[stage] = *info;\n        enabled_uniform_buffer_masks[stage] = info->constant_buffer_mask;", "        stage_infos[stage] = *info;\n        // Immutable shader-stage metadata: avoid repeated empty descriptor\n        // walks while both guest buffer/texture caches are locked.\n        stage_has_image_bindings[stage] =\n            !info->texture_buffer_descriptors.empty() ||\n            !info->image_buffer_descriptors.empty() ||\n            !info->texture_descriptors.empty() ||\n            !info->image_descriptors.empty();\n        enabled_uniform_buffer_masks[stage] = info->constant_buffer_mask;"),
+            ("        buffer_cache.BindHostStageBuffers(stage);\n        PushImageDescriptors(texture_cache, guest_descriptor_queue, stage_infos[stage], rescaling,\n                             samplers_it, views_it);\n        const auto& info{stage_infos[stage]};", "        buffer_cache.BindHostStageBuffers(stage);\n        const auto& info{stage_infos[stage]};\n        // No image or texture-buffer descriptors: PushImageDescriptors\n        // cannot change view cursors, descriptor queue or rescale constants.\n        // Uniform/storage buffer bindings above must still execute.\n        if (stage_has_image_bindings[stage]) {\n            PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling,\n                                 samplers_it, views_it);\n        }"),
             # R363: async failed pipeline can be dropped by the Vulkan worker
             # even after the earlier GPU-owner IsBuilt() check passed.
             ("        if (bind_pipeline) {\n            if (!pipeline) {\n                return;\n            }", "        if (bind_pipeline) {\n            if (!pipeline) {\n                // An asynchronously-built pipeline can fail after Configure's\n                // earlier IsBuilt()/pipeline check but before this worker\n                // callback executes. Count the actual GPU draw omission.\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }"),

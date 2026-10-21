@@ -202,6 +202,7 @@ private:
     u32 num_descriptor_entries{};
     size_t num_image_elements{};
     u32 num_textures{};
+    std::array<bool, NUM_STAGES> stage_has_image_bindings{};
     bool fragment_has_color0_output{};
 
     vk::DescriptorSetLayout descriptor_set_layout;

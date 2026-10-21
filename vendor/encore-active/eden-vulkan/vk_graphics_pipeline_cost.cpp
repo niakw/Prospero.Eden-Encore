@@ -332,6 +332,13 @@ GraphicsPipeline::GraphicsPipeline(
             continue;
         }
         stage_infos[stage] = *info;
+        // Immutable shader-stage metadata: avoid repeated empty descriptor
+        // walks while both guest buffer/texture caches are locked.
+        stage_has_image_bindings[stage] =
+            !info->texture_buffer_descriptors.empty() ||
+            !info->image_buffer_descriptors.empty() ||
+            !info->texture_descriptors.empty() ||
+            !info->image_descriptors.empty();
         enabled_uniform_buffer_masks[stage] = info->constant_buffer_mask;
         std::ranges::copy(info->constant_buffer_used_sizes, uniform_buffer_sizes[stage].begin());
         num_image_elements += Shader::NumDescriptors(info->texture_buffer_descriptors);
@@ -667,9 +674,14 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
     const VideoCommon::ImageViewInOut* views_it{views.data()};
     const auto prepare_stage{[&](size_t stage) LAMBDA_FORCEINLINE {
         buffer_cache.BindHostStageBuffers(stage);
-        PushImageDescriptors(texture_cache, guest_descriptor_queue, stage_infos[stage], rescaling,
-                             samplers_it, views_it);
         const auto& info{stage_infos[stage]};
+        // No image or texture-buffer descriptors: PushImageDescriptors
+        // cannot change view cursors, descriptor queue or rescale constants.
+        // Uniform/storage buffer bindings above must still execute.
+        if (stage_has_image_bindings[stage]) {
+            PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling,
+                                 samplers_it, views_it);
+        }
         if (info.uses_render_area) {
             render_area.uses_render_area = true;
             render_area.words = {static_cast<float>(regs.surface_clip.width),
