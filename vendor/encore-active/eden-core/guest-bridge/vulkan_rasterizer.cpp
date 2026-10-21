@@ -1192,7 +1192,10 @@ void RasterizerVulkan::UnmapMemory(DAddr addr, u64 size) {
         std::scoped_lock lock{texture_cache.mutex};
         texture_cache.UnmapMemory(addr, size);
     }
-    {
+    // A never-registered CPU page cannot reference a cached GPU buffer.
+    // The monotonic owner witness fails closed on unknown or large ranges;
+    // a buffer registered later begins CPU-dirty and uploads normally.
+    if (!::Eden::BufferPages::NeverRegistered(addr, size)) {
         std::scoped_lock lock{buffer_cache.mutex};
         buffer_cache.WriteMemory(addr, size);
     }

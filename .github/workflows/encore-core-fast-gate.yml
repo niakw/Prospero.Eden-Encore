@@ -61,6 +61,7 @@ on:
       - 'tools/check-ps5-active-texture-descriptor-host.py'
       - 'tools/check-native-batched-buffer-invalidation-host.py'
       - 'tools/check-native-single-range-buffer-invalidation-host.py'
+      - 'tools/check-ps5-never-owned-buffer-unmap-host.py'
       - 'tools/check-ps5-untextured-descriptor-sync-host.py'
       - 'tools/check-ps5-known-empty-graphics-descriptors-host.py'
       - 'tools/check-ps5-empty-image-stage-host.py'
@@ -149,6 +150,7 @@ jobs:
           python3 -B tools/check-ps5-active-texture-descriptor-host.py
           python3 -B tools/check-native-batched-buffer-invalidation-host.py
           python3 -B tools/check-native-single-range-buffer-invalidation-host.py
+          python3 -B tools/check-ps5-never-owned-buffer-unmap-host.py
           python3 -B tools/check-ps5-untextured-descriptor-sync-host.py
           python3 -B tools/check-ps5-known-empty-graphics-descriptors-host.py
           python3 -B tools/check-ps5-empty-image-stage-host.py
