@@ -200,6 +200,14 @@
       "evidence": "Previously maintained GPU/memory performance guard reviewed; Checks monotone interval coverage with overflow-safe extent bounds; conservatively reports only an upper free bound. No additional correction justified without new failing evidence."
     },
     {
+      "path": "headless/display_refresh.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U53",
+      "reviewed_source_git_blob": "79aa191d75bbdb0d042d3178d629f02641e9b12c",
+      "source_review_document": "docs/EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md",
+      "evidence": "SkipFrame reste une lecture atomique et un CAS à chaque frame uniquement si le jeu produit plus d'images que le rafraîchissement. Le contrôle d'espacement et la synchronisation inter-renderers sont nécessaires ; aucune allocation ni verrou ; pas de retouche spéculative. Ouvrir de nouveau si blob modifié ou cas reproductible."
+    },
+    {
       "path": "headless/elevation/elevation.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "review_scope": "startup-shim",
@@ -263,6 +271,14 @@
       "proof_ref": "tools/check-headless-specialized-owners.py",
       "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source read: Guest error completion is event-based and bounded; relevant to UI correctness not normal GPU performance. Contract U60; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/experimental_performance.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U23",
+      "reviewed_source_git_blob": "3f3fd71a951147a17298118440b544ffcac13e72",
+      "source_review_document": "docs/EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md",
+      "evidence": "Plan de budget JIT calculé avant les threads invités (4 arènes, overhead direct, plafond relatif 1536 MiB). Atomiques de cache figées par titre ; aucun calcul du plan par bloc compilé ; la fragmentation nécessite une mesure matérielle avant rééquilibrage. Ouvrir de nouveau si blob modifié ou cas reproductible."
     },
     {
       "path": "headless/filesystem_probe.h",
@@ -428,6 +444,14 @@
       "path": "headless/image_pages.h",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "headless/jit_list.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "J11",
+      "reviewed_source_git_blob": "405813ad83c313f619b1ab39e9e2fc362099e237",
+      "source_review_document": "docs/EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md",
+      "evidence": "Précompilation JIT expérimentale, protégée par EDEN_SHARED_JIT_AVAILABLE et opt-in ; chemin absent du rendu standard, historique borné et titre/build contrôlés. Ne pas rendre actif sans qualification de la quiescence JIT. Ouvrir de nouveau si blob modifié ou cas reproductible."
     },
     {
       "path": "headless/jit-sparse-commit.h",
@@ -2756,6 +2780,14 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract H39: Maintained rumble fallback generated verbatim from pinned controller; actual pad vibration on hardware not proved. CI witness retained. No FPS claim."
     },
     {
+      "path": "vendor/encore-active/eden-core/src/hid_core/resources/npad/npad_pause_diag.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "H52",
+      "reviewed_source_git_blob": "ea1cee774ef6299aa52dda918cc609ddbf169bbf",
+      "source_review_document": "docs/EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md",
+      "evidence": "Implémentation NPad de diagnostic choisie seulement sous PS5_NATIVE + EDEN_DEV_PROFILE ; les trois compteurs atomiques et impressions de progression sont DEV, pas la voie de livraison. Conserver l'observabilité sans alourdir le chemin normal. Ouvrir de nouveau si blob modifié ou cas reproductible."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/hid_core/resources/npad/npad.cpp",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "H48",
@@ -3316,6 +3348,13 @@
       "prior_status": "HOST",
       "proof_ref": "tools/check-vulkan-multirange-owner-lifetime-host.py",
       "evidence": "Previous audit host contract V20: Hôte: propriétaires enregistrés pour sparse et gathered, DropOwner et Invalidate natifs extraits exécutés sous ASan/UBSan, libération après tick et débordement des 256 retraits éprouvés; temps d'attente GPU et progression PS5 non démontrés"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vk_pipeline_cache_cost.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "V07",
+      "proof_ref": "tools/check-ps5-vertex-identity-host.py",
+      "evidence": "Active default PS5 Vulkan static vertex input used a single (hash,generation) memo; alternating vertex shaders locked eden_attributeless_mutex and queried std::set per transition. Replaced with a 64-slot GPU-thread-owned direct-mapped memo, generation-invalidated by shader workers. Generator and selected maintained C++ stay in lockstep; sanitizer host witness extended for generation flips and deliberate collisions. No PS5 FPS validation claimed."
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vk_texture_cache_cost.cpp",
