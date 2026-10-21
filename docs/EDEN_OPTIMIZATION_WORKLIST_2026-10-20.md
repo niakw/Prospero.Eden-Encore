@@ -297,3 +297,7 @@ Voir [EDEN_QUIET_HEAP_COMMIT_2026-10-21.md](EDEN_QUIET_HEAP_COMMIT_2026-10-21.md
 ## 21 octobre — sortie de partie silencieuse sans scan de tas périodique
 
 [EDEN_QUIET_NATIVE_SHUTDOWN_HEAP_2026-10-21.md](EDEN_QUIET_NATIVE_SHUTDOWN_HEAP_2026-10-21.md) : `headless/main.cpp` conserve le vidage du tcache local, mais les lectures coûteuses des racines de tas et leur impression sont réservées au profil détaillé. Contrat host C++20 ASan/UBSan compile la section exacte. **423/491 sources traitées ; 6 moteur restants ; 62 lanceur séparés.**
+
+## 21 octobre — IPC HLE : garde-fou sur index de réveil réussi
+
+[EDEN_NATIVE_IPC_WAIT_SLOT_GUARD_2026-10-21.md](EDEN_NATIVE_IPC_WAIT_SLOT_GUARD_2026-10-21.md) : validation index/objet avant déréférencement dans `svc_ipc_standard.cpp`, rejet propre des réveils incohérents, source DEV inchangée ; tests réels ASan/UBSan et oracle exact de parité. **424/491 traités ; 5 moteur à examiner ; 62 lanceur séparés.**

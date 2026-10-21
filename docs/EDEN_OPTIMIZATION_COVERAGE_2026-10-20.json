@@ -2437,6 +2437,13 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc_standard.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "U80",
+      "proof_ref": "tools/verify/hle/check-native-hle-ipc-receive-index-host.py",
+      "evidence": "The shipping ReplyAndReceiveImpl dereferenced objs[index] after a successful KSynchronizationObject::Wait without checking index range or null entry. A malformed or raced native wake could therefore access invalid memory and crash. Added a production-only fail-closed index/object guard returning ResultOutOfRange with out_index=-1; valid IPC, timeout and ResultNotFound retry semantics unchanged. Maintained exact pinned+three deltas oracle, extended C++20 ASan/UBSan receive harness for negative, past-end and null slots, added both IPC oracles to fast gate. No PS5 runtime validation or FPS claim."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc.cpp",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "H21",
