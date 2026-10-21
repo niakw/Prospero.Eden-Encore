@@ -16,6 +16,7 @@ assert pinned.count(marker)==active.count(marker)==1
 assert active.count("IR::U1 LocalInBounds(")==1
 assert active.count("void WriteLocal(TranslatorVisitor& v,")==1
 assert "v.ir.LoadLocal(safe_word_offset)" in active
+assert "if (offset.IsImmediate()) {\n        return v.ir.LoadLocal(word_offset);\n    }" in active
 assert "v.ir.WriteLocal(safe_word_offset, safe_value)" in active
 assert active.count("const u32 max_start{byte_advance < local_size ? local_size - byte_advance : 0};") == 2
 assert active.count("LocalInBounds(v, offset, max_start)") == 2
@@ -52,10 +53,10 @@ using U32=Value32;
 struct U1 {bool value{};};
 struct IREmitter {
     std::array<u32,4> memory{11,22,33,44};
-    u32 reads{},writes{};
+    u32 reads{},writes{},comparisons{},selections{};
     U32 Imm32(u32 n){return {n,true};}
-    U1 ILessThan(U32 a,U32 b,bool){return {a.value<b.value};}
-    U32 Select(U1 cond,U32 a,U32 b){return cond.value?a:b;}
+    U1 ILessThan(U32 a,U32 b,bool){++comparisons;return {a.value<b.value};}
+    U32 Select(U1 cond,U32 a,U32 b){++selections;return cond.value?a:b;}
     U32 LoadLocal(U32 index){++reads; return {memory.at(index.value),false};}
     void WriteLocal(U32 index,U32 value){++writes;memory.at(index.value)=value.value;}
     U32 IAdd(U32 a,U32 b){return {static_cast<u32>(a.value+b.value),a.immediate && b.immediate};}
@@ -79,6 +80,18 @@ int main() {
 #else
     assert(LoadLocal(v,dyn(7),dyn(28)).value==0);
     assert(LoadLocal(v,imm(7),imm(28)).value==0);
+    // Constant and already-qualified byte addresses must not generate
+    // the dynamic bounds-check/select IR in the recompiled shader.
+    const auto comparisons_before=v.ir.comparisons, selections_before=v.ir.selections;
+    const auto reads_immediate=v.ir.reads;
+    assert(LoadLocal(v,imm(2),imm(8)).value==33);
+    assert(v.ir.reads==reads_immediate+1);
+    assert(v.ir.comparisons==comparisons_before);
+    assert(v.ir.selections==selections_before);
+    // Dynamic accesses still use guarded address + result selections.
+    assert(LoadLocal(v,dyn(2),dyn(8)).value==33);
+    assert(v.ir.comparisons==comparisons_before+1);
+    assert(v.ir.selections==selections_before+2);
     assert(LoadLocal(v,dyn(3),dyn(0xFFFFFFFC)).value==0);
     WriteLocal(v,dyn(2),dyn(8),imm(999));
     assert(v.ir.memory[2]==999);

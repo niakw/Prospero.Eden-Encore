@@ -3129,6 +3129,13 @@
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
     },
     {
+      "path": "vendor/encore-active/eden-shader/src/shader_recompiler/frontend/maxwell/translate/impl/load_store_local_shared.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "V24",
+      "proof_ref": "tools/check-ps5-shader-local-bounds-host.py",
+      "evidence": "Maintained shader recompiler LDL already checks original local byte address bounds, but still emitted a runtime ILessThan and two IR Select nodes for literal offsets accepted statically. Fast path returns v.ir.LoadLocal(word_offset) immediately after successful static bound; dynamic offsets continue safe index + value clamps and guard. Existing C++ sanitizer extraction strengthened with counters proving literal loads require no dynamic compare/Select while dynamic still does. Native graphics/pixel and FPS unverified."
+    },
+    {
       "path": "vendor/encore-active/eden-surface-lifecycle/src/core/hle/service/nvnflinger/surface_flinger.cpp",
       "disposition": "historical_native_selected_unit",
       "contract_id": "N06",

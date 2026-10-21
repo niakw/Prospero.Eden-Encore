@@ -257,3 +257,7 @@ Voir [EDEN_HLE_SLAB_AND_RUNTIME_REVIEW_2026-10-21.md](EDEN_HLE_SLAB_AND_RUNTIME_
 ## 21 octobre — trois accès à l'index du slab corrigés
 
 Voir [EDEN_HLE_SLAB_INDEX_FIX_2026-10-21.md](EDEN_HLE_SLAB_INDEX_FIX_2026-10-21.md). `slab_helpers.h` appelait des méthodes/expressions non cohérentes avec le contrat du heap maintenu dans trois `GetSlabIndex`. Alignement sur `kernel.SlabHeap<Derived>().GetObjectIndex` ; test d'instanciation compilée C++20 ASan/UBSan ajouté à la CI. **413/491 traités ; 16 fichiers moteur/runtime à traiter ; 62 du lanceur séparés ; 78 globalement.** Correctif de robustesse, pas gain FPS déclaré.
+
+## 21 octobre — Maxwell local constants sans IR dynamique superflu
+
+Voir [EDEN_MAXWELL_LOCAL_IMMEDIATE_IR_2026-10-21.md](EDEN_MAXWELL_LOCAL_IMMEDIATE_IR_2026-10-21.md). Chemin rapide pour les accès à la mémoire locale des shaders dont l'adresse constante est déjà validée ; comparaison et sélections IR inutiles éliminées. Témoin C++ ASan/UBSan existant étendu aux deux chemins. **414/491 fichiers pris en charge ; 15 moteur à examiner ; 62 lanceur séparés ; 77 globalement.**
