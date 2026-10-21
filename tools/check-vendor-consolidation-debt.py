@@ -349,8 +349,25 @@ ipc_expected = ('#include "performance.h"\n' +
 assert ipc_maintained == ipc_expected, (
     "Maintained DEV IPC source diverges from pinned + profiler + deadline and slot guards")
 ipc_standard = (active / "eden-core/src/core/hle/kernel/svc/svc_ipc_standard.cpp").read_text()
-assert ipc_standard == ipc_pinned.replace(ipc_timeout_old, ipc_timeout_fixed).replace(ipc_index_old, ipc_index_fixed), (
-    "Maintained normal IPC source diverges from pinned + deadline and slot guards")
+# Final IPC source adds one fail-closed check *only* for impossible success
+# indices; DEV remains the pinned profile with its instrumented timestamps.
+ipc_success_old = """            if (R_SUCCEEDED(result)) {
+                KServerSession* session = objs[index]->DynamicCast<KServerSession*>();"""
+ipc_success_safe = """            if (R_SUCCEEDED(result)) {
+                // Even a successful wake must identify an actual queued object.
+                // Fail closed rather than indexing before/after the wait buffer
+                // if an unexpected native wakeup publishes an invalid slot.
+                if (index < 0 || index >= num_objects || objs[index] == nullptr) {
+                    *out_index = -1;
+                    R_THROW(ResultOutOfRange);
+                }
+                KServerSession* session = objs[index]->DynamicCast<KServerSession*>();"""
+assert ipc_pinned.count(ipc_success_old) == 1
+ipc_standard_expected = (ipc_pinned.replace(ipc_timeout_old, ipc_timeout_fixed)
+                         .replace(ipc_index_old, ipc_index_fixed)
+                         .replace(ipc_success_old, ipc_success_safe))
+assert ipc_standard == ipc_standard_expected, (
+    "Maintained normal IPC source diverges from pinned + deadline, initialized index, guarded successful slot")
 assert 'list(APPEND core_sources "${EDEN_MAINTAINED_SVC_IPC_STANDARD}")' in c
 assert 'list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_HLE_SERVICE}"' in c
 for name, pinned_path in (
