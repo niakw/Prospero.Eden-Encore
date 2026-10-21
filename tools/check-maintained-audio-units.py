@@ -21,7 +21,33 @@ original=(base/"audio_core/renderer/voice/voice_info.cpp").read_text()
 needle="flags |= u16(params.flags.IsVoicePitchAndSrcSkippedSupported);"
 updated="flags |= u16(params.flags.IsVoicePitchAndSrcSkippedSupported) << 1;"
 assert original.count(needle)==1
-assert (active/"audio_core/renderer/voice/voice_info.cpp").read_text()==original.replace(needle,updated)
+expected_voice=original.replace(needle,updated)
+# Preserve byte-for-byte pinned parity except for the known native audio-flag
+# adjustment and the bounded PCM offset arithmetic correction.
+voice_namespace="namespace AudioCore::Renderer {\\n"
+helper="""\\nnamespace {
+// Guard offset products without signed multiplication or wrap-around.
+// Positive sample strides are fixed by the format, and division here is a
+// compile-time constant (2 or 4) in both PCM cases.
+constexpr bool PcmOffsetsWithinBuffer(s32 start, s32 end, u64 bytes, u32 sample_bytes) noexcept {
+    return sample_bytes != 0 && start >= 0 && end >= 0 &&
+           static_cast<u64>(start) <= bytes / sample_bytes &&
+           static_cast<u64>(end) <= bytes / sample_bytes;
+}
+} // namespace
+"""
+assert expected_voice.count(voice_namespace)==1
+expected_voice=expected_voice.replace(voice_namespace,voice_namespace+helper)
+for pcm in ("PCM16","PCMFloat"):
+    before=( "        if (wave_buffer_internal.start_offset * byte_size > wave_buffer_internal.size ||\\n"
+             "            wave_buffer_internal.end_offset * byte_size > wave_buffer_internal.size) {\\n"
+             f'            LOG_ERROR(Service_Audio, "Invalid {pcm} start/end wavebuffer sizes!");' )
+    after=( "        if (!PcmOffsetsWithinBuffer(wave_buffer_internal.start_offset, wave_buffer_internal.end_offset,\\n"
+            "                                    wave_buffer_internal.size, byte_size)) {\\n"
+            f'            LOG_ERROR(Service_Audio, "Invalid {pcm} start/end wavebuffer sizes!");' )
+    assert expected_voice.count(before)==1,pcm
+    expected_voice=expected_voice.replace(before,after)
+assert (active/"audio_core/renderer/voice/voice_info.cpp").read_text()==expected_voice
 
 # Historical native sink-stream translation-unit parity. Do not use CMake
 # string rewriting or alter the release audio semantics while consolidating.
