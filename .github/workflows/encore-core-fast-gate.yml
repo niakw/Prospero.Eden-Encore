@@ -102,6 +102,7 @@ on:
       - 'tools/ci/check-final-engine-owner-contracts.py'
       - 'tools/check-native-sparse-jit-release-selector-host.py'
       - 'tools/prepare-vulkan-port.py'
+      - 'tools/check-vendored-vulkan-fork.py'
       - '.github/workflows/encore-core-fast-gate.yml'
   workflow_dispatch:
 
@@ -131,6 +132,13 @@ jobs:
         run: |
           g++ --version
           python3 --version
+      # Gate the exact generated/native Vulkan translation units *before*
+      # fast host fixtures. The earlier gate could be green while the full
+      # preflight failed on an ordered generator replacement mismatch.
+      - name: Pinned Vulkan source reproduction
+        run: |
+          set -euo pipefail
+          python3 -B tools/check-vendored-vulkan-fork.py
       - name: Vulkan arithmetic and frame worker guards
         run: |
           set -euo pipefail
