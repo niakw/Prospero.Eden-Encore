@@ -44,6 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -B tools/check-python-source-syntax.py
+          python3 -B tools/check-ps5-avatar-dds-host.py
           python3 -B tools/check-deferred-native-access-coverage.py
           python3 -B tools/ci/check-repo-hygiene.py
           python3 -B tools/ci/check-native-boilerplate-setup.py
