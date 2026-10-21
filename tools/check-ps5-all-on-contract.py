@@ -26,7 +26,13 @@ assert "!inputs.test_all_on &&" in workflow
 assert 'Prospero.Eden-Encore-PS5-all-on-test' in workflow
 assert 'python3 -B tools/ci/check-all-on-test-binary.py "$EDEN_STAGE_DIR" "$EDEN_TEST_TITLE_ID"' in workflow
 assert 'export EDEN_SPARSE_JIT_DEV=ON' in builder
-assert 'export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=ON' in builder
+# Dev all-on compiles all three candidate features; final release keeps them OFF.
+assert 'export EDEN_SHARED_JIT=ON EDEN_JIT_COMPILE_BATCH=ON' in builder
+assert 'export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=OFF' in builder
+assert '"EDEN_SHARED_JIT:BOOL": "ON"' in binary_gate
+assert '"EDEN_JIT_COMPILE_BATCH:BOOL": "ON"' in binary_gate
+assert 'if(EDEN_FINAL_RELEASE_PROFILE)' in cmake
+assert 'if(EDEN_SHARED_JIT OR EDEN_JIT_COMPILE_BATCH OR EDEN_SPARSE_JIT_DEV OR' in cmake
 assert 'EDEN_EXPERIMENT_DEFAULTS sparse=%u logical_cpu=%u frame_probe=%u safe=%u' in source
 assert '#ifdef PS5_NATIVE\n        // Default experimental profile for all native console builds' in source
 assert '-DEDEN_SPARSE_JIT_DEV="${EDEN_SPARSE_JIT_DEV:-OFF}"' in native
@@ -110,5 +116,5 @@ print("PASS: native Clang syntax flags reject invalid upstream alias and preserv
 
 print("PASS: PS5 native syntax gate runs in dev/release, honors prebuild bypass, keeps release-only checks isolated")
 
-print("PASS ALL_ON_PS5_TEST_CONTRACT: dev diagnostics remain separate; installable release defaults to sparse + logical probe + Vulkan pacing, subject to Safe Launch")
+print("PASS ALL_ON_PS5_TEST_CONTRACT: dev compiles sparse/shared/batch variants; final release forbids all three and keeps a separate shipping path")
 print("No PS5 hardware/glyph art qualification, SDK build or CI run")

@@ -43,7 +43,17 @@ assert "media_retry_timer_ >= 8.0f" in nav
 # permits a game to render with only its older cover/hero artwork.
 assert "const std::string& scan = rear ? game.box_back : game.box_front;" in lib
 assert "flat_front_fallback(c, game, paper);" in lib
-assert "else if (!game.hero.empty()) cover_crop(c, game.hero, art" in lib
+# The latest fallback deliberately uses aspect-fit (not crop), preserving
+# generic cover/hero titles when no authentic printed jacket is available.
+front_fallback = lib.split("void flat_front_fallback(", 1)[1].split(
+    "void flat_back_fallback(", 1)[0]
+fit_art = lib.split("void fit_fallback_art(", 1)[1].split(
+    "void flat_front_fallback(", 1)[0]
+assert "if (!game.cover.empty()) fit_fallback_art(c, game.cover, art);" in front_fallback
+assert "else if (!game.hero.empty()) fit_fallback_art(c, game.hero, art);" in front_fallback
+assert "if (source > target)" in fit_art and "else if (source < target)" in fit_art
+assert "c.list.image(image.texture, fit, {0.0f, 0.0f, 1.0f, 1.0f}" in fit_art
+assert "cover_crop(" not in front_fallback
 assert "if (image.missing) continue;" in lib
 assert "Loading artwork" in home and "Artwork unavailable" in home
 assert "text_shrink(c, title_label" in home

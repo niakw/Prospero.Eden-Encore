@@ -12,7 +12,15 @@ jit_links = (root / 'vendor/encore-active/eden-core/dynarmic/shared-jit/jit_link
 assert 'option(EDEN_SHARED_JIT "Enable the experimental cross-core A64 JIT" OFF)' in cmake
 assert 'option(EDEN_JIT_COMPILE_BATCH "Compile bounded A64 successor chains on a cache miss" OFF)' in cmake
 assert 'set(EDEN_SHARED_JIT ON)' not in cmake
-assert 'if(bits EQUAL 64 AND EDEN_SHARED_JIT)' in cmake
+# CMake now selects complete shared/standard A64 emitter units rather than
+# generating the JIT source with a shared-only foreach condition.
+assert 'if(bits EQUAL 64)' in cmake
+assert 'if(EDEN_SHARED_JIT)\n    set(EDEN_A64_EMITTER_UNIT "${EDEN_MAINTAINED_EMIT_ROOT}/a64_emit_x64_shared.cpp")' in cmake
+assert 'set(EDEN_A64_EMITTER_UNIT "${EDEN_MAINTAINED_EMIT_ROOT}/a64_emit_x64_standard.cpp")' in cmake
+assert 'if(EDEN_SHARED_JIT)\n    eden_shared_jit_sources()' in cmake
+assert 'if(EDEN_SHARED_JIT)\n    set(EDEN_A64_INTERFACE_UNIT "${EDEN_A64_INTERFACE_ROOT}/a64_interface_shared.cpp")' in cmake
+assert 'set(EDEN_A64_INTERFACE_UNIT "${EDEN_A64_INTERFACE_ROOT}/a64_interface_standard.cpp")' in cmake
+assert 'target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/a64_interface.cpp")' in cmake
 assert 'if(EDEN_SHARED_JIT OR EDEN_JIT_COMPILE_BATCH)' in cmake
 assert 'if(EDEN_JIT_COMPILE_BATCH AND (PS5_NATIVE OR CMAKE_SYSTEM_NAME STREQUAL "Linux"))' in cmake
 assert 'EDEN_SHARED_JIT_AVAILABLE=$<BOOL:${EDEN_SHARED_JIT}>' in cmake
