@@ -30,8 +30,8 @@ with tempfile.TemporaryDirectory(prefix="encore-avatar-") as tmp:
     p = pathlib.Path(tmp)
     red = struct.pack('<HHI', 0xf800, 0x001f, 0)
     (p / 'bc1.dds').write_bytes(dds(4, 4, red, 0x31545844))
-    (p / 'bc2.dds').write_bytes(dds(4, 4, b'\\xff' * 8 + red, 0x33545844))
-    (p / 'bc3.dds').write_bytes(dds(4, 4, b'\\xff\\x00' + b'\\x00' * 6 + red, 0x35545844))
+    (p / 'bc2.dds').write_bytes(dds(4, 4, bytes([255]) * 8 + red, 0x33545844))
+    (p / 'bc3.dds').write_bytes(dds(4, 4, bytes([255, 0]) + bytes([0]) * 6 + red, 0x35545844))
     (p / 'bgra.dds').write_bytes(dds(2, 2, bytes([0, 0, 255, 255]) * 4, 0,
                                   (0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000)))
     (p / 'truncated.dds').write_bytes(dds(4, 4, b'', 0x31545844))

@@ -1453,19 +1453,19 @@ std::string EdenServices::profile_avatar() {
             const std::string root =
                 std::string("/system_data/priv/cache/profile/") + prefix + id + "/";
             if (IsFile(root + "avatar.png")) {
-                std::fprintf(stderr, "EDEN_PROFILE_AVATAR format=png status=found\\n");
+                std::fprintf(stderr, "EDEN_PROFILE_AVATAR format=png status=found\n");
                 return root + "avatar.png";
             }
             for (const char* name : {"avatar128.dds", "avatar260.dds",
                                      "avatar64.dds", "avatar440.dds"}) {
                 if (IsFile(root + name)) {
-                    std::fprintf(stderr, "EDEN_PROFILE_AVATAR format=dds status=found\\n");
+                    std::fprintf(stderr, "EDEN_PROFILE_AVATAR format=dds status=found\n");
                     return root + name;
                 }
             }
         }
     }
-    std::fprintf(stderr, "EDEN_PROFILE_AVATAR status=missing_for_active_user\\n");
+    std::fprintf(stderr, "EDEN_PROFILE_AVATAR status=missing_for_active_user\n");
 #endif
     return {};
 }
