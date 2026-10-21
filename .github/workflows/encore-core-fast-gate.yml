@@ -62,6 +62,8 @@ on:
       - 'tools/check-native-batched-buffer-invalidation-host.py'
       - 'tools/check-native-single-range-buffer-invalidation-host.py'
       - 'tools/check-ps5-untextured-descriptor-sync-host.py'
+      - 'tools/check-ps5-known-empty-graphics-descriptors-host.py'
+      - 'vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h'
       - 'vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp'
       - 'vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp'
       - 'tools/check-vulkan-renderpass-clear-bounds-host.py'
@@ -136,6 +138,7 @@ jobs:
           python3 -B tools/check-native-batched-buffer-invalidation-host.py
           python3 -B tools/check-native-single-range-buffer-invalidation-host.py
           python3 -B tools/check-ps5-untextured-descriptor-sync-host.py
+          python3 -B tools/check-ps5-known-empty-graphics-descriptors-host.py
           python3 -B tools/check-vulkan-multirange-overflow-host.py
           python3 -B tools/check-vulkan-fence-completed-wait-host.py
           python3 -B tools/check-vulkan-pipeline-ready-publication-host.py

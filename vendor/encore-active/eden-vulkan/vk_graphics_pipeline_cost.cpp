@@ -650,7 +650,13 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
     buffer_cache.BindHostGeometryBuffers(is_indexed);
 
     { ::Eden::Performance::CachePhaseTimer cost{::Eden::Performance::CachePhase::DescriptorQueueAcquire};
-        guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer);
+        // Exact zero descriptor count: Acquire(0) otherwise reserves 1024
+        // entries and can stall the GPU worker under both guest cache locks.
+        if (num_descriptor_entries == 0) {
+            guest_descriptor_queue.AcquireKnownEmpty(uses_descriptor_buffer);
+        } else {
+            guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer);
+        }
     }
 
     ::Eden::Performance::CachePhaseTimer stage_descriptor_phase{

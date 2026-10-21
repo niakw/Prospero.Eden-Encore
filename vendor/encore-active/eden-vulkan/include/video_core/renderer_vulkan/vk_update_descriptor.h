@@ -58,6 +58,13 @@ public:
     void Acquire(Scheduler& scheduler, size_t required_entries = 0,
                  bool use_descriptor_buffer_ = false);
 #ifdef PS5_NATIVE
+    // Exact zero-descriptor graphics pipeline: publish an empty payload
+    // without the ordinary 1024-entry fallback reservation or GPU wait.
+    // Acquire(0) keeps its legacy semantics for other callers.
+    void AcquireKnownEmpty(bool use_descriptor_buffer_) noexcept {
+        use_descriptor_buffer = supports_descriptor_buffer && use_descriptor_buffer_;
+        upload_start = payload_cursor;
+    }
     template <typename WaitWorker>
     [[nodiscard]] bool PreflightGuestDraw(WaitWorker&& wait_worker) {
         // The common graphics descriptor reservation is at most 0x400
