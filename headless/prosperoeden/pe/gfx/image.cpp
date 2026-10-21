@@ -145,7 +145,7 @@ inline void Colors(const std::uint8_t* p, bool opaque, Pixel (&table)[4]) noexce
 }
 } // namespace avatar_detail
 
-inline bool load_avatar_dds(const std::string& path, Image* image) {
+bool load_avatar_dds(const std::string& path, Image* image) {
     if (!image) return false;
     *image = {};
     std::FILE* f = std::fopen(path.c_str(), "rb");
