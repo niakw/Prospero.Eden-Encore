@@ -33,6 +33,18 @@ with tempfile.TemporaryDirectory(prefix="eden-r312-TIC-") as d:
     begin = data.index("bool IsValidEntry(")
     end = data.index("\nboost::container::small_vector<BufferImageCopy", begin)
     fn = data[begin:end]
+    # The active CMake-selected overlay must preserve the historical PS5
+    # descriptor guard, not silently revert to upstream's permissive logic.
+    active = (root / "vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp").read_text()
+    active_begin = active.index("bool IsValidEntry(")
+    active_end = active.index("\\nboost::container::small_vector<BufferImageCopy", active_begin)
+    active_fn = active[active_begin:active_end]
+    for requirement in (
+        "config.format == static_cast<Tegra::Texture::TextureFormat>(0)",
+        "if (config.is_sparse == 0)",
+        "GpuToCpuAddress(address, guest_size_bytes).has_value()",
+    ):
+        assert requirement in active_fn, ("missing in active overlay", requirement)
     assert fn.count("#ifdef PS5_NATIVE") == 2
     assert "if (config.is_sparse == 0)" in fn
     assert "config.format == static_cast<Tegra::Texture::TextureFormat>(0)" in fn

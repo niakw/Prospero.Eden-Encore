@@ -58,6 +58,8 @@ on:
       - 'tools/check-vulkan-pipeline-ready-publication-host.py'
       - 'tools/check-vulkan-buffer-frame-tick-snapshot-host.py'
       - 'tools/check-ps5-quad-index-initial-fence-host.py'
+      - 'tools/check-ps5-active-texture-descriptor-host.py'
+      - 'vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp'
       - 'tools/check-vulkan-renderpass-clear-bounds-host.py'
       - 'tools/check-vulkan-worker-fatal-drain-host.py'
       - 'tools/check-vulkan-query-allocation-host.py'
@@ -126,6 +128,7 @@ jobs:
           set -euo pipefail
           python3 -B tools/check-vulkan-renderpass-clear-bounds-host.py
           python3 -B tools/check-native-gpu-fence-release-publication-host.py
+          python3 -B tools/check-ps5-active-texture-descriptor-host.py
           python3 -B tools/check-vulkan-multirange-overflow-host.py
           python3 -B tools/check-vulkan-fence-completed-wait-host.py
           python3 -B tools/check-vulkan-pipeline-ready-publication-host.py
