@@ -67,6 +67,10 @@ on:
       - '.github/workflows/encore-core-fast-gate.yml'
   workflow_dispatch:
 
+# Least privilege for the host-only gate (CodeQL workflow permissions #57).
+permissions:
+  contents: read
+
 concurrency:
   group: encore-fast-core-${{ github.ref }}
   cancel-in-progress: true
