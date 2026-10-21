@@ -1246,6 +1246,49 @@ astc_maintained = active / "eden-core/src/video_core/texture_cache/util.cpp"
 # Preserve the complete R428 source except named 3D-layout/policy changes.
 import hashlib
 astc_previous = astc_maintained.read_text()
+# This selected translation unit now includes the native-only R312 texture
+# descriptor guard. Verify its complete semantics, then reverse *only* this
+# reviewed delta before comparing against the pinned R428 ASTC git blob.
+# Any other change to the texture owner continues to fail closed.
+tic_begin = astc_previous.index("bool IsValidEntry(")
+tic_end = astc_previous.index("\\nboost::container::small_vector<BufferImageCopy", tic_begin)
+tic_active = astc_previous[tic_begin:tic_end]
+tic_baseline = (root / "vendor/sources/eden/src/video_core/texture_cache/util.cpp").read_text()
+tic_base_start = tic_baseline.index("bool IsValidEntry(")
+tic_base_end = tic_baseline.index("\\nboost::container::small_vector<BufferImageCopy", tic_base_start)
+tic_baseline = tic_baseline[tic_base_start:tic_base_end]
+expected_tic_native = '''bool IsValidEntry(const Tegra::MemoryManager& gpu_memory, const TICEntry& config) {
+#ifdef PS5_NATIVE
+    // The zero TIC format is invalid. Reject it before constructing a
+    // fallback RGBA image view (which can sample unrelated guest backing).
+    if (config.format == static_cast<Tegra::Texture::TextureFormat>(0)) {
+        return false;
+    }
+#endif
+    const GPUVAddr address = config.Address();
+    if (address == 0) {
+        return false;
+    }
+    if (address >= (1ULL << 40)) {
+        return false;
+    }
+    if (gpu_memory.GpuToCpuAddress(address).has_value()) {
+        return true;
+    }
+#ifdef PS5_NATIVE
+    // The range overload can succeed when only a *later* page is mapped.
+    // That is not proof the first page of a non-sparse texture exists.
+    if (config.is_sparse == 0) {
+        return false;
+    }
+#endif
+    const ImageInfo info{config};
+    const size_t guest_size_bytes = CalculateGuestSizeInBytes(info);
+    return gpu_memory.GpuToCpuAddress(address, guest_size_bytes).has_value();
+}'''
+assert tic_active == expected_tic_native, 'native TIC guard unreviewed drift'
+assert astc_previous.count(tic_active) == 1
+astc_previous = astc_previous.replace(tic_active, tic_baseline)
 astc_layout_edits = [
     ('    u32 output_offset = 0;\n    Common::ScratchBuffer<u8> decode_scratch;\n\n    const Extent2D tile_size = DefaultBlockSize(info.format);', '    if (copies.empty()) {\n        return;\n    }\n    u32 output_offset = 0;\n    Common::ScratchBuffer<u8> decode_scratch;\n\n    // One conversion must use one format policy for all its mip levels.\n    const auto recompression_setting = Settings::values.astc_recompression.GetValue();\n    const bool astc = IsPixelFormatASTC(info.format);\n    const Extent2D tile_size = DefaultBlockSize(info.format);'),
     ('        const auto recompression_setting = Settings::values.astc_recompression.GetValue();\n        const bool astc = IsPixelFormatASTC(info.format);\n\n        if (astc && recompression_setting == Settings::AstcRecompression::Uncompressed) {', '        if (astc && recompression_setting == Settings::AstcRecompression::Uncompressed) {'),
