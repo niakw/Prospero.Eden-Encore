@@ -249,3 +249,7 @@ Voir [EDEN_JIT_ALIAS_LOOKUP_OPTIMIZATION_2026-10-21.md](EDEN_JIT_ALIAS_LOOKUP_OP
 ## 21 octobre — journal natif silencieux
 
 Voir [EDEN_NATIVE_QUIET_LOG_REVIEW_2026-10-21.md](EDEN_NATIVE_QUIET_LOG_REVIEW_2026-10-21.md). Le formatage des messages sans backend actif est court-circuité dans le build natif, avec contrôle ASan/UBSan off/on/off. **407/491 pris en charge ; 22 fichiers moteur/runtime encore à traiter ; 62 UI du lanceur séparés ; 84 globalement.** Aucun FPS console prouvé.
+
+## 21 octobre — mutex slab HLE / ABI / IPC cold-path
+
+Voir [EDEN_HLE_SLAB_AND_RUNTIME_REVIEW_2026-10-21.md](EDEN_HLE_SLAB_AND_RUNTIME_REVIEW_2026-10-21.md). Modification ciblée de `k_slab_heap.h` : accès atomiques relaxed sous mutex déjà exclusif, avec test hôte multithread ASan/UBSan. Revue conservatrice de quatre sources (fastmem ABI, runtime C global, contrôleur audio et gestion des applications). **412/491 traités ; 17 moteur à examiner ; 62 UI séparés ; 79 globalement.** Aucun FPS PS5 qualifié.

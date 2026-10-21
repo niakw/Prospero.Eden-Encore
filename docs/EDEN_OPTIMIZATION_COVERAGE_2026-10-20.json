@@ -633,6 +633,14 @@
       "evidence": "Current source inspected: Témoin de différence entre compteurs cumulés sur deux présentations ; type constexpr sans horloge, allocation ou verrou, branché uniquement aux diagnostics. Rerun this review only on source drift or Écart mesuré entre progression guest et compteur de présentations."
     },
     {
+      "path": "headless/prosperoeden/runtime_shims.cpp",
+      "contract_id": "U87",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "6ce11f021f49f0ed8125f4cec571b391c254ef3c",
+      "source_review_document": "docs/EDEN_HLE_SLAB_AND_RUNTIME_REVIEW_2026-10-21.md",
+      "evidence": "This is the global C runtime owner linked with the emulator as well as launcher, not one of 62 UI sources. pthread_once spins with sceKernelUsleep only while library static initialization is in progress; strtof/fseek/ftell/strcasestr are small libc compatibility wrappers outside the game CPU/GPU draw loops. Do not invent micro-optimizations to libc behavior."
+    },
+    {
       "path": "headless/ps5_amd_topology_evidence.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U79",
@@ -830,6 +838,14 @@
       "reviewed_source_git_blob": "fca535072fdb6087814af775eacd27640a0fd6a1",
       "source_review_document": "docs/EDEN_NATIVE_LIGHTWEIGHT_SOURCE_REVIEW_2026-10-21.md",
       "evidence": "Source inspected: Native startup allocator shim; one posix_memalign call with alignment checks and diagnostic on failure. No per-frame loop; no safe redundant work to eliminate. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
+    },
+    {
+      "path": "src/fastmem.h",
+      "contract_id": "F12",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "32dd49e4d6d05b0b32b90d8cfb2404b33bbef5f4",
+      "source_review_document": "docs/EDEN_HLE_SLAB_AND_RUNTIME_REVIEW_2026-10-21.md",
+      "evidence": "Thin ABI header for direct fastmem access and PC/RSP slots on PS5/Linux. Runtime functions are declarations or one offset-based register access in a signal handler; no scan/allocation/polling to optimize. Firmware ABI offsets intentionally unchanged; do not change absent oracle proof."
     },
     {
       "path": "src/host_memory.cpp",
@@ -2378,6 +2394,22 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract H21: DEV sync IPC request/thread attribution now maintained, with exact former CMake code parity; the guest's resumed JIT PC after request completion remains unproved. CI witness retained. No FPS claim."
     },
     {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/am/service/application_functions.cpp",
+      "contract_id": "H32",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "6f80d50d4c732004bef6ff387dbbc68e0778d1e3",
+      "source_review_document": "docs/EDEN_HLE_SLAB_AND_RUNTIME_REVIEW_2026-10-21.md",
+      "evidence": "Application-management IPC for save-data setup, title/version metadata and lifecycle/event requests, not guest-JIT execution or frame-time synchronization. Handle-title operations are on-demand and no repeatedly taken critical renderer lock. Retain metadata fallback and notification semantics."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/audio/audio_controller.cpp",
+      "contract_id": "A10",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "2408420253c568a63b56713313be8290f3e4e9ec",
+      "source_review_document": "docs/EDEN_HLE_SLAB_AND_RUNTIME_REVIEW_2026-10-21.md",
+      "evidence": "HLE service requests for volume/output targets/mute, not PCM mixing. GetSetSys uses call_once and reuses a service pointer; SetTargetVolume/SetTargetMute perform work only on explicit IPC controls. Keep source behavior to avoid reintroducing audio service deadlock or sink mismatch."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/core/hle/service/audio/audio_controller.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "A11",
@@ -3128,6 +3160,13 @@
       "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_scheduler.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_slab_heap.h",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "H33",
+      "proof_ref": "tools/check-native-kernel-slab-mutex-host.py",
+      "evidence": "KSlabHeapImpl::Allocate/Free operations serialized by m_lock redundantly made four sequentially consistent atomic head accesses per pair of operations. Use relaxed loads/stores under the existing mutex to remove superfluous ordering; published head still atomic for initialization inspection. Host ASan/UBSan test stress concurrent allocate/free/exhaustion; no PS5 performance qualified."
     },
     {
       "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp",
