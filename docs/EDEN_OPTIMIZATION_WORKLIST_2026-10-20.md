@@ -269,3 +269,7 @@ Voir [EDEN_AUDIO_PCM_OVERFLOW_GUARD_2026-10-21.md](EDEN_AUDIO_PCM_OVERFLOW_GUARD
 ## 21 octobre — NPad HID 250 Hz / un seul profil
 
 [EDEN_HID_CADENCE_DECISION_2026-10-21.md](EDEN_HID_CADENCE_DECISION_2026-10-21.md) : période 4 ms contre 1 ms antérieure, moins de réveils CPU/HLE, latence d'échantillonnage potentiellement +3 ms, pas de gain FPS revendiqué ; oracles de parité et témoin ASan/UBSan. **416/491 pris en charge ; 13 moteur restants, 62 interface séparés.**
+
+## 21 octobre — DMA Maxwell contigu : un CopyBlock au lieu d'une boucle par ligne
+
+[EDEN_MAXWELL_DMA_CONTIGUOUS_BATCH_2026-10-21.md](EDEN_MAXWELL_DMA_CONTIGUOUS_BATCH_2026-10-21.md). Repli strict des transferts à pitch variable/chevauchement; qualification d'étendue et d'adresses, tests ASan/UBSan et oracle exact de source. **417/491 traités ; 12 moteur à examiner ; 62 lanceur séparés.** Gain FPS PS5 non mesuré.

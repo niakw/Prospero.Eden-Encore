@@ -2948,6 +2948,13 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract V78: Complete DEV-only render-condition diagnostic; exact parity with retired CMake rewriting; console behavior unqualified. CI witness retained. No FPS claim."
     },
     {
+      "path": "vendor/encore-active/eden-core/src/video_core/engines/maxwell_dma.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "U81",
+      "proof_ref": "tools/check-native-dma-contiguous-host.py",
+      "evidence": "Maxwell DMA pitch-to-pitch row copy used CopyBlock and flush for every row. New constexpr eligibility folds only positive contiguous equal pitches with non-overlapping src/dst, valid 64-bit end addresses and <=u32 max transfer into one memory manager CopyBlock. Other rows retain prior path. Pinned+audited extent source parity and C++20 ASan/UBSan source-extracted oracle. Console performance and title behavior not qualified."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/video_core/engines/puller_dev.cpp",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "V88",
