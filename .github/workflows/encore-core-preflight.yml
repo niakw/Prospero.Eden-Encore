@@ -70,6 +70,7 @@ jobs:
           python3 -B tools/check-native-single-range-buffer-invalidation-host.py
           python3 -B tools/check-ps5-untextured-descriptor-sync-host.py
           python3 -B tools/check-ps5-known-empty-graphics-descriptors-host.py
+          python3 -B tools/check-ps5-graphics-pipeline-aware-preflight-host.py
 
       - name: Audit generic graphics, JIT, runtime and filtered game networking
         run: |

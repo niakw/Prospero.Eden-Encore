@@ -93,6 +93,9 @@ public:
     [[nodiscard]] bool CanUseDescriptorBuffer() const noexcept {
         return uses_descriptor_buffer && descriptor_set_layout;
     }
+    [[nodiscard]] bool HasDescriptorEntries() const noexcept {
+        return num_descriptor_entries != 0;
+    }
     [[nodiscard]] size_t DescriptorEntryReservation() const noexcept {
         return num_descriptor_entries != 0 ? num_descriptor_entries : 0x400;
     }
