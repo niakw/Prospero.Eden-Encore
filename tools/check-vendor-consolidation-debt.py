@@ -1502,7 +1502,10 @@ clear_body = clear_body.replace('    const size_t size = amount * sizeof(u32);\n
     '    const size_t size = amount * sizeof(u32);\n'
     '    const bool dest_dirty = IsRegionRegistered(*cpu_dst_address, size);')
 r437_expected = r437_expected[:clear_start] + clear_body + r437_expected[clear_end:]
-assert (active / r437_rel).read_text() == r437_expected
+assert (active / r437_rel).read_text() == r437_expected, (
+    "R437 maintained buffer cache differs from source reconstruction; "
+    "check BufferPages registration, DMA copy bounds and DMA clear bounds"
+)
 assert 'configure_file("${EDEN_MAINTAINED_BUFFER_PAGES}"' in c
 assert 'write_derived("${PORT_BUILD_DIR}/buffer-pages/video_core/buffer_cache/buffer_cache.h"' not in c
 print("VENDOR_MAINTAINED_BUFFER_PAGES_PARITY_PASS: shipping backport and native-only selection")
