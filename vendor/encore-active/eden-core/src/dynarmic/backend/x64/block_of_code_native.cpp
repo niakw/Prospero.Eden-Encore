@@ -256,7 +256,9 @@ size_t BlockOfCode::SpaceRemaining() const {
 }
 
 void BlockOfCode::EnsureMemoryCommitted([[maybe_unused]] size_t codesize) {
-#ifdef PS5_NATIVE
+#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)
+    // Sparse commits belong only to explicit developer builds. Do not emit
+    // even the runtime atomic branch in the sole release JIT profile.
     if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed)) {
         const size_t written = getSize();
         const auto target = ::Eden::Jit::PlanSparseCommit(written, codesize, maxSize_);
