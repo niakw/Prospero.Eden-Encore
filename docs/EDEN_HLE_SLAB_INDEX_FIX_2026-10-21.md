@@ -8,4 +8,4 @@ Les trois helpers utilisent maintenant ce chemin. Cette correction vise à évit
 
 Le témoin hôte `tools/check-native-slab-index-host.py` compile sous ASan/UBSan une instanciation des trois méthodes du header actif avec des substituts d'interface minimale. Ni FPS console ni résolution du freeze FC27 ne sont revendiqués.
 
-**Couverture : 413/491**, **16 moteur/runtime à examiner**, **62 UI séparés**, **78 globalement**. 
+**Couverture : 413/491**, **16 moteur/runtime à examiner**, **62 UI séparés**, **78 globalement**.
