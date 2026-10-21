@@ -634,11 +634,11 @@
     },
     {
       "path": "headless/prosperoeden/runtime_shims.cpp",
-      "contract_id": "U87",
       "disposition": "reviewed_without_new_code_edit",
       "reviewed_source_git_blob": "6ce11f021f49f0ed8125f4cec571b391c254ef3c",
       "source_review_document": "docs/EDEN_HLE_SLAB_AND_RUNTIME_REVIEW_2026-10-21.md",
-      "evidence": "This is the global C runtime owner linked with the emulator as well as launcher, not one of 62 UI sources. pthread_once spins with sceKernelUsleep only while library static initialization is in progress; strtof/fseek/ftell/strcasestr are small libc compatibility wrappers outside the game CPU/GPU draw loops. Do not invent micro-optimizations to libc behavior."
+      "evidence": "This is the global C runtime owner linked with the emulator as well as launcher, not one of 62 UI sources. pthread_once spins with sceKernelUsleep only while library static initialization is in progress; strtof/fseek/ftell/strcasestr are small libc compatibility wrappers outside the game CPU/GPU draw loops. Do not invent micro-optimizations to libc behavior.",
+      "review_scope": "startup-shim"
     },
     {
       "path": "headless/ps5_amd_topology_evidence.h",
@@ -841,11 +841,11 @@
     },
     {
       "path": "src/fastmem.h",
-      "contract_id": "F12",
       "disposition": "reviewed_without_new_code_edit",
       "reviewed_source_git_blob": "32dd49e4d6d05b0b32b90d8cfb2404b33bbef5f4",
       "source_review_document": "docs/EDEN_HLE_SLAB_AND_RUNTIME_REVIEW_2026-10-21.md",
-      "evidence": "Thin ABI header for direct fastmem access and PC/RSP slots on PS5/Linux. Runtime functions are declarations or one offset-based register access in a signal handler; no scan/allocation/polling to optimize. Firmware ABI offsets intentionally unchanged; do not change absent oracle proof."
+      "evidence": "Thin ABI header for direct fastmem access and PC/RSP slots on PS5/Linux. Runtime functions are declarations or one offset-based register access in a signal handler; no scan/allocation/polling to optimize. Firmware ABI offsets intentionally unchanged; do not change absent oracle proof.",
+      "review_scope": "runtime-abi-interface"
     },
     {
       "path": "src/host_memory.cpp",
