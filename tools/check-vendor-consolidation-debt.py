@@ -1476,15 +1476,15 @@ assert r437_back.count(r437_before) == 1
 r437_expected = '#include "buffer_pages.h"\n' + r437_back.replace(r437_before, r437_after)
 # Preserve the native DMA copy span guard when reconstructing the maintained
 # BufferCache header. FindBuffer/SynchronizeBuffer narrow their spans to u32.
-copy_before = ("bool BufferCache<P>::DMACopy(GPUVAddr src_address, GPUVAddr dest_address, u64 amount) {\\n"
+copy_before = ("bool BufferCache<P>::DMACopy(GPUVAddr src_address, GPUVAddr dest_address, u64 amount) {\n"
                "    const std::optional<DAddr> cpu_src_address = gpu_memory->GpuToCpuAddress(src_address);")
-copy_after = ("bool BufferCache<P>::DMACopy(GPUVAddr src_address, GPUVAddr dest_address, u64 amount) {\\n"
-              "    // FindBuffer and SynchronizeBuffer accept u32 byte spans. Never truncate\\n"
-              "    // a wider DMA request: the caller can take its ordinary software path.\\n"
-              "    // Reject empty copies before dirty-range bookkeeping as well.\\n"
-              "    if (amount == 0 || amount > static_cast<u64>(~u32{0})) {\\n"
-              "        return false;\\n"
-              "    }\\n"
+copy_after = ("bool BufferCache<P>::DMACopy(GPUVAddr src_address, GPUVAddr dest_address, u64 amount) {\n"
+              "    // FindBuffer and SynchronizeBuffer accept u32 byte spans. Never truncate\n"
+              "    // a wider DMA request: the caller can take its ordinary software path.\n"
+              "    // Reject empty copies before dirty-range bookkeeping as well.\n"
+              "    if (amount == 0 || amount > static_cast<u64>(~u32{0})) {\n"
+              "        return false;\n"
+              "    }\n"
               "    const std::optional<DAddr> cpu_src_address = gpu_memory->GpuToCpuAddress(src_address);")
 assert r437_expected.count(copy_before) == 1
 r437_expected = r437_expected.replace(copy_before, copy_after)
