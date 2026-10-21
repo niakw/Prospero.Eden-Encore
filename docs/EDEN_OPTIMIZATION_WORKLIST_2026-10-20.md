@@ -253,3 +253,7 @@ Voir [EDEN_NATIVE_QUIET_LOG_REVIEW_2026-10-21.md](EDEN_NATIVE_QUIET_LOG_REVIEW_2
 ## 21 octobre — mutex slab HLE / ABI / IPC cold-path
 
 Voir [EDEN_HLE_SLAB_AND_RUNTIME_REVIEW_2026-10-21.md](EDEN_HLE_SLAB_AND_RUNTIME_REVIEW_2026-10-21.md). Modification ciblée de `k_slab_heap.h` : accès atomiques relaxed sous mutex déjà exclusif, avec test hôte multithread ASan/UBSan. Revue conservatrice de quatre sources (fastmem ABI, runtime C global, contrôleur audio et gestion des applications). **412/491 traités ; 17 moteur à examiner ; 62 UI séparés ; 79 globalement.** Aucun FPS PS5 qualifié.
+
+## 21 octobre — trois accès à l'index du slab corrigés
+
+Voir [EDEN_HLE_SLAB_INDEX_FIX_2026-10-21.md](EDEN_HLE_SLAB_INDEX_FIX_2026-10-21.md). `slab_helpers.h` appelait des méthodes/expressions non cohérentes avec le contrat du heap maintenu dans trois `GetSlabIndex`. Alignement sur `kernel.SlabHeap<Derived>().GetObjectIndex` ; test d'instanciation compilée C++20 ASan/UBSan ajouté à la CI. **413/491 traités ; 16 fichiers moteur/runtime à traiter ; 62 du lanceur séparés ; 78 globalement.** Correctif de robustesse, pas gain FPS déclaré.

@@ -3182,6 +3182,13 @@
       "evidence": "Current source inspected: Interface mince du worker de tâches kernel, délègue la gestion d’attente au thread worker ; pas de nouvelle allocation ni verrou dans ce header. Rerun this review only on source drift or Attente HLE reproduite avec stack pointant sur le manager."
     },
     {
+      "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/slab_helpers.h",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "H36",
+      "proof_ref": "tools/check-native-slab-index-host.py",
+      "evidence": "Three templated GetSlabIndex methods selected an absent or unqualified slab accessor (`GetIndex` or `SlabHeap<Derived>(kernel)`), despite the maintained KSlabHeap exposing `GetObjectIndex` via `kernel.SlabHeap<Derived>()`. Aligned all three references to the existing kernel/heap ABI. C++20 ASan/UBSan host witness explicitly instantiates all three helpers and checks returned indices; functional PS5 qualification separate."
+    },
+    {
       "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/svc/svc_address_arbiter.cpp",
       "disposition": "historical_host_contract_reviewed",
       "contract_id": "H13",
