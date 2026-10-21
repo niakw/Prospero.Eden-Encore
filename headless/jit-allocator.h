@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cerrno>
@@ -36,6 +38,7 @@ inline Xbyak::Allocator* EdenJitAllocator() {
         struct Mapping { void* writable; std::size_t size; bool sparse = false; };
         std::mutex mutex;
         std::unordered_map<std::uint8_t*, Mapping> mappings;
+        std::atomic<std::uint64_t> mapping_generation{1}; // invalidates per-worker alias memo
         std::uint8_t* alloc(std::size_t size) override {
 #ifdef EDEN_JIT_ALIAS_NATIVE
             auto* diagnostics = stdout; // Native stdout is the separate heap log.
@@ -69,6 +72,7 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                         if (!mappings.emplace(pointer,
                                               Mapping{writable, sparse_span, true}).second)
                             std::abort(); // A live executable VA must be unique
+                        mapping_generation.fetch_add(1, std::memory_order_release);
                     } catch (...) {
                         Common::ReleaseSparseJitCode(executable);
                         return nullptr;
@@ -128,6 +132,7 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                     std::lock_guard lock(mutex);
                     if (!mappings.emplace(pointer, Mapping{writable, mapped_span}).second)
                         std::abort(); // never alias two live code arenas at one RX VA
+                    mapping_generation.fetch_add(1, std::memory_order_release);
                     std::fprintf(diagnostics,
                                  "EDEN_JIT_ALIAS rx=%p rw=%p bytes=%zu active=1\n",
                                  static_cast<void*>(pointer), writable, mapped_span);
@@ -154,9 +159,30 @@ inline Xbyak::Allocator* EdenJitAllocator() {
 #endif
         }
         std::uint8_t* writableAddress(std::uint8_t* pointer) override {
-            std::lock_guard lock(mutex);
+            // Most emitted code reuses the same RX->RW alias many times.
+            // Hits need neither allocator mutex nor unordered_map lookup.
+            struct CachedEntry { std::uint8_t* executable{}; std::uint8_t* writable{}; };
+            struct ThreadCache {
+                std::uint64_t generation{};
+                std::array<CachedEntry, 8> entries{};
+            };
+            static thread_local ThreadCache cache{};
+            const auto generation = mapping_generation.load(std::memory_order_acquire);
+            const auto bits = reinterpret_cast<std::uintptr_t>(pointer);
+            const std::size_t slot = ((bits >> 12) ^ (bits >> 21)) & (cache.entries.size() - 1);
+            if (cache.generation == generation && cache.entries[slot].executable == pointer)
+                return cache.entries[slot].writable;
+            const std::lock_guard lock(mutex);
             const auto entry = mappings.find(pointer);
-            return entry == mappings.end() ? pointer : static_cast<std::uint8_t*>(entry->second.writable);
+            if (entry == mappings.end()) return pointer;
+            const auto latest = mapping_generation.load(std::memory_order_relaxed);
+            if (cache.generation != latest) {
+                cache.entries.fill({});
+                cache.generation = latest;
+            }
+            auto* writable = static_cast<std::uint8_t*>(entry->second.writable);
+            cache.entries[slot] = {pointer, writable};
+            return writable;
         }
         void free(std::uint8_t* pointer) override {
             {
@@ -169,6 +195,7 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                         Common::ReleaseSparseJitCode(pointer);
 #endif
                         mappings.erase(entry);
+                        mapping_generation.fetch_add(1, std::memory_order_release);
                         return;
                     }
                     if (munmap(pointer, mapping.size) != 0) std::abort();
@@ -179,6 +206,7 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                     if (munmap(mapping.writable, mapping.size) != 0) std::abort();
 #endif
                     mappings.erase(entry);
+                    mapping_generation.fetch_add(1, std::memory_order_release);
                     return;
                 }
             }
