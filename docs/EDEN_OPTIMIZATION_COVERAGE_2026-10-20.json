@@ -868,6 +868,13 @@
       "evidence": "Source inspected: Title termination/restart and fatal assertion fallbacks; sleeps only after exit is refused. Not a healthy gameplay hot path. Reopen if: this Git blob changes, new failure is reproduced, or a measured owner-specific cost appears."
     },
     {
+      "path": "src/memory_pages.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "M01",
+      "proof_ref": "tools/check-native-quiet-heap-commit-host.py",
+      "evidence": "PS5 CommitMemoryRange heap growth unconditionally sampled CLOCK_MONOTONIC four times, formatted a report, and called kernel Note even in quiet release, adding system calls on synchronous heap expansion. Gated only these diagnostics under EDEN_HEAP_GROWTH_TRACE, compiled for common in DEV; mandatory AllocateDirectOwned/MapDirectMemory, memset, rollback and physical_out untouched. Clang ASan/UBSan test compiles real production function in release/dev with SDK mapping stubs to compare clock/log calls and memory zeroing. No measured PS5 frame-time or heap map performance."
+    },
+    {
       "path": "vendor/encore-active/compiler-rt/emutls.c",
       "disposition": "previously_integrated_source_change",
       "contract_id": "B04",

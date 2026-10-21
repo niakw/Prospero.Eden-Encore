@@ -1594,6 +1594,9 @@ if(EDEN_DEV_PROFILE)
     endif()
     target_compile_definitions(eden-headless PRIVATE EDEN_DEV_PROFILE=1
         EDEN_DEV_PROFILE_TITLE="${EDEN_DEV_PROFILE_TITLE}")
+    # The direct-memory allocator belongs to 'common', not eden-headless.
+    # Keep timing/formatting of heap growth out of the normal release binary.
+    target_compile_definitions(common PRIVATE EDEN_HEAP_GROWTH_TRACE=1)
 endif()
 option(EDEN_GPU_PROBE "Run bounded graphics-only architecture matrix, then exit" OFF)
 if(EDEN_GPU_PROBE)

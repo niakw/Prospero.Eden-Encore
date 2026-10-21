@@ -948,12 +948,16 @@ bool CommitMemoryRange(void* address, std::size_t size, std::int64_t* physical_o
 #ifdef PS5_NATIVE
     // New backing pieces are allocated, mapped and cleared synchronously.
     // Measure ONLY heap growth (not the per-malloc or per-frame hot path).
+#ifdef EDEN_HEAP_GROWTH_TRACE
     timespec started{}, allocated{}, mapped{}, zeroed{};
     (void)clock_gettime(CLOCK_MONOTONIC, &started);
+#endif
     std::int64_t physical = -1;
     if (AllocateDirectOwned(size, LargePage, &physical) != 0)
         return false;
+#ifdef EDEN_HEAP_GROWTH_TRACE
     (void)clock_gettime(CLOCK_MONOTONIC, &allocated);
+#endif
     void* at = address;
     const auto map_rc = sceKernelMapDirectMemory(&at, size, PROT_READ | PROT_WRITE,
                                                 MAP_FIXED, physical, LargePage);
@@ -969,8 +973,11 @@ bool CommitMemoryRange(void* address, std::size_t size, std::int64_t* physical_o
         if (sceKernelReleaseDirectMemory(physical, size) != 0) std::abort();
         return false;
     }
+#ifdef EDEN_HEAP_GROWTH_TRACE
     (void)clock_gettime(CLOCK_MONOTONIC, &mapped);
+#endif
     std::memset(address, 0, size);
+#ifdef EDEN_HEAP_GROWTH_TRACE
     (void)clock_gettime(CLOCK_MONOTONIC, &zeroed);
     const auto delta_ns = [](const timespec& a, const timespec& b) noexcept -> unsigned long long {
         const auto elapsed = (static_cast<long long>(b.tv_sec) - static_cast<long long>(a.tv_sec)) *
@@ -984,6 +991,7 @@ bool CommitMemoryRange(void* address, std::size_t size, std::int64_t* physical_o
         size, address, static_cast<unsigned long long>(physical),
         delta_ns(started, allocated), delta_ns(allocated, mapped), delta_ns(mapped, zeroed));
     if (length > 0) Note(line);
+#endif
     // The 128 MiB initial heap backing has a specific physical owner. Return
     // it without any dynamic bookkeeping, so failed mspace initialization
     // can release PA as well as the 3 GiB virtual reservation.
