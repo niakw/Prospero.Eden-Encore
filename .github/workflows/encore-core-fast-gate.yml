@@ -86,6 +86,7 @@ on:
       - 'tools/check-native-a64-cache-invalidation-host.py'
       - 'vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp'
       - 'tools/check-native-jit-code-space-bounds-host.py'
+      - 'tools/check-native-sparse-jit-release-selector-host.py'
       - 'tools/prepare-vulkan-port.py'
       - '.github/workflows/encore-core-fast-gate.yml'
   workflow_dispatch:
@@ -153,6 +154,7 @@ jobs:
           python3 -B tools/check-native-a64-default-phases-host.py
           python3 -B tools/check-native-a64-cache-invalidation-host.py
           python3 -B tools/check-native-jit-code-space-bounds-host.py
+          python3 -B tools/check-native-sparse-jit-release-selector-host.py
           python3 -B tools/check-jit-sparse-host.py
           python3 -B tools/check-sparse-zero-bounds-host.py
           python3 -B tools/check-maintained-sparse-vector.py

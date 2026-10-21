@@ -56,6 +56,7 @@ jobs:
           python3 -B tools/ci/check-final-one-profile-source.py
           python3 -B tools/check-native-jit-alias-lookup-host.py
           python3 -B tools/check-native-jit-code-space-bounds-host.py
+          python3 -B tools/check-native-sparse-jit-release-selector-host.py
           python3 -B tools/check-native-kernel-slab-mutex-host.py
           python3 -B tools/check-native-slab-index-host.py
           python3 -B tools/check-ps5-quiet-log-filter-host.py

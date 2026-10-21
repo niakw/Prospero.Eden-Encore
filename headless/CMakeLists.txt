@@ -31,6 +31,11 @@ option(EDEN_FINAL_RELEASE_PROFILE "Enforce a single PS5 release execution profil
 if(EDEN_SPARSE_JIT_DEV AND NOT PS5_NATIVE)
     message(FATAL_ERROR "EDEN_SPARSE_JIT_DEV requires PS5_NATIVE")
 endif()
+# The switch must reach the native Dynarmic library itself, not only the
+# frontend. No compiled sparse memory branch is permitted in final release.
+if(EDEN_SPARSE_JIT_DEV)
+    target_compile_definitions(dynarmic PRIVATE EDEN_SPARSE_JIT_DEV=1)
+endif()
 include("${CMAKE_CURRENT_LIST_DIR}/dynarmic/shared-jit.cmake")
 # Register-allocator bookkeeping visits only the host locations in use (compile time).
 include("${CMAKE_CURRENT_LIST_DIR}/dynarmic/reg_alloc.cmake")

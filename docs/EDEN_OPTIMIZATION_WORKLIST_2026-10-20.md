@@ -309,3 +309,7 @@ Voir [EDEN_QUIET_HEAP_COMMIT_2026-10-21.md](EDEN_QUIET_HEAP_COMMIT_2026-10-21.md
 ## 21 octobre — capacité du cache JIT sans débordement arithmétique
 
 [EDEN_NATIVE_JIT_CODE_CAPACITY_2026-10-21.md](EDEN_NATIVE_JIT_CODE_CAPACITY_2026-10-21.md) : garde-fou `maxSize_-size_` avant l'allocation d'un bloc JIT, protections W^X conservées, témoin C++20 ASan/UBSan des tailles normales et extrêmes. **426/491 pris en charge ; 3 moteur restants ; 62 UI lanceur séparés.**
+
+## 21 octobre — branche atomique sparse JIT retirée à la compilation de la release
+
+Dans `block_of_code_native.cpp`, la branche de mapping sparse n'est plus compilée lorsque `EDEN_SPARSE_JIT_DEV` est OFF ; CMake transmet ce flag à Dynarmic exclusivement en DEV. Test de deux binaires C++20 ASan/UBSan, absence du marqueur sparse dans release. **Compteur inchangé 426/491 ; 3 moteur restants ; 62 UI séparés.**
