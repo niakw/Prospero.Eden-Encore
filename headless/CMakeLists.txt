@@ -1728,6 +1728,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/guest_write_deferred_bridge.cmake")
 # Release gate: Vulkan/RADV is the normal game renderer. The OpenGL SDK stays
 # for the launcher and Safe Launch recovery, not a second experimental build.
 if(EDEN_FINAL_RELEASE_PROFILE)
+    target_compile_definitions(eden-headless PRIVATE EDEN_FINAL_RELEASE_PROFILE=1)
     if(NOT PS5_NATIVE OR NOT EDEN_PS5_VULKAN OR NOT EDEN_PS5_OPENGL OR
        NOT EDEN_VULKAN_DRIVER STREQUAL "RADV")
         message(FATAL_ERROR "Final Encore requires native Vulkan/RADV and OpenGL launcher/recovery")
