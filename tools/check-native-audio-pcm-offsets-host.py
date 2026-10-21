@@ -22,6 +22,7 @@ cpp = r"""
 #include <cstdint>
 #include <cassert>
 #include <limits>
+#include <initializer_list>
 using s32 = std::int32_t;
 using u32 = std::uint32_t;
 using u64 = std::uint64_t;
