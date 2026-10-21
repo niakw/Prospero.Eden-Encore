@@ -10,6 +10,8 @@ on:
       - 'src/host_memory.cpp'
       - 'src/memory_pages.cpp'
       - 'headless/performance.h'
+      - 'headless/performance.cpp'
+      - 'tools/check-native-quiet-gpu-report-host.py'
       - 'tools/check-native-quiet-heap-commit-host.py'
       - 'tools/check-native-quiet-counters-host.py'
       - 'vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h'
@@ -145,6 +147,7 @@ jobs:
           python3 -B tools/check-fastmem-window-bounds-host.py
           python3 -B tools/check-native-quiet-heap-commit-host.py
           python3 -B tools/check-native-quiet-counters-host.py
+          python3 -B tools/check-native-quiet-gpu-report-host.py
           python3 -B tools/check-vendored-fiber-source.py
       - name: Native HLE waiter publication and overlay parity
         run: |

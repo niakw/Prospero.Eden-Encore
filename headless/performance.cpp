@@ -1121,6 +1121,11 @@ void ReportGpuThread(unsigned frame) {
     latest_gpu_report_ns.store(
         static_cast<unsigned long long>(Common::g_wall_clock.GetTimeNS().count()),
         std::memory_order_release);
+    // Publish the low-cost heartbeat regardless of logging. This is the only
+    // release-side signal the independent input watchdog needs to detect a
+    // stalled GPU worker; full snapshots can require expensive memory scans,
+    // clock queries and synchronous printing every report window.
+    if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return;
     if (detailed_gpu_profile.load(std::memory_order_relaxed)) {
         // Fresh UTC/monotonic correlation every sampled five-second frame
         // window, even when the session-start segment has already rotated.

@@ -285,3 +285,7 @@ Voir [EDEN_QUIET_HEAP_COMMIT_2026-10-21.md](EDEN_QUIET_HEAP_COMMIT_2026-10-21.md
 ## 21 octobre — source du pont différé exclue du runtime final
 
 [EDEN_DEFERRED_BRIDGE_PRODUCTION_EXCLUSION_2026-10-21.md](EDEN_DEFERRED_BRIDGE_PRODUCTION_EXCLUSION_2026-10-21.md) : `guest-bridge/memory_ps5_standard.cpp` n'est compilé que derrière `EDEN_GUEST_WRITE_BRIDGE_DEV=ON` (DEV), interdit par le profil final. Source liée à un blob et à son contrôle existant, pas de patch C++ ; **420/491 triés ; 9 fichiers moteur prod à traiter ; 62 lanceur séparés.**
+
+## 21 octobre — heartbeat GPU conservé, instantanés périodiques coûteux supprimés en mode silencieux
+
+[EDEN_QUIET_GPU_REPORT_HEARTBEAT_2026-10-21.md](EDEN_QUIET_GPU_REPORT_HEARTBEAT_2026-10-21.md) : `ReportGpuThread` conserve deux publications atomiques de progression nécessaires au watchdog, mais retourne avant les statistiques/snapshots et impressions si `detailed_gpu_profile=OFF`. Test C++20 ASan/UBSan du préfixe source et contrôle dans le fast gate. **421/491 sources traitées ; 8 moteur restants ; 62 lanceur séparés.**

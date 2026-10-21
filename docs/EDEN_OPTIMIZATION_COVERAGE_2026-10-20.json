@@ -601,6 +601,13 @@
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Controller input and rumble path has release/acquire pending hint before mutex; no hotpath locking on silent polls, preserve paired publication."
     },
     {
+      "path": "headless/performance.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "U47",
+      "proof_ref": "tools/check-native-quiet-gpu-report-host.py",
+      "evidence": "GPU-owner ReportGpuThread executed heap snapshots, live guest-memory queries, costly metrics aggregation, console printing and Snapshot every reporting interval even with detailed_gpu_profile OFF. Now always updates release heartbeat frame and timestamp before early return; full diagnostics run only when profile ON. Independent input-thread stall watchdog remains active. C++20 source-extracted ASan/UBSan witness validates quiet heartbeat and detailed clock sampling. Native console FPS and freeze behavior untested."
+    },
+    {
       "path": "headless/performance.h",
       "disposition": "code_changed_in_batch",
       "contract_id": "U48",
