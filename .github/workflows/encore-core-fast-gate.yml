@@ -8,6 +8,10 @@ on:
       - 'vendor/encore-active/eden-core/src/dynarmic/**'
       - 'vendor/encore-active/eden-core/src/common/sparse_large_vector.h'
       - 'src/host_memory.cpp'
+      - 'src/memory_pages.cpp'
+      - 'headless/performance.h'
+      - 'tools/check-native-quiet-heap-commit-host.py'
+      - 'tools/check-native-quiet-counters-host.py'
       - 'vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h'
       - 'tools/check-native-dma-clear-span-host.py'
       - 'vendor/encore-active/eden-core/src/video_core/engines/maxwell_dma.cpp'
@@ -139,6 +143,8 @@ jobs:
           python3 -B tools/check-sparse-zero-bounds-host.py
           python3 -B tools/check-maintained-sparse-vector.py
           python3 -B tools/check-fastmem-window-bounds-host.py
+          python3 -B tools/check-native-quiet-heap-commit-host.py
+          python3 -B tools/check-native-quiet-counters-host.py
           python3 -B tools/check-vendored-fiber-source.py
       - name: Native HLE waiter publication and overlay parity
         run: |

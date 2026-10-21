@@ -11,8 +11,8 @@ start="bool CommitMemoryRange(void* address, std::size_t size, std::int64_t* phy
 end="bool CommitMemoryRange(void* address, std::size_t size) noexcept {"
 assert source.count(start)==1 and source.count(end)==1
 body=source[source.index(start):source.index(end)]
-assert body.count("#ifdef EDEN_HEAP_GROWTH_TRACE")==3
-assert body.count("#endif")==4  # three trace blocks and the PS5_NATIVE split
+assert body.count("#ifdef EDEN_HEAP_GROWTH_TRACE")==4
+assert body.count("#endif")==5  # four trace blocks and the PS5_NATIVE split
 assert "std::memset(address, 0, size);" in body
 assert "if (physical_out) *physical_out = physical;" in body
 assert 'target_compile_definitions(common PRIVATE EDEN_HEAP_GROWTH_TRACE=1)' in cmake
