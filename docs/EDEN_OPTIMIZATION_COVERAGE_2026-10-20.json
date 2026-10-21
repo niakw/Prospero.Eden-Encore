@@ -2865,6 +2865,13 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract H39: Maintained rumble fallback generated verbatim from pinned controller; actual pad vibration on hardware not proved. CI witness retained. No FPS claim."
     },
     {
+      "path": "vendor/encore-active/eden-core/src/hid_core/resource_manager.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "H31",
+      "proof_ref": "tools/check-native-hid-cadence-host.py",
+      "evidence": "NPad HID service had an explicit 1ms/1000Hz overclock of its documented 4ms baseline. Changed the sole NPad timer to 4ms/250Hz (reducing scheduled callbacks x4) to favor CPU scheduler fairness; event lifetime and other HID periods unchanged. Checked source parity to pinned+two exact deltas, and host sanitizer period witness. Potential additional input sample latency up to 3ms; no measured FPS/PS5 validation."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/hid_core/resources/npad/npad_pause_diag.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "H52",

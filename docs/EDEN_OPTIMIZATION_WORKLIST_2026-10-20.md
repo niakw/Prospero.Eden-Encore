@@ -265,3 +265,7 @@ Voir [EDEN_MAXWELL_LOCAL_IMMEDIATE_IR_2026-10-21.md](EDEN_MAXWELL_LOCAL_IMMEDIAT
 ## 21 octobre — validation PCM sans multiplication susceptible de déborder
 
 Voir [EDEN_AUDIO_PCM_OVERFLOW_GUARD_2026-10-21.md](EDEN_AUDIO_PCM_OVERFLOW_GUARD_2026-10-21.md). Correction des deux branches PCM16/Float, test C++20 ASan/UBSan extrait de l'implémentation et branché en CI. **415/491 traités ; 14 moteur/runtime encore à examiner ; 62 interface séparés ; 76 globalement.** Aucune preuve matérielle FPS/audio revendiquée.
+
+## 21 octobre — NPad HID 250 Hz / un seul profil
+
+[EDEN_HID_CADENCE_DECISION_2026-10-21.md](EDEN_HID_CADENCE_DECISION_2026-10-21.md) : période 4 ms contre 1 ms antérieure, moins de réveils CPU/HLE, latence d'échantillonnage potentiellement +3 ms, pas de gain FPS revendiqué ; oracles de parité et témoin ASan/UBSan. **416/491 pris en charge ; 13 moteur restants, 62 interface séparés.**

@@ -7,7 +7,12 @@ maintained=(root/"vendor/encore-active/eden-core/src/hid_core/resource_manager.c
 old="input_event->Finalize(system.Kernel());"
 new="service_context.CloseEvent(input_event);"
 assert original.count(old)==1
-assert maintained==original.replace(old,new)
+# Keep exact pinned parity except for the audited event lifetime and HID period.
+old_period="// Correct npad_update_ns is 4ms this is overclocked to lower input lag\nconstexpr auto npad_update_ns = std::chrono::nanoseconds{1 * 1000 * 1000};    // (1ms, 1000Hz)"
+new_period="// Use the baseline 4 ms HID period rather than 1 ms overclocking.\n// Fewer input polling wakeups limit pressure on the guest event scheduler.\nconstexpr auto npad_update_ns = std::chrono::nanoseconds{4 * 1000 * 1000}; // 250 Hz"
+assert original.count(old_period)==1
+expected=original.replace(old,new).replace(old_period,new_period)
+assert maintained==expected
 assert maintained.count(new)==1
 cmake=(root/"headless/CMakeLists.txt").read_text()
 assert "set(EDEN_HID_RESOURCE " in cmake

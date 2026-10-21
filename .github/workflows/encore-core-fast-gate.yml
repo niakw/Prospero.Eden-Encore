@@ -53,6 +53,9 @@ on:
       - 'vendor/encore-active/eden-core/src/audio_core/sink/sink_stream.cpp'
       - 'tools/check-texture-convert-volume-host.py'
       - 'tools/check-audio-upmix-scratch-host.py'
+      - 'vendor/encore-active/eden-core/src/hid_core/resource_manager.cpp'
+      - 'tools/check-vendored-hid-resource-source.py'
+      - 'tools/check-native-hid-cadence-host.py'
       - 'tools/check-maintained-audio-units.py'
       - 'tools/check-upstream-texture-memory-r428.py'
       - 'headless/buffer_pages.h'
@@ -139,6 +142,8 @@ jobs:
           python3 -B tools/check-native-hle-state-transition-fastpath-host.py
           python3 -B tools/check-native-hle-suspend-noop-host.py
           python3 -B tools/check-native-ipc-wake-chain-host.py
+          python3 -B tools/check-vendored-hid-resource-source.py
+          python3 -B tools/check-native-hid-cadence-host.py
           python3 -B tools/audit-eden-progress-state.py
           python3 -B tools/check-eden-optimization-coverage.py
           python3 -B tools/check-vendor-archive-pin-contract-host.py
