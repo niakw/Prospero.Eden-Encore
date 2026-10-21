@@ -88,6 +88,13 @@ Result ReplyAndReceiveImpl(KernelCore& kernel, int32_t* out_index, uintptr_t mes
 
             // Receive the request.
             if (R_SUCCEEDED(result)) {
+                // Even a successful wake must identify an actual queued object.
+                // Fail closed rather than indexing before/after the wait buffer
+                // if an unexpected native wakeup publishes an invalid slot.
+                if (index < 0 || index >= num_objects || objs[index] == nullptr) {
+                    *out_index = -1;
+                    R_THROW(ResultOutOfRange);
+                }
                 KServerSession* session = objs[index]->DynamicCast<KServerSession*>();
                 if (session != nullptr) {
                     result = session->ReceiveRequest(kernel, message, buffer_size, message_paddr);

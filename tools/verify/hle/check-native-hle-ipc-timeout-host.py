@@ -37,7 +37,15 @@ fixed_index="""            // Wait may return cancellation/termination before se
             s32 index{-1};
             Result result = KSynchronizationObject::Wait(kernel, std::addressof(index), objs, num_objects, timeout);"""
 assert pinned.count(old)==1 and pinned.count(old_index)==1
-assert normal==pinned.replace(old,fixed).replace(old_index,fixed_index)
+# Preserve strict original-source parity: only deadline overflow, initialized
+# index and the production-only success-slot validity guard may differ.
+slot_before="            if (R_SUCCEEDED(result)) {\n                KServerSession* session = objs[index]->DynamicCast<KServerSession*>();"
+slot_after="            if (R_SUCCEEDED(result)) {\n                // Even a successful wake must identify an actual queued object.\n                // Fail closed rather than indexing before/after the wait buffer\n                // if an unexpected native wakeup publishes an invalid slot.\n                if (index < 0 || index >= num_objects || objs[index] == nullptr) {\n                    *out_index = -1;\n                    R_THROW(ResultOutOfRange);\n                }\n                KServerSession* session = objs[index]->DynamicCast<KServerSession*>();"
+expected=pinned.replace(old,fixed).replace(old_index,fixed_index)
+assert expected.count(slot_before)==1
+expected=expected.replace(slot_before,slot_after)
+assert normal==expected
+assert slot_before in dev and slot_after not in dev
 assert dev.count(fixed_index)==1
 assert old not in dev and dev.count(fixed)==1
 assert "BeginGuestIpc(ipc_tid, ipc_start)" in dev

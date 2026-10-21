@@ -30,6 +30,8 @@ for source in (standard, developer):
     assert body.index("s32 index{-1};") < body.index("KSynchronizationObject::Wait(")
     assert body.index("if (ResultTimedOut == result)") < body.index("*out_index = index;")
     assert body.index("if (R_SUCCEEDED(result))") < body.index("*out_index = index;")
+assert "if (index < 0 || index >= num_objects || objs[index] == nullptr)" in extract(standard)
+assert "if (index < 0 || index >= num_objects || objs[index] == nullptr)" not in extract(developer)
 assert "s32 index{-1};" not in extract(pinned)
 
 code = r"""
@@ -46,6 +48,7 @@ static constexpr Result ResultCancelled = 11;
 static constexpr Result ResultTimedOut = 12;
 static constexpr Result ResultTerminated = 13;
 static constexpr Result ResultNotFound = 14;
+static constexpr Result ResultOutOfRange = 15;
 #define R_SUCCEEDED(value) ((value) == ResultSuccess)
 #define R_RETURN(value) return (value)
 #define R_THROW(value) return (value)
@@ -68,11 +71,12 @@ int KServerSession::receive_calls = 0;
 Result KServerSession::receive_result = ResultSuccess;
 static std::vector<Result> results;
 static std::size_t next_result = 0;
+static s32 simulated_success_index = 0;
 Result KSynchronizationObject::Wait(KernelCore&, s32* index,
                                     KSynchronizationObject**, s32, s64) {
     assert(next_result < results.size());
     const auto r = results[next_result++];
-    if (r == ResultSuccess) *index = 0;
+    if (r == ResultSuccess) *index = simulated_success_index;
     return r;
 }
 Result ReplyAndReceive(KernelCore& kernel, s32* out_index,
@@ -83,10 +87,12 @@ Result ReplyAndReceive(KernelCore& kernel, s32* out_index,
 INJECT
 }
 static void Scenario(const std::vector<Result>& plan, Result expected,
-                     s32 expected_index, Result receive = ResultSuccess) {
+                     s32 expected_index, Result receive = ResultSuccess,
+                     s32 success_index = 0, bool empty_object = false) {
     KernelCore kernel;
     KServerSession session;
-    KSynchronizationObject* objects[] = {&session};
+    KSynchronizationObject* objects[] = {empty_object ? nullptr : &session};
+    simulated_success_index = success_index;
     results = plan;
     next_result = 0;
     KServerSession::receive_calls = 0;
@@ -106,6 +112,13 @@ int main() {
     // ReceiveRequest's NotFound retries the synchronization wait; a later
     // cancellation returns an unambiguous invalid slot.
     Scenario({ResultSuccess, ResultCancelled}, ResultCancelled, -1, ResultNotFound);
+#ifdef EDEN_IPC_STANDARD_SLOT_CHECK
+    // The normal native path must refuse impossible success slots before
+    // dereferencing objs[index]; DEV deliberately retains its pinned path.
+    Scenario({ResultSuccess}, ResultOutOfRange, -1, ResultSuccess, -1);
+    Scenario({ResultSuccess}, ResultOutOfRange, -1, ResultSuccess, 1);
+    Scenario({ResultSuccess}, ResultOutOfRange, -1, ResultSuccess, 0, true);
+#endif
     std::puts("ENCORE_HLE_IPC_INDEX_HOST_PASS");
 }
 """
@@ -125,7 +138,9 @@ with tempfile.TemporaryDirectory(prefix="encore-hle-ipc-index-") as folder:
         path.write_text(code.replace("INJECT", extract(source)))
         subprocess.run([compiler, "-std=c++20", "-O1", "-pthread", "-Wall", "-Wextra",
                         "-Werror", "-fsanitize=address,undefined",
-                        "-fno-sanitize-recover=all", str(path), "-o", str(binary)],
+                        "-fno-sanitize-recover=all",
+                        *(["-DEDEN_IPC_STANDARD_SLOT_CHECK=1"] if name == "standard" else []),
+                        str(path), "-o", str(binary)],
                        check=True, capture_output=True, text=True, timeout=90)
         result = subprocess.run([str(binary)], capture_output=True, text=True, timeout=30)
         assert result.returncode == 0, (name, result.stdout[-1000:], result.stderr[-2000:])

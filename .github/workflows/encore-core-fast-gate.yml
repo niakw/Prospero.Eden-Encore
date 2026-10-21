@@ -40,6 +40,9 @@ on:
       - 'tools/check-native-hle-state-transition-fastpath-host.py'
       - 'tools/check-native-hle-suspend-noop-host.py'
       - 'tools/check-native-ipc-wake-chain-host.py'
+      - 'vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc_standard.cpp'
+      - 'tools/verify/hle/check-native-hle-ipc-timeout-host.py'
+      - 'tools/verify/hle/check-native-hle-ipc-receive-index-host.py'
       - 'tools/audit-eden-progress-state.py'
       - 'tools/check-eden-optimization-coverage.py'
       - 'tools/check-vendored-deps.py'
@@ -162,6 +165,8 @@ jobs:
           python3 -B tools/check-native-hle-state-transition-fastpath-host.py
           python3 -B tools/check-native-hle-suspend-noop-host.py
           python3 -B tools/check-native-ipc-wake-chain-host.py
+          python3 -B tools/verify/hle/check-native-hle-ipc-timeout-host.py
+          python3 -B tools/verify/hle/check-native-hle-ipc-receive-index-host.py
           python3 -B tools/check-vendored-hid-resource-source.py
           python3 -B tools/check-native-hid-cadence-host.py
           python3 -B tools/audit-eden-progress-state.py
