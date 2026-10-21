@@ -10,6 +10,9 @@ on:
       - 'src/host_memory.cpp'
       - 'vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h'
       - 'tools/check-native-dma-clear-span-host.py'
+      - 'vendor/encore-active/eden-core/src/video_core/engines/maxwell_dma.cpp'
+      - 'tools/check-native-dma-extent-host.py'
+      - 'tools/check-native-dma-contiguous-host.py'
       - 'vendor/encore-active/eden-core/overrides/core/gpu_dirty_memory_manager.h'
       - 'tools/check-native-gpu-dirty-transition-host.py'
       - 'tools/check-native-gpu-dirty-gather-host.py'
@@ -115,6 +118,8 @@ jobs:
           python3 -B tools/check-vulkan-tfb-bank-lookup-host.py
           python3 -B tools/check-vulkan-samples-scratch-host.py
           python3 -B tools/check-native-dma-clear-span-host.py
+          python3 -B tools/check-native-dma-extent-host.py
+          python3 -B tools/check-native-dma-contiguous-host.py
           python3 -B tools/check-native-gpu-dirty-transition-host.py
           python3 -B tools/check-native-gpu-dirty-gather-host.py
       - name: Texture volume layout and audio scratch reuse

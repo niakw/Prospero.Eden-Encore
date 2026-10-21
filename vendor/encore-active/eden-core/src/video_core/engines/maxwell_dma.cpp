@@ -21,6 +21,29 @@ namespace Tegra::Engines {
 
 using namespace Texture;
 
+namespace {
+// Fold a row-wise DMA into one guest-memory copy only when every row is
+// contiguous, both byte ranges are representable and do not overlap.
+constexpr bool CanCoalescePitchDma(u64 source, u64 dest, u32 width, u32 rows,
+                                   s64 pitch_in, s64 pitch_out, u64& total) noexcept {
+    total = 0;
+    if (width == 0 || rows == 0 || pitch_in != static_cast<s64>(width) ||
+        pitch_out != static_cast<s64>(width) ||
+        width > (~u32{0}) / rows) {
+        return false;
+    }
+    const u64 bytes = static_cast<u64>(width) * rows;
+    if (source > ~u64{0} - bytes || dest > ~u64{0} - bytes) {
+        return false;
+    }
+    if (!(source + bytes <= dest || dest + bytes <= source)) {
+        return false;
+    }
+    total = bytes;
+    return true;
+}
+} // namespace
+
 MaxwellDMA::MaxwellDMA(MemoryManager& memory_manager_)
     : memory_manager{memory_manager_}
 {
@@ -76,12 +99,23 @@ void MaxwellDMA::Launch() {
         }
 
         if (is_src_pitch && is_dst_pitch) {
-            for (u32 line = 0; line < regs.line_count; ++line) {
-                const GPUVAddr source_line =
-                    regs.offset_in + static_cast<size_t>(line) * regs.pitch_in;
-                const GPUVAddr dest_line =
-                    regs.offset_out + static_cast<size_t>(line) * regs.pitch_out;
-                memory_manager.CopyBlock(dest_line, source_line, regs.line_length_in);
+            u64 contiguous_bytes = 0;
+            if (CanCoalescePitchDma(regs.offset_in, regs.offset_out, regs.line_length_in,
+                                    regs.line_count, regs.pitch_in, regs.pitch_out,
+                                    contiguous_bytes)) {
+                // A single mapped copy/flush avoids a row-wise GPU memory walk.
+                memory_manager.CopyBlock(regs.offset_out, regs.offset_in,
+                                         static_cast<size_t>(contiguous_bytes));
+            } else {
+                // Retain exact row-by-row semantics for overlapping, gapped,
+                // negative-pitch or large transfers.
+                for (u32 line = 0; line < regs.line_count; ++line) {
+                    const GPUVAddr source_line =
+                        regs.offset_in + static_cast<size_t>(line) * regs.pitch_in;
+                    const GPUVAddr dest_line =
+                        regs.offset_out + static_cast<size_t>(line) * regs.pitch_out;
+                    memory_manager.CopyBlock(dest_line, source_line, regs.line_length_in);
+                }
             }
         } else {
             if (!is_src_pitch && is_dst_pitch) {
