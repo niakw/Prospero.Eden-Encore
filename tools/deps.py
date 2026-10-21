@@ -113,6 +113,20 @@ def present(item):
     return (ROOT / marker).exists() if marker else location(item).exists()
 
 
+def missing_setup_outputs(item, path):
+    """Every output of the pinned native bootstrap is mandatory, not just the SDK."""
+    expected = [item['setup_creates'], *item.get('setup_requires', ())]
+    stamps = item.get('setup_version_stamps', {})
+    missing = []
+    for rel in expected:
+        output = path / rel
+        if not output.is_file():
+            missing.append(rel)
+        elif rel in stamps and output.read_text().strip() != stamps[rel]:
+            missing.append(rel)
+    return missing
+
+
 def digest(path, algorithm):
     hasher = hashlib.new(algorithm)
     with open(path, 'rb') as source:
@@ -289,7 +303,7 @@ def fetch_git(item):
                     mode = (member.external_attr >> 16) & 0o777
                     if mode and not member.is_dir():
                         os.chmod(sdk_root / member.filename, mode)
-    if 'setup' in item and not (path / item['setup_creates']).exists():
+    if 'setup' in item and missing_setup_outputs(item, path):
         print(f'deps: setting up {item["name"]}: {" ".join(item["setup"])}', flush=True)
         env = None
         if sys.platform == 'darwin' and item['name'] == 'boilerplate':
@@ -300,6 +314,9 @@ def fetch_git(item):
             env['ARFLAGS'] = 'rcs'
             env['MAKEFLAGS'] = '-e'
         subprocess.run(item['setup'], cwd=path, check=True, env=env)
+        missing = missing_setup_outputs(item, path)
+        if missing:
+            fail(f'{item["name"]}: native setup incomplete after bootstrap: {", ".join(missing)}')
 
 
 def ensure_saved_archive(item):
@@ -423,8 +440,10 @@ def status():
                 else:
                     mismatched += 1
                     state = f'present at {head[:12] if head else "no git checkout"}, pinned {item["commit"][:12]}'
-                if 'setup' in item and not (path / item['setup_creates']).exists():
-                    state += '; setup pending'
+                if 'setup' in item:
+                    missing = missing_setup_outputs(item, path)
+                    if missing:
+                        state += '; setup pending: ' + ', '.join(missing)
         else:
             state = 'ok' if present(item) else 'missing'
         print(f'{item["name"]:<{width}}  {state:<40}  {where}')
@@ -449,8 +468,9 @@ def verify():
             if dirty:
                 summary = '; '.join(dirty.splitlines()[:4])
                 problems.append(f'{item["name"]}: tracked checkout changes: {summary}')
-            if 'setup' in item and not (location(item) / item['setup_creates']).exists():
-                problems.append(f'{item["name"]}: setup output missing: {item["setup_creates"]}')
+            if 'setup' in item:
+                for missing in missing_setup_outputs(item, location(item)):
+                    problems.append(f'{item["name"]}: setup output missing: {missing}')
     if problems:
         for problem in problems:
             print('deps:', problem, file=sys.stderr)

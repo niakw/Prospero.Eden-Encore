@@ -144,6 +144,8 @@ jobs:
       - name: Validate release metadata and legal bundle
         if: ${{ env.RESUME_STAGE_RUN_ID == '' && !inputs.build_only }}
         run: |
+          python3 -B tools/ci/check-repo-hygiene.py
+          python3 -B tools/ci/check-native-boilerplate-setup.py
           python3 -B tools/ci/check-release-metadata.py
           python3 -B tools/ci/check-licenses.py
 
