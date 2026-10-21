@@ -13,10 +13,18 @@ tracked = set(filter(None, subprocess.check_output(
 owned = {path for path in tracked if not path.startswith("vendor/")}
 errors = []
 junk_dir = {"__pycache__", "node_modules", ".pytest_cache", ".mypy_cache",
-            ".ruff_cache", ".tox", ".nox", ".venv", ".idea", ".vscode"}
-junk_names = {".DS_Store", "Thumbs.db"}
+            ".ruff_cache", ".tox", ".nox", ".venv", ".idea", ".vscode",
+            "CMakeFiles", "Testing", "coverage"}
+junk_names = {".DS_Store", "Thumbs.db", "CMakeCache.txt", "cmake_install.cmake",
+              "compile_commands.json", ".ninja_deps", ".ninja_log", ".coverage"}
 junk_extensions = (".pyc", ".pyo", ".swp", ".swo", ".tmp", ".bak", ".orig",
-                   ".rej", ".o", ".obj", ".log")
+                   ".rej", ".o", ".obj", ".log", ".gcda", ".gcno", ".profraw", ".profdata")
+# The two former editable source-background paths carried the same Git blob.
+# Keep one original for future design edits; package art uses encore-background.jpg.
+if "assets/launch-background-source.png" in tracked:
+    errors.append("redundant legacy background source reintroduced")
+if "assets/background-source.png" not in tracked:
+    errors.append("canonical editable background source missing")
 for name in sorted(owned):
     path = Path(name)
     if (any(part in junk_dir for part in path.parts)
