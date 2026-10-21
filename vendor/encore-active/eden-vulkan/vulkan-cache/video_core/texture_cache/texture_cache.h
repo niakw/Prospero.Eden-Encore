@@ -563,7 +563,19 @@ SamplerId TextureCache<P>::GetSamplerId(u32 index, bool compute) {
         channel_state->sampler_ids.insert_or_assign(map_index, id);
         return id;
     }
+#ifdef PS5_NATIVE
+    // A descriptor table can retain its bytes after a channel map entry
+    // is evicted/rebuilt. Never dereference a missing sampler mapping.
+    const auto it = channel_state->sampler_ids.find(map_index);
+    if (it == channel_state->sampler_ids.end()) {
+        const auto id = FindSampler(descriptor, compute);
+        channel_state->sampler_ids.insert_or_assign(map_index, id);
+        return id;
+    }
+    return it->second;
+#else
     return channel_state->sampler_ids.find(map_index)->second;
+#endif
 }
 
 template <class P>
@@ -814,9 +826,11 @@ ImageViewId TextureCache<P>::VisitImageView(u32 index, bool compute) {
     // backing. Remapping a GPU virtual address does NOT rewrite the TIC bytes,
     // so DescriptorTable::Read returns is_new=false forever and the texture
     // otherwise stays missing (e.g. streamed HUD/jersey material).
-    // Only revalidate previously NULL views: common valid views retain the
-    // original zero-overhead fast path and sparse TICs retain their semantics.
-    if (it->second == NULL_IMAGE_VIEW_ID && IsValidEntry(*gpu_memory, descriptor)) {
+    // Revalidate NULL views and recover an unexpectedly absent channel
+    // mapping. Valid cached views retain their normal fast path.
+    if ((it == channel_state->image_view_ids.end() ||
+         it->second == NULL_IMAGE_VIEW_ID) &&
+        IsValidEntry(*gpu_memory, descriptor)) {
         const auto [pair, is_new_tc] = channel_state->image_views.try_emplace(descriptor);
         // CreateImageView can itself return NULL after a transient missing GPU
         // page. An existing map entry with a NULL value must be retried too;
@@ -830,6 +844,12 @@ ImageViewId TextureCache<P>::VisitImageView(u32 index, bool compute) {
             ++texture_bindings_serial;
         channel_state->image_view_ids.insert_or_assign(map_index, pair->second);
         return pair->second;
+    }
+    // A cached, invalid TIC is allowed to have no live view. Materialize
+    // the NULL mapping so later page residency can revive it safely.
+    if (it == channel_state->image_view_ids.end()) {
+        channel_state->image_view_ids.insert_or_assign(map_index, NULL_IMAGE_VIEW_ID);
+        return NULL_IMAGE_VIEW_ID;
     }
 #endif
     if (it->second != NULL_IMAGE_VIEW_ID)

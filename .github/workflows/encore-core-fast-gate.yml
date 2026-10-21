@@ -68,6 +68,7 @@ on:
       - 'tools/check-ps5-graphics-stage-view-cursors-host.py'
       - 'tools/check-ps5-graphics-pipeline-aware-preflight-host.py'
       - 'tools/check-ps5-empty-image-view-retirement-host.py'
+      - 'tools/check-ps5-texture-channel-missing-mapping-host.py'
       - 'vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h'
       - 'vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h'
       - 'vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp'
@@ -158,6 +159,7 @@ jobs:
           python3 -B tools/check-ps5-graphics-stage-view-cursors-host.py
           python3 -B tools/check-ps5-graphics-pipeline-aware-preflight-host.py
           python3 -B tools/check-ps5-empty-image-view-retirement-host.py
+          python3 -B tools/check-ps5-texture-channel-missing-mapping-host.py
           python3 -B tools/check-vulkan-multirange-overflow-host.py
           python3 -B tools/check-vulkan-fence-completed-wait-host.py
           python3 -B tools/check-vulkan-pipeline-ready-publication-host.py
