@@ -451,7 +451,10 @@ inline std::atomic<unsigned> idle_spin_iterations{25000};
 // This is a candidate optimization, not a measured PS5 FPS improvement.
 inline std::atomic<unsigned> dispatch_mask{15};
 inline void CountIdle(std::size_t core, long long nanoseconds, bool slept) {
-    if (core >= guest_idle.size()) return;
+    // A quiet release must not bounce the guest-core counter cache lines on
+    // every HLE idle/wake cycle. These statistics are diagnostic only.
+    if (!detailed_gpu_profile.load(std::memory_order_relaxed) ||
+        core >= guest_idle.size()) return;
     guest_idle[core].calls.fetch_add(1, std::memory_order_relaxed);
     guest_idle[core].nanoseconds.fetch_add(static_cast<unsigned long long>(nanoseconds), std::memory_order_relaxed);
     if (slept) guest_idle[core].sleeps.fetch_add(1, std::memory_order_relaxed);
@@ -459,7 +462,10 @@ inline void CountIdle(std::size_t core, long long nanoseconds, bool slept) {
 // Development: reads 32-bit guest words for code dumps (installed by the frontend per session).
 inline bool (*guest_read32)(unsigned long long address, unsigned& value) = nullptr;
 inline void CountCondition(unsigned slot) {
-    if (slot < render_conditions.size()) render_conditions[slot].fetch_add(1, std::memory_order_relaxed);
+    // Conditional-rendering decision counts are never needed to draw a frame.
+    if (!detailed_gpu_profile.load(std::memory_order_relaxed) ||
+        slot >= render_conditions.size()) return;
+    render_conditions[slot].fetch_add(1, std::memory_order_relaxed);
 }
 inline bool BootTrace() {
     const auto end = boot_trace_end.load(std::memory_order_relaxed);

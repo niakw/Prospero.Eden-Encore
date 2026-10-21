@@ -601,6 +601,13 @@
       "evidence": "Source-read optimization triage, no additional hotpath edit justified: Controller input and rumble path has release/acquire pending hint before mutex; no hotpath locking on silent polls, preserve paired publication."
     },
     {
+      "path": "headless/performance.h",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "U48",
+      "proof_ref": "tools/check-native-quiet-counters-host.py",
+      "evidence": "Production guest idle/wake and Maxwell render-enable decision counters performed unconditional relaxed atomic writes even when detailed_gpu_profile was OFF. CountIdle and CountCondition now early-return in quiet gameplay; diagnostics ON preserve original counts and bounds handling. Source-extracted C++20 ASan/UBSan witness checks quiet 100k calls and full ON/OFF cycle. CPU/graphics semantics and lock ordering unchanged, FPS unmeasured."
+    },
+    {
       "path": "headless/pipeline_trace_registry.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U72",
