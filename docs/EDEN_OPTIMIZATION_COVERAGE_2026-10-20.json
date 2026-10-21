@@ -2598,6 +2598,15 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract H22: DEV service dispatch/caller traces now maintained and source-parity checked; handler return while service lock is held is not proof that the blocked guest resumed execution. CI witness retained. No FPS claim."
     },
     {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/sm/sm.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "H51",
+      "reviewed_source_git_blob": "83e0b7e26a867d578eb869389a807fe3b9c7035b",
+      "source_review_document": "docs/EDEN_LAST_ENGINE_OWNERS_2026-10-21.md",
+      "proof_ref": "tools/ci/check-final-engine-owner-contracts.py",
+      "evidence": "Maintained SM already releases registry lock before invoking factory, distinguishes dummy host worker from guest SleepThread, and is pinned to replayable audited service patch. No additional wait algorithm is safe without a synchronized registration notification path and guest IPC lifecycle proof."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/core/hle/service/sockets/bsd.cpp",
       "disposition": "previously_integrated_source_change",
       "contract_id": "N20",
@@ -2773,6 +2782,15 @@
       "proof_ref": "tools/check-maintained-a64-interface.py",
       "profile_visibility": "optional_or_staged",
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract B11: Shared implementation selected directly, historical group body preserved; mode OFF by default, console unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_interface_standard.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "J10",
+      "reviewed_source_git_blob": "20362a046adfe89d65225c1822104f2910eeb2c5",
+      "source_review_document": "docs/EDEN_LAST_ENGINE_OWNERS_2026-10-21.md",
+      "proof_ref": "tools/ci/check-final-engine-owner-contracts.py",
+      "evidence": "Selected A64 standard JIT keeps valid bounded invalidation, cache pressure/evacuation, and profile/BATCH code behind compile-time DEV flags. Detailed profiling is already absent from production and sparse selected out at library compilation; no new source edit justified without guest frame-time evidence."
     },
     {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_host.cpp",
@@ -3266,6 +3284,15 @@
       "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
+    },
+    {
+      "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "H34",
+      "reviewed_source_git_blob": "e2f359a54cb6b879bdd41f092cf1ea19fb03e4e6",
+      "source_review_document": "docs/EDEN_LAST_ENGINE_OWNERS_2026-10-21.md",
+      "proof_ref": "tools/ci/check-final-engine-owner-contracts.py",
+      "evidence": "The KThread ABI uses cross-host-worker binary_semaphore permits, paired by maintained scheduler try_acquire/release. Changing ordering/field layout in only this header would risk cross-core deadlocks and ABI drift; existing host wake and suspend witnesses apply. No further safe standalone header optimization."
     },
     {
       "path": "vendor/encore-active/eden-threading/src/core/hle/kernel/k_worker_task_manager.h",

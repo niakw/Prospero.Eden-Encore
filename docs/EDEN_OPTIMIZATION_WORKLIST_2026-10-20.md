@@ -313,3 +313,7 @@ Voir [EDEN_QUIET_HEAP_COMMIT_2026-10-21.md](EDEN_QUIET_HEAP_COMMIT_2026-10-21.md
 ## 21 octobre — branche atomique sparse JIT retirée à la compilation de la release
 
 Dans `block_of_code_native.cpp`, la branche de mapping sparse n'est plus compilée lorsque `EDEN_SPARSE_JIT_DEV` est OFF ; CMake transmet ce flag à Dynarmic exclusivement en DEV. Test de deux binaires C++20 ASan/UBSan, absence du marqueur sparse dans release. **Compteur inchangé 426/491 ; 3 moteur restants ; 62 UI séparés.**
+
+## 21 octobre — trois propriétaires moteur conservés après audit complet
+
+[EDEN_LAST_ENGINE_OWNERS_2026-10-21.md](EDEN_LAST_ENGINE_OWNERS_2026-10-21.md) : `sm.h` (H51), `k_thread.h` (H34), `a64_interface_standard.cpp` (J10) maintenus sans modifications spéculatives après revue des dépendances, protections, variantes DEV et témoins hôte existants. Oracle à empreintes Git et sélection CMake ajouté dans les deux gates. **429/491 classifiés ; 0 moteur non examiné, 62 fichiers UI séparés**. Ces trois fichiers sont *audités, non optimisés à nouveau* ; validation PS5 toujours distincte.
