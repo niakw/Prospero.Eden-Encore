@@ -75,6 +75,7 @@ jobs:
           python3 -B tools/check-ps5-graphics-stage-view-cursors-host.py
           python3 -B tools/check-ps5-graphics-pipeline-aware-preflight-host.py
           python3 -B tools/check-ps5-empty-image-view-retirement-host.py
+          python3 -B tools/check-ps5-texture-channel-missing-mapping-host.py
 
       - name: Audit generic graphics, JIT, runtime and filtered game networking
         run: |
