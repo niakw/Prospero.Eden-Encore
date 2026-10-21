@@ -512,7 +512,9 @@ size_t BlockOfCode::GetTotalCodeSize() const {
 }
 
 void* BlockOfCode::AllocateFromCodeSpace(size_t alloc_size) {
-    if (size_ + alloc_size >= maxSize_) {
+    // Fail before address arithmetic: a wrapped size_ + alloc_size could
+    // otherwise bypass the code-cache capacity check and zero unmapped VA.
+    if (size_ >= maxSize_ || alloc_size >= maxSize_ - size_) {
         using Xbyak::Error;
         XBYAK_THROW(Xbyak::ERR_CODE_IS_TOO_BIG);
     }

@@ -2783,6 +2783,13 @@
       "evidence": "Previous audit host contract B09: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-block-of-code.py ; exécution native PS5, FPS et comportement invité non qualifiés"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "J09",
+      "proof_ref": "tools/check-native-jit-code-space-bounds-host.py",
+      "evidence": "Native JIT code allocation checked size_+alloc_size against maxSize_ before advancing the cursor or clearing new bytes. Unsigned overflow could bypass that capacity bound, leading to writes outside mapped JIT memory. Now rejects size_>=maxSize_ and alloc_size >= maxSize_-size_ before any arithmetic, preserving exact-fit rejection and successful valid zeroing/commit. C++20 ASan/UBSan test extracts actual allocator method and checks wrap, exact bound, zeroing and no side effects after rejected allocations. W^X/patch ordering unchanged."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code.h",
       "disposition": "historical_host_contract_reviewed",
       "contract_id": "B10",
