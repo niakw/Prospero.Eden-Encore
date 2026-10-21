@@ -828,6 +828,13 @@ boost::container::small_vector<ImageCopy, 16> MakeReinterpretImageCopies(const I
 }
 
 bool IsValidEntry(const Tegra::MemoryManager& gpu_memory, const TICEntry& config) {
+#ifdef PS5_NATIVE
+    // The zero TIC format is invalid. Reject it before constructing a
+    // fallback RGBA image view (which can sample unrelated guest backing).
+    if (config.format == static_cast<Tegra::Texture::TextureFormat>(0)) {
+        return false;
+    }
+#endif
     const GPUVAddr address = config.Address();
     if (address == 0) {
         return false;
@@ -838,6 +845,13 @@ bool IsValidEntry(const Tegra::MemoryManager& gpu_memory, const TICEntry& config
     if (gpu_memory.GpuToCpuAddress(address).has_value()) {
         return true;
     }
+#ifdef PS5_NATIVE
+    // The range overload can succeed when only a *later* page is mapped.
+    // That is not proof the first page of a non-sparse texture exists.
+    if (config.is_sparse == 0) {
+        return false;
+    }
+#endif
     const ImageInfo info{config};
     const size_t guest_size_bytes = CalculateGuestSizeInBytes(info);
     return gpu_memory.GpuToCpuAddress(address, guest_size_bytes).has_value();

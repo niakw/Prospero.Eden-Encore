@@ -65,6 +65,7 @@ jobs:
           python3 -B tools/check-native-slab-index-host.py
           python3 -B tools/check-ps5-quiet-log-filter-host.py
           python3 -B tools/check-ps5-quad-index-initial-fence-host.py
+          python3 -B tools/check-ps5-active-texture-descriptor-host.py
 
       - name: Audit generic graphics, JIT, runtime and filtered game networking
         run: |
