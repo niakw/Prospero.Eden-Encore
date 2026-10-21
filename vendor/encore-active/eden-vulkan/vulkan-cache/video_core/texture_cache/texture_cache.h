@@ -2752,6 +2752,13 @@ void TextureCache<P>::DeleteImage(ImageId image_id, bool immediate_delete) {
 
 template <class P>
 void TextureCache<P>::RemoveImageViewReferences(std::span<const ImageViewId> removed_views) {
+#ifdef PS5_NATIVE
+    // Images created and retired without any view cannot be in a channel's
+    // descriptor-to-view map. Avoid scanning every channel on that path.
+    if (removed_views.empty()) {
+        return;
+    }
+#endif
     for (size_t c : active_channel_ids) {
         auto& channel_info = channel_storage[c];
         auto it = channel_info.image_views.begin();
@@ -2768,6 +2775,13 @@ void TextureCache<P>::RemoveImageViewReferences(std::span<const ImageViewId> rem
 
 template <class P>
 void TextureCache<P>::RemoveFramebuffers(std::span<const ImageViewId> removed_views) {
+#ifdef PS5_NATIVE
+    // No framebuffer can contain an absent view. Do not flush deferred
+    // clears belonging to other render targets or scan the framebuffer map.
+    if (removed_views.empty()) {
+        return;
+    }
+#endif
     runtime.FlushDeferredClear();
     auto it = framebuffers.begin();
     while (it != framebuffers.end()) {
