@@ -343,9 +343,16 @@ GraphicsPipeline::GraphicsPipeline(
         std::ranges::copy(info->constant_buffer_used_sizes, uniform_buffer_sizes[stage].begin());
         num_image_elements += Shader::NumDescriptors(info->texture_buffer_descriptors);
         num_image_elements += Shader::NumDescriptors(info->image_buffer_descriptors);
-        num_textures += Shader::NumDescriptors(info->texture_descriptors);
-        num_image_elements += Shader::NumDescriptors(info->texture_descriptors);
-        num_image_elements += Shader::NumDescriptors(info->image_descriptors);
+        // Descriptor ranges are immutable for this compiled pipeline.
+        // These two stage cursor offsets used to be rescanned per draw
+        // while both guest GPU caches were locked.
+        const size_t sampled_views = Shader::NumDescriptors(info->texture_descriptors);
+        const size_t storage_views = Shader::NumDescriptors(info->image_descriptors);
+        stage_sampled_view_counts[stage] = sampled_views;
+        stage_storage_view_counts[stage] = storage_views;
+        num_textures += sampled_views;
+        num_image_elements += sampled_views;
+        num_image_elements += storage_views;
         num_descriptor_entries += NumDescriptorEntries(*info);
     }
     fragment_has_color0_output = stage_infos[NUM_STAGES - 1].stores_frag_color[0];
@@ -625,9 +632,11 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
                 add_buffer(desc);
             }
         }
-        texture_buffer_it += Shader::NumDescriptors(info.texture_descriptors);
+        // Stage descriptor counts were recorded during construction,
+        // outside the paired guest buffer/texture cache lock.
+        texture_buffer_it += stage_sampled_view_counts[stage];
         if constexpr (Spec::has_images) {
-            texture_buffer_it += Shader::NumDescriptors(info.image_descriptors);
+            texture_buffer_it += stage_storage_view_counts[stage];
         }
     }};
     if constexpr (Spec::enabled_stages[0]) {

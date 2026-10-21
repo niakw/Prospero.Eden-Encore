@@ -1674,7 +1674,7 @@ adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
      '#endif'),
     # Immutable image-stage presence flag prevents empty helper work on
     # zero-texture passes without disturbing stage buffer bindings.
-    ("    u32 num_textures{};", "    u32 num_textures{};\n    std::array<bool, NUM_STAGES> stage_has_image_bindings{};"),
+    ("    u32 num_textures{};", "    u32 num_textures{};\n    std::array<bool, NUM_STAGES> stage_has_image_bindings{};\n    std::array<size_t, NUM_STAGES> stage_sampled_view_counts{};\n    std::array<size_t, NUM_STAGES> stage_storage_view_counts{};"),
     ('#include <atomic>', '#include <atomic>\n#include <memory>'),
 ])
 
@@ -1772,6 +1772,11 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
     ]
     if name == 'vk_graphics_pipeline':
         replacements.extend([
+            # Pipeline construction precomputes immutable descriptor cursor
+            # increments once, instead of rescanning two descriptor vectors
+            # per enabled graphics stage while paired cache mutexes are held.
+            ("        num_textures += Shader::NumDescriptors(info->texture_descriptors);\n        num_image_elements += Shader::NumDescriptors(info->texture_descriptors);\n        num_image_elements += Shader::NumDescriptors(info->image_descriptors);", "        // Descriptor ranges are immutable for this compiled pipeline.\n        // These two stage cursor offsets used to be rescanned per draw\n        // while both guest GPU caches were locked.\n        const size_t sampled_views = Shader::NumDescriptors(info->texture_descriptors);\n        const size_t storage_views = Shader::NumDescriptors(info->image_descriptors);\n        stage_sampled_view_counts[stage] = sampled_views;\n        stage_storage_view_counts[stage] = storage_views;\n        num_textures += sampled_views;\n        num_image_elements += sampled_views;\n        num_image_elements += storage_views;"),
+            ("        texture_buffer_it += Shader::NumDescriptors(info.texture_descriptors);\n        if constexpr (Spec::has_images) {\n            texture_buffer_it += Shader::NumDescriptors(info.image_descriptors);\n        }", "        // Stage descriptor counts were recorded during construction,\n        // outside the paired guest buffer/texture cache lock.\n        texture_buffer_it += stage_sampled_view_counts[stage];\n        if constexpr (Spec::has_images) {\n            texture_buffer_it += stage_storage_view_counts[stage];\n        }"),
             # Source-proven no-image stage fast path; only stage metadata is
             # hoisted. The descriptor queue and image-view cursor are kept
             # untouched for empty stages, while bindings still execute.

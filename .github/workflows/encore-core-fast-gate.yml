@@ -65,6 +65,7 @@ on:
       - 'tools/check-ps5-untextured-descriptor-sync-host.py'
       - 'tools/check-ps5-known-empty-graphics-descriptors-host.py'
       - 'tools/check-ps5-empty-image-stage-host.py'
+      - 'tools/check-ps5-graphics-stage-view-cursors-host.py'
       - 'tools/check-ps5-graphics-pipeline-aware-preflight-host.py'
       - 'tools/check-ps5-empty-image-view-retirement-host.py'
       - 'vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h'
@@ -154,6 +155,7 @@ jobs:
           python3 -B tools/check-ps5-untextured-descriptor-sync-host.py
           python3 -B tools/check-ps5-known-empty-graphics-descriptors-host.py
           python3 -B tools/check-ps5-empty-image-stage-host.py
+          python3 -B tools/check-ps5-graphics-stage-view-cursors-host.py
           python3 -B tools/check-ps5-graphics-pipeline-aware-preflight-host.py
           python3 -B tools/check-ps5-empty-image-view-retirement-host.py
           python3 -B tools/check-vulkan-multirange-overflow-host.py

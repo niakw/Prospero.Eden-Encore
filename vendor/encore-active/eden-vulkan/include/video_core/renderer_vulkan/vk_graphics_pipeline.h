@@ -203,6 +203,8 @@ private:
     size_t num_image_elements{};
     u32 num_textures{};
     std::array<bool, NUM_STAGES> stage_has_image_bindings{};
+    std::array<size_t, NUM_STAGES> stage_sampled_view_counts{};
+    std::array<size_t, NUM_STAGES> stage_storage_view_counts{};
     bool fragment_has_color0_output{};
 
     vk::DescriptorSetLayout descriptor_set_layout;
