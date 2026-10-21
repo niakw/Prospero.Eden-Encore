@@ -7,7 +7,7 @@ import tempfile
 root=Path(__file__).resolve().parents[1]
 src=(root/"vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp").read_text()
 b=src.index("    GraphicsPipeline* pipeline{pipeline_cache.CurrentGraphicsPipeline()};")
-e=src.index("    for (unsigned preflight = 0;",b)
+e=src.index("#ifdef PS5_NATIVE\n    for (unsigned preflight = 0;",b)
 selected=src[b:e]
 assert "pipeline->HasDescriptorEntries()" in selected
 assert selected.count("pipeline_cache.CurrentGraphicsPipeline()") == 2
