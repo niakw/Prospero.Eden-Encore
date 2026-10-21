@@ -43,3 +43,20 @@ __pycache__/
 *.log
 .env
 .env.*
+
+# Generated CMake/Ninja products and local test/coverage reports.
+# Never blanket-ignore pinned vendor source archives or authoring images.
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+Testing/
+.ninja_deps
+.ninja_log
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+*.dSYM/
+coverage/
+.coverage
