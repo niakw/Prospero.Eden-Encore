@@ -632,6 +632,13 @@ adapt('src/video_core/renderer_vulkan/vk_update_descriptor.h',
      '''    void Acquire(Scheduler& scheduler, size_t required_entries = 0,
                  bool use_descriptor_buffer_ = false);
 #ifdef PS5_NATIVE
+    // Exact zero-descriptor graphics pipeline: publish an empty payload
+    // without the ordinary 1024-entry fallback reservation or GPU wait.
+    // Acquire(0) keeps its legacy semantics for other callers.
+    void AcquireKnownEmpty(bool use_descriptor_buffer_) noexcept {
+        use_descriptor_buffer = supports_descriptor_buffer && use_descriptor_buffer_;
+        upload_start = payload_cursor;
+    }
     template <typename WaitWorker>
     [[nodiscard]] bool PreflightGuestDraw(WaitWorker&& wait_worker) {
         // The common graphics descriptor reservation is at most 0x400
@@ -1806,6 +1813,23 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
             ('buffer_cache.UpdateGraphicsBuffers(is_indexed);', 'GraphicsBufferUpdate'),
             ('guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer);', 'DescriptorQueueAcquire'),
         ):
+            if name == 'vk_graphics_pipeline' and phase == 'DescriptorQueueAcquire':
+                # Zero descriptors are known from immutable Shader::Info counts.
+                # Acquire(0) is a legacy 1024-entry reservation: don't block
+                # both guest cache locks for a draw that writes no entries.
+                replacements.append(
+                    ('    ' + expression,
+                     '    { ::Eden::Performance::CachePhaseTimer cost{'
+                     '::Eden::Performance::CachePhase::DescriptorQueueAcquire};\n'
+                     '        // Exact zero descriptor count: Acquire(0) otherwise reserves 1024\n'
+                     '        // entries and can stall the GPU worker under both guest cache locks.\n'
+                     '        if (num_descriptor_entries == 0) {\n'
+                     '            guest_descriptor_queue.AcquireKnownEmpty(uses_descriptor_buffer);\n'
+                     '        } else {\n'
+                     '            ' + expression + '\n'
+                     '        }\n'
+                     '    }'))
+                continue
             if name == 'vk_graphics_pipeline' and phase == 'TextureDescriptorSync':
                 # No descriptors: skip TIC/TSC synchronization entirely for this
                 # draw; table changes are consumed on the next textured draw.
