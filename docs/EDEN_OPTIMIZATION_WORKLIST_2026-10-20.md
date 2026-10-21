@@ -273,3 +273,7 @@ Voir [EDEN_AUDIO_PCM_OVERFLOW_GUARD_2026-10-21.md](EDEN_AUDIO_PCM_OVERFLOW_GUARD
 ## 21 octobre — DMA Maxwell contigu : un CopyBlock au lieu d'une boucle par ligne
 
 [EDEN_MAXWELL_DMA_CONTIGUOUS_BATCH_2026-10-21.md](EDEN_MAXWELL_DMA_CONTIGUOUS_BATCH_2026-10-21.md). Repli strict des transferts à pitch variable/chevauchement; qualification d'étendue et d'adresses, tests ASan/UBSan et oracle exact de source. **417/491 traités ; 12 moteur à examiner ; 62 lanceur séparés.** Gain FPS PS5 non mesuré.
+
+## 21 octobre — compteurs invités/graphismes désactivés en mode silencieux
+
+Voir [EDEN_QUIET_GUEST_COUNTER_OPT_2026-10-21.md](EDEN_QUIET_GUEST_COUNTER_OPT_2026-10-21.md). Les compteurs atomiques `CountIdle` et `CountCondition` ne modifient plus les compteurs si le profilage détaillé est coupé, avec témoin C++20 ASan/UBSan du mode OFF/ON. **418/491 fichiers traités ; 11 moteur à examiner ; 62 lanceur séparés.** Gains console non mesurés.
