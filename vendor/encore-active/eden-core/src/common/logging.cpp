@@ -433,6 +433,14 @@ void SetColorConsoleBackendEnabled(bool enabled) {
 }
 
 void FmtLogMessageImpl(Class log_class, Level log_level, const char* filename, unsigned int line_num, const char* function, fmt::string_view format, const fmt::format_args& args) {
+#ifdef __OPENORBIS__
+    // Native builds have no file/debugger/logcat backend. When the only
+    // console backend is OFF, do not format messages that nobody can read.
+    // Toggling it back on preserves filtering and the existing log format.
+    if (logging_instance &&
+        !logging_instance->color_console_backend.enabled.load(std::memory_order_relaxed))
+        return;
+#endif
     if (logging_instance && logging_instance->filter.CheckMessage(log_class, log_level)) {
         auto const flush = ::Settings::values.log_flush_line.GetValue();
         char buffer[BUFSIZ];
