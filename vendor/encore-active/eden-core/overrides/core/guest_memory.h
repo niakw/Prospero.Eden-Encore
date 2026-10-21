@@ -121,6 +121,10 @@ public:
         m_addr = addr;
         m_size = size;
         if (m_size == 0) {
+            // This object may be reused after a preceding direct alias or
+            // scratch copy. Never expose a stale pointer for an empty command.
+            m_data_span = {};
+            m_span_valid = false;
             m_is_data_copy = true;
             return {};
         }

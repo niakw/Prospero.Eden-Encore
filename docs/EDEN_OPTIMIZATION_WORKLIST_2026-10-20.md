@@ -301,3 +301,7 @@ Voir [EDEN_QUIET_HEAP_COMMIT_2026-10-21.md](EDEN_QUIET_HEAP_COMMIT_2026-10-21.md
 ## 21 octobre — IPC HLE : garde-fou sur index de réveil réussi
 
 [EDEN_NATIVE_IPC_WAIT_SLOT_GUARD_2026-10-21.md](EDEN_NATIVE_IPC_WAIT_SLOT_GUARD_2026-10-21.md) : validation index/objet avant déréférencement dans `svc_ipc_standard.cpp`, rejet propre des réveils incohérents, source DEV inchangée ; tests réels ASan/UBSan et oracle exact de parité. **424/491 traités ; 5 moteur à examiner ; 62 lanceur séparés.**
+
+## 21 octobre — lectures mémoire invitées de taille zéro sans ancien pointeur
+
+[EDEN_NATIVE_GUEST_EMPTY_READ_SPAN_2026-10-21.md](EDEN_NATIVE_GUEST_EMPTY_READ_SPAN_2026-10-21.md) : le header `GuestMemory::Read` remet à zéro le span et sa validité sur les lectures vides; les parcours non vides et le protocole de synchronisation CPU/GPU restent identiques. Test C++20 ASan/UBSan du header maintenu, branchement fast gate et prévalidation. **425/491 pris en charge ; 4 moteur restants ; 62 lanceur séparés.**
