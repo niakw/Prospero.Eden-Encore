@@ -281,6 +281,13 @@
       "evidence": "Plan de budget JIT calculé avant les threads invités (4 arènes, overhead direct, plafond relatif 1536 MiB). Atomiques de cache figées par titre ; aucun calcul du plan par bloc compilé ; la fragmentation nécessite une mesure matérielle avant rééquilibrage. Ouvrir de nouveau si blob modifié ou cas reproductible."
     },
     {
+      "path": "headless/fastmem_handler.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "J07",
+      "proof_ref": "tools/check-native-fastmem-signal-install-host.py",
+      "evidence": "Fastmem signal Install originally intercepted SIGSEGV before attempting SIGBUS; a SIGBUS registration failure returned false while retaining custom SIGSEGV handler. Now restores original SIGSEGV handler or fails closed if restoration itself fails. JIT range registration refuses begin=0, publication-sentinel begin, zero size or uint64 overflow before publishing range; fast fault path unchanged. Source-extracted C++20 mock-sigaction success/failure/rollback/overflow ASan+UBSan test; no PS5 performance qualification."
+    },
+    {
       "path": "headless/filesystem_probe.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U35",

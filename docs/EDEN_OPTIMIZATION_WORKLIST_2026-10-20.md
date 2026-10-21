@@ -289,3 +289,7 @@ Voir [EDEN_QUIET_HEAP_COMMIT_2026-10-21.md](EDEN_QUIET_HEAP_COMMIT_2026-10-21.md
 ## 21 octobre — heartbeat GPU conservé, instantanés périodiques coûteux supprimés en mode silencieux
 
 [EDEN_QUIET_GPU_REPORT_HEARTBEAT_2026-10-21.md](EDEN_QUIET_GPU_REPORT_HEARTBEAT_2026-10-21.md) : `ReportGpuThread` conserve deux publications atomiques de progression nécessaires au watchdog, mais retourne avant les statistiques/snapshots et impressions si `detailed_gpu_profile=OFF`. Test C++20 ASan/UBSan du préfixe source et contrôle dans le fast gate. **421/491 sources traitées ; 8 moteur restants ; 62 lanceur séparés.**
+
+## 21 octobre — fastmem traps installés de façon transactionnelle
+
+[EDEN_FASTMEM_SIGNAL_INSTALL_2026-10-21.md](EDEN_FASTMEM_SIGNAL_INSTALL_2026-10-21.md) : réparation du cas SIGBUS échoué après SIGSEGV installé et refus d'enregistrer un intervalle JIT vide/débordant/sentinelle. Test C++20 ASan/UBSan source-extrait avec faux `sigaction`. **422/491 pris en charge ; 7 chemins moteur encore à examiner ; 62 UI du lanceur séparés.**
