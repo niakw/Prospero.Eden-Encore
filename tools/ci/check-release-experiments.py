@@ -15,16 +15,17 @@ RELEASE = ROOT / "build/release/PPSA99008"
 REQUIRED = {
     "EDEN_PS5_VULKAN:BOOL": "ON",
     "EDEN_VULKAN_DRIVER:STRING": "RADV",
-    "EDEN_SPARSE_JIT_DEV:BOOL": "ON",
+    "EDEN_SPARSE_JIT_DEV:BOOL": "OFF",
+    "EDEN_FINAL_RELEASE_PROFILE:BOOL": "ON",
+    "EDEN_PS5_OPENGL:BOOL": "ON",
     "EDEN_DEV_PROFILE:BOOL": "OFF",
     "EDEN_DEV_VULKAN:BOOL": "OFF",
     "EDEN_SHARED_JIT:BOOL": "OFF",
     "EDEN_JIT_COMPILE_BATCH:BOOL": "OFF",
 }
+FORBIDDEN = (b"EDEN_JIT_SPARSE_PROBE available=%u", b"EDEN_JIT_SPARSE_COMMIT_FAILED")
 MARKERS = (
     b"EDEN_EXPERIMENT_DEFAULTS sparse=%u logical_cpu=%u frame_probe=%u safe=%u",
-    b"EDEN_JIT_SPARSE_PROBE available=%u",
-    b"EDEN_JIT_SPARSE_COMMIT_FAILED",
     b"EDEN_PS5_JIT_POLICY scope=all_titles",
     b"EDEN_GPU_REPORT_STALLED age_ms=",
 )
@@ -44,6 +45,9 @@ def verify(cache: str, eboot: bytes) -> None:
     missing = [value.decode() for value in MARKERS if value not in eboot]
     if missing:
         raise ValueError("release binary lacks runtime markers: " + ", ".join(missing))
+    stale = [value.decode() for value in FORBIDDEN if value in eboot]
+    if stale:
+        raise ValueError("release binary contains experimental sparse path: " + ", ".join(stale))
 
 def self_test() -> None:
     valid = "\n".join(f"{k}={v}" for k, v in REQUIRED.items())
@@ -64,7 +68,14 @@ def self_test() -> None:
             assert marker.decode() in str(exc)
         else:
             raise AssertionError(f"missing binary marker accepted: {marker!r}")
-    print("PASS: native release CMake+binary experiment flags, fail-closed mismatches")
+    for marker in FORBIDDEN:
+        try:
+            verify(valid, eboot + marker)
+        except ValueError as exc:
+            assert "experimental sparse" in str(exc)
+        else:
+            raise AssertionError(f"experimental binary marker accepted: {marker!r}")
+    print("PASS: one native final release profile, fail-closed experimental flags and markers")
 
 def main() -> int:
     if len(sys.argv) == 2 and sys.argv[1] == "--self-test":
@@ -84,7 +95,7 @@ def main() -> int:
     except (OSError, ValueError) as exc:
         print(f"EDEN_RELEASE_EXPERIMENTS_REJECTED: {exc}", file=sys.stderr)
         return 1
-    print("EDEN_RELEASE_EXPERIMENTS_COMPILED: sparse=on native_profile=release "
+    print("EDEN_RELEASE_EXPERIMENTS_COMPILED: sparse=off native_profile=release "
           "cross_core_shared_jit=off batch=off alias_runtime_probe=pending hardware=untested")
     return 0
 

@@ -25,6 +25,9 @@ option(EDEN_SHARED_JIT "Enable the experimental cross-core A64 JIT" OFF)
 option(EDEN_JIT_COMPILE_BATCH "Compile bounded A64 successor chains on a cache miss" OFF)
 # Incomplete PS5 sparse JIT page mapper; never expose to normal builds via JSON alone.
 option(EDEN_SPARSE_JIT_DEV "Allow developer-only PS5 sparse JIT cache experiments" OFF)
+# A release selects exactly one runtime execution profile; experimental
+# sources remain in the repository but must never enter a final package.
+option(EDEN_FINAL_RELEASE_PROFILE "Enforce a single PS5 release execution profile" OFF)
 if(EDEN_SPARSE_JIT_DEV AND NOT PS5_NATIVE)
     message(FATAL_ERROR "EDEN_SPARSE_JIT_DEV requires PS5_NATIVE")
 endif()
@@ -1721,3 +1724,19 @@ endif()
 include("${CMAKE_CURRENT_LIST_DIR}/gpu_native_observability.cmake")
 # Disabled native GPU coherency bridge, explicit developer compilation only.
 include("${CMAKE_CURRENT_LIST_DIR}/guest_write_deferred_bridge.cmake")
+
+# Release gate: Vulkan/RADV is the normal game renderer. The OpenGL SDK stays
+# for the launcher and Safe Launch recovery, not a second experimental build.
+if(EDEN_FINAL_RELEASE_PROFILE)
+    if(NOT PS5_NATIVE OR NOT EDEN_PS5_VULKAN OR NOT EDEN_PS5_OPENGL OR
+       NOT EDEN_VULKAN_DRIVER STREQUAL "RADV")
+        message(FATAL_ERROR "Final Encore requires native Vulkan/RADV and OpenGL launcher/recovery")
+    endif()
+    if(EDEN_SHARED_JIT OR EDEN_JIT_COMPILE_BATCH OR EDEN_SPARSE_JIT_DEV OR
+       EDEN_INLINE_EXCLUSIVES OR EDEN_DEV_PROFILE OR EDEN_DEV_VULKAN OR
+       EDEN_DEV_WAIT_CALLERS OR EDEN_GPU_PROBE OR EDEN_HEAP_GUARD OR
+       EDEN_DEVICE_FRONTEND OR NOT EDEN_BLOCKING_GUEST_CONTEXT_LOCKS OR
+       NOT EDEN_A32_FASTMEM OR NOT EDEN_DEV_ROM_ID STREQUAL "")
+        message(FATAL_ERROR "Final Encore forbids experimental/development execution variants")
+    endif()
+endif()
