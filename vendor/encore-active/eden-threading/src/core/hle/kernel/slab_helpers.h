@@ -18,7 +18,7 @@ public:
     constexpr KSlabAllocated() = default;
 
     size_t GetSlabIndex(KernelCore& kernel) const {
-        return kernel.SlabHeap<Derived>().GetIndex(static_cast<const Derived*>(this));
+        return kernel.SlabHeap<Derived>().GetObjectIndex(static_cast<const Derived*>(this));
     }
 
 public:
@@ -93,7 +93,7 @@ public:
     }
 
     size_t GetSlabIndex(KernelCore& kernel) const {
-        return SlabHeap<Derived>(kernel).GetObjectIndex(static_cast<const Derived*>(this));
+        return kernel.SlabHeap<Derived>().GetObjectIndex(static_cast<const Derived*>(this));
     }
 
 public:
@@ -169,7 +169,7 @@ public:
     }
 
     size_t GetSlabIndex(KernelCore& kernel) const {
-        return SlabHeap<Derived>(kernel).GetObjectIndex(static_cast<const Derived*>(this));
+        return kernel.SlabHeap<Derived>().GetObjectIndex(static_cast<const Derived*>(this));
     }
 
 public:
