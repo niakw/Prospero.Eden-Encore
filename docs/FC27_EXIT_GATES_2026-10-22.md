@@ -233,3 +233,10 @@ Le chemin maintenu `BufferCache::IsRegionRegistered` parcourait une table limit�
 L'installateur applique **les deux unités complètes** `SurfaceFlinger` et `HardwareComposer` dans l'arbre Eden temporaire ; il vérifie la source originale épinglée par empreinte Git, reconstruit les octets attendus du compositeur, contrôle les deux entrées avant toute écriture et rejette toute modification extérieure. Le test hôte `check-surface-lifecycle.py` exécute la méthode C++ extraite, avec premier manque, réutilisation pendant acquisition, libération puis nouvel échec, nouvelle image et couche indépendante, en `-O0` / `-O2` (UBSan).
 
 **F03 et F05 restent ouverts** : le chemin de référence périmée est corrigé au niveau source, mais la preuve complète HUD et la progression IPC→présentation doivent encore être établies ; ce défaut n'est pas formellement relié aux anciennes traces FC27.
+
+
+## Cartographie et build du correctif compositeur — 23 octobre
+
+La nouvelle unité native `hardware_composer.cpp` est enregistrée sous le contrat **N23** dans `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` et `docs/EDEN_ACTIVE_SOURCE_CATALOG.md`. L'inventaire de revue source passe à **493 fichiers, dont 431 traités et 62 sources du lanceur à examiner séparément**. Le nombre de sources moteur restant à parcourir systématiquement reste zéro ; le nombre de corrections encore nécessaires reste inconnu.
+
+La validation complète du correctif de buffer libéré nécessite un **build natif sur le HEAD contenant aussi l'installateur corrigé**, et non sur `ac04f33` (script initial) ou `d1358ab` (premier inventaire). Les anciens résultats ne doivent pas être attribués au nouveau HEAD. F03/F05 restent ouverts tant que l'intégration native et le rejeu global n'ont pas réussi.
