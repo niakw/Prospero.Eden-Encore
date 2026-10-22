@@ -70,6 +70,7 @@ on:
       - 'tools/check-native-unmapped-uniform-buffer-host.py'
       - 'tools/check-native-wide-vertex-buffer-range-host.py'
       - 'tools/check-native-wide-index-buffer-range-host.py'
+      - 'tools/check-native-indirect-draw-range-host.py'
       - 'tools/check-ps5-never-owned-buffer-unmap-host.py'
       - 'tools/check-ps5-untextured-descriptor-sync-host.py'
       - 'tools/check-ps5-known-empty-graphics-descriptors-host.py'
@@ -176,6 +177,7 @@ jobs:
           python3 -B tools/check-native-unmapped-uniform-buffer-host.py
           python3 -B tools/check-native-wide-vertex-buffer-range-host.py
           python3 -B tools/check-native-wide-index-buffer-range-host.py
+          python3 -B tools/check-native-indirect-draw-range-host.py
           python3 -B tools/check-ps5-never-owned-buffer-unmap-host.py
           python3 -B tools/check-ps5-untextured-descriptor-sync-host.py
           python3 -B tools/check-ps5-known-empty-graphics-descriptors-host.py
