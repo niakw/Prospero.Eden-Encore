@@ -46,7 +46,9 @@ methods = "\n\n".join(
     (extract("FindDisplay", "Display*"),
      extract("RemoveLayerFromDisplayStack"),
      extract("DestroyLayer"),
-     extract("RemoveDisplay"))
+     extract("RemoveDisplay"),
+     extract("FindLayer", "std::shared_ptr<Layer>"),
+     extract("AddLayerToDisplayStack"))
 )
 
 for marker in ("WaitForComposite();", "RemoveLayerLocked(", "RemoveLayerFromDisplayStack("):
@@ -101,6 +103,8 @@ public:
     void RemoveDisplay(u64 display_id);
     void DestroyLayer(s32 consumer_binder_id);
     void RemoveLayerFromDisplayStack(u64 display_id, s32 consumer_binder_id);
+    std::shared_ptr<Layer> FindLayer(s32 consumer_binder_id);
+    void AddLayerToDisplayStack(u64 display_id, s32 consumer_binder_id);
 
     std::shared_ptr<Layer> attach(u64 display, s32 id) {
         auto value = std::make_shared<Layer>(Layer{id});
@@ -114,6 +118,38 @@ public:
 '''
 checks = r'''
 int main() {
+    {
+        // A binder can be attached to several displays, but only once per
+        // display. Duplicate calls must not double-compose one BufferItem.
+        SurfaceFlinger s;
+        s.m_displays.push_back(Display{1, {}});
+        s.m_displays.push_back(Display{2, {}});
+        auto a = std::make_shared<Layer>(Layer{7});
+        auto b = std::make_shared<Layer>(Layer{9});
+        s.m_layers.layers = {a, b};
+        s.AddLayerToDisplayStack(1, 7);
+        s.AddLayerToDisplayStack(1, 7);
+        s.AddLayerToDisplayStack(1, 9);
+        s.AddLayerToDisplayStack(1, 7);
+        s.AddLayerToDisplayStack(2, 7);
+        s.AddLayerToDisplayStack(2, 7);
+        s.AddLayerToDisplayStack(1, 99); // unknown binder, no insertion
+        s.AddLayerToDisplayStack(99, 7); // unknown display, no insertion
+        assert(s.m_displays[0].stack.layers.size() == 2);
+        assert(s.m_displays[1].stack.layers.size() == 1);
+        assert(s.m_displays[0].stack.layers[0] == a);
+        assert(s.m_displays[0].stack.layers[1] == b);
+        assert(s.m_displays[1].stack.layers[0] == a);
+        s.RemoveLayerFromDisplayStack(1, 7);
+        assert(s.m_displays[0].stack.layers.size() == 1);
+        assert(s.m_displays[1].stack.layers.size() == 1);
+        assert((s.events == std::vector<std::string>{"wait", "release:7"}));
+        s.RemoveLayerFromDisplayStack(1, 7); // no second release
+        assert(s.events.size() == 2);
+        s.RemoveDisplay(2);
+        assert((s.events == std::vector<std::string>{
+            "wait", "release:7", "wait", "release:7"}));
+    }
     {
         SurfaceFlinger s;
         s.m_displays.push_back(Display{42, {}});
