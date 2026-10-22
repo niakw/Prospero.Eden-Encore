@@ -40,9 +40,10 @@ inline void Mark(std::uint64_t address,std::uint64_t size) noexcept {
 }
 inline bool NeverRegistered(std::uint64_t address,std::uint64_t size) noexcept {
   if(coverage_unknown.load(std::memory_order_acquire))return false;
-  if(!size || size>64*1024 || address>=kSpace || size>kSpace-address)return false;
+  if(!size || size>256*1024 || address>=kSpace || size>kSpace-address)return false;
   const auto first=address>>kPageBits,last=(address+size-1)>>kPageBits;
-  // The 64 KiB cap spans at most two bitmap words, including unaligned ends.
+  // Up to 256 KiB touches at most 65 4 KiB pages and two bitmap
+  // words, including unaligned ends: the same two atomic loads as before.
   const auto first_word=first/64,last_word=last/64;
   const auto first_mask=Bits(first%64,first_word==last_word?last%64:63);
   if(registered[first_word].load(std::memory_order_acquire)&first_mask)return false;

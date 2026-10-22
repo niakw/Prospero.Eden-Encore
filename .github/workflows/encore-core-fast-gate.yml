@@ -64,6 +64,7 @@ on:
       - 'tools/check-ps5-buffer-region-multipage-host.py'
       - 'headless/buffer_pages.h'
       - 'tools/check-native-large-buffer-pages-host.py'
+      - 'tools/check-native-buffer-pages-wide-probe-host.py'
       - 'tools/check-ps5-never-owned-buffer-unmap-host.py'
       - 'tools/check-ps5-untextured-descriptor-sync-host.py'
       - 'tools/check-ps5-known-empty-graphics-descriptors-host.py'
@@ -164,6 +165,7 @@ jobs:
           python3 -B tools/check-native-single-range-buffer-invalidation-host.py
           python3 -B tools/check-ps5-buffer-region-multipage-host.py
           python3 -B tools/check-native-large-buffer-pages-host.py
+          python3 -B tools/check-native-buffer-pages-wide-probe-host.py
           python3 -B tools/check-ps5-never-owned-buffer-unmap-host.py
           python3 -B tools/check-ps5-untextured-descriptor-sync-host.py
           python3 -B tools/check-ps5-known-empty-graphics-descriptors-host.py
