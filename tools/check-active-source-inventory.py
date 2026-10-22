@@ -107,7 +107,7 @@ print("ENCORE_MAINTAINED_CORE_OWNER_PASS", f"files={len(maintained_core_paths)}"
 draw_owner = "eden-core/src/video_core/engines/draw_manager.cpp"
 draw_sel = native_cmake.split("set(EDEN_MAINTAINED_DRAW_MANAGER", 1)
 assert len(draw_sel) == 2, "native selected draw owner missing"
-draw_block = draw_sel[1].split("endif()", 1)[0]
+draw_block = draw_sel[1].split("# A guest span must be rejected BEFORE", 1)[0]
 assert 'list(REMOVE_ITEM video_sources engines/draw_manager.cpp)' in draw_block
 assert 'list(APPEND video_sources "${EDEN_MAINTAINED_DRAW_MANAGER}")' in draw_block
 assert '"${PORT_ROOT}/vendor/encore-active/"' not in draw_block
