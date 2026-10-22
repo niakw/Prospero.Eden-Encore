@@ -33,6 +33,10 @@ assert draw.index("if (!buffer)") < draw.index("buffer->Handle()")
 assert draw.index("if (!draw_buffer)") < draw.index("draw_buffer->Handle()")
 assert draw.count("if (!buffer)") == draw.count("if (!draw_buffer)") == 1
 assert "buffer_cache.SetDrawIndirect(nullptr);" in draw
+# Disabled post-store experiment must not reintroduce a null Vulkan submit.
+deferred = (root / "vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp").read_text()
+assert method(deferred, "void RasterizerVulkan::DrawIndirect() {", "\nvoid RasterizerVulkan::DrawTexture()") == draw
+
 
 code = r"""
 #include <array>
