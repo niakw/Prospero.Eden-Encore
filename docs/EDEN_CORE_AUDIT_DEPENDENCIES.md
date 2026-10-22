@@ -11,7 +11,7 @@ This is the **single place to resume this technical audit**.
 **P0 source review batch:** see [EDEN_P0_SOURCE_REVIEW_2026-10-20.md](EDEN_P0_SOURCE_REVIEW_2026-10-20.md) for ten explicitly inspected IPC/HLE/JIT/GPU source paths. The host IPC wake proof is not guest progress; no contract statuses or qualification debt counters are reduced.
 
 **Two-axis progress rule:** read [EDEN_TWO_AXIS_PROGRESS_2026-10-20.md](EDEN_TWO_AXIS_PROGRESS_2026-10-20.md). SOURCE+OPEN means *qualification pending*, **not** code files necessarily requiring further optimization. Do not repeatedly modify a recently fixed hotpath merely to lower that count; distinguish host test, current-SHA native build, and PS5/gameplay evidence.
-**Non, this is not an exhaustive repository-wide inventory.** The 478
+**Non, this is not an exhaustive repository-wide inventory.** The 479
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -245,22 +245,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 478 | 455 | 959 |
+| Graphe connu | 479 | 456 | 962 |
 | HOST — preuve ciblée hôte | 62 | 57 | 127 |
-| SOURCE — lecture effectuée, preuve insuffisante | 393 | 383 | 793 |
+| SOURCE — lecture effectuée, preuve insuffisante | 394 | 384 | 796 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **408** | **397** | **821** |
+| **Encore à qualifier (SOURCE + OPEN)** | **409** | **398** | **824** |
 | Dont priorité P0 (SOURCE + OPEN) | 100 | 95 | 228 |
 
-Le **noyau restant** compte donc 408 critères répartis sur
-397 fichiers et 821 mentions fonction/contrat :
-15 OPEN et 393 SOURCE.
+Le **noyau restant** compte donc 409 critères répartis sur
+398 fichiers et 824 mentions fonction/contrat :
+15 OPEN et 394 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-319 fichiers de code/en-têtes présents et 319 avec un chemin de
+320 fichiers de code/en-têtes présents et 320 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -268,7 +268,7 @@ Le contrôle hôte vérifie la complétude des chemins et les références,
 mais pas le comportement.
 
 Le relevé cloud recense également 83 sources Encore hors de ce graphe,
-soit 538 chemins C/C++ indexés ou appartenant au projet. Ces fichiers sont
+soit 539 chemins C/C++ indexés ou appartenant au projet. Ces fichiers sont
 recensés individuellement ; ils ne sont pas tous qualifiés ou optimisés.
 
 La chaîne CPU/JIT comprend aussi H20 (sélection de priorité et migration de cœur), distincte de H18 (commutation de fibres). Le catalogue inclut F04 pour les trois entrées filesystem maintenant maintenues. Ce sont des périmètres indexés, pas des preuves de gain de FPS.
@@ -871,6 +871,7 @@ function/contract tokens are checked by CI for existence only; the
 | J49 | P1 | J19,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_host_normal.cpp | DynarmicCallbacks64::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 host/normal A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified | 🟡 Source étudiée |
 | J50 | P1 | J19,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_native_dev.cpp | DynarmicCallbacks64::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 native/dev A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified | 🟡 Source étudiée |
 | J51 | P1 | J19,J13 | vendor/encore-active/eden-core/src/core/arm/dynarmic/g11/arm_dynarmic_64_native_normal.cpp | DynarmicCallbacks64::MemoryRead8; config.fastmem_exclusive_access | SOURCE | tools/check-g11-jit-profile-matrix-host.py | G11 native/normal A64 full candidate, I-cache preserved and native abort guards where applicable; inline preprocessor branch host-parity test; directly selected, host-parity qualified; console not qualified | 🟡 Source étudiée |
+| V108 | P1 | V77 | vendor/encore-active/eden-core/src/video_core/engines/draw_manager.cpp | DrawManager::DrawIndex(; DrawManager::DrawIndexedIndirect(; DrawManager::DrawEnd( | SOURCE | tools/check-native-index-draw-dirty-span-host.py | Source-extracted O0/O2 UBSan dirty-span replay and native CMake selection; exact native build and FC27 indexed geometry/content remain unverified | 🟡 Source étudiée |
 | V107 | P2 | V84 | vendor/encore-active/eden-core/src/video_core/renderer_opengl/dev_render_passes.inc | CaptureDevelopmentPass | SOURCE | tools/check-headless-fragment-ownership.py | Former headless DEV OpenGL capture fragment moved byte-for-byte into same renderer source directory; local include by maintained rasterizer DEV only, no native console proof | 🟡 Source étudiée |
 | U22 | P1 | J13 | headless/jit-startup-retry.h | NextCapacity(; ConstructWithCapacityFallback( | SOURCE | tools/check-headless-critical-interface-owners.py | A32/A64 JIT startup fallback header, consumed by native Encore G11 sources; file ownership only | 🟡 Source étudiée |
 | U23 | P1 | J01 | headless/experimental_performance.h | ChooseJitMemoryPlan(; A64CacheBytes( | SOURCE | tools/check-headless-critical-interface-owners.py | Memory plan and per-core JIT cache budget interface included by native G11 and native app; hardware admission unqualified | 🟡 Source étudiée |
