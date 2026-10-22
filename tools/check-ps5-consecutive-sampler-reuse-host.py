@@ -1,33 +1,37 @@
 #!/usr/bin/env python3
-"""Verify selected native sampler dedup preserves descriptor order and stage reset."""
+"""Execute selected graphics sampler memo across stages with bounded conflicts."""
 from pathlib import Path
-import subprocess
 import shutil
+import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
 native = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
-start = "        bool last_sampler_valid = false;"
-end = "        if constexpr (Spec::has_images) {"
-assert native.count(start) == 1
-begin = native.index(start)
-finish = native.index(end, begin)
-loop = native[begin:finish]
-assert loop.count("texture_cache.GetSamplerId(handle.second, false)") == 1
-assert loop.index("last_sampler_handle != handle.second") < loop.index("samplers.push_back(last_sampler_id)")
+memo_marker = "    // Sampler table mapping is stable while the paired guest cache locks are"
+assert native.count(memo_marker) == 1
+begin = native.index(memo_marker)
+end = native.index("    const auto config_stage{[&](size_t stage)", begin)
+memo = native[begin:end]
+assert memo.count("std::array<SamplerMemo, 16> sampler_memo{};") == 1
+assert memo.count("texture_cache.GetSamplerId(handle, false)") == 1
+assert memo.count("entry.valid = true;") == 1
+assert memo.count("entry.handle != handle") == 1
+loop_begin = native.index("        for (const auto& desc : info.texture_descriptors)", end)
+loop_end = native.index("        if constexpr (Spec::has_images) {", loop_begin)
+loop = native[loop_begin:loop_end]
 assert loop.count("views.push_back({handle.first});") == 1
-assert loop.count("samplers.push_back(last_sampler_id);") == 1
+assert loop.count("samplers.push_back(resolve_sampler(handle.second));") == 1
 
 fill_guard = "    if (!views.empty()) {"
 assert native.count(fill_guard) == 1
 fill_at = native.index(fill_guard)
 fill_end = native.index("\n    }", fill_at) + len("\n    }")
-selected_fill = native[fill_at:fill_end]
-assert "texture_cache.FillImageViews" in selected_fill
-assert native.index("texture_cache.CheckFeedbackLoop(") > fill_end
+assert "texture_cache.FillImageViews" in native[fill_at:fill_end]
 assert native.index("texture_cache.UpdateRenderTargets(false)") > fill_end
+assert native.index("texture_cache.CheckFeedbackLoop(") > fill_end
 
 program = r"""
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <utility>
@@ -52,59 +56,67 @@ struct CaseResult {
     std::vector<View> views;
     std::vector<VideoCommon::SamplerId> samplers;
 };
-static CaseResult configure(const Info& info, TexCache& texture_cache) {
+static CaseResult configure(const std::array<Info, 2>& stages,
+                            TexCache& texture_cache) {
     CaseResult result;
     auto& views = result.views;
     auto& samplers = result.samplers;
     const auto read_handle = [](const auto& desc, u32 index) {
         return desc.handles.at(index);
     };
+""" + memo + r"""
+    for (const auto& info : stages) {
 """ + loop + r"""
+    }
     return result;
 }
-static unsigned fill_calls = 0;
-static void fill_views(const std::vector<View>& views) {
-    if (!views.empty()) {
-        ++fill_calls;
-    }
-}
 int main() {
-    TexCache texture_cache{};
-    Info info{};
-    auto empty = configure(info, texture_cache);
-    fill_views(empty.views);
-    assert(fill_calls == 0 && texture_cache.lookups == 0);
-    info.texture_descriptors = {
-        {{{1,7},{2,7},{3,9},{4,9}},4},
-        {{{5,7},{6,7}},2},
+    TexCache cache{};
+    std::array<Info, 2> stages{};
+    auto empty = configure(stages, cache);
+    assert(empty.views.empty() && empty.samplers.empty() && cache.lookups == 0);
+
+    stages[0].texture_descriptors = {
+        {{{1,7},{2,7},{3,9},{4,7},{5,9}},5},
     };
-    auto a = configure(info, texture_cache);
-    fill_views(a.views);
-    assert(fill_calls == 1);
-    assert(texture_cache.lookups == 3);
-    assert(a.views.size() == 6 && a.samplers.size() == 6);
-    assert(a.views[0].index == 1 && a.views[5].index == 6);
-    assert((a.samplers == std::vector<u32>{107,107,109,109,107,107}));
-    // No cross-draw state survives: same handles are resolved anew.
-    auto b = configure(info, texture_cache);
-    assert(texture_cache.lookups == 6 && b.samplers == a.samplers);
-    // Different handles resolve separately, even if they target the same view.
-    info.texture_descriptors = {{{{1,7},{1,9},{1,7}},3}};
-    auto c = configure(info, texture_cache);
-    assert(texture_cache.lookups == 9);
-    assert((c.samplers == std::vector<u32>{107,109,107}));
+    stages[1].texture_descriptors = {
+        {{{6,9},{7,7}},2},
+    };
+    auto a = configure(stages, cache);
+    assert(cache.lookups == 2); // A,B,A,B across two shader stages.
+    assert(a.views.size() == 7 && a.samplers.size() == 7);
+    assert(a.views.front().index == 1 && a.views.back().index == 7);
+    assert((a.samplers == std::vector<u32>{107,107,109,107,109,109,107}));
+
+    auto b = configure(stages, cache);
+    assert(cache.lookups == 4); // No sampler ID outlives a draw.
+    assert(b.samplers == a.samplers);
+
+    // Colliding indices are correctness-safe cache misses, not bad IDs.
+    stages[0].texture_descriptors = {{{{1,7},{2,23},{3,7}},3}};
+    stages[1].texture_descriptors = {{{{4,7}},1}};
+    auto conflict = configure(stages, cache);
+    assert(cache.lookups == 7); // 7,23,7 miss; final 7 hit.
+    assert((conflict.samplers == std::vector<u32>{107,123,107,107}));
+
+    // Texture identity is independent of the sampler identity.
+    stages[0].texture_descriptors = {{{{1,7},{1,9},{2,7}},3}};
+    stages[1].texture_descriptors.clear();
+    auto same_view = configure(stages, cache);
+    assert(cache.lookups == 9);
+    assert((same_view.samplers == std::vector<u32>{107,109,107}));
+    assert(same_view.views[0].index == same_view.views[1].index);
 }
 """
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
-assert compiler
-with tempfile.TemporaryDirectory(prefix="encore-gfx-sampler-") as tmp:
-    source = Path(tmp) / "sampler.cpp"
-    source.write_text(program)
+assert compiler, "C++20 compiler required"
+with tempfile.TemporaryDirectory(prefix="encore-gfx-memo-") as temp:
+    path = Path(temp) / "sampler.cpp"
+    path.write_text(program)
     for opt in ("-O0", "-O2"):
-        exe = Path(tmp) / ("sampler" + opt)
+        exe = Path(temp) / ("sampler" + opt)
         subprocess.run([compiler, "-std=c++20", opt, "-Wall", "-Wextra",
-                        "-Werror", "-fsanitize=undefined",
-                        "-fno-sanitize-recover=all", str(source), "-o", str(exe)],
-                       check=True, timeout=45)
+                        "-Werror", "-fsanitize=undefined", "-fno-sanitize-recover=all",
+                        str(path), "-o", str(exe)], check=True, timeout=45)
         subprocess.run([str(exe)], check=True, timeout=20)
-        print("GPU_CONSECUTIVE_SAMPLER_REUSE_PASS", opt)
+        print("GPU_PER_DRAW_SAMPLER_MEMO_PASS", opt)

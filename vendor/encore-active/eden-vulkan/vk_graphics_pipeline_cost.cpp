@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -500,6 +501,25 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
 
     const auto& regs{maxwell3d->regs};
     const bool via_header_index{regs.sampler_binding == Maxwell::SamplerBinding::ViaHeaderBinding};
+    // Sampler table mapping is stable while the paired guest cache locks are
+    // held. Cache repeated handles only for this draw: never reuse an ID after
+    // a later guest descriptor invalidation, channel switch or pipeline change.
+    // A bounded direct-mapped table avoids per-descriptor hash allocations.
+    struct SamplerMemo {
+        u32 handle{};
+        VideoCommon::SamplerId id{};
+        bool valid{};
+    };
+    std::array<SamplerMemo, 16> sampler_memo{};
+    const auto resolve_sampler{[&](u32 handle) -> VideoCommon::SamplerId {
+        auto& entry = sampler_memo[handle & 15U];
+        if (!entry.valid || entry.handle != handle) {
+            entry.id = texture_cache.GetSamplerId(handle, false);
+            entry.handle = handle;
+            entry.valid = true;
+        }
+        return entry.id;
+    }};
     const auto config_stage{[&](size_t stage) LAMBDA_FORCEINLINE {
         const Shader::Info& info{stage_infos[stage]};
         buffer_cache.UnbindGraphicsStorageBuffers(stage);
@@ -554,23 +574,11 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
                 add_image(desc, false);
             }
         }
-        // A descriptor array frequently shares its sampler handle.
-        // Reuse only consecutive equal handles within this stage/configuration:
-        // no sampler id survives a pipeline change or guest invalidation.
-        bool last_sampler_valid = false;
-        u32 last_sampler_handle{};
-        VideoCommon::SamplerId last_sampler_id{};
         for (const auto& desc : info.texture_descriptors) {
             for (u32 index = 0; index < desc.count; ++index) {
                 const auto handle{read_handle(desc, index)};
                 views.push_back({handle.first});
-
-                if (!last_sampler_valid || last_sampler_handle != handle.second) {
-                    last_sampler_id = texture_cache.GetSamplerId(handle.second, false);
-                    last_sampler_handle = handle.second;
-                    last_sampler_valid = true;
-                }
-                samplers.push_back(last_sampler_id);
+                samplers.push_back(resolve_sampler(handle.second));
             }
         }
         if constexpr (Spec::has_images) {
