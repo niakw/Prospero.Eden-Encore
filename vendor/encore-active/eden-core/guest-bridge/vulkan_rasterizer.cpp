@@ -802,19 +802,21 @@ void RasterizerVulkan::DispatchCompute() {
     }
 #endif
     gpu_memory->FlushCaching();
-#ifdef PS5_NATIVE
-    // Compute Configure runs under both guest cache locks. Drain the common
-    // descriptor queue overflow BEFORE taking those locks, exactly as Draw.
-    // The GPU worker may publish guest invalidations while it drains.
-    if (guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {
-        gpu_memory->FlushCaching();
-    }
-#endif
-
     ComputePipeline* pipeline{pipeline_cache.CurrentComputePipeline()};
     if (!pipeline) {
         return;
     }
+#ifdef PS5_NATIVE
+    // Select first: descriptor-free compute dispatches must not drain the
+    // legacy 1024-entry guest queue. After a real wait, consume guest page
+    // invalidations and reselect the possibly changed compute shader.
+    if (pipeline->HasDescriptorEntries() &&
+        guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {
+        gpu_memory->FlushCaching();
+        pipeline = pipeline_cache.CurrentComputePipeline();
+        if (!pipeline) return;
+    }
+#endif
 #ifdef PS5_NATIVE
     // Compute always allocates new descriptor-buffer space for a dispatch.
     // Drain only necessary GPU fences while neither guest cache is locked.
