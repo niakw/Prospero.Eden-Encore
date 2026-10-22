@@ -89,6 +89,10 @@ try:
     subprocess.run(['bash', str(root / 'tools/ci/package-image.sh'), str(app), str(repro)], check=True)
     repro_digest = hashlib.sha256(repro.read_bytes()).hexdigest()
     if repro_digest != image_digest:
+        # Report byte offsets, not just hashes. This check still fails closed;
+        # do not publish potentially nondeterministic release image bytes.
+        subprocess.run([sys.executable, str(root / 'tools/ci/diagnose-image-repro.py'),
+                        str(image), str(repro)], check=False)
         raise SystemExit(f'FFPFSC reproducibility check failed: {image_digest} != {repro_digest}')
 finally:
     repro.unlink(missing_ok=True)
