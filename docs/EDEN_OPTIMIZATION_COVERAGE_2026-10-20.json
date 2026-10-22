@@ -3,7 +3,7 @@
   "description": "Code optimization handling, not validation or inferred need for code edits",
   "base_commit": "82c531d08641d8b28124bd2cebf37fcf85674179",
   "snapshot_commit": "05846723c40c4ebfc593b4be2e3496079c25167c",
-  "owned_code_count_at_snapshot": 491,
+  "owned_code_count_at_snapshot": 492,
   "handled_paths": [
     {
       "path": "headless/assets_dir.h",
@@ -3776,6 +3776,12 @@
       "path": "vendor/encore-active/ps5-mesa/src/vulkan/wsi/wsi_common_videoout.c",
       "disposition": "reviewed_without_new_code_edit",
       "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/engines/draw_manager.cpp",
+      "disposition": "new_source_issue_corrected",
+      "proof_ref": "tools/check-native-index-draw-dirty-span-host.py",
+      "evidence": "Selected native DrawManager previously failed to re-arm Dirty::IndexBuffer when macro/indexed-indirect first/count changed without a Maxwell register write; fixed only changed-span transitions and tested real selected methods at O0/O2. Console frame pacing and geometry fidelity are unverified."
     }
   ],
   "inventoried_including_pinned": 538,

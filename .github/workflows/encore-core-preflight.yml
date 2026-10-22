@@ -125,6 +125,7 @@ jobs:
           python3 -B tools/check-native-dma-contiguous-host.py
           python3 -B tools/check-ps5-buffer-pages-r437.py
           python3 -B tools/check-native-wide-index-buffer-range-host.py
+          python3 -B tools/check-native-index-draw-dirty-span-host.py
           python3 -B tools/check-native-indirect-draw-range-host.py
           python3 -B tools/check-native-wide-vertex-buffer-range-host.py
           python3 -B tools/check-native-unmapped-uniform-buffer-host.py
