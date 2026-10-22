@@ -1362,9 +1362,15 @@ void BufferCache<P>::UpdateIndexBuffer() {
     const GPUVAddr gpu_addr_begin = index_buffer_ref.StartAddress();
     const GPUVAddr gpu_addr_end = index_buffer_ref.EndAddress();
     const std::optional<DAddr> device_addr = gpu_memory->GpuToCpuAddress(gpu_addr_begin);
-    const u32 address_size = static_cast<u32>(gpu_addr_end - gpu_addr_begin);
-    const u32 draw_size = (index_buffer_ref.count + index_buffer_ref.first) * u32(index_buffer_ref.FormatSizeInBytes());
-    const u32 size = (std::min)(address_size, draw_size);
+    // Both the GPU range and (first + count) * format size can exceed
+    // 32 bits. Compare their full widths before bounding FindBuffer(u32).
+    const u64 address_size =
+        gpu_addr_end > gpu_addr_begin ? gpu_addr_end - gpu_addr_begin : 0;
+    const u64 index_count =
+        static_cast<u64>(index_buffer_ref.count) + index_buffer_ref.first;
+    const u64 draw_size = index_count * index_buffer_ref.FormatSizeInBytes();
+    const u32 size = static_cast<u32>((std::min)(
+        (std::min)(address_size, draw_size), static_cast<u64>(~u32{0})));
     if (size == 0 || !device_addr) {
         channel_state->index_buffer = NULL_BINDING;
         return;
