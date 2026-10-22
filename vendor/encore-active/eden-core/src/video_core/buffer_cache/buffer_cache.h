@@ -760,6 +760,12 @@ bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {
     if (size == 0) {
         return false;
     }
+    // The page_table has exactly 16 GiB of guest-physical address space.
+    // Reject unrepresentable/overflowing spans before addr + size or page_table[].
+    constexpr DAddr kTableAddressLimit = DAddr{1} << 34;
+    if (addr >= kTableAddressLimit || size > kTableAddressLimit - addr) {
+        return false;
+    }
     const DAddr end_addr = addr + size;
     const u64 page_end = Common::DivCeil(end_addr, CACHING_PAGESIZE);
     for (u64 page = addr >> CACHING_PAGEBITS; page < page_end;) {
