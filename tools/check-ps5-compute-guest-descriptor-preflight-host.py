@@ -17,15 +17,24 @@ preflight = "guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWo
 select = "pipeline_cache.CurrentComputePipeline()"
 locks = "std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};"
 assert compute.count(preflight) == 1
-assert compute.index("gpu_memory->FlushCaching();") < compute.index(preflight)
-assert compute.index(preflight) < compute.index(select) < compute.index(locks)
-after = compute[compute.index(preflight):compute.index(select)]
+# The selected pipeline advertises an immutable descriptor count: select
+# BEFORE preflight so an empty compute shader cannot wait for 1024 entries.
+# Every real wait remains outside the paired guest buffer/texture mutexes.
+first_select = compute.index("ComputePipeline* pipeline{" + select + "};")
+first_preflight = compute.index(preflight)
+first_lock = compute.index(locks)
+assert compute.index("gpu_memory->FlushCaching();") < first_select < first_preflight < first_lock
+assert ("if (pipeline->HasDescriptorEntries() &&\n        " + preflight) in compute
+wait_guard_end = compute.index("#endif", first_preflight)
+after = compute[first_preflight:wait_guard_end]
 assert after.count("gpu_memory->FlushCaching();") == 1
-assert "if (" + preflight in compute
+assert after.count("pipeline = " + select + ";") == 1
+assert "if (!pipeline) return;" in after
+assert "if (!pipeline)" in compute[first_select:first_lock]
 assert "ComputePipeline::Configure" not in after
-assert "if (!pipeline)" in compute[compute.index(select):compute.index(locks)]
-assert "Compute Configure runs under both guest cache locks" in generator
-assert generator.count("Compute Configure runs under both guest cache locks") == 1
+# The generator must reproduce both the native guard and its oracle parity.
+assert generator.count("Select first: descriptor-free compute dispatches") == 1
+assert "Compute empty-descriptor native anchor changed" in generator
 assert "python3 -B tools/check-ps5-compute-guest-descriptor-preflight-host.py" in workflow
 
 start = "    template <typename WaitWorker>\n    [[nodiscard]] bool PreflightGuestDraw("
@@ -84,4 +93,4 @@ with tempfile.TemporaryDirectory(prefix="encore-compute-descriptor-") as folder:
                     "-fsanitize=address,undefined","-fno-sanitize-recover=all",
                     str(source),"-o",str(binary)],check=True,timeout=45)
     subprocess.run([str(binary)],check=True,timeout=30)
-print("COMPUTE_DESCRIPTOR_PREFLIGHT_HOST_PASS ordinary_no_wait=1 boundary=1 outside_locks=1 refresh_before_selection=1")
+print("COMPUTE_DESCRIPTOR_PREFLIGHT_HOST_PASS ordinary_no_wait=1 boundary=1 outside_locks=1 select_before_preflight=1 reselection_after_wait=1")
