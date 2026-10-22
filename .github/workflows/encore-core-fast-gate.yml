@@ -74,6 +74,8 @@ on:
       - 'vendor/encore-active/eden-core/src/video_core/engines/draw_manager.cpp'
       - 'tools/check-native-indirect-draw-range-host.py'
       - 'tools/check-native-indirect-null-binding-host.py'
+      - 'vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/**'
+      - 'vendor/encore-active/eden-backports/src/core/hle/service/nvnflinger/**'
       - 'tools/check-native-nvnflinger-detach-wake-host.py'
       - 'tools/check-native-nvnflinger-queue-callback-host.py'
       - 'tools/ci/diagnose-image-repro.py'
