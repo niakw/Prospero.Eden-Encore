@@ -76,6 +76,10 @@ on:
       - 'tools/check-native-indirect-null-binding-host.py'
       - 'vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/**'
       - 'vendor/encore-active/eden-backports/src/core/hle/service/nvnflinger/**'
+      - 'vendor/encore-active/eden-surface-lifecycle/**'
+      - 'tools/check-surface-lifecycle.py'
+      - 'tools/install-vendored-surface-lifecycle.py'
+      - '.github/workflows/encore-core-fast-gate.yml'
       - 'tools/check-native-nvnflinger-detach-wake-host.py'
       - 'tools/check-native-nvnflinger-dequeue-profile-host.py'
       - 'tools/check-native-nvnflinger-queue-callback-host.py'
@@ -267,6 +271,7 @@ jobs:
           python3 -B tools/check-native-hle-state-transition-fastpath-host.py
           python3 -B tools/check-native-hle-suspend-noop-host.py
           python3 -B tools/check-native-ipc-wake-chain-host.py
+          python3 -B tools/check-surface-lifecycle.py
           python3 -B tools/verify/hle/check-native-hle-ipc-timeout-host.py
           python3 -B tools/verify/hle/check-native-hle-ipc-receive-index-host.py
           python3 -B tools/check-vendored-hid-resource-source.py
