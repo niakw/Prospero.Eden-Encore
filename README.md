@@ -27,6 +27,8 @@
 <p align="center"><img src="assets/encore-background.jpg" alt="Encore tropical-night launcher artwork" width="860"></p>
 
 > [!IMPORTANT]
+> **FC27 remaining exit gates:** [engine blockers and hardware acceptance tracker](docs/FC27_EXIT_GATES_2026-10-22.md). Source-review totals are not remaining optimization counts.
+>
 > **Firmware 13.60 is Encore's primary hardware-tested target, not a universal compatibility guarantee.** The launcher and selected titles have been exercised on this firmware, but game performance, saved control profiles and end-of-match stability still need work. Other firmware versions are **not** qualified. A current development build is **not** automatically a stable release.
 >
 > **Before a console test:** [source, logs, upstream and package checklist](docs/PRETEST_AUDIT_2026-10-14.md) — verify that the artifact and symbols match the exact tested SHA.
