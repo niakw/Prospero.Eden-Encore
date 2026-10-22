@@ -34,10 +34,12 @@ assert sections[1].index("tbo_index >= NUM_TEXTURE_BUFFERS") < sections[1].index
 
 program = r"""
 #include <array>
+#include <bit>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <initializer_list>
 using u32 = std::uint32_t;
 using GPUVAddr = std::uint64_t;
 constexpr size_t NUM_STAGES = 5;
@@ -74,6 +76,7 @@ struct Runtime {
 };
 constexpr u32 NULL_BUFFER_ID = 0;
 template <class P> struct BufferCache {
+    static constexpr bool SEPARATE_IMAGE_BUFFERS_BINDINGS = true;
     State* channel_state{};
     Maxwell* maxwell3d{};
     Runtime runtime{};
