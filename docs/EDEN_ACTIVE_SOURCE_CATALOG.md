@@ -280,6 +280,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-gpu/include/common/bounded_threadsafe_queue.h` | `maintained-override` | Q02,Q07,V72 |
 | `eden-gpu/include/video_core/gpu_thread.h` | `maintained-override` | Q08 |
 | `eden-shader/src/shader_recompiler/frontend/maxwell/translate/impl/load_store_local_shared.cpp` | `maintained-override` | V24 |
+| `eden-surface-lifecycle/src/core/hle/service/nvnflinger/hardware_composer.cpp` | `maintained-override` | N23 |
 | `eden-surface-lifecycle/src/core/hle/service/nvnflinger/surface_flinger.cpp` | `maintained-override` | N06 |
 | `eden-sync/src/core/hle/kernel/k_synchronization_object.h` | `maintained-override` | H17 |
 | `eden-threading/src/core/hle/kernel/k_address_arbiter.cpp` | `maintained-override` | H07,H10,H11 |
