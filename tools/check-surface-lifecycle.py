@@ -362,4 +362,8 @@ with tempfile.TemporaryDirectory(prefix="eden-composer-released-frame-") as tmp:
         subprocess.run([str(exe)], check=True, timeout=15)
         print("COMPOSER_RELEASED_FRAME_NATIVE_HOST_PASS", opt)
 
+# Reuse the real native Composer implementation for a full multi-layer
+# acquisition -> release -> presentation regression, not only a status mock.
+subprocess.run([sys.executable, str(ROOT / "tools/check-native-hardware-composer-liveness-host.py")], check=True, timeout=110)
+
 print("SURFACE_LIFECYCLE_COMPILER_INPUT_PASS full versioned source, pinned input and conflict rejection")

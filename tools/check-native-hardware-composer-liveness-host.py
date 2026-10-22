@@ -1,0 +1,242 @@
+#!/usr/bin/env python3
+"""Host replay of native HardwareComposer full acquire/release/compose loop.
+
+Uses the exact four C++ method bodies and swap-interval helper from the active,
+pinned-source-reproduced translation unit. Only external display, producer,
+GPU surface and graphic buffer classes are mocked. Never claims a PS5 FPS win.
+"""
+from pathlib import Path
+import subprocess
+import tempfile
+import shutil
+import sys
+
+root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(root / "tools"))
+import importlib.util
+spec = importlib.util.spec_from_file_location(
+    "lifecycle_installer", root / "tools/install-vendored-surface-lifecycle.py")
+assert spec and spec.loader
+installer = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(installer)
+pinned, active = installer.check_composer()
+source = active.decode()
+assert pinned != active
+
+def extract(marker: str) -> str:
+    assert source.count(marker) == 1, marker
+    begin = source.index(marker)
+    open_brace = source.index("{", begin)
+    depth = 0
+    for offset in range(open_brace, len(source)):
+        if source[offset] == "{":
+            depth += 1
+        elif source[offset] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[begin:offset + 1]
+    raise AssertionError("Unterminated native source: " + marker)
+
+helper = extract("s32 NormalizeSwapInterval(")
+methods = "\n\n".join(extract(name) for name in (
+    "u32 HardwareComposer::ComposeLocked(",
+    "void HardwareComposer::ReleaseFramebuffersLocked(",
+    "bool HardwareComposer::TryAcquireFramebufferLocked(",
+    "HardwareComposer::CacheStatus HardwareComposer::CacheFramebufferLocked(",
+))
+assert "nvdisp.WaitForComposite();" in methods
+assert "nvdisp.Composite(composition_stack);" in methods
+assert "if (result == CacheStatus::NoBufferAvailable)" in methods
+assert "return CacheStatus::NoBufferAvailable;" in methods
+
+fixture = r"""
+#include <algorithm>
+#include <cassert>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+#include <deque>
+#include <map>
+#include <memory>
+#include <optional>
+#include <vector>
+#include <boost/container/small_vector.hpp>
+using u32 = std::uint32_t;
+using u64 = std::uint64_t;
+using s32 = std::int32_t;
+using f32 = float;
+using ConsumerId = s32;
+namespace android {
+enum class Status { NoError, NoBufferAvailable };
+enum class BufferTransformFlags : int { Identity = 0 };
+struct Fence { static Fence NoFence() { return {}; } };
+struct GraphicBuffer {
+    int id;
+    int BufferId() const { return id; }
+    int Offset() const { return 0; }
+    int ExternalFormat() const { return 0; }
+    int Width() const { return 1920; }
+    int Height() const { return 1080; }
+    int Stride() const { return 1920; }
+};
+struct BufferItem {
+    std::shared_ptr<GraphicBuffer> graphic_buffer;
+    int swap_interval{1};
+    int transform{};
+    int crop{};
+    Fence fence{};
+};
+}
+struct MockConsumer {
+    std::deque<android::BufferItem> pending;
+    unsigned acquires{}, releases{};
+    android::Status AcquireBuffer(android::BufferItem* item,
+                                  std::chrono::nanoseconds, bool) {
+        ++acquires;
+        if (pending.empty()) return android::Status::NoBufferAvailable;
+        *item = std::move(pending.front());
+        pending.pop_front();
+        return android::Status::NoError;
+    }
+    android::Status ReleaseBuffer(const android::BufferItem& item, android::Fence) {
+        assert(item.graphic_buffer);
+        ++releases;
+        return android::Status::NoError;
+    }
+};
+struct Layer {
+    ConsumerId consumer_id{};
+    bool is_overlay{}, visible{true};
+    int z_index{}, blending{}, layer_stack_mask{};
+    std::shared_ptr<MockConsumer> buffer_item_consumer;
+};
+struct Display {
+    struct Stack {
+        std::vector<std::shared_ptr<Layer>> layers;
+        std::shared_ptr<Layer> FindLayer(ConsumerId id) const {
+            for (const auto& layer : layers)
+                if (layer->consumer_id == id) return layer;
+            return {};
+        }
+    } stack;
+};
+struct HwcLayer {
+    int buffer_handle{}, offset{}, format{}, width{}, height{}, stride{};
+    int z_index{}, blending{};
+    android::BufferTransformFlags transform{};
+    int crop_rect{};
+    android::Fence acquire_fence{};
+    int layer_stack_mask{};
+};
+namespace Nvidia::Devices {
+struct nvdisp_disp0 {
+    int wait_count{};
+    std::vector<std::vector<int>> composed;
+    void WaitForComposite() { ++wait_count; }
+    template<class T> void Composite(const T& stack) {
+        std::vector<int> ids;
+        for (const auto& item : stack) ids.push_back(item.buffer_handle);
+        composed.push_back(std::move(ids));
+    }
+};
+}
+class HardwareComposer {
+public:
+    enum class CacheStatus : u32 {
+        NoBufferAvailable, BufferAcquired, CachedBufferReused
+    };
+    using ReleaseFrameNumber = u64;
+    struct Framebuffer {
+        android::BufferItem item{};
+        ReleaseFrameNumber release_frame_number{};
+        u64 last_acquire_frame{};
+        bool is_acquired{};
+    };
+    std::map<ConsumerId, Framebuffer> m_framebuffers;
+    u64 m_frame_number{};
+    u32 ComposeLocked(f32*, Display&, Nvidia::Devices::nvdisp_disp0&);
+    void ReleaseFramebuffersLocked(Display&);
+    bool TryAcquireFramebufferLocked(Layer&, Framebuffer&);
+    CacheStatus CacheFramebufferLocked(Layer&, ConsumerId);
+};
+""" + helper + "\n" + methods + r"""
+static android::BufferItem frame(int id, int interval) {
+    android::BufferItem item;
+    item.graphic_buffer = std::make_shared<android::GraphicBuffer>(
+        android::GraphicBuffer{id});
+    item.swap_interval = interval;
+    return item;
+}
+int main() {
+    HardwareComposer composer;
+    Display display;
+    Nvidia::Devices::nvdisp_disp0 display_gpu;
+    auto game_consumer = std::make_shared<MockConsumer>();
+    auto hud_consumer = std::make_shared<MockConsumer>();
+    auto game = std::make_shared<Layer>();
+    game->consumer_id = 7;
+    game->z_index = 0;
+    game->buffer_item_consumer = game_consumer;
+    auto hud = std::make_shared<Layer>();
+    hud->consumer_id = 8;
+    hud->is_overlay = true;
+    hud->z_index = 1;
+    hud->buffer_item_consumer = hud_consumer;
+    display.stack.layers = {game, hud};
+    game_consumer->pending.push_back(frame(10,2));
+    hud_consumer->pending.push_back(frame(20,1));
+    f32 speed=0;
+    assert(composer.ComposeLocked(&speed, display, display_gpu) == 1);
+    assert((display_gpu.composed == std::vector<std::vector<int>>{{10,20}}));
+    assert(speed == 1.0f);
+    assert(composer.m_framebuffers[7].is_acquired);
+    assert(composer.m_framebuffers[8].is_acquired);
+
+    // No fresh game/HUD frame: game remains acquired at 2-vsync interval,
+    // overlay is released and must never force stale composition.
+    assert(composer.ComposeLocked(&speed, display, display_gpu) == 1);
+    assert(display_gpu.composed.size() == 1);
+    assert(game_consumer->releases == 0 && hud_consumer->releases == 1);
+
+    // At game release frame, only the new HUD frame is available.
+    // Never compose the previously released game buffer into the new HUD.
+    hud_consumer->pending.push_back(frame(21,1));
+    assert(composer.ComposeLocked(&speed, display, display_gpu) == 1);
+    assert((display_gpu.composed == std::vector<std::vector<int>>{
+        {10,20}, {21}}));
+    assert(game_consumer->releases == 1);
+    assert(!composer.m_framebuffers[7].is_acquired);
+    assert(composer.m_framebuffers[8].is_acquired);
+
+    // Now the game produces a new frame; previously released HUD buffer
+    // must not reappear in the next composite.
+    game_consumer->pending.push_back(frame(11,2));
+    assert(composer.ComposeLocked(&speed, display, display_gpu) == 1);
+    assert((display_gpu.composed == std::vector<std::vector<int>>{
+        {10,20}, {21}, {11}}));
+    assert(hud_consumer->releases == 2);
+
+    // No new buffers: no hidden re-presentation of either released image.
+    assert(composer.ComposeLocked(&speed, display, display_gpu) == 1);
+    assert(display_gpu.composed.size() == 3);
+    assert(display_gpu.wait_count == 5);
+    std::puts("HARDWARE_COMPOSER_FULL_LIVENESS_PASS");
+}
+"""
+compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
+assert compiler, "C++20 compiler required"
+with tempfile.TemporaryDirectory(prefix="encore-composer-full-") as td:
+    path = Path(td) / "composer.cpp"
+    path.write_text(fixture)
+    for opt in ("-O0", "-O2"):
+        exe = Path(td) / ("composer" + opt)
+        result = subprocess.run([compiler, "-std=c++20", opt, "-Wall",
+                                 "-Wextra", "-Werror", "-fsanitize=undefined",
+                                 "-fno-sanitize-recover=all", "-pthread",
+                                 str(path), "-o", str(exe)], capture_output=True,
+                                text=True, timeout=45)
+        assert result.returncode == 0, (opt, result.stderr[-5000:])
+        result = subprocess.run([str(exe)], capture_output=True, text=True,
+                                timeout=15)
+        assert result.returncode == 0, (opt, result.stderr[-3500:])
+        print("NATIVE_FULL_COMPOSITOR_LIVENESS_HOST_PASS", opt)
