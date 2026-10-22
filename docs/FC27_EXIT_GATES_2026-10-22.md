@@ -240,3 +240,9 @@ L'installateur applique **les deux unités complètes** `SurfaceFlinger` et `Har
 La nouvelle unité native `hardware_composer.cpp` est enregistrée sous le contrat **N23** dans `docs/EDEN_CORE_AUDIT_DEPENDENCIES.md` et `docs/EDEN_ACTIVE_SOURCE_CATALOG.md`. L'inventaire de revue source passe à **493 fichiers, dont 431 traités et 62 sources du lanceur à examiner séparément**. Le nombre de sources moteur restant à parcourir systématiquement reste zéro ; le nombre de corrections encore nécessaires reste inconnu.
 
 La validation complète du correctif de buffer libéré nécessite un **build natif sur le HEAD contenant aussi l'installateur corrigé**, et non sur `ac04f33` (script initial) ou `d1358ab` (premier inventaire). Les anciens résultats ne doivent pas être attribués au nouveau HEAD. F03/F05 restent ouverts tant que l'intégration native et le rejeu global n'ont pas réussi.
+
+## Reprise N23 — contrôle hôte réussi, build final réémis
+
+Le fast gate du code `642f80f` est **vert** ([exécution 39865536857](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39865536857)). Le test compilant `HardwareComposer::CacheFramebufferLocked` depuis la source maintenue et la migration des deux TU passent ; le graphe d'architecture et l'inventaire passent le contrôle initial de prévalidation. Le tableau quantifié du graphe a été recalculé séparément : **480 contrats recensés, 410 SOURCE/OPEN** ; ceci ne correspond pas à des fichiers restant à optimiser.
+
+La compilation native de `157e7e0` a été lancée **avant** la dernière rectification du tableau de graphe. Un build complet est donc redemandé sur cette version cohérente. Ne pas considérer la qualification native F03/F05 comme obtenue avant la fin de ce nouveau build.
