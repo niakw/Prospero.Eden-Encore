@@ -36,6 +36,15 @@ clear = clear.replace('    const size_t size = amount * sizeof(u32);\n', '').rep
     '    const size_t size = amount * sizeof(u32);\n'
     '    const bool dest_dirty = IsRegionRegistered(*cpu_dst_address, size);')
 expected = expected[:begin] + clear + expected[end:]
+# Native-only ownership scan fix. The shipping backport remains immutable,
+# and its bytes are still verified against the pinned manifest.
+region_before = "bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {\n    const DAddr end_addr = addr + size;"
+region_after = "bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {\n    // An empty CPU write does not overlap any registered cache buffer.\n    if (size == 0) {\n        return false;\n    }\n    const DAddr end_addr = addr + size;"
+region_skip_before = "        if (buf_start_addr < end_addr && addr < buf_end_addr) {\n            return true;\n        }\n        page = Common::DivCeil(end_addr, CACHING_PAGESIZE);"
+region_skip_after = "        if (buf_start_addr < end_addr && addr < buf_end_addr) {\n            return true;\n        }\n        // The first page can contain a buffer ending before addr. A later\n        // page may belong to another registered buffer intersecting the span.\n        // Do not skip all remaining pages after one non-overlapping owner.\n        ++page;"
+assert expected.count(region_before) == expected.count(region_skip_before) == 1
+expected = expected.replace(region_before, region_after).replace(
+    region_skip_before, region_skip_after)
 assert maintained == expected, "R437 maintained header differs from reviewed transforms"
 assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm

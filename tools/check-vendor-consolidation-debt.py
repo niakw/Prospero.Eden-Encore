@@ -1502,6 +1502,15 @@ clear_body = clear_body.replace('    const size_t size = amount * sizeof(u32);\n
     '    const size_t size = amount * sizeof(u32);\n'
     '    const bool dest_dirty = IsRegionRegistered(*cpu_dst_address, size);')
 r437_expected = r437_expected[:clear_start] + clear_body + r437_expected[clear_end:]
+# Native-only buffer registration fix: a non-overlapping owner in the
+# first partial page must not hide another owner on a subsequent page.
+region_before = "bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {\n    const DAddr end_addr = addr + size;"
+region_after = "bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {\n    // An empty CPU write does not overlap any registered cache buffer.\n    if (size == 0) {\n        return false;\n    }\n    const DAddr end_addr = addr + size;"
+region_skip_before = "        if (buf_start_addr < end_addr && addr < buf_end_addr) {\n            return true;\n        }\n        page = Common::DivCeil(end_addr, CACHING_PAGESIZE);"
+region_skip_after = "        if (buf_start_addr < end_addr && addr < buf_end_addr) {\n            return true;\n        }\n        // The first page can contain a buffer ending before addr. A later\n        // page may belong to another registered buffer intersecting the span.\n        // Do not skip all remaining pages after one non-overlapping owner.\n        ++page;"
+assert r437_expected.count(region_before) == r437_expected.count(region_skip_before) == 1
+r437_expected = r437_expected.replace(region_before, region_after).replace(
+    region_skip_before, region_skip_after)
 assert (active / r437_rel).read_text() == r437_expected, (
     "R437 maintained buffer cache differs from source reconstruction; "
     "check BufferPages registration, DMA copy bounds and DMA clear bounds"

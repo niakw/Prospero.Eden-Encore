@@ -21,7 +21,12 @@ def method(source):
     return source[begin:source.index("\ntemplate <class P>", begin + len(needle))]
 
 body = method(active)
-assert body == method(backport), "native and backport ownership checks diverged"
+original = method(backport)
+assert original.count("page = Common::DivCeil(end_addr, CACHING_PAGESIZE);") == 1
+assert original.count("    const DAddr end_addr = addr + size;") == 1
+expected = original.replace("bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {\n    const DAddr end_addr = addr + size;", "bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {\n    // An empty CPU write does not overlap any registered cache buffer.\n    if (size == 0) {\n        return false;\n    }\n    const DAddr end_addr = addr + size;").replace(
+    "        if (buf_start_addr < end_addr && addr < buf_end_addr) {\n            return true;\n        }\n        page = Common::DivCeil(end_addr, CACHING_PAGESIZE);", "        if (buf_start_addr < end_addr && addr < buf_end_addr) {\n            return true;\n        }\n        // The first page can contain a buffer ending before addr. A later\n        // page may belong to another registered buffer intersecting the span.\n        // Do not skip all remaining pages after one non-overlapping owner.\n        ++page;")
+assert body == expected, "native ownership scan differs from reviewed backport transformation"
 assert "if (size == 0)" in body
 assert body.count("++page;") == 2
 assert "page = Common::DivCeil(end_addr, CACHING_PAGESIZE);" not in body
