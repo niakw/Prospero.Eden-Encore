@@ -235,23 +235,31 @@ private:
 
     void PerformRequestedCacheInvalidation(HaltReason hr) {
         if (Has(hr, HaltReason::CacheInvalidation)) {
-            std::unique_lock lock{invalidation_mutex};
+            // Consume the pending request under its mutex, but never hold it
+            // while invalidating compiled blocks or changing RX/RW code state.
+            // A concurrent guest write can queue the NEXT request while this
+            // JIT thread processes the current snapshot.
+            bool clear_all = false;
+            boost::icl::interval_set<u32> ranges;
+            {
+                std::unique_lock lock{invalidation_mutex};
+                ClearHalt(HaltReason::CacheInvalidation);
+                clear_all = invalidate_entire_cache;
+                invalidate_entire_cache = false;
+                ranges.swap(invalid_cache_ranges);
+            }
 
-            ClearHalt(HaltReason::CacheInvalidation);
-
-            if (!invalidate_entire_cache && invalid_cache_ranges.empty()) {
+            if (!clear_all && ranges.empty()) {
                 return;
             }
 
             jit_state.ResetRSB();
-            if (invalidate_entire_cache) {
+            if (clear_all) {
                 block_of_code.ClearCache();
                 emitter.ClearCache();
             } else {
-                emitter.InvalidateCacheRanges(invalid_cache_ranges);
+                emitter.InvalidateCacheRanges(ranges);
             }
-            invalid_cache_ranges.clear();
-            invalidate_entire_cache = false;
         }
     }
 

@@ -410,33 +410,39 @@ private:
 
     void PerformRequestedCacheInvalidation(HaltReason hr) {
         if (Has(hr, HaltReason::CacheInvalidation)) {
-            std::unique_lock lock{invalidation_mutex};
+            // Consume the pending request under its mutex, but never hold it
+            // while invalidating compiled blocks or changing RX/RW code state.
+            // A concurrent guest write can queue the NEXT request while this
+            // JIT thread processes the current snapshot.
+            bool clear_all = false;
+            boost::icl::interval_set<u64> ranges;
+            {
+                std::unique_lock lock{invalidation_mutex};
+                ClearHalt(HaltReason::CacheInvalidation);
+                clear_all = invalidate_entire_cache;
+                invalidate_entire_cache = false;
+                ranges.swap(invalid_cache_ranges);
+            }
 
-            ClearHalt(HaltReason::CacheInvalidation);
-
-            if (!invalidate_entire_cache && invalid_cache_ranges.empty()) {
+            if (!clear_all && ranges.empty()) {
                 return;
             }
 
             jit_state.ResetRSB();
-            if (invalidate_entire_cache) {
+            if (clear_all) {
                 block_of_code.ClearCache();
                 emitter.ClearCache();
             } else {
-                emitter.InvalidateCacheRanges(invalid_cache_ranges);
+                emitter.InvalidateCacheRanges(ranges);
             }
 #if defined(EDEN_JIT_A64_DEV_PROFILE)
-            // Emit a count only for an actual applied invalidation, not for a
-            // queued request or a redundant halt. No clocks, release impact,
-            // or instrumentation in quiet native gameplay.
+            // Attribute the event to this snapshot, not a newer request.
             if (eden_native_detailed_logging && eden_native_detailed_logging() &&
                 eden_jit_cache_event) {
                 eden_jit_cache_event(unsigned(conf.processor_id),
-                                     invalidate_entire_cache ? 0u : 1u);
+                                     clear_all ? 0u : 1u);
             }
 #endif
-            invalid_cache_ranges.clear();
-            invalidate_entire_cache = false;
         }
     }
 
