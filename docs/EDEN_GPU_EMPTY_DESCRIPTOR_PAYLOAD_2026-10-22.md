@@ -53,3 +53,14 @@ payload space it would never consume, including while preparing a dispatch.
 
 This qualifies a host-side contention elimination, not PS5 frame pacing.
 The archival register still lists zero unreviewed emulator source files.
+
+### Conditional compute TIC/TSC synchronization
+
+A compute shader without any texture, storage image, sampled image or
+texture-buffer descriptors consumes no compute TIC/TSC table entries. The
+selected Vulkan compute pipeline now avoids `SynchronizeDescriptors(true)`
+for those exact layouts. Nonempty layouts retain the full synchronization,
+including binding serial publication. The source-selected UBSan host fixture
+exercises all four descriptor families individually and a descriptor-free case.
+
+This is a cache-lock work reduction, not an assertion about FC27 performance.
