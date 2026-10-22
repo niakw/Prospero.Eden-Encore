@@ -3,7 +3,7 @@
   "description": "Code optimization handling, not validation or inferred need for code edits",
   "base_commit": "82c531d08641d8b28124bd2cebf37fcf85674179",
   "snapshot_commit": "05846723c40c4ebfc593b4be2e3496079c25167c",
-  "owned_code_count_at_snapshot": 492,
+  "owned_code_count_at_snapshot": 493,
   "handled_paths": [
     {
       "path": "headless/assets_dir.h",
@@ -3780,6 +3780,14 @@
       "disposition": "new_source_issue_corrected",
       "proof_ref": "tools/check-native-index-draw-dirty-span-host.py",
       "evidence": "Selected native DrawManager previously failed to re-arm Dirty::IndexBuffer when macro/indexed-indirect first/count changed without a Maxwell register write; fixed only changed-span transitions and tested real selected methods at O0/O2. Console frame pacing and geometry fidelity are unverified."
+    },
+    {
+      "path": "vendor/encore-active/eden-surface-lifecycle/src/core/hle/service/nvnflinger/hardware_composer.cpp",
+      "disposition": "new_source_issue_corrected",
+      "contract_id": "N23",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-surface-lifecycle.py",
+      "evidence": "23 October: native-maintained compositor source selected by staged installer, with exact pinned-original transformation and host replay of released versus still-acquired frame reuse. F03/F05 unresolved until full display progression and HUD are proven."
     }
   ],
   "inventoried_including_pinned": 538,
