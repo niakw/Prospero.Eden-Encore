@@ -157,7 +157,13 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
 bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
                                 Tegra::MemoryManager& gpu_memory, Scheduler& scheduler,
                                 BufferCache& buffer_cache, TextureCache& texture_cache) {
-    guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer);
+    // A descriptor-free compute shader must not reserve the legacy 1024
+    // guest entries or wait for a GPU worker while holding both cache locks.
+    if (num_descriptor_entries == 0) {
+        guest_descriptor_queue.AcquireKnownEmpty(uses_descriptor_buffer);
+    } else {
+        guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer);
+    }
 
     buffer_cache.SetComputeUniformBufferState(info.constant_buffer_mask, &uniform_buffer_sizes);
     buffer_cache.UnbindComputeStorageBuffers();

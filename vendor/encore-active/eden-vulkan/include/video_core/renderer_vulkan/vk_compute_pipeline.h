@@ -54,6 +54,9 @@ public:
                                  BufferCache& buffer_cache, TextureCache& texture_cache);
 
 #ifdef PS5_NATIVE
+    [[nodiscard]] bool HasDescriptorEntries() const noexcept {
+        return num_descriptor_entries != 0;
+    }
     [[nodiscard]] bool CanUseDescriptorBuffer() const noexcept {
         return uses_descriptor_buffer;
     }
