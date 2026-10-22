@@ -300,6 +300,16 @@ assert dequeue_expected.count(dequeue_frame_before_3) == 1
 dequeue_expected = dequeue_expected.replace(dequeue_frame_before_3, dequeue_frame_after_3)
 assert dequeue_maintained == dequeue_expected, (
     "Maintained queue-dequeue diagnostic diverges from prior generated source")
+# Release and DEV use the same fixes, minus the dequeue performance hook.
+dequeue_standard = (active / "eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer_standard.cpp").read_text()
+assert dequeue_expected.startswith('#include "performance.h"\n')
+dequeue_standard_expected = dequeue_expected.partition("\n")[2]
+assert dequeue_standard_expected.count(dequeue_new) == 1
+dequeue_standard_expected = dequeue_standard_expected.replace(dequeue_new, dequeue_old)
+assert dequeue_standard == dequeue_standard_expected, "Release producer and DEV producer diverge"
+assert "::Eden::Performance::" not in dequeue_standard
+assert c.count('buffer_queue_producer_standard.cpp') == 1
+assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")') == 1
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")') == 1
 assert c.count('list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_producer.cpp")') == 1
 assert 'if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")' in c
