@@ -71,6 +71,11 @@ index_before = "    const u32 address_size = static_cast<u32>(gpu_addr_end - gpu
 index_after = "    // Both the GPU range and (first + count) * format size can exceed\n    // 32 bits. Compare their full widths before bounding FindBuffer(u32).\n    const u64 address_size =\n        gpu_addr_end > gpu_addr_begin ? gpu_addr_end - gpu_addr_begin : 0;\n    const u64 index_count =\n        static_cast<u64>(index_buffer_ref.count) + index_buffer_ref.first;\n    const u64 draw_size = index_count * index_buffer_ref.FormatSizeInBytes();\n    const u32 size = static_cast<u32>((std::min)(\n        (std::min)(address_size, draw_size), static_cast<u64>(~u32{0})));"
 assert expected.count(index_before) == 1
 expected = expected.replace(index_before, index_after)
+# Native-only indirect draw extent validation; preserve source replay.
+indirect_before = "    const auto update = [this](GPUVAddr gpu_addr, size_t size, Binding& binding) {\n        const std::optional<DAddr> device_addr = gpu_memory->GpuToCpuAddress(gpu_addr);"
+indirect_after = "    const auto update = [this](GPUVAddr gpu_addr, size_t size, Binding& binding) {\n        // The binding and FindBuffer accept u32 bytes. An empty or wider\n        // indirect command range must not wrap into a valid-looking buffer.\n        if (size == 0 || size > static_cast<size_t>(~u32{0})) {\n            binding = NULL_BINDING;\n            return;\n        }\n        const std::optional<DAddr> device_addr = gpu_memory->GpuToCpuAddress(gpu_addr);"
+assert expected.count(indirect_before) == 1
+expected = expected.replace(indirect_before, indirect_after)
 assert maintained == expected, "R437 maintained header differs from reviewed transforms"
 assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm

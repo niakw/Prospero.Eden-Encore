@@ -1438,6 +1438,12 @@ void BufferCache<P>::UpdateVertexBuffer(u32 index) {
 template <class P>
 void BufferCache<P>::UpdateDrawIndirect() {
     const auto update = [this](GPUVAddr gpu_addr, size_t size, Binding& binding) {
+        // The binding and FindBuffer accept u32 bytes. An empty or wider
+        // indirect command range must not wrap into a valid-looking buffer.
+        if (size == 0 || size > static_cast<size_t>(~u32{0})) {
+            binding = NULL_BINDING;
+            return;
+        }
         const std::optional<DAddr> device_addr = gpu_memory->GpuToCpuAddress(gpu_addr);
         if (!device_addr) {
             binding = NULL_BINDING;
