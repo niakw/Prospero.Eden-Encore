@@ -254,6 +254,22 @@ with tempfile.TemporaryDirectory(prefix="eden-surface-lifecycle-") as tmp:
     module.install(stage)
     assert target.read_bytes() == active
     module.install(stage)  # Idempotence after upgrading an old staged tree.
+
+    # Also upgrade the immediately preceding F05 lifecycle release, which
+    # already contained the per-layer deduplication but not display-ID dedup.
+    display_guard = (
+        "    // A display ID must identify exactly one stack and buffer owner.\n"
+        "    if (FindDisplay(display_id) != nullptr) {\n"
+        "        return;\n"
+        "    }\n"
+    )
+    assert source.count(display_guard) == 1
+    preceding_display_release = source.replace(display_guard, "").encode()
+    assert module.blob_sha(preceding_display_release) == module.SURFACE_PRE_DUPLICATE_DISPLAY_GIT_BLOB
+    target.write_bytes(preceding_display_release)
+    module.install(stage)
+    assert target.read_bytes() == active
+    module.install(stage)
     composer_target.write_bytes(b"unexpected third-party change")
     try:
         module.install(stage)
