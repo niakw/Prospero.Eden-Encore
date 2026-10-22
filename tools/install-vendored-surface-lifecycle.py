@@ -20,6 +20,7 @@ COMPOSER_PATH = Path("src/core/hle/service/nvnflinger/hardware_composer.cpp")
 COMPOSER_ORIGINAL = ROOT / "vendor/sources/eden" / COMPOSER_PATH
 COMPOSER_ACTIVE = ROOT / "vendor/encore-active/eden-surface-lifecycle" / COMPOSER_PATH
 COMPOSER_ORIGINAL_GIT_BLOB = "5decb791e1bb1ab2420f386e3fdbdd2b8628a324"
+COMPOSER_PREVIOUS_ACTIVE_GIT_BLOB = "f5515f4f6d4cc925825d5ad4ccb2ba101188110d"
 
 ORIGINAL_GIT_BLOB = "a6136c111d96d2660c28b27c6881e3b671e7eed8"
 # Exact predecessor on the same maintained branch. Staged/offline build inputs
@@ -39,6 +40,12 @@ COMPOSER_RELEASED_OLD = "        } else {\n            // We didn't acquire a ne
 COMPOSER_RELEASED_NEW = "        }\n        // The previous buffer was already RELEASED to the producer. If no\n        // replacement is ready it can no longer be safely sampled: the\n        // producer may be writing into it. Reuse is legal only while acquired.\n        return CacheStatus::NoBufferAvailable;"
 
 
+# Keep the source derivation exact and ensure signed guest edge values never
+# overflow before conversion to the compositor speed scale.
+COMPOSER_SPEED_OLD = "2.f * static_cast<f32>(1 - swap_interval)"
+COMPOSER_SPEED_NEW = "2.f * (1.f - static_cast<f32>(swap_interval))"
+
+
 def check_composer() -> tuple[bytes, bytes]:
     before = COMPOSER_ORIGINAL.read_bytes()
     after = COMPOSER_ACTIVE.read_bytes()
@@ -47,7 +54,11 @@ def check_composer() -> tuple[bytes, bytes]:
     before_text = before.decode()
     if before_text.count(COMPOSER_RELEASED_OLD) != 1:
         raise RuntimeError("Pinned HardwareComposer released-slot branch changed")
-    if after != before_text.replace(COMPOSER_RELEASED_OLD, COMPOSER_RELEASED_NEW).encode():
+    if before_text.count(COMPOSER_SPEED_OLD) != 1:
+        raise RuntimeError("Pinned HardwareComposer swap interval arithmetic changed")
+    maintained = before_text.replace(COMPOSER_RELEASED_OLD, COMPOSER_RELEASED_NEW)
+    maintained = maintained.replace(COMPOSER_SPEED_OLD, COMPOSER_SPEED_NEW)
+    if after != maintained.encode():
         raise RuntimeError("Maintained HardwareComposer differs from reviewed transformation")
     check_text = after.decode()
     acquired = check_text.split("HardwareComposer::CacheStatus HardwareComposer::CacheFramebufferLocked(", 1)[1]
@@ -97,7 +108,8 @@ def install(destination: Path) -> None:
     # may carry the exact previous SurfaceFlinger release, but nothing else.
     sources = (
         (PATH, ACTIVE, before, replacement, PREVIOUS_ACTIVE_GIT_BLOB, "SurfaceFlinger"),
-        (COMPOSER_PATH, COMPOSER_ACTIVE, composer_before, composer_replacement, None, "HardwareComposer"),
+        (COMPOSER_PATH, COMPOSER_ACTIVE, composer_before, composer_replacement,
+         COMPOSER_PREVIOUS_ACTIVE_GIT_BLOB, "HardwareComposer"),
     )
     for rel, source, original, maintained, previous, label in sources:
         existing = (destination / rel).read_bytes()

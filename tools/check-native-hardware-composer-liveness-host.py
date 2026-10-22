@@ -42,6 +42,8 @@ def extract(marker: str) -> str:
     return extract_from(source, marker)
 
 helper = extract("s32 NormalizeSwapInterval(")
+pinned_helper = extract_from(pinned.decode(), "s32 NormalizeSwapInterval(")
+assert helper != pinned_helper
 methods = "\n\n".join(extract(name) for name in (
     "u32 HardwareComposer::ComposeLocked(",
     "void HardwareComposer::ReleaseFramebuffersLocked(",
@@ -64,6 +66,8 @@ assert "return CacheStatus::CachedBufferReused;" in pinned_cache_method
 fixture = r"""
 #include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <limits>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -180,6 +184,16 @@ static android::BufferItem frame(int id, int interval) {
     return item;
 }
 int main() {
+    // Exact native swap-interval helper: the pinned 1 - INT_MIN expression
+    // overflowed signed int in UBSan at both -O0 and -O2.
+    volatile s32 minimum = std::numeric_limits<s32>::min();
+    f32 edge_speed = 0;
+    assert(NormalizeSwapInterval(&edge_speed, minimum) == 1);
+    assert(std::isfinite(edge_speed) && edge_speed > 1.f);
+    assert(NormalizeSwapInterval(&edge_speed, -1) == 1);
+    assert(edge_speed == 4.f);
+    assert(NormalizeSwapInterval(&edge_speed, 0) == 1);
+    assert(edge_speed == 2.f);
     HardwareComposer composer;
     Display display;
     Nvidia::Devices::nvdisp_disp0 display_gpu;
@@ -270,3 +284,24 @@ with tempfile.TemporaryDirectory(prefix="encore-composer-full-") as td:
             "The pinned original unexpectedly passed the released-buffer"
             " multi-layer regression", opt, actual.stdout, actual.stderr[-1500:])
         print("PINNED_COMPOSITOR_STALE_FRAME_EXPECTED_FAIL_PASS", opt)
+        
+        # Independent negative control for the previous signed-overflow path:
+        # keep the corrected cache method, restore only the exact pinned
+        # normalization helper, then require UBSan to reject INT32_MIN.
+        old_speed = fixture.replace(helper, pinned_helper)
+        assert old_speed != fixture and old_speed.count(pinned_helper) == 1
+        old_speed_path = Path(td) / "composer_old_speed.cpp"
+        old_speed_path.write_text(old_speed)
+        old_speed_bin = Path(td) / ("composer_old_speed" + opt)
+        old_speed_build = subprocess.run(
+            [compiler, "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+             "-fsanitize=undefined", "-fno-sanitize-recover=all", "-pthread",
+             str(old_speed_path), "-o", str(old_speed_bin)],
+            capture_output=True, text=True, timeout=45)
+        assert old_speed_build.returncode == 0, (opt, old_speed_build.stderr[-5000:])
+        old_speed_run = subprocess.run([str(old_speed_bin)], capture_output=True,
+                                       text=True, timeout=15)
+        assert old_speed_run.returncode != 0 and "signed integer overflow" in old_speed_run.stderr, (
+            "Pinned compositor signed-overflow regression unexpectedly passed",
+            opt, old_speed_run.stdout, old_speed_run.stderr[-2000:])
+        print("PINNED_COMPOSITOR_SWAP_OVERFLOW_EXPECTED_FAIL_PASS", opt)
