@@ -94,3 +94,76 @@ with tempfile.TemporaryDirectory(prefix="encore-nvn-callback-") as tmp:
                         str(source), "-o", str(binary)], check=True, timeout=40)
         subprocess.run([str(binary)], check=True, timeout=15)
         print("NATIVE_NVN_QUEUE_CALLBACK_PASS", opt)
+
+# Compile the actual hot-path assignments, not a model of the clock decision.
+# The default-disabled option must leave all queue slot writes intact and
+# avoid GetTimeNS; enabling history retains the prior timestamp.
+block_start = method.index("        const bool record_buffer_history =")
+block_end = method.index("        item.slot = slot;", block_start)
+clock_block = method[block_start:block_end]
+assert clock_block.count("Common::g_wall_clock.GetTimeNS().count()") == 1
+assert method.count("if (record_buffer_history) {") == 2
+assert "if (Settings::values.enable_buffer_history.GetValue())" not in method
+history_fixture = r"""
+#include <cassert>
+#include <array>
+#include <cstdint>
+using u64 = std::uint64_t;
+using s64 = std::int64_t;
+enum class BufferState { Free, Queued };
+struct Fence { int value{}; };
+struct Slot {
+ BufferState buffer_state{BufferState::Free};
+ u64 frame_number{};
+ s64 queue_time{};
+ s64 presentation_time{};
+ Fence fence{};
+};
+struct Core { u64 frame_counter{}; };
+Core state;
+Core* core = &state;
+std::array<Slot,2> slots{};
+struct Flag {
+ bool enabled{};
+ unsigned reads{};
+ bool GetValue() { ++reads; return enabled; }
+};
+namespace Settings {
+struct Values { Flag enable_buffer_history; };
+inline Values values{};
+}
+namespace Common {
+struct Stamp { s64 count() const { return 987654; } };
+struct Clock {
+ unsigned calls{};
+ Stamp GetTimeNS() { ++calls; return {}; }
+};
+inline Clock g_wall_clock{};
+}
+void Run(int slot, s64 timestamp, Fence fence) {
+""" + clock_block + r"""
+}
+int main() {
+ Run(0, 25, Fence{1});
+ assert(state.frame_counter == 1 && slots[0].frame_number == 1);
+ assert(slots[0].queue_time == 25 && slots[0].presentation_time == 0);
+ assert(slots[0].buffer_state == BufferState::Queued && slots[0].fence.value == 1);
+ assert(Common::g_wall_clock.calls == 0 && Settings::values.enable_buffer_history.reads == 1);
+ Settings::values.enable_buffer_history.enabled = true;
+ Run(1, 44, Fence{2});
+ assert(state.frame_counter == 2 && slots[1].frame_number == 2);
+ assert(slots[1].queue_time == 44 && slots[1].presentation_time == 987654);
+ assert(slots[1].buffer_state == BufferState::Queued && slots[1].fence.value == 2);
+ assert(Common::g_wall_clock.calls == 1 && Settings::values.enable_buffer_history.reads == 2);
+}
+"""
+with tempfile.TemporaryDirectory(prefix="encore-nvn-history-") as tmp:
+    source = Path(tmp) / "clock.cpp"
+    source.write_text(history_fixture)
+    for opt in ("-O0", "-O2"):
+        binary = Path(tmp) / ("clock-"+opt)
+        subprocess.run([compiler, "-std=c++20", opt, "-Wall", "-Wextra",
+                        "-Werror", "-fsanitize=undefined", "-fno-sanitize-recover=all",
+                        str(source), "-o", str(binary)], check=True, timeout=40)
+        subprocess.run([str(binary)], check=True, timeout=15)
+        print("NATIVE_NVN_HISTORY_CLOCK_PASS", opt)
