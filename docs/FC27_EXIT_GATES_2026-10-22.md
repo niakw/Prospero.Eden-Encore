@@ -4,11 +4,12 @@
 `dev/ps5-sparse-jit`. Base native vérifiée :
 [`69fdf79`](https://github.com/niakw/Prospero.Eden-Encore/commit/69fdf7912de4cb0264d95bcbfcf61ad49d20d95c).
 
-> **Indicateur principal : 0 / 7 critères de résultat démontrés, 7 ouverts.**
-> Cela **ne signifie pas sept fichiers à modifier**, ni sept défauts indépendants :
-> une même correction peut fermer plusieurs critères, ou aucun si elle ne
-> change pas le résultat sur console. Aucun critère n'est fermé parce que
-> son code compile. Les `430/492` sources examinées et les `409`
+> **Indicateurs séparés : 0 / 6 chantiers techniques clôturés sur code + tests,
+> et F07 = qualification matérielle distincte.**
+> Les six premiers chantiers **ne requièrent aucune nouvelle preuve sur console**.
+> Une correction peut satisfaire plusieurs critères, ou aucun si les tests ne
+> couvrent pas la cause identifiée. Une CI verte seule n'est pas une preuve
+> que tous les chemins du sous-système sont couverts. Les `430/492` sources examinées et les `409`
 > contrats SOURCE/OPEN sont des indicateurs historiques d'inventaire et de
 > qualification, **pas des compteurs d'optimisations restantes**.
 
@@ -20,7 +21,7 @@
 | Prévalidation de toutes les sources | **VERT** | [39775425826](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39775425826) |
 | Build/package natif PS5 | **VERT** | [39775426085](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39775426085) |
 | Analyse sécurité CodeQL | **VERT** | [39775426078](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39775426078) |
-| **Résultat FC27 sur matériel pour ce SHA** | **NON MESURÉ** | Aucun test console du SHA de référence |
+| **Résultat FC27 sur matériel pour ce SHA (F07 uniquement)** | **NON MESURÉ** | Aucun test console du SHA de référence |
 
 Cette base inclut déjà les gardes TIC/TSC, les limites des buffers
 indirects / SSBO / TBO / CBUF, les liaisons compute périmées, la
@@ -30,19 +31,22 @@ qualification de performance, de HUD ou de fidélité des textures.
 
 ## Tableau des sept critères de sortie
 
-Les états ont un sens strict : **OUVERT** = symptôme ou risque encore non
-clos sur console ; **INVESTIGATION** = chemins exacts identifiés mais pas de
-gain prouvé ; **À QUALIFIER** = une correction existe, sans preuve matérielle
-du résultat. Tous les critères restent ouverts jusqu'à leur preuve de sortie.
+Les états ont un sens strict : **OUVERT** = une lacune de code, de reproduction ou
+ de couverture de tests subsiste ; **INVESTIGATION** = les chemins propriétaires sont
+repérés, la cause n'est pas totalement démontrée ; **À QUALIFIER** = un correctif
+existe, mais il manque un test de non-régression ou une preuve de sélection native.
+**F01–F06 se clôturent exclusivement avec preuves source, tests hôte, replay
+et CI/native**, indépendamment d'un test console. **F07 seul** mesure le résultat
+observable par l'utilisateur ; son état ne bloque pas la clôture des six premiers.
 
 | ID | Priorité | Résultat attendu | Situation vérifiée | Prochaine intervention ciblée | Clôture requise |
 | --- | --- | --- | --- | --- | --- |
-| **F01** | P0 | **Plus de saccades CPU/GPU liées aux buffers** | **INVESTIGATION.** 1 005 680 attentes du mutex buffers, 9,311 s cumulées dans la trace détaillée. Réductions partielles déjà intégrées : pages jamais possédées, préallocation des descripteurs, samplers consécutifs. | Isoler les sections réellement longues entre `RasterizerVulkan::OnCPUWrite`, `PrepareDraw` et `GraphicsPipeline::ConfigureImpl`. Réduire le travail immuable sous le verrou sans perdre une invalidation. | Même scène, même binaire : baisse des attentes longues et des images >50/100 ms, **sans** régression de contenu HUD/texture. |
-| **F02** | P0 | **Supprimer les très gros pics de compilation JIT** | **INVESTIGATION.** Les traces comportent des images de plusieurs centaines de ms à plus d'une seconde et de fortes compilations JIT cumulées. Le sparse JIT expérimental est OFF en release ; l'ancienne session sparse utilisait un **autre SHA**. | Isoler par cœur les compilations froides/répétées, invalidations de blocs et limites du cache ; privilégier une correction ciblée plutôt que monter les tailles et les threads au hasard. | Absence de gros pics JIT récurrents en match, temps de frame meilleur à scène comparable, sans faute mémoire/JIT. |
-| **F03** | P0 | **HUD présent et actualisé en continu** | **À QUALIFIER.** Gardes TIC/TSC et récupération de mappings manquants intégrés, mais la dernière console montrait encore des éléments de HUD figés/disparus. Zéro `EDEN_GPU_DRAW_DROP` observé dans l'ancienne trace ne prouve pas la fraîcheur des pixels. | Tracer le parcours TIC/TSC → image view → descripteur graphique → barrières/feedback → présentation, avec la durée de validité et les écritures CPU/GPU. | HUD complet, non figé, continuellement mis à jour dans jeu, menus et transitions. |
-| **F04** | P0 | **Maillots, terrain et autres textures sans trous ni corruption** | **À QUALIFIER.** Limites DMA, vertex/index, slots SSBO/TBO et mappings textures corrigées côté source, sans preuve d'une restitution correcte de FC27. `memory_short=0` dans l'ancien relevé. | Vérifier alias/remap, invalidations de textures, vues périmées et échelles/régions d'upload ; distinguer géométrie absente et texture invalide. | Maillots, terrain et transitions entièrement rendus dans plusieurs séquences de match. |
-| **F05** | P1 | **Image affichée = simulation du jeu qui avance** | **INVESTIGATION.** ~30 FPS Vulkan peuvent masquer une scène bloquée. L'ancien gel de pause/fin de match avait GPU et compositor actifs. Le service `IHOSBinderDriver` concentre des attentes IPC mais elles ne sont pas toutes des coûts évitables. | Corréler progression du jeu/HLE, transactions `TransactParcelAuto`, dequeue/queue de buffers, fences et horodatages de présentation. Ne pas forcer la cadence ni sauter un fence. | Aucune répétition prolongée d'une scène alors que les presents continuent ; transitions menu/mi-temps/fin de match vivantes. |
-| **F06** | P1 | **Match complet : contrôles cohérents, pas de gel ni crash** | **À QUALIFIER.** La session console récente ne semblait plus planter/geler mais de forts lags persistaient ; les anciens gels pause/mi-temps/fin de match et paramètres de commandes non appliqués n'ont pas été clos sur la révision actuelle. | Vérifier le passage DualSense → HID/Npad → actions du jeu, les états de commande personnalisés et la progression HLE des menus/écrans de fin. Ne pas forcer de mapping global pendant le match. | Match complet + menus pause/mi-temps/fin de match + commandes personnalisées corrects, sans fermeture forcée. |
+| **F01** | P0 | **Plus de saccades CPU/GPU liées aux buffers** | **INVESTIGATION.** 1 005 680 attentes du mutex buffers, 9,311 s cumulées dans la trace détaillée. Réductions partielles déjà intégrées : pages jamais possédées, préallocation des descripteurs, samplers consécutifs. | Isoler les sections réellement longues entre `RasterizerVulkan::OnCPUWrite`, `PrepareDraw` et `GraphicsPipeline::ConfigureImpl`. Réduire le travail immuable sous le verrou sans perdre une invalidation. | Test source-extrait concurrents/ownership buffer+texture prouvant l'ordre des invalidations et absence de régression, plus microbenchmark hôte du chemin ciblé et build natif vert. Le gain FPS sur console reste F07. |
+| **F02** | P0 | **Supprimer les très gros pics de compilation JIT** | **INVESTIGATION.** Les traces comportent des images de plusieurs centaines de ms à plus d'une seconde et de fortes compilations JIT cumulées. Le sparse JIT expérimental est OFF en release ; l'ancienne session sparse utilisait un **autre SHA**. | Isoler par cœur les compilations froides/répétées, invalidations de blocs et limites du cache ; privilégier une correction ciblée plutôt que monter les tailles et les threads au hasard. | Reproduction hôte des invalidations/compilations répétées par cœur avec compteur avant/après, tests JIT O0/O2, absence de corruption mémoire sous sanitizers et build natif vert. Aucun A/B console nécessaire pour cette clôture technique. |
+| **F03** | P0 | **HUD présent et actualisé en continu** | **À QUALIFIER.** Gardes TIC/TSC et récupération de mappings manquants intégrés, mais la dernière console montrait encore des éléments de HUD figés/disparus. Zéro `EDEN_GPU_DRAW_DROP` observé dans l'ancienne trace ne prouve pas la fraîcheur des pixels. | Tracer le parcours TIC/TSC → image view → descripteur graphique → barrières/feedback → présentation, avec la durée de validité et les écritures CPU/GPU. | Tests déterministes TIC/TSC, vues NULL, réutilisation après remap et barrières/feedback couvrant le chemin sélectionné ; assertions de fraîcheur/invalidations et CI/native verts. L'aspect visuel sur console relève seulement de F07. |
+| **F04** | P0 | **Maillots, terrain et autres textures sans trous ni corruption** | **À QUALIFIER.** Limites DMA, vertex/index, slots SSBO/TBO et mappings textures corrigées côté source, sans preuve d'une restitution correcte de FC27. `memory_short=0` dans l'ancien relevé. | Vérifier alias/remap, invalidations de textures, vues périmées et échelles/régions d'upload ; distinguer géométrie absente et texture invalide. | Tests host source-extraits couvrant les alias/remaps, régions DMA, vertex/index, uploads et formats pertinents, avec vérification du contenu et absence de dépassement ; sélection native verte. Fidélité réelle en match à vérifier dans F07. |
+| **F05** | P1 | **Image affichée = simulation du jeu qui avance** | **INVESTIGATION.** ~30 FPS Vulkan peuvent masquer une scène bloquée. L'ancien gel de pause/fin de match avait GPU et compositor actifs. Le service `IHOSBinderDriver` concentre des attentes IPC mais elles ne sont pas toutes des coûts évitables. | Corréler progression du jeu/HLE, transactions `TransactParcelAuto`, dequeue/queue de buffers, fences et horodatages de présentation. Ne pas forcer la cadence ni sauter un fence. | Rejeu déterministe de la chaîne HID/HLE/IPC buffer queue → fence → present, invariants de progression, anti-double-present/notification perdue et tests de blocages ; CI/native verts. Réactivité ressentie en jeu uniquement F07. |
+| **F06** | P1 | **Match complet : contrôles cohérents, pas de gel ni crash** | **À QUALIFIER.** La session console récente ne semblait plus planter/geler mais de forts lags persistaient ; les anciens gels pause/mi-temps/fin de match et paramètres de commandes non appliqués n'ont pas été clos sur la révision actuelle. | Vérifier le passage DualSense → HID/Npad → actions du jeu, les états de commande personnalisés et la progression HLE des menus/écrans de fin. Ne pas forcer de mapping global pendant le match. | Tests de bout en bout côté hôte pour transitions pause/mi-temps/fin, style HID/Npad, persistance et mapping de commande, plus analyses des attentes/signalements d'erreurs ; CI/native verts. Essai de match complet uniquement F07. |
 | **F07** | P0, final | **Qualification reproductible sur PS5 FW 13.60** | **OUVERT** : CI verte ≠ résultat sur console. Les deux traces historiques les plus récentes ont des SHAs et des états sparse différents, non comparables comme A/B. | Quand des correctifs ciblés F01–F06 auront un candidat CI vert, figer une seule révision/paramétrage, lancer scénario froid **puis** scénario cache chaud, sans mélange des profils ni changements simultanés. | Relever `late50`, `late100`, intervalle maximal, p95/p99, progression du jeu, HUD, maillots, freeze et commandes. Comparaison contrôlée, effet attribuable, validation explicite. |
 
 ### Ce qui n'est **pas** une tâche restante
@@ -68,13 +72,15 @@ du résultat. Tous les critères restent ouverts jusqu'à leur preuve de sortie.
    ne pas confondre somme du travail JIT multi-cœur et temps perdu par image.
 3. **F05/F06** : confirmer progression HLE, buffers de présentation et
    contrôle de jeu, plutôt que conclure d'après les FPS du compositor.
-4. **F07** seulement sur une version avec diagnostics, tests hôte et
-   paquet natif verts. Un passage sur console sera inévitable pour
-   établir le résultat réel ; il ne faut pas le demander à chaque micro-patch.
+4. **F07** reste distinct : une seule éventuelle campagne de qualification
+   matérielle finale. **Aucune preuve console n'est demandée pour fermer F01–F06**.
+   Les tests hôte démontreront la correction technique, sans prétendre prédire
+   précisément les images/sec ni l'aspect final en match.
 
-Après chaque lot : noter dans ce tableau **le ou les IDs affectés**,
-le commit, le contrôle CI et la preuve fonctionnelle, ou maintenir
-explicitement **OUVERT**. Une baisse du nombre de sources restantes
+Après chaque lot : noter **le ou les IDs techniques affectés**, le commit,
+le test source-extrait/rejeu/benchmark, les résultats CI et le SHA de
+sélection native. Fermer **F01–F06 sans passage sur console** dès que les
+invariants correspondants sont établis. Garder F07 indépendant. Une baisse du nombre de sources restantes
 n'est plus une métrique de progression ici.
 
 **Sources de mesures :**
