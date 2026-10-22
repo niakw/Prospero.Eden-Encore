@@ -2601,3 +2601,16 @@ for name, index, expected in (
     text = '#include "performance.h"\n' + text
     if not path.exists() or path.read_text() != text:
         path.write_text(text)
+
+# Compute zero-descriptor queue fast path: apply after every pinned Vulkan
+# backport/cost transform, and require exact active source parity.
+for relative, previous, corrected in (
+    ("include/video_core/renderer_vulkan/vk_compute_pipeline.h", "#ifdef PS5_NATIVE\n    [[nodiscard]] bool CanUseDescriptorBuffer() const noexcept {", "#ifdef PS5_NATIVE\n    [[nodiscard]] bool HasDescriptorEntries() const noexcept {\n        return num_descriptor_entries != 0;\n    }\n    [[nodiscard]] bool CanUseDescriptorBuffer() const noexcept {"),
+    ("vk_compute_pipeline_cost.cpp", "    guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer);\n\n    buffer_cache.SetComputeUniformBufferState", "    // A descriptor-free compute shader must not reserve the legacy 1024\n    // guest entries or wait for a GPU worker while holding both cache locks.\n    if (num_descriptor_entries == 0) {\n        guest_descriptor_queue.AcquireKnownEmpty(uses_descriptor_buffer);\n    } else {\n        guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer);\n    }\n\n    buffer_cache.SetComputeUniformBufferState"),
+    ("vulkan_rasterizer.cpp", "    gpu_memory->FlushCaching();\n#ifdef PS5_NATIVE\n    // Compute Configure runs under both guest cache locks. Drain the common\n    // descriptor queue overflow BEFORE taking those locks, exactly as Draw.\n    // The GPU worker may publish guest invalidations while it drains.\n    if (guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {\n        gpu_memory->FlushCaching();\n    }\n#endif\n\n    ComputePipeline* pipeline{pipeline_cache.CurrentComputePipeline()};\n    if (!pipeline) {\n        return;\n    }\n#ifdef PS5_NATIVE\n    // Compute always allocates new descriptor-buffer space for a dispatch.", "    gpu_memory->FlushCaching();\n    ComputePipeline* pipeline{pipeline_cache.CurrentComputePipeline()};\n    if (!pipeline) {\n        return;\n    }\n#ifdef PS5_NATIVE\n    // Select first: descriptor-free compute dispatches must not drain the\n    // legacy 1024-entry guest queue. After a real wait, consume guest page\n    // invalidations and reselect the possibly changed compute shader.\n    if (pipeline->HasDescriptorEntries() &&\n        guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {\n        gpu_memory->FlushCaching();\n        pipeline = pipeline_cache.CurrentComputePipeline();\n        if (!pipeline) return;\n    }\n#endif\n#ifdef PS5_NATIVE\n    // Compute always allocates new descriptor-buffer space for a dispatch."),
+):
+    selected = output / relative
+    text = selected.read_text()
+    if text.count(previous) != 1:
+        raise RuntimeError(f"Compute empty-descriptor native anchor changed: {relative}")
+    selected.write_text(text.replace(previous, corrected))
