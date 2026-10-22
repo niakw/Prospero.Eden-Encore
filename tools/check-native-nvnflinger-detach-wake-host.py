@@ -26,6 +26,8 @@ def method(src):
     end = src.index("\nStatus BufferQueueProducer::AttachBuffer(", start)
     return src[start:end].rstrip()
 selected = method(active)
+standard = (ROOT / "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer_standard.cpp").read_text()
+assert method(standard) == selected, "Release detach differs from DEV"
 assert 'core->FreeBufferLocked(found);\n    // DetachBuffer' in selected
 assert selected.count("core->SignalDequeueCondition();") == 1
 assert selected.index("core->FreeBufferLocked(found);") < selected.index("core->SignalDequeueCondition();")

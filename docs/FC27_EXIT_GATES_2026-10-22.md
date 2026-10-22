@@ -140,3 +140,7 @@ Dans `BufferQueueProducer::WaitForFreeSlotThenRelock`, le cas `queue.size() > ma
 ## F05 — 22 octobre : lecture des numéros de frame sous verrou
 
 Le diagnostic de `DequeueBuffer` relisait `slots[*out_slot].frame_number` après la sortie de `core->mutex`, pendant qu'un autre producteur ou consommateur pouvait modifier les métadonnées du slot. Le numéro est maintenant capturé sous verrou à la sélection, puis actualisé dans le chemin de réallocation sous le même mutex. Seule cette copie est utilisée par `LOG_DEBUG`. Cela évite une lecture concurrente indéfinie et un diagnostic de frame incohérent, sans changer la propriété des buffers, les fences, la sélection du slot ni la synchronisation du jeu. L'oracle des sources maintenues reproduit chaque remplacement exactement depuis la version épinglée. **F05 demeure ouvert ; ce garde ne prouve pas un déblocage FC27.**
+
+## F05 — release et DEV utilisent les mêmes correctifs NVNflinger
+
+L'audit CMake a identifié que les dernières corrections de buffer_queue_producer.cpp étaient sélectionnées uniquement avec EDEN_DEV_PROFILE. Le profil final utilisait donc encore le fichier épinglé sans ces corrections. La version standard désormais maintenue sous vendor/encore-active applique les mêmes changements de synchronisation et de durée de vie des frames, sans les horodatages de profilage DEV. La sélection CMake remplace l'unité épinglée dans les deux profils et les oracles vérifient la parité exacte des variantes. F05 reste ouvert : cela confirme la sélection du code, et non le résultat réel sur console.

@@ -20,6 +20,8 @@ def queue_method(source):
     return source[start:source.index(end_marker, start)]
 
 method = queue_method(active)
+standard = (ROOT / "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer_standard.cpp").read_text()
+assert queue_method(standard) == method, "Release callback differs from DEV"
 assert "item.graphic_buffer.reset();" in queue_method(pinned)
 assert "item.slot = BufferItem::INVALID_BUFFER_SLOT;" in queue_method(pinned)
 assert "item.graphic_buffer.reset();" not in method

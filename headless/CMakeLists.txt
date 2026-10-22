@@ -541,14 +541,6 @@ if(EDEN_DEV_PROFILE)
     endif()
     list(REMOVE_ITEM core_sources "hle/service/nvdrv/devices/nvhost_ctrl.cpp")
     list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_NVCTRL}")
-    # DEV-only buffer dequeue timing comes from a tracked maintained TU.
-    set(EDEN_MAINTAINED_PROFILE_DEQUEUE
-        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp")
-    if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")
-        message(FATAL_ERROR "Missing maintained buffer queue diagnostic source")
-    endif()
-    list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_producer.cpp")
-    list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")
     # Guest asset streaming: time and bytes of fsp-srv IFile/IStorage backend reads.
     # Use the reviewed, maintained source directly. The original source stays
     # pinned; no C++ text replacement or generated translation unit in CMake.
@@ -592,6 +584,19 @@ if(EDEN_DEV_PROFILE)
     list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_HLE_SERVICE}"
                              "${EDEN_MAINTAINED_PROFILE_SVC_IPC}")
 endif()
+# Keep DEV timing isolated, but compile the same queue correctness fixes in release.
+if(EDEN_DEV_PROFILE)
+    set(EDEN_MAINTAINED_PROFILE_DEQUEUE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp")
+else()
+    set(EDEN_MAINTAINED_PROFILE_DEQUEUE
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer_standard.cpp")
+endif()
+if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")
+    message(FATAL_ERROR "Missing maintained buffer queue producer source")
+endif()
+list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_producer.cpp")
+list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")
 # Both normal and DEV IPC paths use maintained source owners. The
 # DEV-only request profiler remains isolated to its existing unit.
 if(NOT EDEN_DEV_PROFILE)
