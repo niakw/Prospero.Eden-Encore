@@ -1517,6 +1517,12 @@ zero_tick_before = "        const u64 buffer_tick = buffer.getWriteTick();\n    
 zero_tick_after = "        const u64 buffer_tick = buffer.getWriteTick();\n        // New and never-GPU-written buffers have a zero fence tick.\n        // Scheduler::Wait(0) cannot wait; skip its IsFree semaphore probe.\n        if (buffer_tick != 0 && !runtime.IsFree(buffer_tick)) {\n            runtime.Wait(buffer_tick);\n        }"
 assert r437_expected.count(zero_tick_before) == 1
 r437_expected = r437_expected.replace(zero_tick_before, zero_tick_after)
+# Native-only unmapped uniform CBUF guard. A missing GPU-to-CPU
+# translation must clear the previous slot binding without optional UB.
+unmapped_uniform_before = "    const std::optional<DAddr> device_addr = gpu_memory->GpuToCpuAddress(gpu_addr);\n    const Binding binding{\n        .device_addr = *device_addr,\n        .size = size,\n        .buffer_id = BufferId{},\n    };"
+unmapped_uniform_after = "    const std::optional<DAddr> device_addr = gpu_memory->GpuToCpuAddress(gpu_addr);\n    if (!device_addr) {\n        // An unmapped cbuf is not a valid CPU-backed GPU buffer. Retire any\n        // previous slot binding instead of dereferencing an empty optional.\n        channel_state->uniform_buffers[stage][index] = NULL_BINDING;\n        return;\n    }\n    const Binding binding{\n        .device_addr = *device_addr,\n        .size = size,\n        .buffer_id = BufferId{},\n    };"
+assert r437_expected.count(unmapped_uniform_before) == 1
+r437_expected = r437_expected.replace(unmapped_uniform_before, unmapped_uniform_after)
 assert (active / r437_rel).read_text() == r437_expected, (
     "R437 maintained buffer cache differs from source reconstruction; "
     "check BufferPages registration, DMA copy bounds and DMA clear bounds"
