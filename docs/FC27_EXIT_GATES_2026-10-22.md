@@ -1,5 +1,44 @@
 # Eden Encore — reste à faire pour FC27 (critères de sortie)
 
+## Tableau de bord de progression — 22 octobre, état après `da6d57c`
+
+**Il reste six critères techniques ouverts (F01–F06), puis la qualification console F07.** Les correctifs et les contrôles hôte réussis font avancer des sous-chemins précis, **mais aucun critère technique complet n'a encore satisfait tous ses critères de clôture**.
+
+**Ne pas confondre trois décomptes :**
+
+- **Revue initiale des sources d'émulation : 0 fichier restant** (registre vérifié par `tools/check-eden-optimization-coverage.py`, fast/preflight `EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS`).
+- **Revue source de tous les composants : 62 fichiers restants**, exclusivement dans `headless/prosperoeden/` et séparés de l'audit moteur. Le fichier commun `runtime_shims.cpp` a déjà été classé avec le moteur.
+- **Nombre de fichiers exigeant encore un changement d'optimisation/correction : inconnu**. Un fichier déjà revu peut contenir un défaut découvert lors d'un rejeu ; ni « 0 » ni « 62 » ne mesure les corrections restantes.
+
+| Critère | État technique | Dernier progrès démontrable | Travail empêchant la clôture |
+| --- | --- | --- | --- |
+| F01 — contention et saccades GPU/CPU | **INVESTIGATION** | Mémoire paginée, préflight GPU et déduplication de samplers par draw (`abbf9c5`, `da6d57c`), tests de sources en CI | Identifier et diminuer la section *réellement* responsable des attentes cache ; test de concurrence/benchmark avant-après et compilation native validés |
+| F02 — pics de compilation JIT | **INVESTIGATION** | Invalidation et limites de cache précédemment gardées | Rejeu par cœur de la compilation et des invalidations avec compteurs et comportement pré/post correctif |
+| F03 — HUD actualisé | **À QUALIFIER** | Récupération des mappings TIC/TSC, test hôte existant | Tests de fraîcheur TIC → vue → descripteur → barrières → présent, y compris alias et retour de NULL |
+| F04 — maillots et terrain corrects | **À QUALIFIER** | Sécurités DMA, tailles d'index et transferts déjà intégrées | Rejeu de contenu des alias/remaps, upload et invalidations sans perte de données |
+| F05 — simulation HLE qui avance | **INVESTIGATION** | Notifications producteur et horodatage conditionnel validés en hôte | Rejeu déterministe complet HID/HLE/IPC → queue → fence → present ; prouver les réveils et l'absence de frame périmée |
+| F06 — commandes et match sans gel | **À QUALIFIER** | Parcours contrôleur et symptômes de pause documentés | Rejeu Npad/HID et commandes modifiées, transitions pause/mi-temps/fin |
+| F07 — qualification console | **OUVERT** | Aucune comparaison A/B sur le même binaire récent | Une campagne finale, seulement lorsque F01–F06 disposent de preuves suffisantes |
+
+**Contrats :** les six premiers se closent par preuve source + hôte + CI + compilation native ; **F07 est le seul critère nécessitant la console**. Les anciennes traces ne prouvent pas encore une amélioration de FPS ou la disparition des gels.
+
+**Sélection de fichiers encore actifs sur les problèmes, déjà revus dans l'inventaire :**
+`vulkan_rasterizer.cpp` (`OnCPUWrite`/`PrepareDraw`),
+`vk_graphics_pipeline_cost.cpp` (`ConfigureImpl`),
+`video_core/buffer_cache/buffer_cache.h`,
+`texture_cache/texture_cache.h`,
+`video_core/texture_cache/util.cpp`,
+`video_core/memory_manager.cpp`,
+`buffer_queue_producer.cpp`,
+`buffer_queue_core.cpp` et `surface_flinger.cpp`.
+Il ne s'agit **pas** d'une liste exhaustive des fichiers qui devront être modifiés.
+
+**Temps de clôture : non estimable de manière fiable**, tant que les reproductions F01/F02 et les replays F03–F06 n'ont pas identifié l'effort exact. Remplacer ce constat par un nombre d'heures arbitraire serait une fausse visibilité. Le suivi porte sur les preuves manquantes, pas sur un calendrier inventé.
+
+**Référence actuelle :** HEAD `da6d57c` (mémorisation de sampler par draw et test de génération), fast gate, prévalidation, CodeQL C++ et compilation native déclenchés mais non définitifs au moment de cette entrée. [Build natif](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39849801544), [Fast gate](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39849801419).
+
+---
+
 **État établi le 22 octobre 2026.** Branche unique :
 `dev/ps5-sparse-jit`. Base native vérifiée :
 [`69fdf79`](https://github.com/niakw/Prospero.Eden-Encore/commit/69fdf7912de4cb0264d95bcbfcf61ad49d20d95c).
