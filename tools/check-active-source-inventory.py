@@ -179,6 +179,10 @@ print("ENCORE_VULKAN_SHARED_ABI_OWNER_PASS", f"headers={len(abi_headers)}")
 # Summary prose is itself an audit contract, not a manually stale count.
 linked_count = sum(path in graph for path in physical)
 assert f"**{len(physical)} fichiers** de code" in document
+source_truth = (root / "docs/EDEN_OVERRIDE_SOURCE_OF_TRUTH.md").read_text()
+assert f"**{len(physical)} sources et en-têtes suivis**" in source_truth, (
+    "stale single-source summary", len(physical)
+)
 assert f"**{linked_count} fichiers** possèdent" in document
 if linked_count == len(physical):
     assert "**0 fichier** reste sans correspondance" in document
