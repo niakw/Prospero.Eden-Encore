@@ -271,6 +271,10 @@ assert dequeue_pinned.count(detach_before) == 1
 dequeue_expected = '#include "performance.h"\n' + dequeue_pinned.replace(dequeue_old, dequeue_new)
 assert dequeue_expected.count(detach_before) == 1
 dequeue_expected = dequeue_expected.replace(detach_before, detach_after)
+queue_before = "    item.graphic_buffer.reset();\n    item.slot = BufferItem::INVALID_BUFFER_SLOT;\n\n    if (listener_available) {"
+queue_after = "    // Notify consumers with the actual queued item: keep its buffer and slot\n    // alive until the callback completes, outside the BufferQueue mutex.\n    if (listener_available) {"
+assert dequeue_expected.count(queue_before) == 1
+dequeue_expected = dequeue_expected.replace(queue_before, queue_after)
 assert dequeue_maintained == dequeue_expected, (
     "Maintained queue-dequeue diagnostic diverges from prior generated source")
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")') == 1

@@ -546,9 +546,8 @@ Status BufferQueueProducer::QueueBuffer(s32 slot, const QueueBufferInput& input,
         output->Inflate(core->default_width, core->default_height, core->transform_hint, static_cast<u32>(core->queue.size()));
     }
 
-    item.graphic_buffer.reset();
-    item.slot = BufferItem::INVALID_BUFFER_SLOT;
-
+    // Notify consumers with the actual queued item: keep its buffer and slot
+    // alive until the callback completes, outside the BufferQueue mutex.
     if (listener_available) {
         listener_available->OnFrameAvailable(item);
     } else if (listener_replaced) {
