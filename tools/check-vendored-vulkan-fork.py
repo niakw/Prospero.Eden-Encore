@@ -115,6 +115,22 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     for pinned_fragment, native_fragment in optimized_pipeline_deltas:
         assert pipeline_text.count(pinned_fragment) == 1, "pinned sampler stage moved"
         pipeline_text = pipeline_text.replace(pinned_fragment, native_fragment)
+    # Reconstruct the reviewed per-draw sampler memo separately from the
+    # older consecutive-only optimization. Fail on source/anchor drift.
+    sampler_previous = "        // A descriptor array frequently shares its sampler handle.\n        // Reuse only consecutive equal handles within this stage/configuration:\n        // no sampler id survives a pipeline change or guest invalidation.\n        bool last_sampler_valid = false;\n        u32 last_sampler_handle{};\n        VideoCommon::SamplerId last_sampler_id{};\n        for (const auto& desc : info.texture_descriptors) {\n            for (u32 index = 0; index < desc.count; ++index) {\n                const auto handle{read_handle(desc, index)};\n                views.push_back({handle.first});\n\n                if (!last_sampler_valid || last_sampler_handle != handle.second) {\n                    last_sampler_id = texture_cache.GetSamplerId(handle.second, false);\n                    last_sampler_handle = handle.second;\n                    last_sampler_valid = true;\n                }\n                samplers.push_back(last_sampler_id);\n            }\n        }"
+    sampler_current = "        for (const auto& desc : info.texture_descriptors) {\n            for (u32 index = 0; index < desc.count; ++index) {\n                const auto handle{read_handle(desc, index)};\n                views.push_back({handle.first});\n                samplers.push_back(resolve_sampler(handle.second));\n            }\n        }"
+    sampler_memo = "    // Sampler table mapping is stable while the paired guest cache locks are\n    // held. Cache repeated handles only for this draw: never reuse an ID after\n    // a later guest descriptor invalidation, channel switch or pipeline change.\n    // A bounded direct-mapped table avoids per-descriptor hash allocations.\n    struct SamplerMemo {\n        u32 handle{};\n        VideoCommon::SamplerId id{};\n        bool valid{};\n    };\n    std::array<SamplerMemo, 16> sampler_memo{};\n    const auto resolve_sampler{[&](u32 handle) -> VideoCommon::SamplerId {\n        auto& entry = sampler_memo[handle & 15U];\n        if (!entry.valid || entry.handle != handle) {\n            entry.id = texture_cache.GetSamplerId(handle, false);\n            entry.handle = handle;\n            entry.valid = true;\n        }\n        return entry.id;\n    }};\n"
+    sampler_stage = '    const auto config_stage{[&](size_t stage) LAMBDA_FORCEINLINE {'
+    assert pipeline_text.count(sampler_previous) == 1
+    assert pipeline_text.count(sampler_stage) == 1
+    assert pipeline_text.count('#include <algorithm>\n') == 1
+    assert '#include <array>\n' not in pipeline_text
+    pipeline_text = pipeline_text.replace('#include <algorithm>\n',
+                                          '#include <algorithm>\n#include <array>\n', 1)
+    pipeline_text = pipeline_text.replace(sampler_previous, sampler_current)
+    pipeline_text = pipeline_text.replace(sampler_stage, sampler_memo + sampler_stage)
+    assert pipeline_text.count('std::array<SamplerMemo, 16> sampler_memo{};') == 1
+    assert pipeline_text.count('samplers.push_back(resolve_sampler(handle.second));') == 1
     pipeline_src.write_text(pipeline_text)
 
     # AMD logic-op host-state projection: never mutate guest Maxwell regs.
