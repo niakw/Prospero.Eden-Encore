@@ -24,7 +24,7 @@ body = method(active)
 original = method(backport)
 assert original.count("page = Common::DivCeil(end_addr, CACHING_PAGESIZE);") == 1
 assert original.count("    const DAddr end_addr = addr + size;") == 1
-expected = original.replace("bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {\n    const DAddr end_addr = addr + size;", "bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {\n    // An empty CPU write does not overlap any registered cache buffer.\n    if (size == 0) {\n        return false;\n    }\n    const DAddr end_addr = addr + size;").replace(
+expected = original.replace("bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {\n    const DAddr end_addr = addr + size;", "bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {\n    // An empty CPU write does not overlap any registered cache buffer.\n    if (size == 0) {\n        return false;\n    }\n    // The page_table has exactly 16 GiB of guest-physical address space.\n    // Reject unrepresentable/overflowing spans before addr + size or page_table[].\n    constexpr DAddr kTableAddressLimit = DAddr{1} << 34;\n    if (addr >= kTableAddressLimit || size > kTableAddressLimit - addr) {\n        return false;\n    }\n    const DAddr end_addr = addr + size;").replace(
     "        if (buf_start_addr < end_addr && addr < buf_end_addr) {\n            return true;\n        }\n        page = Common::DivCeil(end_addr, CACHING_PAGESIZE);", "        if (buf_start_addr < end_addr && addr < buf_end_addr) {\n            return true;\n        }\n        // The first page can contain a buffer ending before addr. A later\n        // page may belong to another registered buffer intersecting the span.\n        // Do not skip all remaining pages after one non-overlapping owner.\n        ++page;")
 assert body == expected, "native ownership scan differs from reviewed backport transformation"
 assert "if (size == 0)" in body
@@ -84,6 +84,17 @@ int main() {
     assert(!b.IsRegionRegistered(0x1100,0));
     // Independent direct registration on the later page.
     assert(b.IsRegionRegistered(0x3200,0x80));
+    // The actual native page_table is bounded to 16 GiB. Invalid spans
+    // must return BEFORE attempting a page_table[] lookup; this small fixture
+    // deliberately keeps only eight pages, and UBSan checks the range logic.
+    constexpr DAddr limit = DAddr{1} << 34;
+    assert(!b.IsRegionRegistered(limit, 1));
+    assert(!b.IsRegionRegistered(limit + 0x1000, 1));
+    assert(!b.IsRegionRegistered(limit - 0x80, 0x100));
+    assert(!b.IsRegionRegistered(~DAddr{0} - 2, 8));
+    assert(!b.IsRegionRegistered(~DAddr{0}, 1));
+    // A zero-sized query at the maximum address remains a no-op.
+    assert(!b.IsRegionRegistered(~DAddr{0}, 0));
 }
 """
 compiler = shutil.which("c++") or shutil.which("clang++") or shutil.which("g++")

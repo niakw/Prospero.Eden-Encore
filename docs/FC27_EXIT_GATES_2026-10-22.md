@@ -221,3 +221,7 @@ Le nouveau test `tools/check-native-jit-invalidation-snapshot-host.py` compile l
 - **F03–F06** : restent ouverts. Aucun correctif de texture ni contrôle de match ne peut être considéré comme complet sur la seule base d'une compilation.
 
 **Décision avant F07 :** continuer les preuves F01–F06 sans nouvelle session PS5, et conserver les tests de fidélité des caches, du HUD et des commandes. Les résultats de CI n'établissent ni une cadence stable des frames invitées ni un HUD correct.
+
+## F04 — 22 octobre : bounds de la page-table BufferCache en cas d'adresse invalide
+
+Le chemin maintenu `BufferCache::IsRegionRegistered` parcourait une table limitée à 16 Gio tout en calculant `addr + size` sans garde supérieure. Sur une adresse malformée, une plage débordante ou dépassant cette limite pouvait mener à un index hors de la table. Une garde rejette désormais les plages vides, hors domaine et non représentables avant tout calcul de borne haute ou accès `page_table[]`, sans changer le parcours des plages valides. Le test source-extrait `check-ps5-buffer-region-multipage-host.py` vérifie les plages valides multipages, les plages croisées au-delà de 16 Gio, les adresses proches de `UINT64_MAX` et zéro octet en `-O0` et `-O2` (UBSan). Les deux oracles de reproductibilité recomposent exactement la nouvelle source à partir du backport épinglé. **F04 reste ouvert :** cela prévient un accès hors limites, mais n'établit pas une correction visible des maillots ou du terrain FC27.
