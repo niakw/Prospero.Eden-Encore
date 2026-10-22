@@ -26,6 +26,9 @@ ORIGINAL_GIT_BLOB = "a6136c111d96d2660c28b27c6881e3b671e7eed8"
 # Exact predecessor on the same maintained branch. Staged/offline build inputs
 # can already contain it; all other unknown edits still fail closed.
 PREVIOUS_ACTIVE_GIT_BLOB = "a9fb2da699b1786cdea176d1089f1aea1e5cf351"
+# Complete maintained SurfaceFlinger immediately before unique-display guard.
+# Accept only this exact staging predecessor, never arbitrary edited sources.
+SURFACE_PRE_DUPLICATE_DISPLAY_GIT_BLOB = "b9b13f717d8516af72c4c877df3f4bbe12af73c7"
 EDEN_COMMIT = "5f142c7926d0c7fcbbd0ce30794d72f638a43b2a"
 
 
@@ -113,15 +116,15 @@ def install(destination: Path) -> None:
     # Verify ALL existing files before writing either one. Cached staged trees
     # may carry the exact previous SurfaceFlinger release, but nothing else.
     sources = (
-        (PATH, ACTIVE, before, replacement, PREVIOUS_ACTIVE_GIT_BLOB, "SurfaceFlinger"),
+        (PATH, ACTIVE, before, replacement,
+         (PREVIOUS_ACTIVE_GIT_BLOB, SURFACE_PRE_DUPLICATE_DISPLAY_GIT_BLOB),
+         "SurfaceFlinger"),
         (COMPOSER_PATH, COMPOSER_ACTIVE, composer_before, composer_replacement,
-         COMPOSER_PREVIOUS_ACTIVE_GIT_BLOB, "HardwareComposer"),
+         (COMPOSER_PREVIOUS_ACTIVE_GIT_BLOB,), "HardwareComposer"),
     )
     for rel, source, original, maintained, previous, label in sources:
         existing = (destination / rel).read_bytes()
-        if existing not in (original, maintained) and (
-            previous is None or blob_sha(existing) != previous
-        ):
+        if existing not in (original, maintained) and blob_sha(existing) not in previous:
             raise RuntimeError("Unknown " + label + " input: refusing unsafe overwrite")
 
     for rel, source, original, maintained, previous, label in sources:
