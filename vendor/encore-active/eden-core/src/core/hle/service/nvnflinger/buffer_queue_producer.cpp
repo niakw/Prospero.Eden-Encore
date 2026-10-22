@@ -503,11 +503,14 @@ Status BufferQueueProducer::QueueBuffer(s32 slot, const QueueBufferInput& input,
             return Status::BadValue;
         }
 
+        // History is normally disabled: avoid unconditional wall-clock work.
+        const bool record_buffer_history = Settings::values.enable_buffer_history.GetValue();
         ++core->frame_counter;
         slots[slot].buffer_state = BufferState::Queued;
         slots[slot].frame_number = core->frame_counter;
         slots[slot].queue_time = timestamp;
-        slots[slot].presentation_time = Common::g_wall_clock.GetTimeNS().count();
+        slots[slot].presentation_time = record_buffer_history
+                                            ? Common::g_wall_clock.GetTimeNS().count() : 0;
         slots[slot].fence = fence;
 
         item.slot = slot;
@@ -533,7 +536,7 @@ Status BufferQueueProducer::QueueBuffer(s32 slot, const QueueBufferInput& input,
             auto front = core->queue.begin();
             if (front->is_droppable && core->StillTracking(*front)) {
                 slots[front->slot].buffer_state = BufferState::Free;
-                if (Settings::values.enable_buffer_history.GetValue()) {
+                if (record_buffer_history) {
                     core->UpdateHistory(front->frame_number, BufferState::Free);
                 }
                 slots[front->slot].frame_number = 0;
@@ -548,7 +551,7 @@ Status BufferQueueProducer::QueueBuffer(s32 slot, const QueueBufferInput& input,
             }
         }
 
-        if (Settings::values.enable_buffer_history.GetValue()) {
+        if (record_buffer_history) {
             core->PushHistory(core->frame_counter, slots[slot].queue_time, slots[slot].presentation_time, BufferState::Queued);
         }
 
