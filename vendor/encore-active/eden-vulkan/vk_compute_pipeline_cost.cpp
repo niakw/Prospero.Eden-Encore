@@ -175,7 +175,15 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
         ++ssbo_index;
     }
 
-    texture_cache.SynchronizeDescriptors(true);
+    // No TIC/TSC state is consumed by a shader that has no sampled,
+    // storage or texel-buffer images. Defer table synchronization until a
+    // later compute pipeline actually uses descriptor tables.
+    if (!info.texture_buffer_descriptors.empty() ||
+        !info.image_buffer_descriptors.empty() ||
+        !info.texture_descriptors.empty() ||
+        !info.image_descriptors.empty()) {
+        texture_cache.SynchronizeDescriptors(true);
+    }
 
     boost::container::small_vector<VideoCommon::ImageViewInOut, 64> views;
     boost::container::small_vector<VideoCommon::SamplerId, 64> samplers;
