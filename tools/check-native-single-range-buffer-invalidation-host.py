@@ -103,11 +103,19 @@ int main() {
     assert(image.buffer_cache.written.empty());
     assert(image.pipeline_cache.calls==2);
     Eden::ImagePages::held=false;
-    // Unknown spans are conservative. NeverRegistered must fail closed.
+    // Registered-page bitmap queries now cover up to 256 KiB, with no
+    // false buffer invalidation on an unowned 128 KiB span.
     RasterizerVulkan large;
     large.InvalidateRegion(0x300000,131072,full);
     large.OnCacheInvalidation(0x300000,131072);
+    assert(large.buffer_cache.mutex.locks==0);
+    assert(large.buffer_cache.written.empty());
+    assert(large.query_cache.calls==1 && large.pipeline_cache.calls==2);
+    // Larger requests must fail closed and keep the previous locking path.
+    large.InvalidateRegion(0x300000,256*1024+1,full);
+    large.OnCacheInvalidation(0x300000,256*1024+1);
     assert(large.buffer_cache.mutex.locks==2);
+    assert(large.buffer_cache.written.size()==2);
     // Cache mask is respected: no unintended buffer invalidation.
     RasterizerVulkan isolated;
     isolated.InvalidateRegion(prior,4096,CacheType::ShaderCache);
