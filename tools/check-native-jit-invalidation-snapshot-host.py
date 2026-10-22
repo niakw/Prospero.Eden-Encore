@@ -75,6 +75,11 @@ template <typename T> struct interval_set {
 }
 static bool detailed = true;
 static unsigned reported[2]{};
+// Match the weak host hooks declared by the actual maintained JIT unit.
+// A non-weak fixture declaration makes Clang correctly complain that the
+// source's optional function-pointer checks can never be false here.
+extern "C" bool eden_native_detailed_logging() noexcept __attribute__((weak));
+extern "C" void eden_jit_cache_event(unsigned,unsigned) __attribute__((weak));
 extern "C" bool eden_native_detailed_logging() noexcept {return detailed;}
 extern "C" void eden_jit_cache_event(unsigned core,unsigned kind){
     assert(core==2 && kind<2); ++reported[kind];
