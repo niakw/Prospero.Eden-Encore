@@ -101,6 +101,21 @@ assert all(path in graph for path in maintained_core_paths), (
 )
 print("ENCORE_MAINTAINED_CORE_OWNER_PASS", f"files={len(maintained_core_paths)}")
 
+# A maintained native draw manager must replace (not join) the pinned
+# engine source. Tracking its file and V108 graph row alone is insufficient
+# if CMake silently compiles the old function body instead.
+draw_owner = "eden-core/src/video_core/engines/draw_manager.cpp"
+draw_sel = native_cmake.split("set(EDEN_MAINTAINED_DRAW_MANAGER", 1)
+assert len(draw_sel) == 2, "native selected draw owner missing"
+draw_block = draw_sel[1].split("endif()", 1)[0]
+assert 'list(REMOVE_ITEM video_sources engines/draw_manager.cpp)' in draw_block
+assert 'list(APPEND video_sources "${EDEN_MAINTAINED_DRAW_MANAGER}")' in draw_block
+assert '"${PORT_ROOT}/vendor/encore-active/"' not in draw_block
+assert '"${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/engines/draw_manager.cpp"' in draw_block
+assert draw_owner in graph and graph[draw_owner] == ["V108"]
+assert (active / draw_owner).is_file()
+print("ENCORE_INDEXED_DRAW_OWNER_PASS", "source=maintained", "single_CMake_target=video_core")
+
 # GPU variants and the coordinated HLE header overlays are not optional
 # catalogue blind spots, even if selected only by a native build flag.
 for family, size in (("eden-gpu/", 4), ("eden-threading/", 12)):
