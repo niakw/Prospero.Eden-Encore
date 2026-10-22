@@ -242,6 +242,7 @@ Status BufferQueueProducer::DequeueBuffer(s32* out_slot, Fence* out_fence, bool 
 
     Status return_flags = Status::NoError;
     bool attached_by_consumer = false;
+    u64 returned_frame_number{};
     {
         std::unique_lock lock{core->mutex};
         core->WaitWhileAllocatingLocked();
@@ -292,6 +293,8 @@ Status BufferQueueProducer::DequeueBuffer(s32* out_slot, Fence* out_fence, bool 
 
         *out_fence = slots[found].fence;
         slots[found].fence = Fence::NoFence();
+        // Snapshot the slot metadata while the queue mutex is still owned.
+        returned_frame_number = slots[found].frame_number;
     }
 
     if ((return_flags & Status::BufferNeedsReallocation) != Status::None) {
@@ -312,6 +315,7 @@ Status BufferQueueProducer::DequeueBuffer(s32* out_slot, Fence* out_fence, bool 
             }
 
             slots[*out_slot].frame_number = UINT32_MAX;
+            returned_frame_number = UINT32_MAX;
             slots[*out_slot].graphic_buffer = graphic_buffer;
         }
     }
@@ -321,7 +325,7 @@ Status BufferQueueProducer::DequeueBuffer(s32* out_slot, Fence* out_fence, bool 
     }
 
     LOG_DEBUG(Service_Nvnflinger, "returning slot={} frame={}, flags={}", *out_slot,
-              slots[*out_slot].frame_number, return_flags);
+              returned_frame_number, return_flags);
 
     return return_flags;
 }
