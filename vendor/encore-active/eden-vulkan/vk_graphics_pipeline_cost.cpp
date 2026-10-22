@@ -554,13 +554,23 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
                 add_image(desc, false);
             }
         }
+        // A descriptor array frequently shares its sampler handle.
+        // Reuse only consecutive equal handles within this stage/configuration:
+        // no sampler id survives a pipeline change or guest invalidation.
+        bool last_sampler_valid = false;
+        u32 last_sampler_handle{};
+        VideoCommon::SamplerId last_sampler_id{};
         for (const auto& desc : info.texture_descriptors) {
             for (u32 index = 0; index < desc.count; ++index) {
                 const auto handle{read_handle(desc, index)};
                 views.push_back({handle.first});
 
-                VideoCommon::SamplerId sampler{texture_cache.GetSamplerId(handle.second, false)};
-                samplers.push_back(sampler);
+                if (!last_sampler_valid || last_sampler_handle != handle.second) {
+                    last_sampler_id = texture_cache.GetSamplerId(handle.second, false);
+                    last_sampler_handle = handle.second;
+                    last_sampler_valid = true;
+                }
+                samplers.push_back(last_sampler_id);
             }
         }
         if constexpr (Spec::has_images) {
@@ -589,8 +599,13 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
     ASSERT(views.size() == num_image_elements);
     ASSERT(samplers.size() == num_textures);
     stage_texture_phase.Stop();
-    { ::Eden::Performance::CachePhaseTimer cost{::Eden::Performance::CachePhase::TextureFillImageViews};
-        texture_cache.FillImageViews(std::span(views.data(), views.size()), false, Spec::has_images);
+    // The empty image set cannot resolve, retire or rescale any view.
+    // Preserve render-target refresh and feedback-loop processing below.
+    if (!views.empty()) {
+        ::Eden::Performance::CachePhaseTimer cost{
+            ::Eden::Performance::CachePhase::TextureFillImageViews};
+        texture_cache.FillImageViews(std::span(views.data(), views.size()), false,
+                                     Spec::has_images);
     }
 
     ::Eden::Performance::CachePhaseTimer bind_texture_phase{

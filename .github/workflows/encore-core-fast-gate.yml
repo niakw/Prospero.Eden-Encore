@@ -82,6 +82,7 @@ on:
       - 'tools/check-ps5-compute-descriptor-ring-preflight-host.py'
       - 'tools/check-ps5-dma-buffer-copy-span-host.py'
       - 'tools/check-ps5-empty-image-stage-host.py'
+      - 'tools/check-ps5-consecutive-sampler-reuse-host.py'
       - 'tools/check-ps5-graphics-stage-view-cursors-host.py'
       - 'tools/check-ps5-graphics-pipeline-aware-preflight-host.py'
       - 'tools/check-ps5-empty-image-view-retirement-host.py'
