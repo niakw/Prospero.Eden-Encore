@@ -21,6 +21,8 @@
 <p align="center"><img src="assets/encore-background.jpg" alt="Identité visuelle tropicale néon d'Encore" width="860"></p>
 
 > [!IMPORTANT]
+> **FC27 — ce qu'il reste vraiment :** [blocages moteur et critères de sortie](docs/FC27_EXIT_GATES_2026-10-22.md). Le nombre de sources examinées ne mesure pas les optimisations restantes.
+>
 > **Le firmware 13.60 est notre cible principale testée sur console.** Cela ne garantit ni le fonctionnement de tous les jeux, ni la compatibilité d'autres versions système. Le launcher et certains jeux ont été exécutés sur cette version ; les saccades, la progression en fin de match et certains contrôles personnalisés restent à résoudre.
 >
 > **Avant un test console :** [audit des logs, mises à jour, build et fichiers à conserver](docs/PRETEST_AUDIT_2026-10-14.md). Vérifier le SHA exact du paquet et des symboles.

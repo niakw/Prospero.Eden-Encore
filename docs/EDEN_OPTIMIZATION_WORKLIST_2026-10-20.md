@@ -1,5 +1,11 @@
 # Eden Encore — compteurs d'optimisations (≠ validation)
 
+> **Archive de progression du 20 octobre.** Pour l'état opérationnel du moteur
+> et les problèmes à résoudre aujourd'hui, consulter le
+> [suivi des 7 critères de sortie FC27](FC27_EXIT_GATES_2026-10-22.md).
+> Les compteurs de sources et de contrats ci-dessous ne sont plus des
+> indicateurs de travaux moteur restant à terminer.
+
 **20 octobre 2026 — premier lot d'optimisation dédié.**
 
 Le registre existant recense **538 chemins inventoriés** (491 fichiers de code directement maintenus, plus 47 chemins épinglés hors du périmètre des corrections directes ; 83 des fichiers maintenus sont hors du graphe central). Ces nombres ne correspondent ni à
