@@ -246,3 +246,9 @@ La validation complète du correctif de buffer libéré nécessite un **build na
 Le fast gate du code `642f80f` est **vert** ([exécution 39865536857](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39865536857)). Le test compilant `HardwareComposer::CacheFramebufferLocked` depuis la source maintenue et la migration des deux TU passent ; le graphe d'architecture et l'inventaire passent le contrôle initial de prévalidation. Le tableau quantifié du graphe a été recalculé séparément : **480 contrats recensés, 410 SOURCE/OPEN** ; ceci ne correspond pas à des fichiers restant à optimiser.
 
 La compilation native de `157e7e0` a été lancée **avant** la dernière rectification du tableau de graphe. Un build complet est donc redemandé sur cette version cohérente. Ne pas considérer la qualification native F03/F05 comme obtenue avant la fin de ce nouveau build.
+
+## F03/F05 — 23 octobre : rejeu réel des couches composées
+
+Le témoin `tools/check-native-hardware-composer-liveness-host.py` compile **les quatre méthodes C++ du HardwareComposer effectivement installées**, plus la fonction de cadence, en `-O0` et `-O2` sous UBSan. Seuls les objets périphériques (buffers entrants, display GPU et deux consommateurs) sont simulés. Le scénario alterne une couche jeu à cadence double, un HUD indépendant, le maintien d'un buffer encore acquis, sa libération, une acquisition manquante, un nouveau HUD et un nouveau jeu. Les identifiants des images réellement présentées sont comparés pour exclure la réintroduction d'une image libérée. Le test est appelé par le fast gate et la prévalidation via `check-surface-lifecycle.py`.
+
+**Portée :** une preuve de non-régression du compositeur sur ce scénario HLE, non une preuve du comportement du jeu FC27, de l'IPC complet ou de la synchronisation effective de la console. F03/F05 restent ouverts.
