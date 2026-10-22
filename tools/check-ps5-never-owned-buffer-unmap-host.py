@@ -87,11 +87,15 @@ int main() {
     assert(c.buffer_cache.mutex.locks==0 && c.buffer_cache.writes==0);
     assert(c.pipeline_cache.invalidations==1);
     Eden::ImagePages::held=false;
-    // A large or unknown span MUST retain the original conservative lock.
+    // A 128 KiB unowned CPU unmap now uses the two-word bitmap fast path.
     RasterizerVulkan d;
     d.UnmapMemory(0x300000,131072);
-    assert(d.buffer_cache.mutex.locks==1 && d.buffer_cache.writes==1);
+    assert(d.buffer_cache.mutex.locks==0 && d.buffer_cache.writes==0);
     assert(d.pipeline_cache.invalidations==1);
+    // Oversized or unknown queries must still take the conservative lock.
+    d.UnmapMemory(0x300000,256*1024+1);
+    assert(d.buffer_cache.mutex.locks==1 && d.buffer_cache.writes==1);
+    assert(d.pipeline_cache.invalidations==2);
     Eden::BufferPages::Mark(Eden::BufferPages::kSpace,4096);
     RasterizerVulkan e;
     e.UnmapMemory(never,4096);
