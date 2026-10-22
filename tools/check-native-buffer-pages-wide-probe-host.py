@@ -44,7 +44,10 @@ int main() {
     assert(NeverRegistered(shifted, span));
     Mark(shifted + span - 1, 1);
     assert(!NeverRegistered(shifted, span));
-    assert(NeverRegistered(shifted + span, page));
+    // The byte just beyond an unaligned query can still occupy the same
+    // registered page. Only the NEXT entirely different page is unowned.
+    constexpr std::uint64_t next_full_page = ((shifted + span + page - 1) / page) * page;
+    assert(NeverRegistered(next_full_page, page));
     // Larger requests preserve the old conservative locking behavior.
     assert(!NeverRegistered(empty + 20 * span, span + 1));
     assert(!NeverRegistered(empty + 20 * span, 0));
