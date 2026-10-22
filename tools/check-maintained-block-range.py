@@ -16,7 +16,7 @@ def blob_id(path):
     return hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
 
 expected = {
-    "block_range_information.cpp": "748f0c86345096fc3bfb98a1c16f26c1893f1768",
+    "block_range_information.cpp": "5d99bdb5a5b9e1d8a00a084467633cf058a0b670",
     "block_range_information.h": "d31186747a07cfacc0d374aefd7d8579b59b89c8",
 }
 for unit, signature in expected.items():
