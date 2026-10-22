@@ -207,3 +207,17 @@ Les méthodes de JIT **A32** et **A64 standard** maintenues tenaient `invalidati
 Les deux modes de release utilisent désormais **la même séparation** : sous verrou, effacement du bit de halt, capture et retrait atomique du flag de vidage complet et des plages (par `ranges.swap`) ; hors verrou, invalidation effective et restauration RSB. Les demandes arrivées durant l'exécution restent dans la file pour la prochaine itération au lieu d'être effacées à la fin de l'ancienne invalidation. Les compteurs DEV sont associés au snapshot réellement traité.
 
 Le nouveau test `tools/check-native-jit-invalidation-snapshot-host.py` compile les corps des trois méthodes depuis les sources réelles A32/A64, en `-O0`/`-O2`, release et profil DEV. Il déclenche une invalidation **réentrante pendant le traitement**, puis vérifie que le mutex est libre, que les demandes suivantes survivent, que la plage exacte est appliquée et que le vidage complet n'efface pas les nouvelles demandes. Tests ajoutés au fast gate et à la prévalidation. **F02 reste ouvert : réduction du temps passé sous verrou démontrable, mais effet réel sur les pics de compilation et FPS non mesuré sur console.**
+
+
+## État de qualification technique — 22 octobre, après correctif F02
+
+- **HEAD moteur vérifié :** `e96d474` (les commits `b907007` à `e96d474` réparent uniquement les oracles/test fixtures, sans autre changement A32/A64 depuis `a607654`).
+- **Fast gate : réussi** [39860743923](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39860743923). Source-extracted A32 et A64 : cas de vidage complet et de nouvelle invalidation pendant l'ancien traitement, `-O0` et `-O2`, release et DEV.
+- **Prévalidation complète : réussie** [39860743911](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39860743911).
+- **Build PS5 source moteur `a607654` : réussi** [39858896077](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39858896077). Une recompilation explicite de la source courante est demandée séparément, et son résultat n'est pas anticipé.
+- **CodeQL C++ : en cours** [39860743939](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/39860743939), alors que Python et Actions sont réussis. Ne pas annoncer CodeQL entièrement vert avant la fin.
+- **F02** : sous-mécanisme d'invalidation concurrente corrigé et testé. Les durées globales de compilation JIT et l'effet sur les saccades restent non mesurés.
+- **F01** : dans `PrepareDraw`, la section sous mutex inclut `ConfigureImpl` **mais aussi** les états dynamiques et l'enregistrement des draws. Elle ne doit pas être libérée prématurément : `DrawIndirect` accède à `buffer_cache`, et la durée de vie des vues/descripteurs d'un draw direct dépend de l'ordre de publication des commandes. Les anciennes mesures désignent la contention sur `buffer_cache.mutex`, mais ne prouvent pas qu'un déplacement de ces opérations hors verrou serait correct. Tant qu'une extraction sûre des données et des barrières n'est pas démontrée, **aucun unlock spéculatif**.
+- **F03–F06** : restent ouverts. Aucun correctif de texture ni contrôle de match ne peut être considéré comme complet sur la seule base d'une compilation.
+
+**Décision avant F07 :** continuer les preuves F01–F06 sans nouvelle session PS5, et conserver les tests de fidélité des caches, du HUD et des commandes. Les résultats de CI n'établissent ni une cadence stable des frames invitées ni un HUD correct.
