@@ -92,3 +92,23 @@ n'est plus une métrique de progression ici.
 
 **Périmètre séparé :** travaux launcher/UI, couvertures 3D, avatar, jaquettes,
 glyphes et traductions. Ne pas les mélanger à la mesure de stabilité du moteur.
+
+
+## F05 — 22 octobre : réveil producteur après détachement du plus ancien tampon libre
+
+**Source ciblée :** `eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp`
+(`BufferQueueProducer::DetachNextBuffer`, sélectionné directement par CMake).
+Le chemin `DetachBuffer` publiait déjà `SignalDequeueCondition` après
+`FreeBufferLocked`, mais `DetachNextBuffer` ne le faisait pas. Une
+transition de la file pouvait donc passer inaperçue pour un producteur
+attendant la génération suivante. Le chemin normal conserve l'ordre de
+sélection du tampon le plus ancien, la propriété du buffer transféré et
+les fences ; seule la notification est ajoutée, sous `core->mutex`.
+
+**Preuve technique :** `tools/check-native-nvnflinger-detach-wake-host.py`
+compile le corps C++ sélectionné à -O0/-O2 sous UBSan, vérifie
+les refus sans signal, le choix du plus ancien tampon libre,
+les transferts de fence et exactement un réveil après chaque détachement
+réussi. La parité reproduit le changement depuis la source épinglée.
+**F05 reste ouvert** : ce test ferme le sous-chemin « détachement sans réveil »,
+pas toute la progression HLE/IPC / présentation.

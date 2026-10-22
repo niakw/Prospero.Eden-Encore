@@ -265,14 +265,20 @@ dequeue_new = """        const auto dequeue_start = ::Eden::Performance::detaile
         Status status = WaitForFreeSlotThenRelock(async, &found, &return_flags, lock);
         if (dequeue_start) ::Eden::Performance::AddSince(::Eden::Performance::guest_dequeue_wait, dequeue_start);"""
 assert dequeue_pinned.count(dequeue_old) == 1
-assert dequeue_maintained == '#include "performance.h"\n' + dequeue_pinned.replace(dequeue_old, dequeue_new), (
+detach_before = "    *out_buffer = slots[found].graphic_buffer;\n    *out_fence = slots[found].fence;\n\n    core->FreeBufferLocked(found);\n\n    return Status::NoError;\n}"
+detach_after = "    *out_buffer = slots[found].graphic_buffer;\n    *out_fence = slots[found].fence;\n\n    core->FreeBufferLocked(found);\n    // DetachBuffer and CancelBuffer wake waiting producers. The oldest-free\n    // detach path must publish the same state transition to all dequeuers.\n    // Notify under core->mutex so waiters cannot miss the transition.\n    core->SignalDequeueCondition();\n\n    return Status::NoError;\n}"
+assert dequeue_pinned.count(detach_before) == 1
+dequeue_expected = '#include "performance.h"\n' + dequeue_pinned.replace(dequeue_old, dequeue_new)
+assert dequeue_expected.count(detach_before) == 1
+dequeue_expected = dequeue_expected.replace(detach_before, detach_after)
+assert dequeue_maintained == dequeue_expected, (
     "Maintained queue-dequeue diagnostic diverges from prior generated source")
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")') == 1
 assert c.count('list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_producer.cpp")') == 1
 assert 'if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")' in c
 assert 'write_derived("${PORT_BUILD_DIR}/buffer_queue_producer.cpp"' not in c
 assert "producer_source" not in c and "producer_old" not in c
-print("VENDOR_MAINTAINED_DEQUEUE_PARITY_PASS: wait timing, quiet guard, DEV selection")
+print("VENDOR_MAINTAINED_DEQUEUE_PARITY_PASS: wait timing, detach wake, DEV selection")
 
 print("VENDOR_MAINTAINED_NVCTRL_PARITY_PASS: async callback capture, quiet clock, DEV selection")
 

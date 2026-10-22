@@ -392,6 +392,10 @@ Status BufferQueueProducer::DetachNextBuffer(std::shared_ptr<GraphicBuffer>* out
     *out_fence = slots[found].fence;
 
     core->FreeBufferLocked(found);
+    // DetachBuffer and CancelBuffer wake waiting producers. The oldest-free
+    // detach path must publish the same state transition to all dequeuers.
+    // Notify under core->mutex so waiters cannot miss the transition.
+    core->SignalDequeueCondition();
 
     return Status::NoError;
 }
