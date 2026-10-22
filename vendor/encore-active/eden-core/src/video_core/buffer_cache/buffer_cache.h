@@ -1399,8 +1399,11 @@ void BufferCache<P>::UpdateVertexBuffer(u32 index) {
     const GPUVAddr gpu_addr_begin = array.Address();
     const GPUVAddr gpu_addr_end = limit.Address() + 1;
     const std::optional<DAddr> device_addr = gpu_memory->GpuToCpuAddress(gpu_addr_begin);
-    const u32 address_size = static_cast<u32>(gpu_addr_end - gpu_addr_begin);
-    u32 size = address_size; // TODO: Analyze stride and number of vertices
+    // GPU addresses are 64-bit. Truncating the range before validation
+    // could turn a valid >=4 GiB vertex span into zero or a tiny buffer.
+    const u64 address_size =
+        gpu_addr_end > gpu_addr_begin ? gpu_addr_end - gpu_addr_begin : 0;
+    u32 size = static_cast<u32>((std::min)(address_size, static_cast<u64>(~u32{0})));
     if (array.enable == 0 || size == 0 || !device_addr) {
         channel_state->vertex_buffers[index] = NULL_BINDING;
         UpdateVertexBufferSlot(index, NULL_BINDING);
@@ -1408,6 +1411,13 @@ void BufferCache<P>::UpdateVertexBuffer(u32 index) {
     }
     if (!gpu_memory->IsWithinGPUAddressRange(gpu_addr_end) || size >= 64_MiB) {
         size = static_cast<u32>(gpu_memory->MaxContinuousRange(gpu_addr_begin, size));
+        if (size == 0) {
+            // No mapped contiguous data: never create a zero-byte vertex
+            // buffer or retain the previous draw's vertex binding.
+            channel_state->vertex_buffers[index] = NULL_BINDING;
+            UpdateVertexBufferSlot(index, NULL_BINDING);
+            return;
+        }
     }
     const BufferId buffer_id = FindBuffer(*device_addr, size, false);
     const Binding binding{

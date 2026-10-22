@@ -57,6 +57,14 @@ unmapped_uniform_before = "    const std::optional<DAddr> device_addr = gpu_memo
 unmapped_uniform_after = "    const std::optional<DAddr> device_addr = gpu_memory->GpuToCpuAddress(gpu_addr);\n    if (!device_addr) {\n        // An unmapped cbuf is not a valid CPU-backed GPU buffer. Retire any\n        // previous slot binding instead of dereferencing an empty optional.\n        channel_state->uniform_buffers[stage][index] = NULL_BINDING;\n        return;\n    }\n    const Binding binding{\n        .device_addr = *device_addr,\n        .size = size,\n        .buffer_id = BufferId{},\n    };"
 assert expected.count(unmapped_uniform_before) == 1
 expected = expected.replace(unmapped_uniform_before, unmapped_uniform_after)
+# Native-only vertex buffer extent hardening: never truncate a 64-bit
+# guest GPU range to u32 before checking the exclusive-end bounds.
+vertex_extent_old = "    const u32 address_size = static_cast<u32>(gpu_addr_end - gpu_addr_begin);\n    u32 size = address_size; // TODO: Analyze stride and number of vertices"
+vertex_extent_new = "    // GPU addresses are 64-bit. Truncating the range before validation\n    // could turn a valid >=4 GiB vertex span into zero or a tiny buffer.\n    const u64 address_size =\n        gpu_addr_end > gpu_addr_begin ? gpu_addr_end - gpu_addr_begin : 0;\n    u32 size = static_cast<u32>((std::min)(address_size, static_cast<u64>(~u32{0})));"
+vertex_clip_old = "    if (!gpu_memory->IsWithinGPUAddressRange(gpu_addr_end) || size >= 64_MiB) {\n        size = static_cast<u32>(gpu_memory->MaxContinuousRange(gpu_addr_begin, size));\n    }\n    const BufferId buffer_id = FindBuffer(*device_addr, size, false);"
+vertex_clip_new = "    if (!gpu_memory->IsWithinGPUAddressRange(gpu_addr_end) || size >= 64_MiB) {\n        size = static_cast<u32>(gpu_memory->MaxContinuousRange(gpu_addr_begin, size));\n        if (size == 0) {\n            // No mapped contiguous data: never create a zero-byte vertex\n            // buffer or retain the previous draw's vertex binding.\n            channel_state->vertex_buffers[index] = NULL_BINDING;\n            UpdateVertexBufferSlot(index, NULL_BINDING);\n            return;\n        }\n    }\n    const BufferId buffer_id = FindBuffer(*device_addr, size, false);"
+assert expected.count(vertex_extent_old) == expected.count(vertex_clip_old) == 1
+expected = expected.replace(vertex_extent_old, vertex_extent_new).replace(vertex_clip_old, vertex_clip_new)
 assert maintained == expected, "R437 maintained header differs from reviewed transforms"
 assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm
