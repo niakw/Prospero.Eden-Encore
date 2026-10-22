@@ -279,6 +279,25 @@ backpressure_before = "        if (too_many_buffers) {\n            LOG_ERROR(Se
 backpressure_after = "        if (too_many_buffers) {\n            // Backpressure is an expected queue state, not a service failure.\n            // Avoid per-wakeup ERROR formatting/output on the producer hot path.\n            LOG_DEBUG(Service_Nvnflinger, \"queue size is {}, waiting\", core->queue.size());\n        }"
 assert dequeue_expected.count(backpressure_before) == 1
 dequeue_expected = dequeue_expected.replace(backpressure_before, backpressure_after)
+
+# Dequeue diagnostics must snapshot frame metadata while the core mutex is
+# owned; logging a live slot outside the lock races with producer/consumer.
+dequeue_frame_before_0 = "    Status return_flags = Status::NoError;\n    bool attached_by_consumer = false;\n"
+dequeue_frame_after_0 = "    Status return_flags = Status::NoError;\n    bool attached_by_consumer = false;\n    u64 returned_frame_number{};\n"
+assert dequeue_expected.count(dequeue_frame_before_0) == 1
+dequeue_expected = dequeue_expected.replace(dequeue_frame_before_0, dequeue_frame_after_0)
+dequeue_frame_before_1 = "        *out_fence = slots[found].fence;\n        slots[found].fence = Fence::NoFence();\n"
+dequeue_frame_after_1 = "        *out_fence = slots[found].fence;\n        slots[found].fence = Fence::NoFence();\n        // Snapshot the slot metadata while the queue mutex is still owned.\n        returned_frame_number = slots[found].frame_number;\n"
+assert dequeue_expected.count(dequeue_frame_before_1) == 1
+dequeue_expected = dequeue_expected.replace(dequeue_frame_before_1, dequeue_frame_after_1)
+dequeue_frame_before_2 = "            slots[*out_slot].frame_number = UINT32_MAX;\n            slots[*out_slot].graphic_buffer = graphic_buffer;\n"
+dequeue_frame_after_2 = "            slots[*out_slot].frame_number = UINT32_MAX;\n            returned_frame_number = UINT32_MAX;\n            slots[*out_slot].graphic_buffer = graphic_buffer;\n"
+assert dequeue_expected.count(dequeue_frame_before_2) == 1
+dequeue_expected = dequeue_expected.replace(dequeue_frame_before_2, dequeue_frame_after_2)
+dequeue_frame_before_3 = "    LOG_DEBUG(Service_Nvnflinger, \"returning slot={} frame={}, flags={}\", *out_slot,\n              slots[*out_slot].frame_number, return_flags);"
+dequeue_frame_after_3 = "    LOG_DEBUG(Service_Nvnflinger, \"returning slot={} frame={}, flags={}\", *out_slot,\n              returned_frame_number, return_flags);"
+assert dequeue_expected.count(dequeue_frame_before_3) == 1
+dequeue_expected = dequeue_expected.replace(dequeue_frame_before_3, dequeue_frame_after_3)
 assert dequeue_maintained == dequeue_expected, (
     "Maintained queue-dequeue diagnostic diverges from prior generated source")
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")') == 1
