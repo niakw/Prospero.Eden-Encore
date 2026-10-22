@@ -77,6 +77,7 @@ def check() -> tuple[bytes, bytes]:
         raise RuntimeError("Active SurfaceFlinger source header no longer matches upstream")
     text = replacement.decode()
     for marker in (
+        "void SurfaceFlinger::AddDisplay(",
         "void SurfaceFlinger::RemoveDisplay(",
         "void SurfaceFlinger::DestroyLayer(",
         "void SurfaceFlinger::RemoveLayerFromDisplayStack(",
@@ -86,6 +87,11 @@ def check() -> tuple[bytes, bytes]:
     ):
         if marker not in text:
             raise RuntimeError("Lost critical display release operation: " + marker)
+    add_display = text.split("void SurfaceFlinger::AddDisplay(", 1)[1].split(
+        "void SurfaceFlinger::RemoveDisplay(", 1)[0]
+    if ("FindDisplay(display_id)" not in add_display or
+        add_display.index("FindDisplay(display_id)") > add_display.index("emplace_back(display_id)")):
+        raise RuntimeError("Duplicate display ownership prevention missing")
     add_method = text.split("void SurfaceFlinger::AddLayerToDisplayStack(", 1)[1].split(
         "void SurfaceFlinger::RemoveLayerFromDisplayStack(", 1)[0]
     assert "std::any_of(display->stack.layers.begin()" in add_method
