@@ -31,3 +31,13 @@ two native changes. The source remains solely under
 No speculative JIT/cache-lock policy is enabled. There is no claim of
 improved frame pacing or repaired FC27 jersey/HUD graphics until console
 measurement.
+
+## Constant-buffer index bounds
+
+The same SSBO binding paths formerly trusted the embedded constant-buffer index. The
+Maxwell graphics stage owns 18 CBUFs; the Kepler compute launch owns 8. Both
+indices are now checked before touching any enabled/written mask, array or
+compute mask shift, including a stage-slot combination that is otherwise valid.
+The existing source-extracted ASan/UBSan fixture also covers the last valid and
+first invalid CBUF index on both graphics and compute. No texture descriptor
+ordering, fence or CPU-write semantics change.
