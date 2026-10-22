@@ -33,6 +33,13 @@ assert draw.index("if (!buffer)") < draw.index("buffer->Handle()")
 assert draw.index("if (!draw_buffer)") < draw.index("draw_buffer->Handle()")
 assert draw.count("if (!buffer)") == draw.count("if (!draw_buffer)") == 1
 assert "buffer_cache.SetDrawIndirect(nullptr);" in draw
+# Both native OpenGL profiles also use this shared BufferCache getter.
+for profile in ("gl_rasterizer.cpp", "gl_rasterizer_dev.cpp"):
+    gl = (root / "vendor/encore-active/eden-core/src/video_core/renderer_opengl" / profile).read_text()
+    gl_draw = method(gl, "void RasterizerOpenGL::DrawIndirect() {", "\nvoid RasterizerOpenGL::DrawTexture()")
+    assert gl_draw.index("if (!buffer)") < gl_draw.index("buffer->Handle()"), profile
+    assert gl_draw.index("if (!draw_buffer)") < gl_draw.index("draw_buffer->Handle()"), profile
+
 # Disabled post-store experiment must not reintroduce a null Vulkan submit.
 deferred = (root / "vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp").read_text()
 assert method(deferred, "void RasterizerVulkan::DrawIndirect() {", "\nvoid RasterizerVulkan::DrawTexture()") == draw

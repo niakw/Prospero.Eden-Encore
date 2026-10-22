@@ -322,11 +322,19 @@ void RasterizerOpenGL::DrawIndirect() {
             return;
         }
         const auto [buffer, offset] = buffer_cache.GetDrawIndirectBuffer();
+        // Reject empty/unmapped guest command spans before dereferencing the
+        // null buffer sentinel. Only the selected render backend is affected.
+        if (!buffer) {
+            return;
+        }
         const GLvoid* const gl_offset =
             reinterpret_cast<const GLvoid*>(static_cast<uintptr_t>(offset));
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, buffer->Handle());
         if (params.include_count) {
             const auto [draw_buffer, offset_base] = buffer_cache.GetDrawIndirectCount();
+            if (!draw_buffer) {
+                return;
+            }
             glBindBuffer(GL_PARAMETER_BUFFER, draw_buffer->Handle());
 
             if (params.is_indexed) {

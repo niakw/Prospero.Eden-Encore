@@ -29,3 +29,11 @@ native C++ cache getter/bind bodies at -O0 and -O2 under UBSan, verifies
 zero and live bindings, and asserts that both Vulkan handle dereferences
 are guarded. This is not PS5 validation, and does not prove FC27 contains
 an unmapped indirect draw or that frame pacing/HUD issues are resolved.
+
+## OpenGL consumer closure
+
+The same selected buffer-cache getters are also consumed by both native
+OpenGL rasterizer profiles. Both maintained `gl_rasterizer.cpp` and
+`gl_rasterizer_dev.cpp` now reject a missing command/count binding before
+`glBindBuffer` dereferences. The full-source OpenGL parity oracle and
+indirect-null host guard check both paths; no release profile switch is made.
