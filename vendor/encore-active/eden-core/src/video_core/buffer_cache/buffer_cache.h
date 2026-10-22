@@ -1583,7 +1583,9 @@ template <class P>
 void BufferCache<P>::SynchronizeBufferWrites(Buffer& buffer) {
     if constexpr (!IS_OPENGL) {
         const u64 buffer_tick = buffer.getWriteTick();
-        if (!runtime.IsFree(buffer_tick)) {
+        // New and never-GPU-written buffers have a zero fence tick.
+        // Scheduler::Wait(0) cannot wait; skip its IsFree semaphore probe.
+        if (buffer_tick != 0 && !runtime.IsFree(buffer_tick)) {
             runtime.Wait(buffer_tick);
         }
     }

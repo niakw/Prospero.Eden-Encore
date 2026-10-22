@@ -1511,6 +1511,12 @@ region_skip_after = "        if (buf_start_addr < end_addr && addr < buf_end_add
 assert r437_expected.count(region_before) == r437_expected.count(region_skip_before) == 1
 r437_expected = r437_expected.replace(region_before, region_after).replace(
     region_skip_before, region_skip_after)
+# Native-only zero-tick GPU fence fast path: the scheduler cannot wait
+# for tick zero, and the shipping backport remains byte-for-byte pinned.
+zero_tick_before = "        const u64 buffer_tick = buffer.getWriteTick();\n        if (!runtime.IsFree(buffer_tick)) {\n            runtime.Wait(buffer_tick);\n        }"
+zero_tick_after = "        const u64 buffer_tick = buffer.getWriteTick();\n        // New and never-GPU-written buffers have a zero fence tick.\n        // Scheduler::Wait(0) cannot wait; skip its IsFree semaphore probe.\n        if (buffer_tick != 0 && !runtime.IsFree(buffer_tick)) {\n            runtime.Wait(buffer_tick);\n        }"
+assert r437_expected.count(zero_tick_before) == 1
+r437_expected = r437_expected.replace(zero_tick_before, zero_tick_after)
 assert (active / r437_rel).read_text() == r437_expected, (
     "R437 maintained buffer cache differs from source reconstruction; "
     "check BufferPages registration, DMA copy bounds and DMA clear bounds"

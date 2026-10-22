@@ -45,6 +45,12 @@ region_skip_after = "        if (buf_start_addr < end_addr && addr < buf_end_add
 assert expected.count(region_before) == expected.count(region_skip_before) == 1
 expected = expected.replace(region_before, region_after).replace(
     region_skip_before, region_skip_after)
+# Native-only zero-tick GPU fence fast path: the scheduler cannot wait
+# for tick zero, and the shipping backport remains byte-for-byte pinned.
+zero_tick_before = "        const u64 buffer_tick = buffer.getWriteTick();\n        if (!runtime.IsFree(buffer_tick)) {\n            runtime.Wait(buffer_tick);\n        }"
+zero_tick_after = "        const u64 buffer_tick = buffer.getWriteTick();\n        // New and never-GPU-written buffers have a zero fence tick.\n        // Scheduler::Wait(0) cannot wait; skip its IsFree semaphore probe.\n        if (buffer_tick != 0 && !runtime.IsFree(buffer_tick)) {\n            runtime.Wait(buffer_tick);\n        }"
+assert expected.count(zero_tick_before) == 1
+expected = expected.replace(zero_tick_before, zero_tick_after)
 assert maintained == expected, "R437 maintained header differs from reviewed transforms"
 assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm
