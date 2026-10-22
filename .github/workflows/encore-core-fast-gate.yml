@@ -73,6 +73,7 @@ on:
       - 'tools/check-native-index-draw-dirty-span-host.py'
       - 'vendor/encore-active/eden-core/src/video_core/engines/draw_manager.cpp'
       - 'tools/check-native-indirect-draw-range-host.py'
+      - 'tools/check-native-indirect-null-binding-host.py'
       - 'tools/check-ps5-never-owned-buffer-unmap-host.py'
       - 'tools/check-ps5-untextured-descriptor-sync-host.py'
       - 'tools/check-ps5-known-empty-graphics-descriptors-host.py'
@@ -181,6 +182,7 @@ jobs:
           python3 -B tools/check-native-wide-index-buffer-range-host.py
           python3 -B tools/check-native-index-draw-dirty-span-host.py
           python3 -B tools/check-native-indirect-draw-range-host.py
+          python3 -B tools/check-native-indirect-null-binding-host.py
           python3 -B tools/check-ps5-never-owned-buffer-unmap-host.py
           python3 -B tools/check-ps5-untextured-descriptor-sync-host.py
           python3 -B tools/check-ps5-known-empty-graphics-descriptors-host.py
