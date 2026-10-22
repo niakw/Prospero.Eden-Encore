@@ -926,6 +926,11 @@ void BufferCache<P>::BindHostVertexBuffers() {
 template <class P>
 void BufferCache<P>::BindHostDrawIndirectBuffers() {
     const auto bind_buffer = [this](const Binding& binding) {
+        // An unmapped or rejected guest indirect draw has no real VkBuffer.
+        // Never touch or synchronize the null sentinel as if it were live.
+        if (binding.buffer_id == NULL_BUFFER_ID || binding.size == 0) {
+            return;
+        }
         Buffer& buffer = slot_buffers[binding.buffer_id];
         TouchBuffer(buffer, binding.buffer_id);
         SynchronizeBuffer(buffer, binding.device_addr, binding.size);
@@ -2149,15 +2154,22 @@ bool BufferCache<P>::HasFastUniformBufferBound(size_t stage, u32 binding_index) 
 
 template <class P>
 std::pair<typename BufferCache<P>::Buffer*, u32> BufferCache<P>::GetDrawIndirectCount() {
-    auto& buffer = slot_buffers[channel_state->count_buffer_binding.buffer_id];
-    return std::make_pair(&buffer, buffer.Offset(channel_state->count_buffer_binding.device_addr));
+    const Binding& binding = channel_state->count_buffer_binding;
+    if (binding.buffer_id == NULL_BUFFER_ID || binding.size == 0) {
+        return {nullptr, 0};
+    }
+    auto& buffer = slot_buffers[binding.buffer_id];
+    return std::make_pair(&buffer, buffer.Offset(binding.device_addr));
 }
 
 template <class P>
 std::pair<typename BufferCache<P>::Buffer*, u32> BufferCache<P>::GetDrawIndirectBuffer() {
-    auto& buffer = slot_buffers[channel_state->indirect_buffer_binding.buffer_id];
-    return std::make_pair(&buffer,
-                          buffer.Offset(channel_state->indirect_buffer_binding.device_addr));
+    const Binding& binding = channel_state->indirect_buffer_binding;
+    if (binding.buffer_id == NULL_BUFFER_ID || binding.size == 0) {
+        return {nullptr, 0};
+    }
+    auto& buffer = slot_buffers[binding.buffer_id];
+    return std::make_pair(&buffer, buffer.Offset(binding.device_addr));
 }
 
 } // namespace VideoCommon

@@ -463,6 +463,11 @@ void RasterizerVulkan::DrawIndirect() {
         const auto indirect_buffer = buffer_cache.GetDrawIndirectBuffer();
         const auto& buffer = indirect_buffer.first;
         const auto& offset = indirect_buffer.second;
+        // UpdateDrawIndirect can deliberately reject an unmapped/overflowing
+        // guest command span. Never record a Vulkan draw with a null buffer.
+        if (!buffer) {
+            return;
+        }
         if (params.is_byte_count) {
             scheduler.Record([buffer_obj = buffer->Handle(), offset,
                               stride = params.stride,
@@ -481,6 +486,9 @@ void RasterizerVulkan::DrawIndirect() {
             const auto count = buffer_cache.GetDrawIndirectCount();
             const auto& draw_buffer = count.first;
             const auto& offset_base = count.second;
+            if (!draw_buffer) {
+                return;
+            }
             scheduler.Record([draw_buffer_obj = draw_buffer->Handle(),
                               buffer_obj = buffer->Handle(), offset_base, offset,
                               params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {

@@ -1542,6 +1542,19 @@ indirect_before = "    const auto update = [this](GPUVAddr gpu_addr, size_t size
 indirect_after = "    const auto update = [this](GPUVAddr gpu_addr, size_t size, Binding& binding) {\n        // The binding and FindBuffer accept u32 bytes. An empty or wider\n        // indirect command range must not wrap into a valid-looking buffer.\n        if (size == 0 || size > static_cast<size_t>(~u32{0})) {\n            binding = NULL_BINDING;\n            return;\n        }\n        const std::optional<DAddr> device_addr = gpu_memory->GpuToCpuAddress(gpu_addr);"
 assert r437_expected.count(indirect_before) == 1
 r437_expected = r437_expected.replace(indirect_before, indirect_after)
+# Reject null guest indirect bindings end-to-end: no null-buffer touch or Vulkan submit.
+indirect_null_before_0 = "    const auto bind_buffer = [this](const Binding& binding) {\n        Buffer& buffer = slot_buffers[binding.buffer_id];"
+indirect_null_after_0 = "    const auto bind_buffer = [this](const Binding& binding) {\n        // An unmapped or rejected guest indirect draw has no real VkBuffer.\n        // Never touch or synchronize the null sentinel as if it were live.\n        if (binding.buffer_id == NULL_BUFFER_ID || binding.size == 0) {\n            return;\n        }\n        Buffer& buffer = slot_buffers[binding.buffer_id];"
+assert r437_expected.count(indirect_null_before_0) == 1
+r437_expected = r437_expected.replace(indirect_null_before_0, indirect_null_after_0)
+indirect_null_before_1 = "std::pair<typename BufferCache<P>::Buffer*, u32> BufferCache<P>::GetDrawIndirectCount() {\n    auto& buffer = slot_buffers[channel_state->count_buffer_binding.buffer_id];\n    return std::make_pair(&buffer, buffer.Offset(channel_state->count_buffer_binding.device_addr));\n}"
+indirect_null_after_1 = "std::pair<typename BufferCache<P>::Buffer*, u32> BufferCache<P>::GetDrawIndirectCount() {\n    const Binding& binding = channel_state->count_buffer_binding;\n    if (binding.buffer_id == NULL_BUFFER_ID || binding.size == 0) {\n        return {nullptr, 0};\n    }\n    auto& buffer = slot_buffers[binding.buffer_id];\n    return std::make_pair(&buffer, buffer.Offset(binding.device_addr));\n}"
+assert r437_expected.count(indirect_null_before_1) == 1
+r437_expected = r437_expected.replace(indirect_null_before_1, indirect_null_after_1)
+indirect_null_before_2 = "std::pair<typename BufferCache<P>::Buffer*, u32> BufferCache<P>::GetDrawIndirectBuffer() {\n    auto& buffer = slot_buffers[channel_state->indirect_buffer_binding.buffer_id];\n    return std::make_pair(&buffer,\n                          buffer.Offset(channel_state->indirect_buffer_binding.device_addr));\n}"
+indirect_null_after_2 = "std::pair<typename BufferCache<P>::Buffer*, u32> BufferCache<P>::GetDrawIndirectBuffer() {\n    const Binding& binding = channel_state->indirect_buffer_binding;\n    if (binding.buffer_id == NULL_BUFFER_ID || binding.size == 0) {\n        return {nullptr, 0};\n    }\n    auto& buffer = slot_buffers[binding.buffer_id];\n    return std::make_pair(&buffer, buffer.Offset(binding.device_addr));\n}"
+assert r437_expected.count(indirect_null_before_2) == 1
+r437_expected = r437_expected.replace(indirect_null_before_2, indirect_null_after_2)
 assert (active / r437_rel).read_text() == r437_expected, (
     "R437 maintained buffer cache differs from source reconstruction; "
     "check BufferPages registration, DMA copy bounds and DMA clear bounds"
