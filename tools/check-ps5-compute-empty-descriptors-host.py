@@ -26,6 +26,13 @@ end = configure.index("\n\n    buffer_cache.SetComputeUniformBufferState", initi
 acquire = configure[initial:end]
 assert acquire.count("AcquireKnownEmpty(uses_descriptor_buffer)") == 1
 assert acquire.count("guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer)") == 1
+sync_start = compute.index("    // No TIC/TSC state is consumed")
+sync_end = compute.index("\n\n    boost::container::small_vector<", sync_start)
+sync = compute[sync_start:sync_end]
+assert sync.count("texture_cache.SynchronizeDescriptors(true);") == 1
+for name in ("texture_buffer_descriptors", "image_buffer_descriptors",
+             "texture_descriptors", "image_descriptors"):
+    assert f"info.{name}.empty()" in sync
 queue_header = (root / "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h").read_text()
 assert "void AcquireKnownEmpty(bool use_descriptor_buffer_) noexcept" in queue_header
 
@@ -129,6 +136,46 @@ int main() {
     assert(z.guest_descriptor_queue.acquires==1 && z.scheduler.waits==0);
 }
 """
+
+# Test the source-selected compute TIC/TSC guard with all four descriptor kinds.
+synchronization_test = r"""
+#include <cassert>
+#include <vector>
+struct Info {
+    std::vector<int> texture_buffer_descriptors, image_buffer_descriptors;
+    std::vector<int> texture_descriptors, image_descriptors;
+};
+struct TextureCache {
+    int calls{};
+    void SynchronizeDescriptors(bool compute) {
+        assert(compute);
+        ++calls;
+    }
+};
+struct Probe {
+    Info info;
+    TextureCache texture_cache;
+    void Run() {
+""" + sync + r"""
+    }
+};
+int main() {
+    Probe p;
+    p.Run(); assert(p.texture_cache.calls == 0);
+    p.info.texture_buffer_descriptors.push_back(1);
+    p.Run(); assert(p.texture_cache.calls == 1);
+    p.info.texture_buffer_descriptors.clear();
+    p.info.image_buffer_descriptors.push_back(1);
+    p.Run(); assert(p.texture_cache.calls == 2);
+    p.info.image_buffer_descriptors.clear();
+    p.info.texture_descriptors.push_back(1);
+    p.Run(); assert(p.texture_cache.calls == 3);
+    p.info.texture_descriptors.clear();
+    p.info.image_descriptors.push_back(1);
+    p.Run(); assert(p.texture_cache.calls == 4);
+}
+"""
+
 with tempfile.TemporaryDirectory(prefix="encore-compute-empty-desc-") as folder:
     cpp = Path(folder) / "test.cpp"
     cpp.write_text(test)
@@ -138,3 +185,11 @@ with tempfile.TemporaryDirectory(prefix="encore-compute-empty-desc-") as folder:
                         "-fsanitize=undefined", str(cpp), "-o", str(exe)], check=True, timeout=30)
         subprocess.run([str(exe)], check=True, timeout=10)
         print("COMPUTE_EMPTY_DESCRIPTOR_QUEUE_PASS", opt)
+        sync_cpp = Path(folder) / "synchronization.cpp"
+        sync_cpp.write_text(synchronization_test)
+        sync_exe = Path(folder) / ("sync" + opt)
+        subprocess.run(["c++", "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+                        "-fsanitize=undefined", str(sync_cpp), "-o", str(sync_exe)],
+                       check=True, timeout=30)
+        subprocess.run([str(sync_exe)], check=True, timeout=10)
+        print("COMPUTE_EMPTY_TEXTURE_SYNC_PASS", opt)
