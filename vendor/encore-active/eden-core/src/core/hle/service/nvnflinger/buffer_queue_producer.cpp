@@ -204,7 +204,9 @@ Status BufferQueueProducer::WaitForFreeSlotThenRelock(bool async, s32* found, St
         // outrun the consumer. Wait here if it looks like we have too many buffers queued up.
         const bool too_many_buffers = core->queue.size() > static_cast<size_t>(max_buffer_count);
         if (too_many_buffers) {
-            LOG_ERROR(Service_Nvnflinger, "queue size is {}, waiting", core->queue.size());
+            // Backpressure is an expected queue state, not a service failure.
+            // Avoid per-wakeup ERROR formatting/output on the producer hot path.
+            LOG_DEBUG(Service_Nvnflinger, "queue size is {}, waiting", core->queue.size());
         }
 
         // If no buffer is found, or if the queue has too many buffers outstanding, wait for a

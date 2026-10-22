@@ -132,3 +132,7 @@ frame/buffer/slot et l'absence de double notification. La parité
 `check-vendor-consolidation-debt.py` est mise à jour ; fast gate et
 prévalidation doivent rester verts. **F05 reste ouvert** jusqu'à la preuve
 de progression de bout en bout.
+
+## F01/F05 — 22 octobre : limiter les logs d'attente normale de NVNflinger
+
+Dans `BufferQueueProducer::WaitForFreeSlotThenRelock`, le cas `queue.size() > max_buffer_count` représente une attente de retour de capacité, pas une erreur de service. Sa journalisation `LOG_ERROR` se produisait à chaque itération de la boucle et pouvait créer des écritures de log en rafale lorsque le consommateur était en retard, même sans diagnostic détaillé. Elle passe à `LOG_DEBUG`, tout en conservant la condition d'attente, les réveils, l'ordre des frames et les fences à l'identique. L'oracle de parité maintenue vérifie la substitution exacte depuis la source épinglée. **Amélioration préventive du coût CPU/log ; aucun gain FC27 ni correction de freeze n'est encore revendiqué.**

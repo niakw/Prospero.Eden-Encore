@@ -275,6 +275,10 @@ queue_before = "    item.graphic_buffer.reset();\n    item.slot = BufferItem::IN
 queue_after = "    // Notify consumers with the actual queued item: keep its buffer and slot\n    // alive until the callback completes, outside the BufferQueue mutex.\n    if (listener_available) {"
 assert dequeue_expected.count(queue_before) == 1
 dequeue_expected = dequeue_expected.replace(queue_before, queue_after)
+backpressure_before = "        if (too_many_buffers) {\n            LOG_ERROR(Service_Nvnflinger, \"queue size is {}, waiting\", core->queue.size());\n        }"
+backpressure_after = "        if (too_many_buffers) {\n            // Backpressure is an expected queue state, not a service failure.\n            // Avoid per-wakeup ERROR formatting/output on the producer hot path.\n            LOG_DEBUG(Service_Nvnflinger, \"queue size is {}, waiting\", core->queue.size());\n        }"
+assert dequeue_expected.count(backpressure_before) == 1
+dequeue_expected = dequeue_expected.replace(backpressure_before, backpressure_after)
 assert dequeue_maintained == dequeue_expected, (
     "Maintained queue-dequeue diagnostic diverges from prior generated source")
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")') == 1
