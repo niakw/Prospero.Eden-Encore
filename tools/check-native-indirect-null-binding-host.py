@@ -13,7 +13,11 @@ legacy = (root / "vendor/encore-active/eden-backports/src/video_core/buffer_cach
 def method(source, signature, end="\ntemplate <class P>"):
     at = source.index(signature)
     assert source.count(signature) == 1
-    return source[at:source.index(end, at+len(signature))]
+    tail = source.find(end, at+len(signature))
+    if tail < 0:
+        # GetDrawIndirectBuffer is the final method before the namespace close.
+        tail = source.index("\n} // namespace VideoCommon", at)
+    return source[at:tail].rstrip()
 
 names = [
     "void BufferCache<P>::BindHostDrawIndirectBuffers() {",
