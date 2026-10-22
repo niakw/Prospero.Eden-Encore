@@ -24,10 +24,13 @@ signatures = (
     "void BufferCache<P>::BindComputeStorageBuffer(size_t",
 )
 sections = [grab(current, s) for s in signatures]
-for section in sections:
-    assert "stage >= NUM_STAGES" in section
+for index, section in enumerate(sections):
     assert "[[unlikely]]" in section
-    assert "stage >= NUM_STAGES" not in grab(base, signatures[sections.index(section)])
+    if index < 2:  # Compute bindings have no graphics stage parameter.
+        assert "stage >= NUM_STAGES" in section
+        assert "stage >= NUM_STAGES" not in grab(base, signatures[index])
+    else:
+        assert "cbuf_index >= kepler_compute->launch_description.const_buffer_config.size()" not in grab(base, signatures[index])
 assert "ssbo_index >= NUM_STORAGE_BUFFERS" in sections[0]
 assert "tbo_index >= NUM_TEXTURE_BUFFERS" in sections[1]
 assert "cbuf_index >= maxwell3d->state.shader_stages[stage].const_buffers.size()" in sections[0]
