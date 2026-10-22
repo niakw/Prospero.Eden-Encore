@@ -51,7 +51,7 @@ def check_composer() -> tuple[bytes, bytes]:
         raise RuntimeError("Maintained HardwareComposer differs from reviewed transformation")
     check_text = after.decode()
     acquired = check_text.split("HardwareComposer::CacheStatus HardwareComposer::CacheFramebufferLocked(", 1)[1]
-    if (acquired.index("if (it->second.is_acquired)") > acquired.index("return CacheStatus::NoBufferAvailable;"):
+    if acquired.index("if (it->second.is_acquired)") > acquired.index("return CacheStatus::NoBufferAvailable;"):
         raise RuntimeError("Lost still-acquired frame reuse")
     print("HARDWARE_COMPOSER_PINNED_REPRODUCTION_PASS source and released-slot gate")
     return before, after
