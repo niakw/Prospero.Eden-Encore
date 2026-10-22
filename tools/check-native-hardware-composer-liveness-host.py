@@ -23,19 +23,23 @@ pinned, active = installer.check_composer()
 source = active.decode()
 assert pinned != active
 
-def extract(marker: str) -> str:
-    assert source.count(marker) == 1, marker
-    begin = source.index(marker)
-    open_brace = source.index("{", begin)
+def extract_from(source_text: str, marker: str) -> str:
+    assert source_text.count(marker) == 1, marker
+    begin = source_text.index(marker)
+    open_brace = source_text.index("{", begin)
     depth = 0
-    for offset in range(open_brace, len(source)):
-        if source[offset] == "{":
+    for offset in range(open_brace, len(source_text)):
+        if source_text[offset] == "{":
             depth += 1
-        elif source[offset] == "}":
+        elif source_text[offset] == "}":
             depth -= 1
             if depth == 0:
-                return source[begin:offset + 1]
+                return source_text[begin:offset + 1]
     raise AssertionError("Unterminated native source: " + marker)
+
+
+def extract(marker: str) -> str:
+    return extract_from(source, marker)
 
 helper = extract("s32 NormalizeSwapInterval(")
 methods = "\n\n".join(extract(name) for name in (
@@ -48,6 +52,14 @@ assert "nvdisp.WaitForComposite();" in methods
 assert "nvdisp.Composite(composition_stack);" in methods
 assert "if (result == CacheStatus::NoBufferAvailable)" in methods
 assert "return CacheStatus::NoBufferAvailable;" in methods
+cache_marker = "HardwareComposer::CacheStatus HardwareComposer::CacheFramebufferLocked("
+current_cache_method = extract(cache_marker)
+pinned_cache_method = extract_from(pinned.decode(), cache_marker)
+assert current_cache_method != pinned_cache_method
+assert current_cache_method in methods
+assert "return CacheStatus::CachedBufferReused;" in pinned_cache_method
+# Produce a negative control by replacing ONLY the corrected method with the
+# byte-exact historical one. The rest of the full composition is identical.
 
 fixture = r"""
 #include <algorithm>
@@ -240,3 +252,21 @@ with tempfile.TemporaryDirectory(prefix="encore-composer-full-") as td:
                                 timeout=15)
         assert result.returncode == 0, (opt, result.stderr[-3500:])
         print("NATIVE_FULL_COMPOSITOR_LIVENESS_HOST_PASS", opt)
+
+        historical = fixture.replace(current_cache_method, pinned_cache_method)
+        assert historical != fixture and historical.count(pinned_cache_method) == 1
+        original_file = Path(td) / "composer_pinned.cpp"
+        original_file.write_text(historical)
+        original_bin = Path(td) / ("composer_pinned" + opt)
+        built = subprocess.run([compiler, "-std=c++20", opt, "-Wall",
+                                "-Wextra", "-Werror", "-fsanitize=undefined",
+                                "-fno-sanitize-recover=all", "-pthread",
+                                str(original_file), "-o", str(original_bin)],
+                               capture_output=True, text=True, timeout=45)
+        assert built.returncode == 0, (opt, built.stderr[-5000:])
+        actual = subprocess.run([str(original_bin)], capture_output=True,
+                                text=True, timeout=15)
+        assert actual.returncode != 0 and "Assertion" in actual.stderr, (
+            "The pinned original unexpectedly passed the released-buffer"
+            " multi-layer regression", opt, actual.stdout, actual.stderr[-1500:])
+        print("PINNED_COMPOSITOR_STALE_FRAME_EXPECTED_FAIL_PASS", opt)
