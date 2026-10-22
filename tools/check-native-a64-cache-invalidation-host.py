@@ -20,14 +20,16 @@ start=A64.index("    void PerformRequestedCacheInvalidation(HaltReason hr) {")
 end=A64.index("\n    IR::Block ir_block", start)
 snippet=A64[start:end].rstrip()
 assert '#if defined(EDEN_JIT_A64_DEV_PROFILE)' in snippet
-assert 'invalidate_entire_cache ? 0u : 1u' in snippet
+assert 'clear_all ? 0u : 1u' in snippet
 assert 'eden_native_detailed_logging() &&' in snippet
 assert 'eden_jit_cache_event' in snippet
 assert 'std::unique_lock lock{invalidation_mutex};' in snippet
 assert 'block_of_code.ClearCache();' in snippet
 assert 'emitter.ClearCache();' in snippet
-assert 'emitter.InvalidateCacheRanges(invalid_cache_ranges);' in snippet
-assert 'invalid_cache_ranges.clear();' in snippet
+assert 'emitter.InvalidateCacheRanges(ranges);' in snippet
+assert 'ranges.swap(invalid_cache_ranges);' in snippet
+assert 'invalid_cache_ranges.clear();' not in snippet
+assert snippet.index('ranges.swap(invalid_cache_ranges);') < snippet.index('emitter.InvalidateCacheRanges(ranges);')
 assert 'jit_state.ResetRSB();' in snippet
 assert 'extern "C" void eden_jit_cache_event(unsigned core, unsigned kind)' in PERF
 assert 'EDEN_PERF_JIT_CACHE mono_ns=' in PERF
