@@ -132,11 +132,12 @@ with tempfile.TemporaryDirectory(prefix="encore-default-jit-cache-") as tmp:
     source.write_text(CPP)
     for variant,flags in (("release",[]),("dev",["-DEDEN_JIT_A64_DEV_PROFILE=1"])):
         exe=d/variant
-        subprocess.run(
+        compiled=subprocess.run(
             [compiler,"-std=c++20","-O1","-Wall","-Wextra",
              "-fsanitize=address,undefined","-fno-sanitize-recover=all",
              *flags,str(source),"-o",str(exe)],
-            check=True,timeout=90,capture_output=True,text=True)
+            check=False,timeout=90,capture_output=True,text=True)
+        assert compiled.returncode==0,(variant,compiled.stdout[-1500:],compiled.stderr[-4000:])
         result=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
         assert result.returncode==0,(variant,result.stdout[-1000:],result.stderr[-2000:])
 print("ENCORE_A64_CACHE_INVALIDATION_HOST_PASS source_extracted=1 dev=1 release=1 quiet=1")
