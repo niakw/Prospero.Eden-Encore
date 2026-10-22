@@ -390,6 +390,7 @@ jobs:
           python3 -B tools/check-maintained-sw-blitter.py
           python3 -B tools/check-maintained-scalar-emitters.py
           python3 -B tools/check-maintained-block-range.py
+          python3 -B tools/check-native-jit-block-range-rebase-host.py
           python3 -B tools/check-maintained-kprocess-dev.py
           python3 -B tools/check-maintained-page-table-finalize.py
           python3 -B tools/check-maintained-server-manager.py
