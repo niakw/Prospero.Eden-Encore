@@ -25,6 +25,14 @@ original, active = module.check()
 composer_original, composer_active = module.check_composer()
 source = active.decode()
 composer_source = composer_active.decode()
+
+# The second maintained TU is part of the exact native ownership graph.
+# Do not let a future staged installer silently omit its inventory contract.
+catalog = (ROOT / "docs/EDEN_ACTIVE_SOURCE_CATALOG.md").read_text()
+audit = (ROOT / "docs/EDEN_CORE_AUDIT_DEPENDENCIES.md").read_text()
+owner = "eden-surface-lifecycle/src/core/hle/service/nvnflinger/hardware_composer.cpp"
+assert f"| `{owner}` | `maintained-override` | N23 |" in catalog
+assert f"| N23 | P0 | N03,N06 | vendor/encore-active/{owner} |" in audit
 original_source = original.decode()
 
 
