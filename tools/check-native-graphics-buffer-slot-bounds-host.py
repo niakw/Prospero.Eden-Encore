@@ -36,6 +36,8 @@ assert "tbo_index >= NUM_TEXTURE_BUFFERS" in sections[1]
 assert "cbuf_index >= maxwell3d->state.shader_stages[stage].const_buffers.size()" in sections[0]
 assert "cbuf_index >= kepler_compute->launch_description.const_buffer_config.size()" in sections[2]
 assert sections[2].index("cbuf_index >= kepler_compute") < sections[2].index(">> cbuf_index")
+assert "channel_state->compute_storage_buffers[ssbo_index] = NULL_BINDING;" in sections[2]
+assert "written_compute_storage_buffers &= ~(1U << ssbo_index)" in sections[2]
 assert sections[0].index("ssbo_index >= NUM_STORAGE_BUFFERS") < sections[0].index(">> ssbo_index")
 assert sections[1].index("tbo_index >= NUM_TEXTURE_BUFFERS") < sections[1].index("<< tbo_index")
 
@@ -58,6 +60,7 @@ enum class PixelFormat { R8 };
 struct StorageBinding {
     u32 buffer_id{};
 };
+constexpr StorageBinding NULL_BINDING{};
 struct TextureBinding {
     u32 buffer_id{};
 };
@@ -163,10 +166,17 @@ int main() {
     cache.BindComputeStorageBuffer(1, 1000, 0, true);
     assert(state.enabled_compute_storage_buffers == 1U);
     assert(state.total_compute_storage_buffers == comp_before);
-    // Reject impossible compute CBUF before any shift, array read or dirty mark.
+    // Rebinding a previously valid SSBO from a disabled compute CBUF must
+    // clear the previous launch's buffer and write tracking.
+    cache.BindComputeStorageBuffer(2, 7, 0, true);
+    assert(state.compute_storage_buffers[2].buffer_id == 1);
+    assert((state.written_compute_storage_buffers & (1U << 2)) != 0);
     compute.launch_description.const_buffer_enable_mask = 0;
     cache.BindComputeStorageBuffer(2, 7, 0, true);
     assert(state.compute_storage_buffers[2].buffer_id == 0);
+    assert((state.written_compute_storage_buffers & (1U << 2)) == 0);
+    // The descriptor slot stays occupied to preserve host binding indices.
+    assert((state.enabled_compute_storage_buffers & (1U << 2)) != 0);
 }
 """
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")

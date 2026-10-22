@@ -41,3 +41,14 @@ compute mask shift, including a stage-slot combination that is otherwise valid.
 The existing source-extracted ASan/UBSan fixture also covers the last valid and
 first invalid CBUF index on both graphics and compute. No texture descriptor
 ordering, fence or CPU-write semantics change.
+
+## Disabled compute CBUF must invalidate its old binding
+
+When a shader reuses a storage slot but disables its source constant buffer,
+the existing compute bind path returned early **after** setting the slot
+mask, leaving the previous dispatch's storage binding intact. This could
+replay stale resource content and incorrectly mark that memory GPU-written.
+The disabled path now sets `NULL_BINDING` and clears only that slot's
+write flag while preserving the logical enabled position (shader descriptor
+binding-index ordering must remain stable). The source-extracted fixture
+exercises a valid SSBO followed by disabled-CBUF rebind at the **same** slot.

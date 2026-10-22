@@ -558,6 +558,10 @@ void BufferCache<P>::BindComputeStorageBuffer(size_t ssbo_index, u32 cbuf_index,
 
     const auto& launch_desc = kepler_compute->launch_description;
     if (((launch_desc.const_buffer_enable_mask >> cbuf_index) & 1) == 0) {
+        // Preserve the logical descriptor position, but never reuse a buffer
+        // left from an earlier dispatch when this launch disables its CBUF.
+        channel_state->compute_storage_buffers[ssbo_index] = NULL_BINDING;
+        channel_state->written_compute_storage_buffers &= ~(1U << ssbo_index);
         LOG_WARNING(HW_GPU, "Skipped binding SSBO: cbuf index {} is not enabled", cbuf_index);
         return;
     }
