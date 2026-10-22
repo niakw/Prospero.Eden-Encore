@@ -22,7 +22,9 @@ assert spec and spec.loader
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 original, active = module.check()
+composer_original, composer_active = module.check_composer()
 source = active.decode()
+composer_source = composer_active.decode()
 original_source = original.decode()
 
 
@@ -205,8 +207,13 @@ with tempfile.TemporaryDirectory(prefix="eden-surface-lifecycle-") as tmp:
     target = stage / module.PATH
     target.parent.mkdir(parents=True)
     target.write_bytes(original)
+    composer_target = stage / module.COMPOSER_PATH
+    composer_target.parent.mkdir(parents=True, exist_ok=True)
+    composer_target.write_bytes(composer_original)
     module.install(stage)
+    assert composer_target.read_bytes() == composer_active
     assert target.read_bytes() == active
+    assert composer_target.read_bytes() == composer_active
     module.install(stage)
     # Reproduce the exact previous maintained TU from the current one, without
     # storing a second source copy. Only its immutable Git blob may migrate.
@@ -218,6 +225,14 @@ with tempfile.TemporaryDirectory(prefix="eden-surface-lifecycle-") as tmp:
     module.install(stage)
     assert target.read_bytes() == active
     module.install(stage)  # Idempotence after upgrading an old staged tree.
+    composer_target.write_bytes(b"unexpected third-party change")
+    try:
+        module.install(stage)
+    except RuntimeError as exc:
+        assert "Unknown HardwareComposer input" in str(exc)
+    else:
+        raise AssertionError("unknown HardwareComposer source must fail closed")
+    composer_target.write_bytes(composer_active)
     target.write_bytes(b"unexpected third-party change")
     try:
         module.install(stage)
@@ -239,4 +254,104 @@ with tempfile.TemporaryDirectory(prefix="eden-surface-lifecycle-") as tmp:
     subprocess.run(["c++", "-std=c++20", "-O1", "-Wall", "-Wextra", "-Werror",
                     str(unit), "-o", str(binary)], check=True, timeout=50, env=env)
     subprocess.run([str(binary)], check=True, timeout=10)
+
+# Exercise the precise CacheFramebufferLocked implementation that ships to
+# the PS5. Reuse of a still-acquired slot is valid; a RELEASED slot must not
+# appear in another layer's new composite when acquire fails.
+def extract_composer(name: str) -> str:
+    marker = "HardwareComposer::CacheStatus HardwareComposer::" + name + "("
+    assert composer_source.count(marker) == 1
+    first = composer_source.index(marker)
+    opening = composer_source.index("{", first)
+    depth = 0
+    for end in range(opening, len(composer_source)):
+        if composer_source[end] == "{":
+            depth += 1
+        elif composer_source[end] == "}":
+            depth -= 1
+            if depth == 0:
+                return composer_source[first:end + 1]
+    raise AssertionError("Unterminated HardwareComposer native implementation")
+
+composer_method = extract_composer("CacheFramebufferLocked")
+assert "if (it->second.is_acquired)" in composer_method
+assert "return CacheStatus::CachedBufferReused;" in composer_method
+assert "return CacheStatus::NoBufferAvailable;" in composer_method
+assert "this->TryAcquireFramebufferLocked(layer, it->second)" in composer_method
+compose_real = composer_source.split("u32 HardwareComposer::ComposeLocked(", 1)[1]
+assert compose_real.index("if (result == CacheStatus::NoBufferAvailable)") < compose_real.index("const auto& igbp_buffer = *item.graphic_buffer;")
+composer_fixture = r"""
+#include <cassert>
+#include <cstdint>
+#include <cstdio>
+#include <map>
+using ConsumerId = std::int32_t;
+struct Layer {};
+class HardwareComposer {
+public:
+    enum class CacheStatus : std::uint32_t {
+        NoBufferAvailable, BufferAcquired, CachedBufferReused
+    };
+    struct Framebuffer {
+        int item{-1};
+        bool is_acquired{};
+    };
+    std::map<ConsumerId, Framebuffer> m_framebuffers;
+    bool next_available{};
+    int next_item{10};
+    unsigned attempts{};
+    bool TryAcquireFramebufferLocked(Layer&, Framebuffer& framebuffer) {
+        ++attempts;
+        if (!next_available) return false;
+        framebuffer.is_acquired = true;
+        framebuffer.item = next_item++;
+        next_available = false;
+        return true;
+    }
+    CacheStatus CacheFramebufferLocked(Layer&, ConsumerId);
+};
+""" + composer_method + r"""
+int main() {
+    HardwareComposer h;
+    Layer layer;
+    using Status = HardwareComposer::CacheStatus;
+    // First acquire failure must not invent a cached frame.
+    assert(h.CacheFramebufferLocked(layer, 7) == Status::NoBufferAvailable);
+    assert(h.m_framebuffers.empty());
+    h.next_available = true;
+    assert(h.CacheFramebufferLocked(layer, 7) == Status::BufferAcquired);
+    assert(h.m_framebuffers[7].item == 10 && h.m_framebuffers[7].is_acquired);
+    unsigned acquired_calls = h.attempts;
+    // Reusing an acquired image is valid until its release.
+    assert(h.CacheFramebufferLocked(layer, 7) == Status::CachedBufferReused);
+    assert(h.attempts == acquired_calls);
+    // Releasing to the producer revokes permission to sample stale memory.
+    h.m_framebuffers[7].is_acquired = false;
+    assert(h.CacheFramebufferLocked(layer, 7) == Status::NoBufferAvailable);
+    assert(h.m_framebuffers[7].item == 10 && !h.m_framebuffers[7].is_acquired);
+    assert(h.CacheFramebufferLocked(layer, 7) == Status::NoBufferAvailable);
+    // A fresh, valid producer buffer restores the regular presentation path.
+    h.next_available = true;
+    assert(h.CacheFramebufferLocked(layer, 7) == Status::BufferAcquired);
+    assert(h.m_framebuffers[7].item == 11 && h.m_framebuffers[7].is_acquired);
+    // Separate layer never inherits an old cached acquisition.
+    assert(h.CacheFramebufferLocked(layer, 8) == Status::NoBufferAvailable);
+    h.next_available = true;
+    assert(h.CacheFramebufferLocked(layer, 8) == Status::BufferAcquired);
+    assert(h.m_framebuffers[8].item == 12 && h.m_framebuffers[7].item == 11);
+    std::puts("HARDWARE_COMPOSER_RELEASED_FRAME_HOST_PASS");
+}
+"""
+with tempfile.TemporaryDirectory(prefix="eden-composer-released-frame-") as tmp:
+    stage = Path(tmp)
+    unit = stage / "hardware_composer.cpp"
+    unit.write_text(composer_fixture)
+    for opt in ("-O0", "-O2"):
+        exe = stage / ("hardware_composer" + opt)
+        subprocess.run(["c++", "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+                        "-fsanitize=undefined", "-fno-sanitize-recover=all",
+                        str(unit), "-o", str(exe)], check=True, timeout=45)
+        subprocess.run([str(exe)], check=True, timeout=15)
+        print("COMPOSER_RELEASED_FRAME_NATIVE_HOST_PASS", opt)
+
 print("SURFACE_LIFECYCLE_COMPILER_INPUT_PASS full versioned source, pinned input and conflict rejection")
