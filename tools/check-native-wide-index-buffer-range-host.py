@@ -115,23 +115,33 @@ int main(){
     cache.UpdateIndexBuffer();
     assert(state.index_buffer.size==64 && cache.finds==1);
     // Previously end-start narrowed to zero before comparing draw bytes.
+    // Every independent draw reasserts the IndexBuffer dirty register.
+    g.dirty.flags[Dirty::IndexBuffer]=true;
     ref.start=0x100000000ull;ref.end=ref.start+0x100000000ull;
     cache.UpdateIndexBuffer();
     assert(state.index_buffer.size==64 && cache.finds==2);
     // Previously count+first overflowed to zero.
+    // Every independent draw reasserts the IndexBuffer dirty register.
+    g.dirty.flags[Dirty::IndexBuffer]=true;
     ref.start=0x2000;ref.end=0x3000;
     ref.count=0xffffffffu;ref.first=1u;
     cache.UpdateIndexBuffer();
     assert(state.index_buffer.size==4096 && cache.finds==3);
     // Invalid reversed GPU range safely disables the stale index binding.
+    // Every independent draw reasserts the IndexBuffer dirty register.
+    g.dirty.flags[Dirty::IndexBuffer]=true;
     ref.start=0x3000;ref.end=0x2fff;
     cache.UpdateIndexBuffer();
     assert(state.index_buffer.size==0 && cache.finds==3);
     // Translation failures remain null, no FindBuffer call.
+    // Every independent draw reasserts the IndexBuffer dirty register.
+    g.dirty.flags[Dirty::IndexBuffer]=true;
     mem.mapped=false;ref.start=0x2000;ref.end=0x3000;
     cache.UpdateIndexBuffer();
     assert(state.index_buffer.size==0 && cache.finds==3);
     // Inline index data still takes its original non-GPU-address route.
+    // Every independent draw reasserts the IndexBuffer dirty register.
+    g.dirty.flags[Dirty::IndexBuffer]=true;
     g.draw_manager.draw_state.inline_index_draw_indexes={0,1,2};
     cache.UpdateIndexBuffer();
     assert(state.index_buffer.size==3 && state.index_buffer.buffer_id!=0);
