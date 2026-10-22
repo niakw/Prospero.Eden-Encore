@@ -14,6 +14,11 @@ oracle = (ROOT / "tools/check-vendor-consolidation-debt.py").read_text()
 assert 'list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")' in cmake
 assert 'dequeue_expected = dequeue_expected.replace(detach_before, detach_after)' in oracle
 assert "dequeue_epoch.fetch_add(1, std::memory_order_relaxed)" in core
+core_methods_start = core.index("void BufferQueueCore::SignalDequeueCondition() {")
+core_methods_end = core.index("s32 BufferQueueCore::GetMinUndequeuedBufferCountLocked(", core_methods_start)
+core_methods = core[core_methods_start:core_methods_end].rstrip()
+assert core_methods.count("dequeue_condition.notify_all();") == 1
+assert "dequeue_condition.wait(lk," in core_methods
 sig = "Status BufferQueueProducer::DetachNextBuffer("
 def method(src):
     assert src.count(sig) == 1
@@ -28,10 +33,14 @@ assert "core->SignalDequeueCondition();" not in method(pinned)
 
 fixture = r"""
 #include <array>
+#include <atomic>
 #include <cassert>
+#include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <thread>
 using s32 = int;
 using u32 = std::uint32_t;
 enum class Status { NoError, BadValue, NoInit, NoMemory };
@@ -52,7 +61,8 @@ struct BufferQueueCore {
     std::mutex mutex{};
     std::array<BufferSlot, BufferQueueDefs::NUM_BUFFER_SLOTS> slots{};
     bool is_abandoned{};
-    int notifications{};
+    std::condition_variable dequeue_condition{};
+    std::atomic<std::uint64_t> dequeue_epoch{};
     void WaitWhileAllocatingLocked() const {}
     void FreeBufferLocked(s32 index) {
         auto& slot = slots[index];
@@ -60,13 +70,8 @@ struct BufferQueueCore {
         slot.buffer_state = BufferState::Free;
         slot.frame_number = 0xffffffffu;
     }
-    void SignalDequeueCondition() {
-        assert(slots[0].graphic_buffer == nullptr ||
-               slots[1].graphic_buffer == nullptr ||
-               slots[2].graphic_buffer == nullptr ||
-               slots[3].graphic_buffer == nullptr);
-        ++notifications;
-    }
+    void SignalDequeueCondition();
+    bool WaitForDequeueCondition(std::unique_lock<std::mutex>& lk);
 };
 struct BufferQueueProducer {
     BufferQueueCore* core{};
@@ -74,7 +79,7 @@ struct BufferQueueProducer {
     explicit BufferQueueProducer(BufferQueueCore& c) : core(&c), slots(c.slots) {}
     Status DetachNextBuffer(std::shared_ptr<GraphicBuffer>* out_buffer, Fence* out_fence);
 };
-""" + "\n" + selected + r"""
+""" + "\n" + core_methods + "\n" + selected + r"""
 int main() {
     BufferQueueCore core{};
     BufferQueueProducer p(core);
@@ -82,9 +87,9 @@ int main() {
     Fence fence{};
     assert(p.DetachNextBuffer(nullptr, &fence) == Status::BadValue);
     assert(p.DetachNextBuffer(&output, nullptr) == Status::BadValue);
-    assert(core.notifications == 0);
+    assert(core.dequeue_epoch.load() == 0);
     assert(p.DetachNextBuffer(&output, &fence) == Status::NoMemory);
-    assert(core.notifications == 0);
+    assert(core.dequeue_epoch.load() == 0);
     // Oldest free graphic buffer is detached first. The active slot is
     // cleared BEFORE a single shared dequeue-generation wake is published.
     core.slots[0].graphic_buffer = std::make_shared<GraphicBuffer>(GraphicBuffer{123});
@@ -96,15 +101,49 @@ int main() {
     assert(p.DetachNextBuffer(&output, &fence) == Status::NoError);
     assert(output && output->payload == 456 && fence.sequence == 9);
     assert(core.slots[1].graphic_buffer == nullptr);
-    assert(core.notifications == 1);
+    assert(core.dequeue_epoch.load() == 1);
     assert(p.DetachNextBuffer(&output, &fence) == Status::NoError);
     assert(output && output->payload == 123 && fence.sequence == 2);
-    assert(core.notifications == 2);
+    assert(core.dequeue_epoch.load() == 2);
     assert(p.DetachNextBuffer(&output, &fence) == Status::NoMemory);
-    assert(core.notifications == 2);
+    assert(core.dequeue_epoch.load() == 2);
     core.is_abandoned = true;
     assert(p.DetachNextBuffer(&output, &fence) == Status::NoInit);
-    assert(core.notifications == 2);
+    assert(core.dequeue_epoch.load() == 2);
+
+    // Deterministically place TWO producers inside the actual core condition
+    // wait: each must release the mutex for the next one to enter.
+    // The selected DetachNextBuffer must broadcast its generation update.
+    for (int round = 0; round < 50; ++round) {
+        BufferQueueCore blocked{};
+        BufferQueueProducer detacher(blocked);
+        blocked.slots[0].graphic_buffer = std::make_shared<GraphicBuffer>(GraphicBuffer{round});
+        blocked.slots[0].frame_number = 1;
+        std::atomic<int> entered{};
+        std::atomic<int> woke{};
+        auto waiter = [&] {
+            std::unique_lock lock(blocked.mutex);
+            entered.fetch_add(1);
+            const bool awakened = blocked.WaitForDequeueCondition(lock);
+            if (awakened) woke.fetch_add(1);
+        };
+        std::thread first(waiter), second(waiter);
+        while (entered.load() != 2) std::this_thread::yield();
+        // Acquiring core mutex guarantees both waiters have entered wait().
+        { std::unique_lock lock(blocked.mutex); }
+        std::shared_ptr<GraphicBuffer> detached{};
+        Fence detached_fence{};
+        assert(detacher.DetachNextBuffer(&detached, &detached_fence) == Status::NoError);
+        assert(detached && detached->payload == round);
+        using namespace std::chrono_literals;
+        const auto deadline = std::chrono::steady_clock::now() + 2s;
+        while (woke.load() != 2 && std::chrono::steady_clock::now() < deadline)
+            std::this_thread::yield();
+        assert(woke.load() == 2);
+        assert(blocked.dequeue_epoch.load() == 1);
+        first.join();
+        second.join();
+    }
 }
 """
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
@@ -115,7 +154,7 @@ with tempfile.TemporaryDirectory(prefix="encore-nvn-detach-") as tmp:
     for opt in ("-O0", "-O2"):
         binary = Path(tmp) / ("detach" + opt)
         subprocess.run([compiler, "-std=c++20", opt, "-Wall", "-Wextra",
-                        "-Werror", "-fsanitize=undefined", "-fno-sanitize-recover=all",
+                        "-Werror", "-pthread", "-fsanitize=undefined", "-fno-sanitize-recover=all",
                         str(source), "-o", str(binary)], check=True, timeout=40)
         subprocess.run([str(binary)], check=True, timeout=15)
-        print("NATIVE_NVN_DETACH_WAKE_PASS", opt)
+        print("NATIVE_NVN_DETACH_BROADCAST_PASS", opt)
