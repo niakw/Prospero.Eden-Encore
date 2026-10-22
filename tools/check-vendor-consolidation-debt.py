@@ -279,6 +279,19 @@ queue_before = "    item.graphic_buffer.reset();\n    item.slot = BufferItem::IN
 queue_after = "    // Notify consumers with the actual queued item: keep its buffer and slot\n    // alive until the callback completes, outside the BufferQueue mutex.\n    if (listener_available) {"
 assert dequeue_expected.count(queue_before) == 1
 dequeue_expected = dequeue_expected.replace(queue_before, queue_after)
+# Buffer history is opt-in: no per-frame clock on its default-disabled path.
+history_before_1 = "        ++core->frame_counter;\n"
+history_after_1 = "        // History is normally disabled: avoid unconditional wall-clock work.\n        const bool record_buffer_history = Settings::values.enable_buffer_history.GetValue();\n        ++core->frame_counter;\n"
+assert dequeue_expected.count(history_before_1) == 1
+dequeue_expected = dequeue_expected.replace(history_before_1, history_after_1)
+history_before_2 = "        slots[slot].presentation_time = Common::g_wall_clock.GetTimeNS().count();"
+history_after_2 = "        slots[slot].presentation_time = record_buffer_history\n                                            ? Common::g_wall_clock.GetTimeNS().count() : 0;"
+assert dequeue_expected.count(history_before_2) == 1
+dequeue_expected = dequeue_expected.replace(history_before_2, history_after_2)
+history_before_3 = "if (Settings::values.enable_buffer_history.GetValue()) {"
+history_after_3 = "if (record_buffer_history) {"
+assert dequeue_expected.count(history_before_3) == 2
+dequeue_expected = dequeue_expected.replace(history_before_3, history_after_3)
 backpressure_before = "        if (too_many_buffers) {\n            LOG_ERROR(Service_Nvnflinger, \"queue size is {}, waiting\", core->queue.size());\n        }"
 backpressure_after = "        if (too_many_buffers) {\n            // Backpressure is an expected queue state, not a service failure.\n            // Avoid per-wakeup ERROR formatting/output on the producer hot path.\n            LOG_DEBUG(Service_Nvnflinger, \"queue size is {}, waiting\", core->queue.size());\n        }"
 assert dequeue_expected.count(backpressure_before) == 1
