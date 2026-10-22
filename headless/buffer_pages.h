@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 // Monotonic witness: a buffer has ever occupied a guest-physical page.
+// Every representable registration is published; a large but valid buffer
+// must not permanently turn off the never-owned fast path for the whole game.
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -16,7 +18,11 @@ constexpr std::uint64_t Bits(unsigned first,unsigned last) noexcept {
 }
 inline void Mark(std::uint64_t address,std::uint64_t size) noexcept {
   if(!size)return;
-  if(address>=kSpace || size>kSpace-address || size>128ull*1024*1024){
+  // The bitmap already covers the entire 16 GiB guest-physical domain.
+  // Old code treated any >128 MiB allocation as unknown forever, forcing
+  // later unrelated CPU writes through both cache-lock fallbacks. A large
+  // valid buffer costs a bounded bitmap walk but keeps untouched pages fast.
+  if(address>=kSpace || size>kSpace-address){
     coverage_unknown.store(true,std::memory_order_release);
     return;
   }
