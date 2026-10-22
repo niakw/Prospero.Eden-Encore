@@ -56,8 +56,17 @@ pair="std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};"
 assert compute.count("descriptor_buffer_ring.PreflightFrameReuse(scheduler)") == 1
 assert compute.count("descriptor_buffer_ring.PreflightCapacity(") == 1
 assert compute.count("guest_descriptor_queue.PreflightLargeGuestDraw(") == 3
-assert compute.index("guest_descriptor_queue.PreflightGuestDraw(") < compute.index(
-    "CurrentComputePipeline()")
+# Native compute chooses the immutable shader before a queue preflight:
+# zero-entry shaders cannot reserve the fallback 1024 guest descriptors.
+# A real worker drain still precedes the paired cache mutexes and reselects
+# the compute shader after consuming pending guest invalidations.
+select = compute.index("ComputePipeline* pipeline{pipeline_cache.CurrentComputePipeline()};")
+preflight = compute.index("guest_descriptor_queue.PreflightGuestDraw(")
+assert select < preflight < compute.index(pair)
+assert "pipeline->HasDescriptorEntries()" in compute[select:preflight]
+after_drain = compute[preflight:compute.index("#endif", preflight)]
+assert "gpu_memory->FlushCaching();" in after_drain
+assert "pipeline = pipeline_cache.CurrentComputePipeline();" in after_drain
 assert compute.index("descriptor_buffer_ring.PreflightFrameReuse(") < compute.index(
     "descriptor_buffer_ring.PreflightCapacity(") < compute.index(pair)
 assert "pipeline = pipeline_cache.CurrentComputePipeline();" in compute
@@ -73,7 +82,11 @@ assert "gpu_memory->FlushCaching();" in after_capacity
 assert "PreflightLargeGuestDraw(" in after_capacity
 assert "    if (!pipeline) return;" in after_capacity
 assert compute.index("SCOPE_EXIT { SyncProbe") < compute.index(pair)
-assert gen.count("Compute always allocates new descriptor-buffer space") == 1
+# The pinned transformation and the final native source-preserving
+# rewrite both mention this guarantee. Check the compiler-selected TU
+# exactly once instead of relying on a count inside the Python oracle.
+assert gen.count("Compute always allocates new descriptor-buffer space") >= 1
+assert compute.count("Compute always allocates new descriptor-buffer space") == 1
 assert "python3 -B tools/check-ps5-compute-descriptor-ring-preflight-host.py" in workflow
 
 frame=methods(ring,"bool DescriptorBufferRing::PreflightFrameReuse(")
