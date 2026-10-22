@@ -61,6 +61,7 @@ on:
       - 'tools/check-ps5-active-texture-descriptor-host.py'
       - 'tools/check-native-batched-buffer-invalidation-host.py'
       - 'tools/check-native-single-range-buffer-invalidation-host.py'
+      - 'tools/check-ps5-buffer-readback-elision-host.py'
       - 'tools/check-ps5-buffer-region-multipage-host.py'
       - 'headless/buffer_pages.h'
       - 'tools/check-native-large-buffer-pages-host.py'
@@ -163,6 +164,7 @@ jobs:
           python3 -B tools/check-ps5-active-texture-descriptor-host.py
           python3 -B tools/check-native-batched-buffer-invalidation-host.py
           python3 -B tools/check-native-single-range-buffer-invalidation-host.py
+          python3 -B tools/check-ps5-buffer-readback-elision-host.py
           python3 -B tools/check-ps5-buffer-region-multipage-host.py
           python3 -B tools/check-native-large-buffer-pages-host.py
           python3 -B tools/check-native-buffer-pages-wide-probe-host.py
