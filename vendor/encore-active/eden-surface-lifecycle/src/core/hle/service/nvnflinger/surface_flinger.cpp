@@ -31,6 +31,10 @@ SurfaceFlinger::~SurfaceFlinger() {
 }
 
 void SurfaceFlinger::AddDisplay(u64 display_id) {
+    // A display ID must identify exactly one stack and buffer owner.
+    if (FindDisplay(display_id) != nullptr) {
+        return;
+    }
     m_displays.emplace_back(display_id);
 }
 
