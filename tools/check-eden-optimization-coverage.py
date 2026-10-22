@@ -127,7 +127,19 @@ assert sum(e["disposition"]=="historical_native_selected_unit" for e in entries)
 # those source files are optimized or absent from the full inventory.
 launcher_prefix=STATE.get("active_emulation_priority_excludes_launcher_prefix")
 assert launcher_prefix=="headless/prosperoeden/"
-pending_code=owners-handled
+# This fixed release source was introduced AFTER the immutable 20 October
+# inventory. Count it explicitly as reviewed and CI-covered without changing
+# that historical source snapshot or inflating the optimization backlog.
+post_snapshot_verified = {
+    "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer_standard.cpp":
+        "tools/check-native-nvnflinger-detach-wake-host.py",
+}
+assert set(post_snapshot_verified).isdisjoint(handled)
+for source_path, witness in post_snapshot_verified.items():
+    assert source_path in owners and (ROOT / witness).is_file()
+    assert "python3 -B " + witness in preflight
+    assert "buffer_queue_producer_standard.cpp" in (ROOT / "headless/CMakeLists.txt").read_text()
+pending_code=owners-handled-set(post_snapshot_verified)
 # One source in the launcher directory is linked into EVERY native app build:
 # it defines global pthread_once/libc shims. Never dismiss it as UI-only.
 shared=set(STATE.get("launcher_global_runtime_exceptions",[]))
@@ -206,11 +218,12 @@ for e in entries:
 assert sum(e["disposition"]=="preexisting_generated_or_inactive_unit"
            for e in entries)==19
 status=Counter(e["disposition"] for e in entries)
-assert len(owners)==STATE["owned_code_count_at_snapshot"],("source inventory changed",len(owners),STATE["owned_code_count_at_snapshot"])
+assert len(owners)==STATE["owned_code_count_at_snapshot"]+len(post_snapshot_verified),("unreviewed source inventory drift",len(owners),STATE["owned_code_count_at_snapshot"],len(post_snapshot_verified))
 assert len(owners)==len(handled)+len(owners-handled)
 print("EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS",
       "owned_code="+str(len(owners)),
       "handled="+str(len(handled)),
+      "post_snapshot_verified="+str(len(post_snapshot_verified)),
       "code_touched="+str(status["code_changed_in_batch"]),
       "source_reviewed="+str(status["reviewed_without_new_code_edit"]),
       "prior_host="+str(status["historical_host_contract_reviewed"]),
