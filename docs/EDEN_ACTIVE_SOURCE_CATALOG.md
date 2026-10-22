@@ -370,7 +370,7 @@ Les fichiers source/en-tête/fragment de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 Les chemins du graphe moteur y ont un propriétaire exact ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 319/319 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 320/320 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
