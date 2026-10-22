@@ -134,7 +134,7 @@ with tempfile.TemporaryDirectory(prefix="encore-compute-empty-desc-") as folder:
     cpp.write_text(test)
     for opt in ("-O0", "-O2"):
         exe = Path(folder) / ("test" + opt)
-        subprocess.run(["c++", "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+        subprocess.run(["c++", "-std=c++20", "-DPS5_NATIVE", opt, "-Wall", "-Wextra", "-Werror",
                         "-fsanitize=undefined", str(cpp), "-o", str(exe)], check=True, timeout=30)
         subprocess.run([str(exe)], check=True, timeout=10)
         print("COMPUTE_EMPTY_DESCRIPTOR_QUEUE_PASS", opt)
