@@ -1933,6 +1933,20 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
             "            auto timer = Eden::Performance::VulkanTimer(16);\n"
             "            std::unique_lock lock{build_mutex};",
         ))
+    if name == 'vk_graphics_pipeline':
+        # Zero-descriptor shaders must not pass a null vector pointer to
+        # memcmp or construct a null [first,last) range. Preserve actual
+        # descriptor-buffer allocations and Vulkan bind ordering unchanged.
+        replacements.extend([
+            ("            std::memcmp(last_descriptor_payload.data(), entries,\n                        num_descriptor_entries * sizeof(DescriptorUpdateEntry)) == 0;",
+             "            (num_descriptor_entries == 0 ||\n             std::memcmp(last_descriptor_payload.data(), entries,\n                         num_descriptor_entries * sizeof(DescriptorUpdateEntry)) == 0);"),
+            ("            std::memcmp(last_descriptor_payload.data(), entries,\n                        num_descriptor_entries * sizeof(DescriptorUpdateEntry)) != 0;",
+             "            (num_descriptor_entries != 0 &&\n             std::memcmp(last_descriptor_payload.data(), entries,\n                         num_descriptor_entries * sizeof(DescriptorUpdateEntry)) != 0);"),
+            ("            last_descriptor_buffer_generation = alloc.generation;\n            last_descriptor_payload.assign(entries, entries + num_descriptor_entries);",
+             "            last_descriptor_buffer_generation = alloc.generation;\n            // Empty shader layouts have no descriptor payload to copy.\n            if (num_descriptor_entries != 0) {\n                last_descriptor_payload.assign(entries, entries + num_descriptor_entries);\n            } else {\n                last_descriptor_payload.clear();\n            }"),
+            ("        if (update_descriptors) {\n            last_descriptor_payload.assign(entries, entries + num_descriptor_entries);\n        }",
+             "        if (update_descriptors) {\n            if (num_descriptor_entries != 0) {\n                last_descriptor_payload.assign(entries, entries + num_descriptor_entries);\n            } else {\n                last_descriptor_payload.clear();\n            }\n        }")
+        ])
     adapt(f'src/video_core/renderer_vulkan/{name}.cpp', name + '_cost.cpp', replacements)
 shader_costs = [
     ('#include <algorithm>', '#include <algorithm>\n#include <cstdio>\n#include "pipeline_trace_registry.h"\n'

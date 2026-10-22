@@ -748,8 +748,9 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
         const bool reuse_allocation =
             last_descriptor_buffer_generation == descriptor_buffer_ring.CurrentGeneration() &&
             last_descriptor_payload.size() == num_descriptor_entries &&
-            std::memcmp(last_descriptor_payload.data(), entries,
-                        num_descriptor_entries * sizeof(DescriptorUpdateEntry)) == 0;
+            (num_descriptor_entries == 0 ||
+             std::memcmp(last_descriptor_payload.data(), entries,
+                         num_descriptor_entries * sizeof(DescriptorUpdateEntry)) == 0);
         if (reuse_allocation) {
             descriptor_buffer_offset = last_descriptor_buffer_offset;
             descriptor_buffer_chunk = last_descriptor_buffer_chunk;
@@ -769,7 +770,12 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
             last_descriptor_buffer_offset = alloc.offset;
             last_descriptor_buffer_chunk = alloc.chunk;
             last_descriptor_buffer_generation = alloc.generation;
-            last_descriptor_payload.assign(entries, entries + num_descriptor_entries);
+            // Empty shader layouts have no descriptor payload to copy.
+            if (num_descriptor_entries != 0) {
+                last_descriptor_payload.assign(entries, entries + num_descriptor_entries);
+            } else {
+                last_descriptor_payload.clear();
+            }
         }
     }
 
@@ -807,10 +813,15 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
         const auto* const entries = static_cast<const DescriptorUpdateEntry*>(descriptor_data);
         update_descriptors =
             bind_pipeline || last_descriptor_payload.size() != num_descriptor_entries ||
-            std::memcmp(last_descriptor_payload.data(), entries,
-                        num_descriptor_entries * sizeof(DescriptorUpdateEntry)) != 0;
+            (num_descriptor_entries != 0 &&
+             std::memcmp(last_descriptor_payload.data(), entries,
+                         num_descriptor_entries * sizeof(DescriptorUpdateEntry)) != 0);
         if (update_descriptors) {
-            last_descriptor_payload.assign(entries, entries + num_descriptor_entries);
+            if (num_descriptor_entries != 0) {
+                last_descriptor_payload.assign(entries, entries + num_descriptor_entries);
+            } else {
+                last_descriptor_payload.clear();
+            }
         }
     }
     scheduler.Record([this, descriptor_data, bind_pipeline, update_descriptors,
