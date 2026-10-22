@@ -77,6 +77,7 @@ on:
       - 'vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/**'
       - 'vendor/encore-active/eden-backports/src/core/hle/service/nvnflinger/**'
       - 'tools/check-native-nvnflinger-detach-wake-host.py'
+      - 'tools/check-native-nvnflinger-dequeue-profile-host.py'
       - 'tools/check-native-nvnflinger-queue-callback-host.py'
       - 'tools/ci/diagnose-image-repro.py'
       - 'tools/check-image-repro-diagnostic-host.py'
@@ -193,6 +194,7 @@ jobs:
           python3 -B tools/check-native-indirect-draw-range-host.py
           python3 -B tools/check-native-indirect-null-binding-host.py
           python3 -B tools/check-native-nvnflinger-detach-wake-host.py
+          python3 -B tools/check-native-nvnflinger-dequeue-profile-host.py
           python3 -B tools/check-native-nvnflinger-queue-callback-host.py
           python3 -B tools/check-image-repro-diagnostic-host.py
           python3 -B tools/check-native-graphics-buffer-slot-bounds-host.py
