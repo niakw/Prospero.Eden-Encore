@@ -107,6 +107,8 @@ on:
       - 'tools/check-native-a64-default-phases-host.py'
       - 'tools/check-native-jit-block-range-rebase-host.py'
       - 'tools/check-native-a64-cache-invalidation-host.py'
+      - 'tools/check-native-jit-empty-block-invalidation-host.py'
+      - 'tools/check-maintained-common-emit-x64.py'
       - 'vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp'
       - 'tools/check-native-jit-code-space-bounds-host.py'
       - 'vendor/encore-active/eden-core/src/core/hle/service/sm/sm.h'
@@ -206,6 +208,8 @@ jobs:
           python3 -B tools/check-native-a64-default-phases-host.py
           python3 -B tools/check-native-jit-block-range-rebase-host.py
           python3 -B tools/check-native-a64-cache-invalidation-host.py
+          python3 -B tools/check-native-jit-empty-block-invalidation-host.py
+          python3 -B tools/check-maintained-common-emit-x64.py
           python3 -B tools/check-native-jit-code-space-bounds-host.py
           python3 -B tools/ci/check-final-engine-owner-contracts.py
           python3 -B tools/check-native-sparse-jit-release-selector-host.py

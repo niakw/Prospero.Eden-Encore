@@ -21,7 +21,13 @@ fixed = (
 perf = "    PerfMapRegister(entrypoint, code.getCurr(), LocationDescriptorToFriendlyName(descriptor));"
 assert old.count(lookup) == old.count(perf) == 1
 assert host == old.replace(lookup, fixed), "common emitter exact source drift"
-assert native == host.replace(perf, ""), "native emitter exact source drift"
+empty_invalidation = "void EmitX64::InvalidateBasicBlocks(const ::Common::unordered_set<IR::LocationDescriptor>& locations) {\n    code.EnableWriting();"
+guarded_invalidation = "void EmitX64::InvalidateBasicBlocks(const ::Common::unordered_set<IR::LocationDescriptor>& locations) {\n    // Unmapped guest writes often invalidate no compiled code. Do not flip\n    // RX/RW permissions when there are no machine instructions to patch.\n    if (locations.empty()) return;\n    code.EnableWriting();"
+expected_native = host.replace(perf, "")
+assert expected_native.count(empty_invalidation) == 1
+expected_native = expected_native.replace(empty_invalidation, guarded_invalidation)
+assert native == expected_native, "native emitter exact source drift"
+assert native.count(guarded_invalidation) == 1
 assert "LocationDescriptorToFriendlyName(descriptor)" not in native
 assert "patch_information.find(target_desc)" in native
 assert 'write_derived("${PORT_BUILD_DIR}/emit_x64.cpp"' not in cmake

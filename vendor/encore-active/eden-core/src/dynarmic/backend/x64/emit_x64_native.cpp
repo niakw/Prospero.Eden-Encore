@@ -400,6 +400,9 @@ void EmitX64::ClearCache() {
 }
 
 void EmitX64::InvalidateBasicBlocks(const ::Common::unordered_set<IR::LocationDescriptor>& locations) {
+    // Unmapped guest writes often invalidate no compiled code. Do not flip
+    // RX/RW permissions when there are no machine instructions to patch.
+    if (locations.empty()) return;
     code.EnableWriting();
     for (const auto& descriptor : locations) {
         if (auto const it = block_descriptors.find(descriptor); it != block_descriptors.end()) {
