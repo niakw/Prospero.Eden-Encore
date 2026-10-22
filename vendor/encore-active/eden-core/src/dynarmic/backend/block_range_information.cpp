@@ -8,6 +8,7 @@
 
 #include "dynarmic/backend/block_range_information.h"
 
+#include <algorithm>
 #include <boost/icl/interval_set.hpp>
 #include "common/common_types.h"
 
@@ -34,6 +35,9 @@ void BlockRangeInformation<P>::ClearCache() {
 template<typename P>
 ::Common::unordered_set<IR::LocationDescriptor> BlockRangeInformation<P>::InvalidateRanges(const boost::icl::interval_set<P>& ranges) {
     ::Common::unordered_set<IR::LocationDescriptor> erase_locations;
+    // Invalidated blocks can span multiple guest pages: track all owner
+    // pages so stale entries cannot later evict unrelated recompiled code.
+    std::vector<P> purge_pages;
     for (const auto& interval : ranges) {
         if (boost::icl::is_empty(interval))
             continue;
@@ -44,6 +48,12 @@ template<typename P>
             for (size_t i = 0; i < entries.size();) {
                 if (entries[i].first <= last && first <= entries[i].last) {
                     erase_locations.insert(entries[i].location);
+                    const P last_owner_page = entries[i].last >> page_bits;
+                    for (P owner_page = entries[i].first >> page_bits;; ++owner_page) {
+                        purge_pages.push_back(owner_page);
+                        if (owner_page == last_owner_page)
+                            break;
+                    }
                     entries[i] = entries.back();
                     entries.pop_back();
                 } else {
@@ -67,6 +77,22 @@ template<typename P>
                     visit(entries);
             }
         }
+    }
+    // Purge every remaining reference to invalidated blocks, even on
+    // guest pages not touched by this write. Never scan unrelated buckets.
+    std::sort(purge_pages.begin(), purge_pages.end());
+    purge_pages.erase(std::unique(purge_pages.begin(), purge_pages.end()),
+                      purge_pages.end());
+    for (const P page : purge_pages) {
+        const auto it = pages.find(page);
+        if (it == pages.end())
+            continue;
+        auto& entries = it->second;
+        std::erase_if(entries, [&](const Entry& entry) {
+            return erase_locations.find(entry.location) != erase_locations.end();
+        });
+        if (entries.empty())
+            pages.erase(it);
     }
     return erase_locations;
 }
