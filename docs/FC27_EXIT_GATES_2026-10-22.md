@@ -112,3 +112,23 @@ les transferts de fence et exactement un réveil après chaque détachement
 réussi. La parité reproduit le changement depuis la source épinglée.
 **F05 reste ouvert** : ce test ferme le sous-chemin « détachement sans réveil »,
 pas toute la progression HLE/IPC / présentation.
+
+## F05 — 22 octobre : conserver la frame réelle jusqu'à la notification
+
+**Source native :** `vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp`.
+`QueueBuffer` construisait une `BufferItem` complète, mais vidait son
+`graphic_buffer` et remplaçait son `slot` par `INVALID_BUFFER_SLOT` juste avant
+d'appeler `OnFrameAvailable` ou `OnFrameReplaced`. Cela rompait le contrat de
+notification avec tout consommateur utilisant les champs du paramètre.
+Le consommateur `ConsumerBase` actuellement retenu ignore ces champs dans
+ses callbacks : **aucun gain de FPS ou déblocage FC27 n'est donc prétendu**.
+
+La correction conserve la frame et sa référence au buffer jusqu'à la fin
+de la notification **hors verrou**, sans supprimer de fence ni modifier la
+politique de remplacement des frames. Un test C++ extrait le dispatch
+de la méthode réellement sélectionnée, compile à O0/O2 sous UBSan et
+vérifie les callbacks « available » et « replaced », l'identité de la
+frame/buffer/slot et l'absence de double notification. La parité
+`check-vendor-consolidation-debt.py` est mise à jour ; fast gate et
+prévalidation doivent rester verts. **F05 reste ouvert** jusqu'à la preuve
+de progression de bout en bout.
