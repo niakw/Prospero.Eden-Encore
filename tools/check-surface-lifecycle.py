@@ -54,6 +54,7 @@ def extract(name: str, prefix: str = "void") -> str:
 
 methods = "\n\n".join(
     (extract("FindDisplay", "Display*"),
+     extract("AddDisplay"),
      extract("RemoveLayerFromDisplayStack"),
      extract("DestroyLayer"),
      extract("RemoveDisplay"),
@@ -110,6 +111,7 @@ public:
     std::vector<Display> m_displays;
 
     Display* FindDisplay(u64 display_id);
+    void AddDisplay(u64 display_id);
     void RemoveDisplay(u64 display_id);
     void DestroyLayer(s32 consumer_binder_id);
     void RemoveLayerFromDisplayStack(u64 display_id, s32 consumer_binder_id);
@@ -128,6 +130,25 @@ public:
 '''
 checks = r'''
 int main() {
+    {
+        // A duplicate display ID must not create a hidden second stack;
+        // teardown has to release exactly the stack known to FindDisplay.
+        SurfaceFlinger s;
+        s.AddDisplay(42);
+        s.AddDisplay(42);
+        assert(s.m_displays.size() == 1);
+        auto layer = std::make_shared<Layer>(Layer{7});
+        s.m_layers.layers.push_back(layer);
+        s.AddLayerToDisplayStack(42, 7);
+        assert(s.m_displays[0].stack.layers.size() == 1);
+        s.RemoveDisplay(42);
+        assert(s.m_displays.empty());
+        assert((s.events == std::vector<std::string>{"wait", "release:7"}));
+        s.AddDisplay(43);
+        s.AddDisplay(44);
+        assert(s.m_displays.size() == 2);
+        assert(s.m_displays[0].id == 43 && s.m_displays[1].id == 44);
+    }
     {
         // A binder can be attached to several displays, but only once per
         // display. Duplicate calls must not double-compose one BufferItem.
