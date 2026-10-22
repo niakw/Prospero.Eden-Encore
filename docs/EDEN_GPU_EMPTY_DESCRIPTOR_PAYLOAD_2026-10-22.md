@@ -28,3 +28,28 @@ its `data()` pointer null. Neither operation is necessary in that case.
 Native compile and complete preflight must pass for this exact code, followed by
 target hardware qualification only when there is a performance/correctness
 reason to run a new title test.
+
+## Compute path follow-up
+
+The compute pipeline had the same legacy 1024-entry guest descriptor fallback
+in `Acquire(0)`, and `RasterizerVulkan::DispatchCompute` ran the queue
+preflight before reading its active immutable shader descriptor count.
+For a descriptor-free compute shader this could block the GPU worker for
+payload space it would never consume, including while preparing a dispatch.
+
+- Native `ComputePipeline::HasDescriptorEntries()` reports the immutable
+  `num_descriptor_entries` count.
+- The compute owner selects the pipeline before deciding whether a guest-queue
+  preflight is necessary; on a real wait it flushes guest invalidations and
+  selects the current pipeline again.
+- `ComputePipeline::Configure` selects `AcquireKnownEmpty` only for exact
+  zero-entry layouts. Nonempty shader payloads continue the ordinary path.
+- Descriptor-buffer ring allocation, compute bindings and barriers are
+  unchanged, even for zero-entry shaders.
+- `tools/check-ps5-compute-empty-descriptors-host.py` checks source-selected
+  behavior under native defines, both C++ optimization levels and UBSan.
+- The Vulkan source generator reproduces the new compute header, pipeline
+  and rasterizer changes; the core fast gate passed.
+
+This qualifies a host-side contention elimination, not PS5 frame pacing.
+The archival register still lists zero unreviewed emulator source files.
