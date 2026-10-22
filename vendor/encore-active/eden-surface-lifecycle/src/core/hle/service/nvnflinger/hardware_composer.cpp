@@ -23,7 +23,7 @@ s32 NormalizeSwapInterval(f32* out_speed_scale, s32 swap_interval) {
     if (swap_interval <= 0) {
         // As an extension, treat nonpositive swap interval as speed multiplier.
         if (out_speed_scale) {
-            *out_speed_scale = 2.f * static_cast<f32>(1 - swap_interval);
+            *out_speed_scale = 2.f * (1.f - static_cast<f32>(swap_interval));
         }
 
         swap_interval = 1;
