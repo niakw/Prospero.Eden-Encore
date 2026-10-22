@@ -131,7 +131,8 @@ print("ENCORE_GPU_THREADING_OWNER_PASS", "gpu=4", "threading=12")
 # maintained sources; require their REAL source selection, not a second copy.
 shader_rel = "eden-shader/src/shader_recompiler/frontend/maxwell/translate/impl/load_store_local_shared.cpp"
 surface_rel = "eden-surface-lifecycle/src/core/hle/service/nvnflinger/surface_flinger.cpp"
-for rel in (shader_rel, surface_rel):
+composer_rel = "eden-surface-lifecycle/src/core/hle/service/nvnflinger/hardware_composer.cpp"
+for rel in (shader_rel, surface_rel, composer_rel):
     assert rel in graph and (active / rel).is_file(), ("missing active owner", rel)
 shader_recipe = (root / "headless/CMakeLists.txt").read_text()
 assert 'list(APPEND eden_shader_sources "${EDEN_MAINTAINED_SHADER_LOCAL}")' in shader_recipe
@@ -141,8 +142,15 @@ surface_prepare = (root / "tools/prepare-build.sh").read_text()
 assert 'ORIGINAL_GIT_BLOB = "a6136c111d96d2660c28b27c6881e3b671e7eed8"' in surface_installer
 assert 'WaitForComposite();' in surface_installer and 'm_composer.RemoveLayerLocked(' in surface_installer
 assert 'tools/install-vendored-surface-lifecycle.py "$eden"' in surface_prepare
-assert 'if existing not in (before, replacement)' in surface_installer
-print("ENCORE_SHADER_SURFACE_SOURCE_OWNER_PASS sources=2")
+# Installer verifies BOTH pinned originals and rejects unknown staged
+# translations before replacing either one. This avoids mixing mismatched
+# SurfaceFlinger/HardwareComposer lifetimes in a single native app.
+assert 'COMPOSER_ORIGINAL_GIT_BLOB = "5decb791e1bb1ab2420f386e3fdbdd2b8628a324"' in surface_installer
+assert 'if existing not in (original, maintained)' in surface_installer
+assert 'check_composer()' in surface_installer
+assert 'for rel, source, original, maintained, previous, label in sources:' in surface_installer
+assert 'COMPOSER_PATH, COMPOSER_ACTIVE' in surface_installer
+print("ENCORE_SHADER_SURFACE_SOURCE_OWNER_PASS sources=3")
 
 # Core native Vulkan device, query and presentation implementation units
 # are versioned sources selected into the disposable build tree by the Vulkan
