@@ -261,14 +261,18 @@ dequeue_rel = "core/hle/service/nvnflinger/buffer_queue_producer.cpp"
 dequeue_pinned = (sources / "eden/src" / dequeue_rel).read_text()
 dequeue_maintained = (active / "eden-core/src" / dequeue_rel).read_text()
 dequeue_old = "        Status status = WaitForFreeSlotThenRelock(async, &found, &return_flags, lock);"
-dequeue_new = """        const auto dequeue_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;
+dequeue_new = """#ifdef EDEN_NVNF_DEQUEUE_PROFILE
+        const auto dequeue_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;
+#endif
         Status status = WaitForFreeSlotThenRelock(async, &found, &return_flags, lock);
-        if (dequeue_start) ::Eden::Performance::AddSince(::Eden::Performance::guest_dequeue_wait, dequeue_start);"""
+#ifdef EDEN_NVNF_DEQUEUE_PROFILE
+        if (dequeue_start) ::Eden::Performance::AddSince(::Eden::Performance::guest_dequeue_wait, dequeue_start);
+#endif"""
 assert dequeue_pinned.count(dequeue_old) == 1
 detach_before = "    *out_buffer = slots[found].graphic_buffer;\n    *out_fence = slots[found].fence;\n\n    core->FreeBufferLocked(found);\n\n    return Status::NoError;\n}"
 detach_after = "    *out_buffer = slots[found].graphic_buffer;\n    *out_fence = slots[found].fence;\n\n    core->FreeBufferLocked(found);\n    // DetachBuffer and CancelBuffer wake waiting producers. The oldest-free\n    // detach path must publish the same state transition to all dequeuers.\n    // Notify under core->mutex so waiters cannot miss the transition.\n    core->SignalDequeueCondition();\n\n    return Status::NoError;\n}"
 assert dequeue_pinned.count(detach_before) == 1
-dequeue_expected = '#include "performance.h"\n' + dequeue_pinned.replace(dequeue_old, dequeue_new)
+dequeue_expected = '#ifdef EDEN_NVNF_DEQUEUE_PROFILE\n#include "performance.h"\n#endif\n' + dequeue_pinned.replace(dequeue_old, dequeue_new)
 assert dequeue_expected.count(detach_before) == 1
 dequeue_expected = dequeue_expected.replace(detach_before, detach_after)
 queue_before = "    item.graphic_buffer.reset();\n    item.slot = BufferItem::INVALID_BUFFER_SLOT;\n\n    if (listener_available) {"
@@ -300,16 +304,9 @@ assert dequeue_expected.count(dequeue_frame_before_3) == 1
 dequeue_expected = dequeue_expected.replace(dequeue_frame_before_3, dequeue_frame_after_3)
 assert dequeue_maintained == dequeue_expected, (
     "Maintained queue-dequeue diagnostic diverges from prior generated source")
-# Release and DEV use the same fixes, minus the dequeue performance hook.
-dequeue_standard = (active / "eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer_standard.cpp").read_text()
-assert dequeue_expected.startswith('#include "performance.h"\n')
-dequeue_standard_expected = dequeue_expected.partition("\n")[2]
-assert dequeue_standard_expected.count(dequeue_new) == 1
-dequeue_standard_expected = dequeue_standard_expected.replace(dequeue_new, dequeue_old)
-assert dequeue_standard == dequeue_standard_expected, "Release producer and DEV producer diverge"
-assert "::Eden::Performance::" not in dequeue_standard
-assert c.count('buffer_queue_producer_standard.cpp') == 1
-assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")') == 1
+# Compile one maintained source; CMake owns DEV's compile-time profiler switch.
+assert c.count('buffer_queue_producer_standard.cpp') == 0
+assert c.count('target_compile_definitions(core PRIVATE EDEN_NVNF_DEQUEUE_PROFILE=1)') == 1
 assert c.count('list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")') == 1
 assert c.count('list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_producer.cpp")') == 1
 assert 'if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")' in c

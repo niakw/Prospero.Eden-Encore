@@ -12,6 +12,7 @@ core = (ROOT / "vendor/encore-active/eden-backports/src/core/hle/service/nvnflin
 cmake = (ROOT / "headless/CMakeLists.txt").read_text()
 oracle = (ROOT / "tools/check-vendor-consolidation-debt.py").read_text()
 assert 'list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")' in cmake
+assert 'target_compile_definitions(core PRIVATE EDEN_NVNF_DEQUEUE_PROFILE=1)' in cmake
 assert 'dequeue_expected = dequeue_expected.replace(detach_before, detach_after)' in oracle
 assert "dequeue_epoch.fetch_add(1, std::memory_order_relaxed)" in core
 core_methods_start = core.index("void BufferQueueCore::SignalDequeueCondition() {")
@@ -26,8 +27,6 @@ def method(src):
     end = src.index("\nStatus BufferQueueProducer::AttachBuffer(", start)
     return src[start:end].rstrip()
 selected = method(active)
-standard = (ROOT / "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer_standard.cpp").read_text()
-assert method(standard) == selected, "Release detach differs from DEV"
 assert 'core->FreeBufferLocked(found);\n    // DetachBuffer' in selected
 assert selected.count("core->SignalDequeueCondition();") == 1
 assert selected.index("core->FreeBufferLocked(found);") < selected.index("core->SignalDequeueCondition();")

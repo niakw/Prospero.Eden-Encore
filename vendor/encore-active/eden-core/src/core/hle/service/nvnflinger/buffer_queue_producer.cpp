@@ -1,4 +1,6 @@
+#ifdef EDEN_NVNF_DEQUEUE_PROFILE
 #include "performance.h"
+#endif
 // SPDX-FileCopyrightText: Copyright 2026 Eden Emulator Project
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -255,9 +257,13 @@ Status BufferQueueProducer::DequeueBuffer(s32* out_slot, Fence* out_fence, bool 
         usage |= core->consumer_usage_bit;
 
         s32 found{};
+#ifdef EDEN_NVNF_DEQUEUE_PROFILE
         const auto dequeue_start = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed) ? ::Eden::Performance::NowNs() : 0;
+#endif
         Status status = WaitForFreeSlotThenRelock(async, &found, &return_flags, lock);
+#ifdef EDEN_NVNF_DEQUEUE_PROFILE
         if (dequeue_start) ::Eden::Performance::AddSince(::Eden::Performance::guest_dequeue_wait, dequeue_start);
+#endif
         if (status != Status::NoError) {
             return status;
         }
