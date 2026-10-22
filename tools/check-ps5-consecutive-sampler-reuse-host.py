@@ -45,10 +45,11 @@ struct Descriptor {
 struct Info { std::vector<Descriptor> texture_descriptors; };
 struct TexCache {
     unsigned lookups{};
+    u32 generation_offset{100};
     VideoCommon::SamplerId GetSamplerId(u32 handle, bool compute) {
         assert(!compute);
         ++lookups;
-        return handle + 100;
+        return handle + generation_offset;
     }
 };
 struct View { u32 index{}; };
@@ -106,6 +107,12 @@ int main() {
     assert(cache.lookups == 9);
     assert((same_view.samplers == std::vector<u32>{107,109,107}));
     assert(same_view.views[0].index == same_view.views[1].index);
+
+    // A later draw must never retain the previous descriptor generation.
+    cache.generation_offset = 200;
+    auto refreshed = configure(stages, cache);
+    assert(cache.lookups == 11);
+    assert((refreshed.samplers == std::vector<u32>{207,209,207}));
 }
 """
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
