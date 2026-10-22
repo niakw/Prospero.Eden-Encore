@@ -73,7 +73,11 @@ int main(){
  assert(r.texture_cache.mutex.counts==0 && r.query_cache.calls==2);
  r.FlushRegion(19*p,2*p,b);
  assert(r.buffer_cache.downloads==2 && r.buffer_cache.mutex.counts==2);
- r.FlushRegion(40*p,64*1024+1,b);
+ // An unowned 256 KiB readback stays lock-free after the wider bitmap
+ // probe; larger/overflowed ranges still take the conservative path.
+ r.FlushRegion(40*p,256*1024,b);
+ assert(r.buffer_cache.downloads==2 && r.buffer_cache.mutex.counts==2);
+ r.FlushRegion(40*p,256*1024+1,b);
  r.FlushRegion(BufferPages::kSpace-2,8,b);
  assert(r.buffer_cache.downloads==4 && r.buffer_cache.mutex.counts==4);
  r.FlushRegion(0,p,all);r.FlushRegion(10*p,0,all);
