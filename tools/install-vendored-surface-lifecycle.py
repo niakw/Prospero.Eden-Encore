@@ -36,11 +36,17 @@ def check() -> tuple[bytes, bytes]:
         "void SurfaceFlinger::RemoveDisplay(",
         "void SurfaceFlinger::DestroyLayer(",
         "void SurfaceFlinger::RemoveLayerFromDisplayStack(",
+        "void SurfaceFlinger::AddLayerToDisplayStack(",
         "WaitForComposite();",
         "m_composer.RemoveLayerLocked(",
     ):
         if marker not in text:
             raise RuntimeError("Lost critical display release operation: " + marker)
+    add_method = text.split("void SurfaceFlinger::AddLayerToDisplayStack(", 1)[1].split(
+        "void SurfaceFlinger::RemoveLayerFromDisplayStack(", 1)[0]
+    assert "std::any_of(display->stack.layers.begin()" in add_method
+    assert "return attached->consumer_id == consumer_binder_id;" in add_method
+    assert add_method.index("std::any_of(") < add_method.index("emplace_back(")
     if text.count("WaitForComposite();") != 2:
         raise RuntimeError("Unexpected number of explicit composite fence waits")
     print("SURFACE_LIFECYCLE_VERSIONED_OK exact Eden input SHA and complete source")

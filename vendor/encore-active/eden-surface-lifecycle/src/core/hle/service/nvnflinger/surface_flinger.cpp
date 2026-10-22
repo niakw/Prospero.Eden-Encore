@@ -107,6 +107,16 @@ void SurfaceFlinger::AddLayerToDisplayStack(u64 display_id, s32 consumer_binder_
         return;
     }
 
+    // A layer is identified by its consumer binder within a display stack.
+    // Duplicate insertion would compose the same acquired BufferItem twice on
+    // each refresh and could needlessly retain an otherwise released slot.
+    if (std::any_of(display->stack.layers.begin(), display->stack.layers.end(),
+                    [consumer_binder_id](const auto& attached) {
+                        return attached->consumer_id == consumer_binder_id;
+                    })) {
+        return;
+    }
+
     display->stack.layers.emplace_back(std::move(layer));
 }
 
