@@ -78,6 +78,7 @@ on:
       - 'vendor/encore-active/eden-backports/src/core/hle/service/nvnflinger/**'
       - 'vendor/encore-active/eden-surface-lifecycle/**'
       - 'tools/check-surface-lifecycle.py'
+      - 'tools/check-native-hardware-composer-liveness-host.py'
       - 'tools/install-vendored-surface-lifecycle.py'
       - '.github/workflows/encore-core-fast-gate.yml'
       - 'tools/check-native-nvnflinger-detach-wake-host.py'
