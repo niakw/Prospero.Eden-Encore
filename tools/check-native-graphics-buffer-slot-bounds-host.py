@@ -21,6 +21,7 @@ def grab(src, signature):
 signatures = (
     "bool BufferCache<P>::BindGraphicsStorageBuffer(size_t",
     "void BufferCache<P>::BindGraphicsTextureBuffer(size_t",
+    "void BufferCache<P>::BindComputeStorageBuffer(size_t",
 )
 sections = [grab(current, s) for s in signatures]
 for section in sections:
@@ -29,6 +30,9 @@ for section in sections:
     assert "stage >= NUM_STAGES" not in grab(base, signatures[sections.index(section)])
 assert "ssbo_index >= NUM_STORAGE_BUFFERS" in sections[0]
 assert "tbo_index >= NUM_TEXTURE_BUFFERS" in sections[1]
+assert "cbuf_index >= maxwell3d->state.shader_stages[stage].const_buffers.size()" in sections[0]
+assert "cbuf_index >= kepler_compute->launch_description.const_buffer_config.size()" in sections[2]
+assert sections[2].index("cbuf_index >= kepler_compute") < sections[2].index(">> cbuf_index")
 assert sections[0].index("ssbo_index >= NUM_STORAGE_BUFFERS") < sections[0].index(">> ssbo_index")
 assert sections[1].index("tbo_index >= NUM_TEXTURE_BUFFERS") < sections[1].index("<< tbo_index")
 
@@ -55,9 +59,16 @@ struct TextureBinding {
     u32 buffer_id{};
 };
 struct ConstBuffer { GPUVAddr address{100}; };
-struct ShaderStage { std::array<ConstBuffer, 16> const_buffers{}; };
+struct ShaderStage { std::array<ConstBuffer, 18> const_buffers{}; };
 struct StageState { std::array<ShaderStage, NUM_STAGES> shader_stages{}; };
 struct Maxwell { StageState state; };
+struct ComputeConfig { GPUVAddr Address() const { return 100; } };
+struct LaunchDescription {
+    u32 const_buffer_enable_mask{0xff};
+    std::array<ComputeConfig,8> const_buffer_config{};
+};
+struct Kepler { LaunchDescription launch_description{}; };
+#define ASSERT(cond) assert(cond)
 struct State {
     std::array<u32, NUM_STAGES> enabled_storage_buffers{};
     std::array<u32, NUM_STAGES> written_storage_buffers{};
@@ -67,6 +78,10 @@ struct State {
     std::array<std::array<StorageBinding, NUM_STORAGE_BUFFERS>, NUM_STAGES> storage_buffers{};
     std::array<std::array<TextureBinding, NUM_TEXTURE_BUFFERS>, NUM_STAGES> texture_buffers{};
     u32 total_graphics_storage_buffers{};
+    u32 enabled_compute_storage_buffers{};
+    u32 written_compute_storage_buffers{};
+    u32 total_compute_storage_buffers{};
+    std::array<StorageBinding, NUM_STORAGE_BUFFERS> compute_storage_buffers{};
 };
 struct Runtime {
     bool limit{};
@@ -78,6 +93,7 @@ template <class P> struct BufferCache {
     static constexpr bool SEPARATE_IMAGE_BUFFERS_BINDINGS = true;
     State* channel_state{};
     Maxwell* maxwell3d{};
+    Kepler* kepler_compute{};
     Runtime runtime{};
     StorageBinding StorageBufferBinding(GPUVAddr, u32, bool) { return {1}; }
     TextureBinding GetTextureBufferBinding(GPUVAddr, u32, PixelFormat) { return {1}; }
@@ -85,12 +101,16 @@ template <class P> struct BufferCache {
                                    u32 cbuf_offset, bool is_written);
     void BindGraphicsTextureBuffer(size_t stage, size_t tbo_index, GPUVAddr gpu_addr,
                                    u32 size, PixelFormat format, bool is_written, bool is_image);
+    void BindComputeStorageBuffer(size_t ssbo_index, u32 cbuf_index,
+                                  u32 cbuf_offset, bool is_written);
 };
 """ + "\n\n".join("template <class P>\n"+v for v in sections) + r"""
 int main() {
     State state{};
     Maxwell maxwell{};
+    Kepler compute{};
     BufferCache<void> cache{};
+    cache.kepler_compute = &compute;
     cache.channel_state = &state;
     cache.maxwell3d = &maxwell;
     // Valid endpoints must keep their masks and exact descriptor slots.
@@ -124,6 +144,26 @@ int main() {
     assert(state.total_graphics_storage_buffers == saved_total + 1);
     assert(!cache.BindGraphicsStorageBuffer(2, 16, 0, 2, false));
     assert(state.total_graphics_storage_buffers == saved_total + 1);
+    // Graphics shader constant-buffer array has 18 entries, 0..17 inclusive.
+    assert(cache.BindGraphicsStorageBuffer(0, 1, 17, 0, false));
+    const auto gfx_before = state.enabled_storage_buffers[0];
+    assert(!cache.BindGraphicsStorageBuffer(0, 2, 18, 0, true));
+    assert(!cache.BindGraphicsStorageBuffer(0, 2, 1000, 0, true));
+    assert(state.enabled_storage_buffers[0] == gfx_before);
+    // Compute constant-buffer enable mask and its table only cover 0..7.
+    cache.BindComputeStorageBuffer(0, 7, 0, true);
+    assert(state.enabled_compute_storage_buffers == 1U);
+    assert(state.written_compute_storage_buffers == 1U);
+    assert(state.compute_storage_buffers[0].buffer_id == 1);
+    auto comp_before = state.total_compute_storage_buffers;
+    cache.BindComputeStorageBuffer(1, 8, 0, true);
+    cache.BindComputeStorageBuffer(1, 1000, 0, true);
+    assert(state.enabled_compute_storage_buffers == 1U);
+    assert(state.total_compute_storage_buffers == comp_before);
+    // Reject impossible compute CBUF before any shift, array read or dirty mark.
+    compute.launch_description.const_buffer_enable_mask = 0;
+    cache.BindComputeStorageBuffer(2, 7, 0, true);
+    assert(state.compute_storage_buffers[2].buffer_id == 0);
 }
 """
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")

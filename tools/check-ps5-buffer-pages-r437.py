@@ -98,6 +98,15 @@ graphics_slot_before_1 = "void BufferCache<P>::BindGraphicsTextureBuffer(size_t 
 graphics_slot_after_1 = "void BufferCache<P>::BindGraphicsTextureBuffer(size_t stage, size_t tbo_index, GPUVAddr gpu_addr,\n                                               u32 size, PixelFormat format, bool is_written,\n                                               bool is_image) {\n    // A malformed descriptor array must not shift by >=32 or overwrite an\n    // adjacent stage's texture binding. Compute already guards its slots.\n    if (stage >= NUM_STAGES || tbo_index >= NUM_TEXTURE_BUFFERS) [[unlikely]] {\n        LOG_ERROR(HW_GPU, \"Graphics texture buffer stage={} index={} exceeds supported slots\",\n                  stage, tbo_index);\n        return;\n    }\n    channel_state->enabled_texture_buffers[stage] |="
 assert expected.count(graphics_slot_before_1) == 1
 expected = expected.replace(graphics_slot_before_1, graphics_slot_after_1)
+# Maintain bounded graphics and compute SSBO CBUF indices in the selected source.
+ssbo_cbuf_before_0 = "    if (stage >= NUM_STAGES || ssbo_index >= NUM_STORAGE_BUFFERS) [[unlikely]] {\n        LOG_ERROR(HW_GPU, \"Graphics storage buffer stage={} index={} exceeds supported slots\",\n                  stage, ssbo_index);"
+ssbo_cbuf_after_0 = "    if (stage >= NUM_STAGES || ssbo_index >= NUM_STORAGE_BUFFERS ||\n        cbuf_index >= maxwell3d->state.shader_stages[stage].const_buffers.size()) [[unlikely]] {\n        LOG_ERROR(HW_GPU, \"Graphics SSBO stage={} slot={} cbuf={} exceeds supported slots\",\n                  stage, ssbo_index, cbuf_index);"
+assert expected.count(ssbo_cbuf_before_0) == 1
+expected = expected.replace(ssbo_cbuf_before_0, ssbo_cbuf_after_0)
+ssbo_cbuf_before_1 = "    if (ssbo_index >= channel_state->compute_storage_buffers.size()) [[unlikely]] {\n        LOG_ERROR(HW_GPU, \"Storage buffer index {} exceeds maximum storage buffer count\",\n                  ssbo_index);"
+ssbo_cbuf_after_1 = "    if (ssbo_index >= channel_state->compute_storage_buffers.size() ||\n        cbuf_index >= kepler_compute->launch_description.const_buffer_config.size()) [[unlikely]] {\n        LOG_ERROR(HW_GPU, \"Compute SSBO slot={} cbuf={} exceeds supported slots\",\n                  ssbo_index, cbuf_index);"
+assert expected.count(ssbo_cbuf_before_1) == 1
+expected = expected.replace(ssbo_cbuf_before_1, ssbo_cbuf_after_1)
 assert maintained == expected, "R437 maintained header differs from reviewed transforms"
 assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm

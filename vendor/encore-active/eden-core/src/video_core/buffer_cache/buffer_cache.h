@@ -452,9 +452,10 @@ bool BufferCache<P>::BindGraphicsStorageBuffer(size_t stage, size_t ssbo_index, 
                                                u32 cbuf_offset, bool is_written) {
     // Reject excess shader slots before shifting a u32 mask or indexing the
     // per-stage storage array. Compute bindings already enforce this limit.
-    if (stage >= NUM_STAGES || ssbo_index >= NUM_STORAGE_BUFFERS) [[unlikely]] {
-        LOG_ERROR(HW_GPU, "Graphics storage buffer stage={} index={} exceeds supported slots",
-                  stage, ssbo_index);
+    if (stage >= NUM_STAGES || ssbo_index >= NUM_STORAGE_BUFFERS ||
+        cbuf_index >= maxwell3d->state.shader_stages[stage].const_buffers.size()) [[unlikely]] {
+        LOG_ERROR(HW_GPU, "Graphics SSBO stage={} slot={} cbuf={} exceeds supported slots",
+                  stage, ssbo_index, cbuf_index);
         return false;
     }
     const bool already_enabled =
@@ -528,9 +529,10 @@ void BufferCache<P>::UnbindComputeStorageBuffers() {
 template <class P>
 void BufferCache<P>::BindComputeStorageBuffer(size_t ssbo_index, u32 cbuf_index, u32 cbuf_offset,
                                               bool is_written) {
-    if (ssbo_index >= channel_state->compute_storage_buffers.size()) [[unlikely]] {
-        LOG_ERROR(HW_GPU, "Storage buffer index {} exceeds maximum storage buffer count",
-                  ssbo_index);
+    if (ssbo_index >= channel_state->compute_storage_buffers.size() ||
+        cbuf_index >= kepler_compute->launch_description.const_buffer_config.size()) [[unlikely]] {
+        LOG_ERROR(HW_GPU, "Compute SSBO slot={} cbuf={} exceeds supported slots",
+                  ssbo_index, cbuf_index);
         return;
     }
     const bool already_enabled =
