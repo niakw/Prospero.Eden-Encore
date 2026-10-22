@@ -61,6 +61,60 @@ assert source.count(extent_original) == 1, "pinned A32 invalidate extent changed
 for anchor in (pressure,commit,emit):
     assert source.count(anchor)==1,("pinned A32 interface changed",anchor)
 expected=prefix+source.replace(pressure,pressure_replacement).replace(commit,retry).replace(emit,metered).replace(extent_original,extent_checked)
+# Reviewed on 22 October: detach the JIT invalidation publication mutex
+# before executing cache/code invalidations. Pinned third-party input stays fixed.
+old_cache_drain = """    void PerformRequestedCacheInvalidation(HaltReason hr) {
+        if (Has(hr, HaltReason::CacheInvalidation)) {
+            std::unique_lock lock{invalidation_mutex};
+
+            ClearHalt(HaltReason::CacheInvalidation);
+
+            if (!invalidate_entire_cache && invalid_cache_ranges.empty()) {
+                return;
+            }
+
+            jit_state.ResetRSB();
+            if (invalidate_entire_cache) {
+                block_of_code.ClearCache();
+                emitter.ClearCache();
+            } else {
+                emitter.InvalidateCacheRanges(invalid_cache_ranges);
+            }
+            invalid_cache_ranges.clear();
+            invalidate_entire_cache = false;
+        }
+    }"""
+new_cache_drain = """    void PerformRequestedCacheInvalidation(HaltReason hr) {
+        if (Has(hr, HaltReason::CacheInvalidation)) {
+            // Consume the pending request under its mutex, but never hold it
+            // while invalidating compiled blocks or changing RX/RW code state.
+            // A concurrent guest write can queue the NEXT request while this
+            // JIT thread processes the current snapshot.
+            bool clear_all = false;
+            boost::icl::interval_set<u32> ranges;
+            {
+                std::unique_lock lock{invalidation_mutex};
+                ClearHalt(HaltReason::CacheInvalidation);
+                clear_all = invalidate_entire_cache;
+                invalidate_entire_cache = false;
+                ranges.swap(invalid_cache_ranges);
+            }
+
+            if (!clear_all && ranges.empty()) {
+                return;
+            }
+
+            jit_state.ResetRSB();
+            if (clear_all) {
+                block_of_code.ClearCache();
+                emitter.ClearCache();
+            } else {
+                emitter.InvalidateCacheRanges(ranges);
+            }
+        }
+    }"""
+assert expected.count(old_cache_drain) == 1, "pinned A32 cache drain changed"
+expected = expected.replace(old_cache_drain, new_cache_drain)
 assert maintained.read_text()==expected, "A32 maintained source must exactly match historical generator"
 assert 'write_derived("${PORT_BUILD_DIR}/a32_interface.cpp"' not in cm
 assert 'configure_file("${EDEN_MAINTAINED_A32_INTERFACE}"' in cm

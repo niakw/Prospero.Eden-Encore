@@ -2785,12 +2785,10 @@
     },
     {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a64_interface_standard.cpp",
-      "disposition": "reviewed_without_new_code_edit",
+      "disposition": "new_source_issue_corrected",
       "contract_id": "J10",
-      "reviewed_source_git_blob": "20362a046adfe89d65225c1822104f2910eeb2c5",
-      "source_review_document": "docs/EDEN_LAST_ENGINE_OWNERS_2026-10-21.md",
-      "proof_ref": "tools/ci/check-final-engine-owner-contracts.py",
-      "evidence": "Selected A64 standard JIT keeps valid bounded invalidation, cache pressure/evacuation, and profile/BATCH code behind compile-time DEV flags. Detailed profiling is already absent from production and sparse selected out at library compilation; no new source edit justified without guest frame-time evidence."
+      "proof_ref": "tools/check-native-jit-invalidation-snapshot-host.py",
+      "evidence": "22 October F02 fix: drain compiled-block invalidations outside request mutex. Source-extracted A32/A64 reentrant replay proves new invalidations survive an in-flight drain. Historical no-change audit superseded; no FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_host.cpp",

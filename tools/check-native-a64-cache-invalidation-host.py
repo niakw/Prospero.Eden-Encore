@@ -57,7 +57,11 @@ struct Ranges {
     bool present=false;
     bool empty() const { return !present; }
     void clear() { present=false; }
+    void swap(Ranges& other) { const bool original=present; present=other.present; other.present=original; }
 };
+namespace boost::icl {
+template<class T> using interval_set = ::Ranges;
+}
 struct Code {
     int cleared=0;
     void ClearCache() { ++cleared; }
