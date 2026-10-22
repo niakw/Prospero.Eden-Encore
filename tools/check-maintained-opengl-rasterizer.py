@@ -9,6 +9,18 @@ old_tail = "        }\n    });\n}\n\nvoid RasterizerOpenGL::DrawIndirect()"
 new_tail = "        }\n        static unsigned traced_draws{};\n        if (traced_draws < 3) {\n            ++traced_draws;\n            LOG_INFO(Render_OpenGL, \"EDEN_GUEST_GL_DRAW count={} error={}\", traced_draws, glGetError());\n        }\n    });\n}\n\nvoid RasterizerOpenGL::DrawIndirect()"
 assert pinned.count(old_tail) == 1
 baseline = pinned.replace(old_tail, new_tail)
+# Both maintained OpenGL variants share the same cache null-sentinel contract.
+# Reproduce the two reviewed native guards before applying DEV-only changes.
+indirect_guards = (
+    ("        const auto [buffer, offset] = buffer_cache.GetDrawIndirectBuffer();\n        const GLvoid* const gl_offset =",
+     "        const auto [buffer, offset] = buffer_cache.GetDrawIndirectBuffer();\n        // Reject empty/unmapped guest command spans before dereferencing the\n        // null buffer sentinel. Only the selected render backend is affected.\n        if (!buffer) {\n            return;\n        }\n        const GLvoid* const gl_offset ="),
+    ("            const auto [draw_buffer, offset_base] = buffer_cache.GetDrawIndirectCount();\n            glBindBuffer(GL_PARAMETER_BUFFER, draw_buffer->Handle());",
+     "            const auto [draw_buffer, offset_base] = buffer_cache.GetDrawIndirectCount();\n            if (!draw_buffer) {\n                return;\n            }\n            glBindBuffer(GL_PARAMETER_BUFFER, draw_buffer->Handle());"),
+)
+for before, after in indirect_guards:
+    assert baseline.count(before) == 1, "pinned OpenGL indirect draw moved"
+    baseline = baseline.replace(before, after)
+
 assert (maintained / "gl_rasterizer.cpp").read_text() == baseline
 dev = "#include \"dev_render_passes.inc\"\n#include \"performance.h\"\n" + baseline
 assert dev.count("        static unsigned traced_draws{};") == 1
