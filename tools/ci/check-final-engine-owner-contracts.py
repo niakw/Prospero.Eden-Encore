@@ -15,10 +15,15 @@ paths={
 expected={
  "sm": "83e0b7e26a867d578eb869389a807fe3b9c7035b",
  "thread": "e2f359a54cb6b879bdd41f092cf1ea19fb03e4e6",
- "jit": "20362a046adfe89d65225c1822104f2910eeb2c5",
+ # J10 was a "reviewed without edit" historical source. The JIT drain
+ # is now a source correction; retain the old hash below as provenance and
+ # pin the new reviewed source with the source-extracted reentrant witness.
+ "jit": "26ae49088a528c4cf27712f639948604de2260d4",
 }
 def gitblob(data: bytes)->str:
     return hashlib.sha1(b"blob "+str(len(data)).encode()+b"\0"+data).hexdigest()
+JIT_PREVIOUS_REVIEW_BLOB = "20362a046adfe89d65225c1822104f2910eeb2c5"
+assert expected["jit"] != JIT_PREVIOUS_REVIEW_BLOB
 sources={key:(root/path).read_text() for key,path in paths.items()}
 for key,path in paths.items():
     assert gitblob((root/path).read_bytes())==expected[key], (key,"source changed; re-audit")
@@ -54,9 +59,18 @@ for invariant in ("#if defined(EDEN_JIT_A64_BATCH)",
                   "#if defined(EDEN_JIT_A64_DEV_PROFILE)",
                   "std::unique_lock lock{invalidation_mutex};",
                   "block_of_code.ClearCache();",
-                  "emitter.InvalidateCacheRanges(invalid_cache_ranges);",
+                  "emitter.InvalidateCacheRanges(ranges);",
+                  "ranges.swap(invalid_cache_ranges);",
+                  "clear_all = invalidate_entire_cache;",
+                  "invalidate_entire_cache = false;",
                   "if (length - 1 > (~u64{0} - start_address))"):
     assert invariant in jit,invariant
+assert jit.index("ranges.swap(invalid_cache_ranges);") < jit.index("emitter.InvalidateCacheRanges(ranges);")
+assert "emitter.InvalidateCacheRanges(invalid_cache_ranges);" not in jit
+# Reviewed source must be tied to a HOST proof, not just a new opaque digest.
+proof = (root/"tools/check-native-jit-invalidation-snapshot-host.py").read_text()
+assert "PerformRequestedCacheInvalidation" in proof
+assert "invalid_cache_ranges" in proof and "p.InvalidateCacheRange(" in proof
 cmake=(root/"headless/CMakeLists.txt").read_text()
 for invariant in ("a64_interface_standard.cpp", "a64_interface_shared.cpp",
                   'NOT EDEN_BLOCKING_GUEST_CONTEXT_LOCKS',
@@ -66,9 +80,10 @@ for invariant in ("a64_interface_standard.cpp", "a64_interface_shared.cpp",
 preflight=(root/".github/workflows/encore-core-preflight.yml").read_text()
 for path in ("tools/check-maintained-a64-interface.py",
              "tools/check-native-a64-cache-invalidation-host.py",
+             "tools/check-native-jit-invalidation-snapshot-host.py",
              "tools/verify/hle/check-hle-overlay-layout.py",
              "tools/check-native-hle-suspend-noop-host.py",
              "tools/install-active-core-backports.py"):
     assert "python3 -B "+path in preflight,path
 assert "python3 -B tools/ci/check-final-engine-owner-contracts.py" in preflight
-print("ENCORE_FINAL_ENGINE_OWNERS_PASS standard_JIT=1 host_SM_lock_safe=1 context_permit=1 source_hashes=3")
+print("ENCORE_FINAL_ENGINE_OWNERS_PASS standard_JIT=1 host_SM_lock_safe=1 context_permit=1 source_hashes=3 jit_fix_witness=1")
