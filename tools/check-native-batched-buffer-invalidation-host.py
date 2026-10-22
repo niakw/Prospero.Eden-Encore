@@ -87,12 +87,21 @@ int main() {
   mixed.InnerInvalidation(old);
   assert(mixed.buffer_cache.written.size() == 2);
 
-  // Unknown/large spans fail closed: execute the original locked path.
+  // 128 KiB entirely unregistered: the two-word bitmap fast path
+  // must skip the buffer mutex while still invalidating query/shader.
   RasterizerVulkan large;
   std::array<Pair, 1> broad{Pair{0x310000, 131072}};
   large.InnerInvalidation(broad);
+  assert(large.buffer_cache.mutex.locks == 0);
+  assert(large.buffer_cache.written.empty());
+  assert(large.query_cache.calls == 1 && large.pipeline_cache.calls == 1);
+
+  // Unknown or >256 KiB spans retain conservative cache invalidation.
+  std::array<Pair, 1> oversized{Pair{0x310000, 256 * 1024 + 1}};
+  large.InnerInvalidation(oversized);
   assert(large.buffer_cache.mutex.locks == 1);
   assert(large.buffer_cache.written.size() == 1);
+  assert(large.query_cache.calls == 2 && large.pipeline_cache.calls == 2);
 
   // Texture-cache invalidation still occurs independently from buffer state.
   Eden::ImagePages::any_held = true;
