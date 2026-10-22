@@ -83,3 +83,96 @@ with tempfile.TemporaryDirectory(prefix="encore-exact-zero-desc-") as tmp:
                         str(cpp),"-o",str(exe)],check=True)
         subprocess.run([str(exe)],check=True)
         print("ENCORE_KNOWN_EMPTY_DESCRIPTOR_SKIP_PASS",profile)
+
+# Regression for zero-descriptor payload comparison and cache snapshots.
+# Keep both branches sourced from the actual selected graphics pipeline code.
+import re
+reuse_start=gfx.index("        const bool reuse_allocation =",
+                      gfx.index("bool GraphicsPipeline::ConfigureDraw("))
+reuse_end=gfx.index(";\n",reuse_start)+1
+reuse_stmt=gfx[reuse_start:reuse_end]
+update_start=gfx.index("        update_descriptors =",reuse_end)
+update_end=gfx.index(";\n",update_start)+1
+update_stmt=gfx[update_start:update_end]
+buffer_start=gfx.index("            // Empty shader layouts have no descriptor payload to copy.",reuse_end)
+buffer_end=gfx.index("\n        }",buffer_start)
+buffer_snapshot=gfx[buffer_start:buffer_end]
+set_start=gfx.index("        if (update_descriptors) {",update_start)
+set_end=gfx.index("\n    }\n    scheduler.Record(",set_start)
+set_snapshot=gfx[set_start:set_end]
+assert "(num_descriptor_entries == 0 ||" in reuse_stmt
+assert "(num_descriptor_entries != 0 &&" in update_stmt
+assert buffer_snapshot.count("last_descriptor_payload.clear();")==1
+assert set_snapshot.count("last_descriptor_payload.clear();")==1
+assert gfx.count("last_descriptor_payload.assign(entries, entries + num_descriptor_entries);")==2
+assert "Zero-descriptor shaders must not pass a null vector pointer" in oracle
+host_source=r"""
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <vector>
+#include <cstddef>
+struct DescriptorUpdateEntry { std::uint64_t bits; };
+struct Ring { std::uint64_t gen=1; std::uint64_t CurrentGeneration() const { return gen; } };
+struct Case {
+    std::vector<DescriptorUpdateEntry> last_descriptor_payload;
+    std::size_t num_descriptor_entries{};
+    std::uint64_t last_descriptor_buffer_generation{};
+    Ring descriptor_buffer_ring;
+    bool bind_pipeline{};
+    bool Reuse(const DescriptorUpdateEntry* entries) {
+""" + reuse_stmt + r"""
+        return reuse_allocation;
+    }
+    bool NeedsSetUpdate(const DescriptorUpdateEntry* entries) {
+        bool update_descriptors=false;
+""" + update_stmt + r"""
+        return update_descriptors;
+    }
+    void SaveBuffer(const DescriptorUpdateEntry* entries) {
+""" + buffer_snapshot + r"""
+    }
+    void SaveSet(const DescriptorUpdateEntry* entries) {
+        bool update_descriptors=true;
+""" + set_snapshot + r"""
+    }
+};
+int main() {
+    Case x;
+    // First use must allocate, despite an empty payload.
+    assert(!x.Reuse(nullptr));
+    x.last_descriptor_buffer_generation=1;
+    assert(x.Reuse(nullptr));
+    assert(!x.NeedsSetUpdate(nullptr));
+    x.bind_pipeline=true;
+    assert(x.NeedsSetUpdate(nullptr));
+    x.bind_pipeline=false;
+    x.last_descriptor_payload.push_back({17});
+    x.SaveBuffer(nullptr);
+    assert(x.last_descriptor_payload.empty());
+    x.last_descriptor_payload.push_back({18});
+    x.SaveSet(nullptr);
+    assert(x.last_descriptor_payload.empty());
+    x.num_descriptor_entries=1;
+    const DescriptorUpdateEntry a[]{ {123} };
+    const DescriptorUpdateEntry b[]{ {124} };
+    assert(!x.Reuse(a));
+    assert(x.NeedsSetUpdate(a));
+    x.SaveBuffer(a);
+    assert(x.Reuse(a));
+    assert(!x.Reuse(b));
+    assert(x.NeedsSetUpdate(b));
+    x.SaveSet(b);
+    assert(x.Reuse(b));
+    assert(!x.NeedsSetUpdate(b));
+}
+"""
+with tempfile.TemporaryDirectory(prefix="encore-empty-payload-") as folder:
+    cpp=Path(folder)/"test.cpp"
+    cpp.write_text(host_source)
+    for opt in ("-O0","-O2"):
+        exe=Path(folder)/("payload"+opt)
+        subprocess.run(["c++","-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                        "-fsanitize=undefined",str(cpp),"-o",str(exe)],check=True,timeout=30)
+        subprocess.run([str(exe)],check=True,timeout=10)
+        print("ENCORE_EMPTY_DESCRIPTOR_PAYLOAD_PASS",opt)
