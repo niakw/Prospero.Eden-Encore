@@ -11,6 +11,7 @@ pinned = (ROOT / "vendor/sources/eden/src/core/hle/service/nvnflinger/buffer_que
 cmake = (ROOT / "headless/CMakeLists.txt").read_text()
 oracle = (ROOT / "tools/check-vendor-consolidation-debt.py").read_text()
 assert 'list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")' in cmake
+assert 'target_compile_definitions(core PRIVATE EDEN_NVNF_DEQUEUE_PROFILE=1)' in cmake
 assert "dequeue_expected = dequeue_expected.replace(queue_before, queue_after)" in oracle
 begin_marker = "Status BufferQueueProducer::QueueBuffer("
 end_marker = "\nvoid BufferQueueProducer::CancelBuffer("
@@ -20,8 +21,6 @@ def queue_method(source):
     return source[start:source.index(end_marker, start)]
 
 method = queue_method(active)
-standard = (ROOT / "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer_standard.cpp").read_text()
-assert queue_method(standard) == method, "Release callback differs from DEV"
 assert "item.graphic_buffer.reset();" in queue_method(pinned)
 assert "item.slot = BufferItem::INVALID_BUFFER_SLOT;" in queue_method(pinned)
 assert "item.graphic_buffer.reset();" not in method

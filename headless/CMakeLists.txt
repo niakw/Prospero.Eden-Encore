@@ -584,19 +584,18 @@ if(EDEN_DEV_PROFILE)
     list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_HLE_SERVICE}"
                              "${EDEN_MAINTAINED_PROFILE_SVC_IPC}")
 endif()
-# Keep DEV timing isolated, but compile the same queue correctness fixes in release.
-if(EDEN_DEV_PROFILE)
-    set(EDEN_MAINTAINED_PROFILE_DEQUEUE
-        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp")
-else()
-    set(EDEN_MAINTAINED_PROFILE_DEQUEUE
-        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer_standard.cpp")
-endif()
+# A single source owns the queue correctness fixes for release and DEV.
+# Profiling is compiled only with EDEN_DEV_PROFILE; never duplicate the TU.
+set(EDEN_MAINTAINED_PROFILE_DEQUEUE
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp")
 if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")
     message(FATAL_ERROR "Missing maintained buffer queue producer source")
 endif()
 list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_producer.cpp")
 list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")
+if(EDEN_DEV_PROFILE)
+    target_compile_definitions(core PRIVATE EDEN_NVNF_DEQUEUE_PROFILE=1)
+endif()
 # Both normal and DEV IPC paths use maintained source owners. The
 # DEV-only request profiler remains isolated to its existing unit.
 if(NOT EDEN_DEV_PROFILE)
