@@ -68,6 +68,42 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
         assert source.count(old)==source.count(inc)==1, ('pipeline source moved',name)
         modified=source.replace(inc,inc+'\n#include "video_core/renderer_vulkan/striped_wait.h"').replace(old,new)
         actual[name].write_text(modified)
+    # The selected native rasterizer intentionally fails closed on an absent
+    # indirect-command/count binding. Mirror ONLY those two reviewed guards
+    # in the temporary oracle; the production source stays in encore-active.
+    raster_path = actual['vulkan_rasterizer.cpp']
+    raster = raster_path.read_text()
+    native_guards = (
+        (
+            "        const auto& buffer = indirect_buffer.first;\n"
+            "        const auto& offset = indirect_buffer.second;\n"
+            "        if (params.is_byte_count) {",
+            "        const auto& buffer = indirect_buffer.first;\n"
+            "        const auto& offset = indirect_buffer.second;\n"
+            "        // UpdateDrawIndirect can deliberately reject an unmapped/overflowing\n"
+            "        // guest command span. Never record a Vulkan draw with a null buffer.\n"
+            "        if (!buffer) {\n"
+            "            return;\n"
+            "        }\n"
+            "        if (params.is_byte_count) {",
+        ),
+        (
+            "            const auto& draw_buffer = count.first;\n"
+            "            const auto& offset_base = count.second;\n"
+            "            scheduler.Record([draw_buffer_obj = draw_buffer->Handle(),",
+            "            const auto& draw_buffer = count.first;\n"
+            "            const auto& offset_base = count.second;\n"
+            "            if (!draw_buffer) {\n"
+            "                return;\n"
+            "            }\n"
+            "            scheduler.Record([draw_buffer_obj = draw_buffer->Handle(),",
+        ),
+    )
+    for old, new in native_guards:
+        assert raster.count(old) == 1, "pinned Vulkan indirect draw moved"
+        raster = raster.replace(old, new)
+    assert raster.count("if (!buffer)") == raster.count("if (!draw_buffer)") == 1
+    raster_path.write_text(raster)
     mismatches=[name for name in sorted(actual) if not filecmp.cmp(actual[name],expected[name],shallow=False)]
     if mismatches:
         # Print a tightly bounded exact diff before failing. The generator and
