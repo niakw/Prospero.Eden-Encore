@@ -1067,6 +1067,18 @@ if(NOT EXISTS "${EDEN_MAINTAINED_GL_VIDEO_FACTORY}")
     message(FATAL_ERROR "Missing maintained OpenGL-only video core factory")
 endif()
 get_target_property(video_sources video_core SOURCES)
+# Runtime-selected index-buffer dirty flags must follow macro draw arguments
+# (first/count), not only Maxwell register writes. Keep the single maintained
+# override in encore-active, and never build the pinned source alongside it.
+if(PS5_NATIVE)
+    set(EDEN_MAINTAINED_DRAW_MANAGER
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/engines/draw_manager.cpp")
+    if(NOT EXISTS "${EDEN_MAINTAINED_DRAW_MANAGER}")
+        message(FATAL_ERROR "Missing maintained indexed draw manager")
+    endif()
+    list(REMOVE_ITEM video_sources engines/draw_manager.cpp)
+    list(APPEND video_sources "${EDEN_MAINTAINED_DRAW_MANAGER}")
+endif()
 # A guest span must be rejected BEFORE IsContinuousRange walks GPU page tables.
 # An out-of-space or wrapping address would otherwise index the page vectors.
 # Preserve the normal range walk and all GPU cache operations for valid spans.
