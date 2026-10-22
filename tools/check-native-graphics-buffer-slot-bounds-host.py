@@ -46,7 +46,6 @@ constexpr size_t NUM_STAGES = 5;
 constexpr size_t NUM_STORAGE_BUFFERS = 16;
 constexpr size_t NUM_TEXTURE_BUFFERS = 32;
 enum class PixelFormat { R8 };
-constexpr int HW_GPU = 1;
 #define LOG_ERROR(...) (void)0
 #define LOG_WARNING(...) (void)0
 struct StorageBinding {
