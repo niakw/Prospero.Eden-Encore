@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""Exact BufferCache region-ownership regression for partially covered first pages.
+
+False negatives here can skip guest CPU writes and leave a later registered GPU
+buffer stale, even though the monotonic BufferPages witness correctly says
+the queried region MAY overlap some buffer.
+"""
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+
+root = Path(__file__).resolve().parents[1]
+active = (root / "vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h").read_text()
+backport = (root / "vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h").read_text()
+needle = "template <class P>\nbool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {"
+
+def method(source):
+    assert source.count(needle) == 1
+    begin = source.index(needle)
+    return source[begin:source.index("\ntemplate <class P>", begin + len(needle))]
+
+body = method(active)
+assert body == method(backport), "native and backport ownership checks diverged"
+assert "if (size == 0)" in body
+assert body.count("++page;") == 2
+assert "page = Common::DivCeil(end_addr, CACHING_PAGESIZE);" not in body
+fixture = r"""
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+using DAddr = std::uint64_t;
+using u64 = std::uint64_t;
+static constexpr u64 CACHING_PAGEBITS=12;
+static constexpr u64 CACHING_PAGESIZE=1ull << CACHING_PAGEBITS;
+namespace Common {
+template<class T> T DivCeil(T a, T b) { return a / b + (a % b != 0); }
+}
+struct BufferId {
+    std::size_t value{};
+    operator std::size_t() const { return value; }
+};
+struct Buffer {
+    DAddr address{};
+    std::size_t size{};
+    DAddr CpuAddr() const { return address; }
+    std::size_t SizeBytes() const { return size; }
+};
+template<class P>
+struct BufferCache {
+    std::vector<BufferId> page_table;
+    std::vector<Buffer> slot_buffers;
+    bool IsRegionRegistered(DAddr addr, size_t size);
+};
+""" + body + r"""
+int main() {
+    BufferCache<void> b;
+    b.page_table.resize(8);
+    b.slot_buffers = {{}, {0x1000,0x400}, {0x2000,0x800}, {0x3100,0x700}};
+    b.page_table[1] = {1};
+    b.page_table[2] = {2};
+    b.page_table[3] = {3};
+
+    // Prior implementation jumped straight to the end when the first
+    // registered page ended before the queried span's starting address.
+    // The SECOND page is nevertheless a real overlap and must be visited.
+    assert(b.IsRegionRegistered(0x1800,0x1000));
+    // A gap must remain a gap; seeing a page owner isn't itself an overlap.
+    assert(!b.IsRegionRegistered(0x1800,0x100));
+    // Direct single-page overlap still succeeds.
+    assert(b.IsRegionRegistered(0x1100,0x100));
+    // Skipping an unowned intermediate page must not lose page three.
+    b.page_table[2] = {};
+    assert(b.IsRegionRegistered(0x1800,0x2000));
+    // All actual owners absent from the queried range means false.
+    assert(!b.IsRegionRegistered(0x1800,0x1600));
+    // An empty write is not an overlapping write, even inside a buffer.
+    assert(!b.IsRegionRegistered(0x1100,0));
+    // Independent direct registration on the later page.
+    assert(b.IsRegionRegistered(0x3200,0x80));
+}
+"""
+compiler = shutil.which("c++") or shutil.which("clang++") or shutil.which("g++")
+assert compiler, "Host C++ compiler required"
+with tempfile.TemporaryDirectory(prefix="encore-region-multipage-") as folder:
+    source = Path(folder) / "region.cpp"
+    source.write_text(fixture)
+    for opt in ("-O0", "-O2"):
+        exe = Path(folder) / ("region" + opt)
+        subprocess.run([compiler, "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+                        "-fsanitize=undefined", str(source), "-o", str(exe)],
+                       check=True, timeout=45)
+        subprocess.run([str(exe)], check=True, timeout=20)
+        print("BUFFER_REGION_MULTIPAGE_HOST_PASS", opt)
