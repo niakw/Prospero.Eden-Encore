@@ -450,6 +450,13 @@ void BufferCache<P>::UnbindGraphicsStorageBuffers(size_t stage) {
 template <class P>
 bool BufferCache<P>::BindGraphicsStorageBuffer(size_t stage, size_t ssbo_index, u32 cbuf_index,
                                                u32 cbuf_offset, bool is_written) {
+    // Reject excess shader slots before shifting a u32 mask or indexing the
+    // per-stage storage array. Compute bindings already enforce this limit.
+    if (stage >= NUM_STAGES || ssbo_index >= NUM_STORAGE_BUFFERS) [[unlikely]] {
+        LOG_ERROR(HW_GPU, "Graphics storage buffer stage={} index={} exceeds supported slots",
+                  stage, ssbo_index);
+        return false;
+    }
     const bool already_enabled =
         ((channel_state->enabled_storage_buffers[stage] >> ssbo_index) & 1U) != 0;
     if constexpr (requires { runtime.ShouldLimitDynamicStorageBuffers(); }) {
@@ -489,6 +496,13 @@ template <class P>
 void BufferCache<P>::BindGraphicsTextureBuffer(size_t stage, size_t tbo_index, GPUVAddr gpu_addr,
                                                u32 size, PixelFormat format, bool is_written,
                                                bool is_image) {
+    // A malformed descriptor array must not shift by >=32 or overwrite an
+    // adjacent stage's texture binding. Compute already guards its slots.
+    if (stage >= NUM_STAGES || tbo_index >= NUM_TEXTURE_BUFFERS) [[unlikely]] {
+        LOG_ERROR(HW_GPU, "Graphics texture buffer stage={} index={} exceeds supported slots",
+                  stage, tbo_index);
+        return;
+    }
     channel_state->enabled_texture_buffers[stage] |= 1U << tbo_index;
     channel_state->written_texture_buffers[stage] |= (is_written ? 1U : 0U) << tbo_index;
     if constexpr (SEPARATE_IMAGE_BUFFERS_BINDINGS) {
