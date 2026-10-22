@@ -1503,18 +1503,13 @@ void RasterizerVulkan::UpdateDynamicStates() {
 
     if (device.IsExtExtendedDynamicState3EnablesSupported()) {
         using namespace Tegra::Engines;
-        // AMD Workaround: LogicOp incompatible with float render targets
-        if (device.GetDriverID() == VkDriverIdKHR::VK_DRIVER_ID_AMD_OPEN_SOURCE ||
-            device.GetDriverID() == VkDriverIdKHR::VK_DRIVER_ID_AMD_PROPRIETARY) {
-            const auto has_float = std::any_of(
-                regs.vertex_attrib_format.begin(), regs.vertex_attrib_format.end(),
-                [](const auto& attrib) {
-                    return attrib.type == Maxwell3D::Regs::VertexAttribute::Type::Float;
-                }
-            );
-            if (regs.logic_op.enable) {
-                regs.logic_op.enable = static_cast<u32>(!has_float);
-            }
+        // The AMD host workaround depends on vertex formats as well as the
+        // guest logic-op register. A vertex format change must rebind the
+        // effective Vulkan state without overwriting the guest register.
+        if (regs.logic_op.enable != 0 && flags[Dirty::VertexInput] &&
+            (device.GetDriverID() == VkDriverIdKHR::VK_DRIVER_ID_AMD_OPEN_SOURCE ||
+             device.GetDriverID() == VkDriverIdKHR::VK_DRIVER_ID_AMD_PROPRIETARY)) {
+            flags[Dirty::LogicOpEnable] = true;
         }
         UpdateLogicOpEnable(regs);
         UpdateDepthClampEnable(regs);
@@ -2039,8 +2034,22 @@ void RasterizerVulkan::UpdateLogicOpEnable(Tegra::Engines::Maxwell3D::Regs& regs
     if (!device.SupportsDynamicState3LogicOpEnable()) {
         return;
     }
-    scheduler.Record([enable = regs.logic_op.enable](vk::CommandBuffer cmdbuf) {
-        cmdbuf.SetLogicOpEnableEXT(enable != 0);
+    bool enable = regs.logic_op.enable != 0;
+    if (enable &&
+        (device.GetDriverID() == VkDriverIdKHR::VK_DRIVER_ID_AMD_OPEN_SOURCE ||
+         device.GetDriverID() == VkDriverIdKHR::VK_DRIVER_ID_AMD_PROPRIETARY)) {
+        // The existing AMD float-vertex workaround applies to Vulkan only.
+        // Never mutate a Maxwell register: the guest can reuse its original
+        // logic-op value on a later draw with a different vertex format.
+        enable = !std::any_of(
+            regs.vertex_attrib_format.begin(), regs.vertex_attrib_format.end(),
+            [](const auto& attrib) {
+                return attrib.type ==
+                       Tegra::Engines::Maxwell3D::Regs::VertexAttribute::Type::Float;
+            });
+    }
+    scheduler.Record([enable](vk::CommandBuffer cmdbuf) {
+        cmdbuf.SetLogicOpEnableEXT(enable);
     });
 }
 
