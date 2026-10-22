@@ -34,7 +34,9 @@ for method, next_method in methods:
     old = extract(pinned, method, next_method)
     new = extract(native, method, next_method)
     assert new.count("changed_index_span") >= 2
-    assert new.count("maxwell3d.dirty.flags[VideoCommon::Dirty::IndexBuffer] = true;") == 1
+    # DrawEnd already has the independent, always-dirty inline-index case.
+    expected_dirty_marks = 2 if method == "DrawEnd" else 1
+    assert new.count("maxwell3d.dirty.flags[VideoCommon::Dirty::IndexBuffer] = true;") == expected_dirty_marks
     expected = expected.replace(old, new)
 assert expected == native, "Unexpected change outside the three reviewed draw entrypoints"
 
