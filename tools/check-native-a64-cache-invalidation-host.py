@@ -43,6 +43,7 @@ CPP=r"""
 #include <cstdint>
 #include <mutex>
 #include <cstdio>
+using u64 = std::uint64_t;
 enum class HaltReason { None=0, CacheInvalidation=1 };
 bool Has(HaltReason given, HaltReason expected) { return given == expected; }
 static bool detailed=false;
