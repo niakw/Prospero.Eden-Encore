@@ -208,6 +208,16 @@ with tempfile.TemporaryDirectory(prefix="eden-surface-lifecycle-") as tmp:
     module.install(stage)
     assert target.read_bytes() == active
     module.install(stage)
+    # Reproduce the exact previous maintained TU from the current one, without
+    # storing a second source copy. Only its immutable Git blob may migrate.
+    dedup_guard = "    // A layer is identified by its consumer binder within a display stack.\n    // Duplicate insertion would compose the same acquired BufferItem twice on\n    // each refresh and could needlessly retain an otherwise released slot.\n    if (std::any_of(display->stack.layers.begin(), display->stack.layers.end(),\n                    [consumer_binder_id](const auto& attached) {\n                        return attached->consumer_id == consumer_binder_id;\n                    })) {\n        return;\n    }\n\n"
+    assert source.count(dedup_guard) == 1
+    previous = source.replace(dedup_guard, "").encode()
+    assert module.blob_sha(previous) == module.PREVIOUS_ACTIVE_GIT_BLOB
+    target.write_bytes(previous)
+    module.install(stage)
+    assert target.read_bytes() == active
+    module.install(stage)  # Idempotence after upgrading an old staged tree.
     target.write_bytes(b"unexpected third-party change")
     try:
         module.install(stage)

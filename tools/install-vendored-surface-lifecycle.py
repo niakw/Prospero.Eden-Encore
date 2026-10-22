@@ -17,6 +17,9 @@ PATH = Path("src/core/hle/service/nvnflinger/surface_flinger.cpp")
 ORIGINAL = ROOT / "vendor/sources/eden" / PATH
 ACTIVE = ROOT / "vendor/encore-active/eden-surface-lifecycle" / PATH
 ORIGINAL_GIT_BLOB = "a6136c111d96d2660c28b27c6881e3b671e7eed8"
+# Exact predecessor on the same maintained branch. Staged/offline build inputs
+# can already contain it; all other unknown edits still fail closed.
+PREVIOUS_ACTIVE_GIT_BLOB = "a9fb2da699b1786cdea176d1089f1aea1e5cf351"
 EDEN_COMMIT = "5f142c7926d0c7fcbbd0ce30794d72f638a43b2a"
 
 
@@ -59,7 +62,7 @@ def install(destination: Path) -> None:
         raise RuntimeError("Refusing SurfaceFlinger source replacement on unknown Eden pin")
     target = destination / PATH
     existing = target.read_bytes()
-    if existing not in (before, replacement):
+    if existing not in (before, replacement) and blob_sha(existing) != PREVIOUS_ACTIVE_GIT_BLOB:
         raise RuntimeError("Unknown SurfaceFlinger input: refusing unsafe overwrite")
     if existing != replacement:
         temporary = target.with_name(target.name + ".encore-" + str(os.getpid()))
