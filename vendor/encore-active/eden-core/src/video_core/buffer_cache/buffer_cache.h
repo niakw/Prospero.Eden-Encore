@@ -730,6 +730,10 @@ bool BufferCache<P>::IsRegionGpuModified(DAddr addr, size_t size) {
 
 template <class P>
 bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {
+    // An empty CPU write does not overlap any registered cache buffer.
+    if (size == 0) {
+        return false;
+    }
     const DAddr end_addr = addr + size;
     const u64 page_end = Common::DivCeil(end_addr, CACHING_PAGESIZE);
     for (u64 page = addr >> CACHING_PAGEBITS; page < page_end;) {
@@ -744,7 +748,10 @@ bool BufferCache<P>::IsRegionRegistered(DAddr addr, size_t size) {
         if (buf_start_addr < end_addr && addr < buf_end_addr) {
             return true;
         }
-        page = Common::DivCeil(end_addr, CACHING_PAGESIZE);
+        // The first page can contain a buffer ending before addr. A later
+        // page may belong to another registered buffer intersecting the span.
+        // Do not skip all remaining pages after one non-overlapping owner.
+        ++page;
     }
     return false;
 }
