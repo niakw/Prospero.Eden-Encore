@@ -1573,6 +1573,11 @@ ssbo_cbuf_before_1 = "    if (ssbo_index >= channel_state->compute_storage_buffe
 ssbo_cbuf_after_1 = "    if (ssbo_index >= channel_state->compute_storage_buffers.size() ||\n        cbuf_index >= kepler_compute->launch_description.const_buffer_config.size()) [[unlikely]] {\n        LOG_ERROR(HW_GPU, \"Compute SSBO slot={} cbuf={} exceeds supported slots\",\n                  ssbo_index, cbuf_index);"
 assert r437_expected.count(ssbo_cbuf_before_1) == 1
 r437_expected = r437_expected.replace(ssbo_cbuf_before_1, ssbo_cbuf_after_1)
+# Clear previous-launch compute SSBO when its constant buffer is disabled.
+compute_cbuf_disabled_before = "    if (((launch_desc.const_buffer_enable_mask >> cbuf_index) & 1) == 0) {\n        LOG_WARNING(HW_GPU, \"Skipped binding SSBO: cbuf index {} is not enabled\", cbuf_index);\n        return;\n    }"
+compute_cbuf_disabled_after = "    if (((launch_desc.const_buffer_enable_mask >> cbuf_index) & 1) == 0) {\n        // Preserve the logical descriptor position, but never reuse a buffer\n        // left from an earlier dispatch when this launch disables its CBUF.\n        channel_state->compute_storage_buffers[ssbo_index] = NULL_BINDING;\n        channel_state->written_compute_storage_buffers &= ~(1U << ssbo_index);\n        LOG_WARNING(HW_GPU, \"Skipped binding SSBO: cbuf index {} is not enabled\", cbuf_index);\n        return;\n    }"
+assert r437_expected.count(compute_cbuf_disabled_before) == 1
+r437_expected = r437_expected.replace(compute_cbuf_disabled_before, compute_cbuf_disabled_after)
 assert (active / r437_rel).read_text() == r437_expected, (
     "R437 maintained buffer cache differs from source reconstruction; "
     "check BufferPages registration, DMA copy bounds and DMA clear bounds"
