@@ -80,7 +80,7 @@ for fragment in (
     "draw_composed_case_face(ink, launch_case_game_",
     "c.textures.render_case_page(",
     "composed_page == 0 && !compose_attempted",
-    "const bool use_composed = (scan.empty() || artwork.texture == 0)",
+    "const bool use_composed = scan.empty() && composed_page != 0;",
     "c.list.case_face(composed_page, face, angle, back, kWhite,",
     "{0.0f, 1.0f, 1.0f, -1.0f}",
     "EDEN_CASE_COMPOSE title=%016llX side=%s status=ready",
@@ -121,6 +121,43 @@ assert "draw_composed_case_face(Canvas &c, const Game &game," in library_src
 assert "flat_front_fallback(c, game, paper);" in library_src
 assert "flat_back_fallback(c, game, paper);" in library_src
 
+# A cached original face is authoritative even while its texture is pending.
+# Independent reconstruction occurs ONLY for the specific missing face.
+assert "if (scan.empty() && composed_page == 0 && !compose_attempted)" in draw
+assert "const bool use_composed = scan.empty() && composed_page != 0;" in draw
+assert "if (scan.empty() || artwork.texture == 0)" not in draw
+assert "if (rear)\n                flat_back_fallback(c, game, paper);" not in library
+assert 'if (std::getenv("PE_PREVIEW_NO_BOX_FRONT") == nullptr)' in (
+    root / "headless/prosperoeden/host/fake_services.cpp").read_text()
+assert 'if (std::getenv("PE_PREVIEW_NO_BOX_BACK") == nullptr)' in (
+    root / "headless/prosperoeden/host/fake_services.cpp").read_text()
+# User-provided fixed raster parts must be in the repo AND converted for
+# preview and PS5 packaging, not merely named by dormant renderer branches.
+import base64
+import hashlib
+import struct
+for stem, wh, digest in (
+    ("switch-logo", (193, 190),
+     "e4299753479b26855f3817806e77c6710295a30b96add0f6e38ba83b66a1868d"),
+    ("switch-rear-footer", (600, 286),
+     "3b8cd6f6a3af33f986e0539ac8a6e305582f5746d60d433e4eee4d18d209171c"),
+):
+    packed = (root / f"headless/prosperoeden/ui/art/{stem}.png.b64").read_text().strip()
+    raw = base64.b64decode(packed, validate=True)
+    assert raw[:8] == b"\\x89PNG\\r\\n\\x1a\\n"
+    assert struct.unpack(">II", raw[16:24]) == wh
+    assert hashlib.sha256(raw).hexdigest() == digest, stem
+loader = (root / "headless/prosperoeden/pe/ui/textures.cpp").read_text()
+for fragment in ('load("art/switch-logo.tga", &switch_logo_)',
+                 'load("art/switch-rear-footer.tga", &switch_rear_footer_)',
+                 '&switch_logo_, &switch_rear_footer_'):
+    assert fragment in loader
+assert "brand fixed" in (root / "tools/launcher/preview.sh").read_text()
+package = (root / "tools/package-headless-native.sh").read_text()
+for fragment in ("for stem in switch-logo switch-rear-footer; do",
+                 "base64.b64decode", "tga:bits-per-pixel=32"):
+    assert fragment in package
+
 # Quarter turn becomes an edge; the full back is visible half a turn later.
 assert math.cos(0.52) > 0 and math.sin(0.52) > 0
 assert math.cos(math.pi + 0.18) < -0.98
@@ -160,16 +197,20 @@ for token in ("game.hero", "game.cover", "game.screenshots", "cover_crop(",
 for token in ("game.screenshots.front()",
               "case_media::BackScenes(hero, game.cover, game.screenshots)",
               "game.description", "text_block(c, desc,", "const Rect footer",
-              "ENCORE  /  GAME INFORMATION"):
+              "ENCORE / GAME INFORMATION"):
     assert token in back_fallback, ("Back fallback dropped", token)
-assert 'case_media::FrontAlternate(painting, game.cover, game.screenshots)' in front
-assert 'if (*second == game.cover) case_art_contain(c, *second, right);' in back_fallback
+assert 'c.textures.switch_logo() != 0' in front
+assert 'const Rect logo{r.x, r.y, logo_w,' in front
+assert 'cover_crop(c, painting, r, 0.0f, 0.0f);' in front
+assert 'constexpr float kFixedFooter = 0.41f;' in back_fallback
+assert 'c.textures.switch_rear_footer() != 0' in back_fallback
+assert 'if (path == game.cover) case_art_contain(c, path, area);' in back_fallback
 assert "if (!scan.empty()) {" in library
 assert library.index("if (!scan.empty()) {") < library.index("flat_back_fallback(c, game, paper);")
 # The non-official fallback footer must never invent regulatory labels,
 # game ratings or scan-style barcodes.
 assert "const Rect footer" in back_fallback, "Back footer removed"
-assert "barcode" not in back_fallback.lower().split("const rect footer",1)[1]
+assert "if (c.textures.switch_rear_footer() != 0)" in back_fallback
 assert "shell.y + shell.h - top" in library
 assert "s.press({Key::r1, Key::r1});" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
