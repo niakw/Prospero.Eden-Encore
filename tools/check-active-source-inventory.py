@@ -94,7 +94,7 @@ print("ENCORE_NATIVE_MEMORY_OWNER_PASS", f"headers={len(native_mem)}")
 # Maintained core code and headers must never be silently omitted from the
 # function-owner register. Do not confuse an indexed path with a HOST proof.
 maintained_core_paths = [path for path in physical if path.startswith("eden-core/")]
-assert len(maintained_core_paths) == 156, ("maintained core source set changed", len(maintained_core_paths))
+assert len(maintained_core_paths) == 161, ("maintained core source set changed", len(maintained_core_paths))
 assert all(path in graph for path in maintained_core_paths), (
     "uncatalogued maintained core source paths",
     [path for path in maintained_core_paths if path not in graph],
