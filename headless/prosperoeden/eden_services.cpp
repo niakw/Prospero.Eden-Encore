@@ -2007,7 +2007,9 @@ pe::ui::FolderInfo EdenServices::folder_info(const std::string& directory) {
     pe::ui::FolderInfo info;
     info.keys = Eden::FileExists(JoinPath(directory, "keys/prod.keys"));
     info.firmware = CountFiles(JoinPath(directory, "firmware"), {".nca"});
-    info.games = CountFiles(JoinPath(directory, "roms"), {".nsp", ".xci", ".nsz", ".xcz"});
+    info.games = CountFiles(JoinPath(directory, "roms"),
+                            {".nsp", ".xci", ".nsz", ".xcz", ".nro", ".nso",
+                             ".nca", ".nax", ".kip"});
     return info;
 }
 
