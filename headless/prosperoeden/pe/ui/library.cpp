@@ -231,11 +231,14 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
     const std::string& desc = !game.description.empty() ? game.description :
                               !game.intro.empty() ? game.intro : game.name;
     const float copy_font = std::clamp(r.w * 0.042f, 8.0f, 18.0f);
+    const float line_h = copy_font * 1.22f;
+    const float usable_h = std::max(line_h, description.h - gap * 3.0f);
+    const int lines = std::clamp(static_cast<int>(usable_h / line_h), 1, 8);
     text_block(c, desc, description.x + gap * 1.6f,
                baseline(description.y + gap * 1.4f, copy_font * 1.12f,
-                        copy_font), copy_font, copy_font * 1.22f,
+                        copy_font), copy_font, line_h,
                Color::rgb(0xffffff), description.w - gap * 3.2f,
-               8, kShrink);
+               lines, kShrink);
 
     const Rect footer{r.x, r.y + dynamic_h, r.w, footer_h};
     if (c.textures.switch_rear_footer() != 0) {
