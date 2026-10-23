@@ -31,4 +31,20 @@ référence U13 après cette revue ciblée. Le verrouillage d'empreinte dans
 `tools/check-eden-optimization-coverage.py` reste **inchangé** :
 toute modification ultérieure exige un nouveau réexamen.
 
+## Réexamen du 23 octobre — U75, sélection de jeux persistée
+
+La différence entre le blob revu
+`ec168add36f89f8800b32e875a8f7bd7b95cdf99` et le blob courant
+`ebcfe022c94cb74bbf20c74664ae28e04912289e` porte exclusivement
+sur la validation des noms sauvegardés : ajout de `game_files.h`,
+remplacement du test de suffixe NSP/XCI par `IsGameFile` et acceptation
+contrôlée d'un dossier ExeFS sélectionné comme `<folder>/main`.
+`IsDeconstructedGameSelection` impose une seule composante de répertoire
+sans séparateurs et rejette `.` et `..`; le traitement rejette toujours
+les caractères de contrôle et les backslashes. Le chargement JSON,
+la publication atomique et les mutations de préférences restent inchangés.
+Ce code n'est pas appelé par les instructions invitées ou chaque draw.
+Aucune performance de F01–F06 ni qualification PS5 n'est déduite de
+l'extension des formats. Toute nouvelle modification rouvrira cette revue.
+
 **Périmètre :** 491 fichiers de code maintenus ; **396 pris en charge** ; **95 restant dans l'inventaire global**, dont **33 liés au moteur/runtime**, et **62 sources du lanceur** suivies à part. Ces quatre examens ne sont ni quatre optimisations créées ni une validation PS5. Le chantier prioritaire reste `src/memory_pages.cpp`, `headless/fastmem_handler.cpp`, les transferts Maxwell DMA, les barrières HLE et le cache pipelines Vulkan.
