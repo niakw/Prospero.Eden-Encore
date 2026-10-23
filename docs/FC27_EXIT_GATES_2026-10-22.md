@@ -472,3 +472,33 @@ une preuve CI sur le dernier HEAD. Ce changement retire une allocation
 de la section critique lors de certaines premières utilisations,
 mais **aucun gain de FPS, de `pair_held` ou de `late50` sur console
 n'est encore démontré**. F01 reste ouvert.
+
+
+## F01/F04 — 23 octobre : suppression de la décision feedback pour les draws sans texture
+
+La source native sélectionnée `vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h`
+contient désormais un chemin direct lorsque `CheckFeedbackLoop` reçoit une liste
+`views` vide. Aucun échantillon ne pouvant référencer un attachement,
+il n'est pas nécessaire de comparer la clé des vues précédentes, de
+réévaluer les rendertargets ou de construire un nouveau snapshot.
+Le cache de décision et les numéros de série sont remis dans l'état
+`false` existant, afin que **le draw texturé suivant** recalcule
+obligatoirement la décision de barrière.
+
+Le changement est présent dans la source maintenue (`92150c6`) et dans
+son backport épinglé (`2fd4743`), pour éviter un écart entre le build
+natif et l'arbre de développement. L'oracle du patch source est renforcé
+(`69941db`), et `tools/check-ps5-feedback-loop-empty-fastpath-host.py`
+(`7f75349`) compile la fonction réellement maintenue et rejoue
+un ensemble de transitions `depth→other→depth→empty→depth→color-only→depth`
+avec et sans `PS5_NATIVE`, `-O0`/`-O2` sous UBSan.
+
+Une reproduction locale indépendante de ces transitions, compilée sous
+Clang et GCC, a passé **huit combinaisons** (compilateur × niveau
+d'optimisation × mode natif/amont). La suite native complète et le rejeu
+du patch sur la totalité des fichiers épinglés restent à confirmer.
+
+**Impact limité :** suppression d'un travail non nécessaire sur les draws
+sans image ; aucune donnée de scène FC27 ne permet encore de quantifier
+un gain de `pair_held`, `late50` ou FPS. Ce n'est pas une preuve de
+correction des textures de maillots ou du HUD. F01, F03 et F04 restent ouverts.
