@@ -27,6 +27,8 @@ assert 'if (!Eden::ValidRomFilename(file)) continue;' in library
 assert 'game.name = CleanTitle(entry_name);' in library
 assert 'game.format = format;' in library
 assert 'CountExeFsFolders(roms_path)' in library
+directory_counter = library.split("int CountExeFsFolders(", 1)[1].split("unsigned int HashPath(", 1)[0]
+assert "ListEntries(directory, true, ok)" in directory_counter
 assert 'IsDeconstructedGameDirectory(selected_path.parent_path())' in main
 assert 'Eden::IsDeconstructedGameDirectory(entry.path())' in main
 assert 'selected_path.filename() == "main"' in main
