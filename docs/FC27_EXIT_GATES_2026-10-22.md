@@ -365,3 +365,30 @@ incomplète. Aucun ancien log FC27 ne prouve que la création
 d'un pipeline lançait l'une de ces exceptions. Cette correction
 ne valide ni un gain de FPS, ni l'absence de freeze en match.
 **F01/F05 restent ouverts**, ainsi que F02–F04/F06.
+
+
+## F04 — 23 octobre : contrôle strict de parité des coordonnées négatives
+
+Un audit supplémentaire du chemin `GetScissorState` a confirmé un point
+subtil des promotions entières en C++ : l'opérande `up_scale` est
+`u32`, donc l'expression historique `value * up_scale` suivie du
+décalage se comporte en **non signé**, y compris lorsque `value < 0`.
+Remplacer ce décalage par un décalage arithmétique signé changerait
+la géométrie d'un titre valide. Cette variante a été rejetée puis le
+comportement épinglé a été restauré, au lieu de faire passer une
+rupture visuelle pour une optimisation.
+
+Les commits `5a8a26f` et `aff4105` maintiennent donc le décalage
+historique et ajoutent un témoin explicite : pour un offset
+`-96`, `up_scale=1` et `down_shift=1`, le rectangle épinglé
+et maintenu renvoient tous deux `-1` après la borne historique.
+Une reproduction locale des deux méthodes C++ a été compilée et
+exécutée sous **Clang et GCC**, `-O0`/`-O2`, UBSan : **3516**
+configurations de rectangles ordinaires/extrêmes validées pour chacune
+des quatre combinaisons. Ce test indépendant n'est pas une exécution
+de la suite CI complète ni une mesure de performance réelle.
+
+La protection contre les soustractions 32 bits overflow et le
+décalage hors plage est conservée. **F04 reste ouvert** tant que la
+fidélité du rendu invité n'est pas démontrée. Ne pas annoncer de
+résolution du HUD, des maillots ou du terrain de FC27.
