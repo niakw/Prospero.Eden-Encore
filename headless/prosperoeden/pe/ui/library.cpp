@@ -210,9 +210,15 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
     const std::string* second = shots[1];
     if (first && second) {
         const float shot_w = (r.w - gap * 3.0f) * 0.5f;
-        cover_crop(c, *first, {r.x + gap, row_y, shot_w, row_h}, 0.0f, 0.0f);
-        cover_crop(c, *second, {r.x + gap * 2.0f + shot_w, row_y,
-                                shot_w, row_h}, 0.0f, 0.0f);
+        const Rect left{r.x + gap, row_y, shot_w, row_h};
+        const Rect right{r.x + gap * 2.0f + shot_w, row_y, shot_w, row_h};
+        // A cached app icon/poster is not a gameplay screenshot. When it
+        // fills the spare second pane, keep its native aspect ratio rather
+        // than cutting out most of the square/portrait image.
+        if (*first == game.cover) case_art_contain(c, *first, left);
+        else cover_crop(c, *first, left, 0.0f, 0.0f);
+        if (*second == game.cover) case_art_contain(c, *second, right);
+        else cover_crop(c, *second, right, 0.0f, 0.0f);
     } else if (first || second) {
         const std::string& one = first ? *first : *second;
         if (one == game.cover) {
