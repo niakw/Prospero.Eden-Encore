@@ -117,6 +117,10 @@ bool Textures::load_art(const std::string &directory)
     // released before a game starts, so it does not consume gameplay VRAM.
     (void)load("art/backdrop.tga", &backdrop_);
     const bool brand = load("art/brand.tga", &brand_);
+    // Exact fixed components are optional assets; the painter retains a
+    // clean metadata-only fallback when they are absent.
+    (void)load("art/switch-logo.tga", &switch_logo_);
+    (void)load("art/switch-rear-footer.tga", &switch_rear_footer_);
     // Licensed DualSense artwork is a compact 144x100 mask embedded in the
     // launcher. Decode it ONCE before any frame; no SVG parser, PNG I/O or
     // texture upload inside navigation/gameplay. Fall back to the old local
