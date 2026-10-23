@@ -900,23 +900,62 @@ void Launcher::draw_launch(Canvas &c)
             fallback = launch_cover_;
     }
     const Cover artwork = c.textures.cover(scan.empty() ? fallback : scan, 760.0f);
+    // Compose a real paper texture from exactly the same C++ drawing code
+    // as the Library's front/back replacement. The offscreen pass runs ONCE
+    // per face, only after cached input images have finished their async
+    // decode; no download, CPU image synthesis or repeated FBO pass in draw().
+    std::uint32_t& composed_page = back ? launch_composed_back_ : launch_composed_front_;
+    if ((scan.empty() || artwork.texture == 0) && composed_page == 0) {
+        const auto is_ready = [&](const std::string& path) {
+            if (path.empty()) return true;
+            const Cover media = c.textures.cover(path, 760.0f);
+            return media.missing || (media.texture != 0 && media.age >= 0.22f);
+        };
+        bool ready = is_ready(launch_case_game_.hero) &&
+                     is_ready(launch_case_game_.cover);
+        for (const auto& screenshot : launch_case_game_.screenshots)
+            ready = is_ready(screenshot) && ready;
+        if (ready) {
+            constexpr float ink_scale = 1.5f;
+            constexpr int paper_w = 660, paper_h = 1056;
+            gfx::DrawList print;
+            Canvas ink{print, c.fonts, c.textures, c.backdrop, c.time};
+            print.push_transform(ink_scale, 0.0f, 0.0f, 0.0f, 0.0f);
+            draw_composed_case_face(ink, launch_case_game_,
+                                    {0.0f, 0.0f, 440.0f, 704.0f}, back);
+            print.pop_transform();
+            composed_page = c.textures.render_case_page(
+                print, c.fonts.font, c.fonts.texture, paper_w, paper_h);
+        }
+    }
+    const bool use_composed = (scan.empty() || artwork.texture == 0) &&
+                              composed_page != 0;
+    const std::uint32_t visible_texture =
+        use_composed ? composed_page : artwork.texture;
     // One event per visible paper face and state, NEVER a per-frame log.
     // Stored/decoded/uploaded assets can still fail to reach the render list;
     // this is the last observable stage before the case-face GPU draw call.
     const unsigned face_bit = back ? 2u : 1u;
-    if (artwork.texture == 0 && !(launch_case_placeholder_mask_ & face_bit)) {
+    if (visible_texture == 0 && !(launch_case_placeholder_mask_ & face_bit)) {
         launch_case_placeholder_mask_ |= face_bit;
         sys::log("EDEN_CASE_DRAW title=%016llX side=%s status=placeholder retail_path=%d",
                  static_cast<unsigned long long>(launch_title_id_),
                  back ? "back" : "front", !scan.empty());
-    } else if (artwork.texture != 0 && !(launch_case_ready_mask_ & face_bit)) {
+    } else if (visible_texture != 0 && !(launch_case_ready_mask_ & face_bit)) {
         launch_case_ready_mask_ |= face_bit;
         sys::log("EDEN_CASE_DRAW title=%016llX side=%s status=ready source=%s texture=%u",
                  static_cast<unsigned long long>(launch_title_id_),
-                 back ? "back" : "front", scan.empty() ? "fallback" : "retail",
-                 artwork.texture);
+                 back ? "back" : "front",
+                 use_composed ? "composed" : (scan.empty() ? "fallback" : "retail"),
+                 visible_texture);
     }
-    if (artwork.texture != 0) {
+    if (use_composed) {
+        // OpenGL framebuffer textures have bottom-left origin. Flip Y once,
+        // then let the existing 3D case-face shader project both printed
+        // faces onto the same physical shell as original retailer scans.
+        c.list.case_face(composed_page, face, angle, back, kWhite,
+                         {0.0f, 1.0f, 1.0f, -1.0f});
+    } else if (artwork.texture != 0) {
         // Keep the WHOLE printed back visible: never stretch a scan or crop
         // its French description. Letterbox only for unmatched source ratios.
         // Transparent excess UV is discarded by the case-face fragment shader.
