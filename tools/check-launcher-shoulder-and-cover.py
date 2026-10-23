@@ -46,7 +46,27 @@ for attr in ("game.hero","game.screenshots[1]","game.description",
              "text_block(c, desc,", "const Rect footer"):
     assert attr in back, attr
 assert '"SWITCH"' in front
+# A square app icon cannot be stretched across an entire tall retail sleeve.
+contain = method(library, "void case_art_contain(", "void flat_front_fallback(")
+for token in ("const float aspect", "fitted.h = panel.w / aspect;",
+              "fitted.w = panel.h * aspect;", "c.list.image(art.texture, fitted"):
+    assert token in contain, token
+assert "const bool has_landscape" in front
+assert "case_art_contain(c, game.cover, icon_panel);" in front
+assert "secondary != painting" in front
+# Screenshots are title-keyed; never create an illusory second distinct
+# picture by repeating the same cached hero or screenshot.
+for token in ('shot_a != hero', 'shot_b != hero',
+              'shot_b != *first', 'if (first && second)',
+              'case_art_contain(c, one,'):
+    assert token in back, token
 assert "ENCORE  /  GAME INFORMATION" in back
+# A remote retail scan may have a valid pathname but not yet a GPU texture.
+# Falling back to a blank case face here would defeat the composition.
+assert 'if (artwork.texture != 0)' in render
+assert 'if (rear)\n                flat_back_fallback(c, game, paper);' in render
+assert 'else\n                flat_front_fallback(c, game, paper);' in render
+assert 'const std::string& credit = !game.publisher.empty()' in back
 # The fixed lower panel must not pretend that unknown regions, age labels,
 # publisher addresses, barcodes or classifications are official information.
 footer = back.split("const Rect footer",1)[1]
