@@ -1520,7 +1520,10 @@ std::vector<pe::ui::Game> EdenServices::games(const std::atomic<bool>* cancel) {
         std::string format = file.substr(dot + 1);
         std::transform(format.begin(), format.end(), format.begin(),
                        [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
-        if (format != "NSP" && format != "XCI") continue;
+        // One format table for storage counts, recent titles and the TV
+        // library. Raw executable/archive loaders may reject incomplete
+        // content at boot; never silently hide them during the file scan.
+        if (!Eden::IsGameFile(file)) continue;
         ++rom_candidates;
         const std::string path = Eden::AssetsPath("roms/" + file);
         struct stat info {};
