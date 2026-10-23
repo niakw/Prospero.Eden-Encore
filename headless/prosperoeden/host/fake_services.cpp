@@ -273,7 +273,12 @@ FakeServices::FakeServices(const std::string &covers_directory)
             game.name = "The Legend of Zelda: Breath of the Wild";
             game.file = "The Legend of Zelda - Breath of the Wild [01007EF00011E000].xci";
             game.title_id = 0x01007EF00011E000ull;
-            game.cover = covers_directory + "/botw-front.tga";
+            // For a missing original front, the fallback starts from the
+            // sample application's own icon rather than secretly loading a
+            // real box-front scan as its supposedly missing source.
+            game.cover = std::getenv("PE_PREVIEW_NO_BOX_FRONT") != nullptr ?
+                covers_directory + "/cover-" + std::to_string(index) + ".tga" :
+                covers_directory + "/botw-front.tga";
             game.hero = covers_directory + "/botw-hero.tga";
             game.screenshots = {game.hero};
             game.intro = "Explore the vast landscapes of Hyrule.";
