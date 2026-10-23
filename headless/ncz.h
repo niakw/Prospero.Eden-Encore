@@ -316,6 +316,15 @@ inline u64 Fnv64(const u8* data, std::size_t size, u64 hash = 146959810393466560
     return hash;
 }
 // Writes what is buffered and makes it durable.
+// All regenerable NCZ caches may live on writable console storage. Never
+// follow a symlink into another app's data, and open new files exclusively.
+inline std::FILE* OpenCacheFile(const std::string& path, int flags, const char* mode) {
+    const int fd = ::open(path.c_str(), flags | O_NOFOLLOW, 0600);
+    if (fd < 0) return nullptr;
+    std::FILE* result = ::fdopen(fd, mode);
+    if (!result) ::close(fd);
+    return result;
+}
 inline bool Sync(std::FILE* file) {
     return std::fflush(file) == 0 && fsync(fileno(file)) == 0;
 }
@@ -351,7 +360,7 @@ private:
 
 // An unpacked file made before, when it is there whole: of the plaintext's size and marked so.
 inline std::unique_ptr<Plaintext> OpenUnpacked(const std::string& path, u64 size) {
-    std::FILE* file = std::fopen(path.c_str(), "rb");
+    std::FILE* file = Detail::OpenCacheFile(path, O_RDONLY, "rb");
     if (!file) return nullptr;
     u8 mark[16];
     const bool whole = fseeko(file, 0, SEEK_END) == 0 && static_cast<u64>(ftello(file)) == size + sizeof(mark) &&
@@ -372,7 +381,7 @@ inline std::unique_ptr<Plaintext> UnpackToFile(const Layout& layout, const ReadF
                                                const std::function<void(u64 done, u64 total)>& progress = {},
                                                const std::function<bool()>& stop = {}) {
     const std::string part = path + ".part";
-    std::FILE* out = std::fopen(part.c_str(), "wb");
+    std::FILE* out = Detail::OpenCacheFile(part, O_WRONLY | O_CREAT | O_EXCL, "wb");
     if (!out) {
         if (error) *error = "cannot create " + part;
         return nullptr;
@@ -515,9 +524,9 @@ private:
     // ends it there, and the next piece is written over it.
     void Load() {
         if (path.empty()) return;
-        file = std::fopen(path.c_str(), "r+b");
+        file = Detail::OpenCacheFile(path, O_RDWR, "r+b");
         if (!file) {
-            file = std::fopen(path.c_str(), "w+b");
+            file = Detail::OpenCacheFile(path, O_RDWR | O_CREAT | O_EXCL, "w+b");
             return;
         }
         if (fseeko(file, 0, SEEK_END) != 0) return;
