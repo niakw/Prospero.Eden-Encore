@@ -22,5 +22,16 @@ inline bool IsPackageFile(std::string_view name) {
 inline bool IsCardImageFile(std::string_view name) {
     return EndsWithNoCase(name, ".xci") || EndsWithNoCase(name, ".xcz");
 }
-inline bool IsGameFile(std::string_view name) { return IsPackageFile(name) || IsCardImageFile(name); }
+// Eden also has dedicated NRO, NSO, NCA, NAX and KIP loaders. These may be
+// standalone homebrew, program partitions or system components, not necessarily
+// complete game containers. Keep them selectable; let the native core loader
+// determine whether enough content exists to boot the selection.
+inline bool IsDirectLoaderFile(std::string_view name) {
+    return EndsWithNoCase(name, ".nro") || EndsWithNoCase(name, ".nso") ||
+           EndsWithNoCase(name, ".nca") || EndsWithNoCase(name, ".nax") ||
+           EndsWithNoCase(name, ".kip");
+}
+inline bool IsGameFile(std::string_view name) {
+    return IsPackageFile(name) || IsCardImageFile(name) || IsDirectLoaderFile(name);
+}
 } // namespace Eden
