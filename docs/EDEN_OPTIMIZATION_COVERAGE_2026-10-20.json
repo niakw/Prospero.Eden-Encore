@@ -510,9 +510,9 @@
       "path": "headless/metadata_bridge.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U13",
-      "reviewed_source_git_blob": "c15a5f3bac31d6206e61cfc39317be280a129c48",
+      "reviewed_source_git_blob": "43ed86fa7dec1da214051c291fc60c818b3d3eeb",
       "source_review_document": "docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md",
-      "evidence": "Source code checked; Extraction métadonnées NSP/XCI et gestion des sauvegardes, avec publication du snapshot addons après scan hors mutex ; opérations de bibliothèque/lancement et non par frame de jeu. Any mutation, reproducible failure or measured gameplay hotpath usage reopens this decision."
+      "evidence": "Re-reviewed 2026-10-23 against prior blob c15a5f3: game_files.h format guards switch package/card metadata and glyph-version entry points to Eden::IsPackageFile/IsCardImageFile, rejecting direct executable inputs that have no Control RomFS. No GPU/JIT hotpath modified. Review documented in docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md; every further source mutation reopens the review."
     },
     {
       "path": "headless/metadata_bridge.h",
