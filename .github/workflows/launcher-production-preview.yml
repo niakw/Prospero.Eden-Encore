@@ -209,6 +209,21 @@ jobs:
                   with Image.open(path / name) as frame:
                       assert frame.size == (1920, 1080)
                       assert sum(ImageStat.Stat(frame.convert("RGB").crop((480, 270, 565, 620))).stddev) > 17, (kind, name)
+              if kind == "front-only":
+                  # A missing rear scan MUST show the real game artwork on
+                  # its upper paper. An earlier FBO baked the untextured
+                  # dark gradient even though EDEN_CASE_COMPOSE said ready.
+                  # This ROI is inside the projected LEFT upper back, away
+                  # from the description, the background and plastic rims.
+                  with Image.open(path / "02-launch-case-back.png") as rear:
+                      printed = ImageStat.Stat(rear.convert("RGB").crop(
+                          (410, 200, 470, 420)))
+                      assert sum(printed.stddev) > 75, (
+                          "reconstructed 3D back baked before artwork decoded",
+                          printed.mean, printed.stddev)
+                      assert sum(printed.mean) > 130, (
+                          "reconstructed 3D back is still dark/empty",
+                          printed.mean)
               print(f"INDEPENDENT_CASE_FACE_{kind.upper()}: PASS")
           PY
 
