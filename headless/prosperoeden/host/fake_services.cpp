@@ -301,8 +301,13 @@ FakeServices::FakeServices(const std::string &covers_directory)
                 if (!write_case_fixture(sample_case_back_, true)) sample_case_back_.clear();
             }
             if (enable_sample_case_) {
-                game.box_front = sample_case_front_;
-                game.box_back = sample_case_back_;
+                // Host evidence for four independent configurations: both
+                // scans, front only, back only, and neither. A missing one
+                // must never synthesize over the other genuine face.
+                if (std::getenv("PE_PREVIEW_NO_BOX_FRONT") == nullptr)
+                    game.box_front = sample_case_front_;
+                if (std::getenv("PE_PREVIEW_NO_BOX_BACK") == nullptr)
+                    game.box_back = sample_case_back_;
             }
             break;
         }
