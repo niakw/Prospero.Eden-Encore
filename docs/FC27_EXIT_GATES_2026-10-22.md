@@ -621,3 +621,43 @@ Le profil de livraison conserve le JIT normal, les verrous nécessaires, les
 fences et les invalidations GPU. Aucun changement automatique de fréquence,
 affinité, résolution, taille des caches ou file Vulkan. Une seule validation
 matérielle finale demeure réservée à F07.
+
+
+## 23 octobre — intégration des formats et compteur moteur restauré
+
+Après la prise en charge des formats NSZ/XCZ, des modules directs et de
+l'ExeFS, le registre d'audit historique à 493 fichiers n'était plus à jour.
+Une comparaison exacte avec les objets de l'arbre Git de la branche a révélé
+**11 nouvelles sources de code** : dix sont des unités de lecture, décompression
+ou routage de formats ; la dernière est
+`headless/prosperoeden/pe/ui/case_media_selection.hpp`, suivie dans le
+périmètre UI. Aucun de ces onze fichiers ne constitue en lui-même un
+correctif de saccades, de HUD ou de commandes FC27.
+
+Au commit `540f4bb`, le nouveau registre distingue :
+
+| Compteur de la première revue de code | Valeur |
+| --- | ---: |
+| Fichiers C/C++/headers détenus par Encore | **504** |
+| Sources traitées, revues ou intégrées avec référence | **441** |
+| Dont nouveaux propriétaires de formats, hors optimisations FPS | **10** |
+| Première revue moteur restant à traiter | **0** |
+| Première revue UI/launcher restant à traiter séparément | **63** |
+| Nombre de correctifs moteur réellement encore nécessaires | **inconnu** |
+| Critères FC27 F01–F06 techniquement clos | **0/6** |
+
+La source et le test `tools/check-eden-optimization-coverage.py`
+contrôlent désormais les dix nouveaux chemins par **empreinte Git exacte**,
+preuve de sélection, référence à la prévalidation et distinction
+native/hôte/en-tête. Voir
+[la revue indépendante des formats](EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md).
+Les **12 témoins hôte F01–F06** précédemment exécutés ont tous réussi,
+mais la suite CI complète du dernier SHA demeure une qualification
+indépendante. La reproduction Vulkan générateur/sources est passée dans
+le fast gate de `d612c8c` ; des témoins de contrôle de préflight
+compute ont été réalignés ensuite, sans modifier les fences ni désactiver
+les verrous.
+
+**Ne pas interpréter « 0 source moteur à revoir » comme « F01–F06
+terminés ».** Les six critères restent à prouver au niveau bout-en-bout ;
+F07 reste la seule validation physique sur PS5.
