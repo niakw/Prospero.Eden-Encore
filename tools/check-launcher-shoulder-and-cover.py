@@ -37,7 +37,7 @@ assert "key==Key::r1?1:-1" in switch_keys
 # True scanned faces must take precedence over any composited fallback.
 render = method(library, "void flat_retail_sleeve(", "// ONE physical shell: narrow top/bottom")
 assert 'const std::string& scan = rear ? game.box_back : game.box_front;' in render
-assert render.index("if (!scan.empty())") < render.index("flat_back_fallback(c, game, paper)")
+assert render.index("if (!scan.empty())") < render.index("flat_composed_ink(c, game, paper, rear)")
 front = method(library, "void flat_front_fallback(", "void flat_back_fallback(")
 back = method(library, "void flat_back_fallback(", "// Static sleeve used")
 for attr in ("game.hero","game.cover","game.screenshots","game.name","cover_crop"):
@@ -70,6 +70,18 @@ assert "ENCORE / GAME INFORMATION" in back
 assert "const std::string& credit = !game.publisher.empty()" in back
 # A real face remains untouched while asynchronous texture decoding runs;
 # a different missing face can still receive a reconstructed paper insert.
+# Every Library jacket uses the same height and visual composition as
+# the launcher's paper face, regardless of a downloaded cover.
+for token in ("constexpr float kCaseShellAspect = 454.0f / 730.0f;",
+              "constexpr float kCaseInkWidth = 440.0f;",
+              "constexpr float kCaseInkHeight = 704.0f;",
+              "void flat_composed_ink(Canvas& c, const Game& game,",
+              "const float sleeve_w = sleeve_h * kCaseShellAspect;",
+              "constexpr float rear_h = 247.0f;",
+              "constexpr float rear_w = rear_h * kCaseShellAspect;"):
+    assert token in library, token
+assert "flat_composed_ink(c, game, paper, rear);" in render
+assert "selected ? 1.025f : 1.0f" not in library
 assert "if (!scan.empty()) {" in render
 assert "if (artwork.texture != 0)" in render
 assert "c.list.gradient_rect(paper, 0.0f," in render
