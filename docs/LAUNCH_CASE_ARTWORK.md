@@ -441,3 +441,7 @@ then commits it under assets/screenshots/encore-home.png and swaps the
 README.md and README.fr.md links together. On failure neither the
 README nor the image is changed. This is real application UI rendered
 on a host computer; it is **not** a screenshot captured on PS5.
+
+The final documentation/preview opt-in is tied to this maintained
+launcher iteration. The screenshot publisher only commits verified C++/OpenGL
+pixels; a missing render must not replace the existing README hero.
