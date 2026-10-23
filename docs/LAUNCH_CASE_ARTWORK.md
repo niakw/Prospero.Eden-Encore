@@ -470,3 +470,29 @@ on a host computer; it is **not** a screenshot captured on PS5.
 The final documentation/preview opt-in is tied to this maintained
 launcher iteration. The screenshot publisher only commits verified C++/OpenGL
 pixels; a missing render must not replace the existing README hero.
+
+
+## Native fallback preview acceptance — 23 October
+
+The **actual** launcher host renderer now exercises three cases:
+
+1. Original retail front/back: unchanged scans and existing 3D plastic/hinges.
+2. Both scans missing: distinct native-composed front/back paper, projected
+   on the same real C++/OpenGL three-dimensional case.
+3. Missing/late individual scan: locally recomposed face is displayed until
+   a readable scan supersedes it, without replacing the other known face.
+
+The generic screenshot job records `EDEN_CASE_COMPOSE` once per visible
+side and checks that front and rear screenshots are materially different.
+It rejects a fallback that merely turns one square app icon into a
+blank, mirrored, or repeatedly stretched back print. The dedicated
+source test checks source/header ownership and the two-page GPU limit.
+Both tests are **host-only**; no PS5 deployment or hardware test is
+requested. The signed gameplay ABI, JIT, texture caches and FC27 exit
+gates F01-F06 are unchanged by this UI work.
+
+**Requested at this checkpoint:** launch the existing
+`launcher-production-preview.yml` C++/OpenGL visual gate. The result
+is **pending verification**, not asserted successful here. Any failing
+visual check or native compilation must be resolved before declaring
+the animated fallback complete.
