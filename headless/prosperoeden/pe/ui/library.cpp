@@ -1476,7 +1476,9 @@ void Launcher::press_game(Key key)
         return;
     case Key::up:
     case Key::down:
-        if (game_rows_.move(key == Key::down ? 1 : -1))
+    case Key::l1:
+    case Key::r1:
+        if (game_rows_.move(key == Key::down || key == Key::r1 ? 1 : -1))
         {
             option_ = game_rows_.selected;
             message_.clear();
