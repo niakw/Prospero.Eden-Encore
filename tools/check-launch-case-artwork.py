@@ -168,7 +168,7 @@ assert library.index("if (!scan.empty()) {") < library.index("flat_back_fallback
 # The non-official fallback footer must never invent regulatory labels,
 # game ratings or scan-style barcodes.
 assert "const Rect footer" in back_fallback, "Back footer removed"
-assert "barcode" not in back_fallback.lower().split("const Rect footer",1)[1]
+assert "barcode" not in back_fallback.lower().split("const rect footer",1)[1]
 assert "shell.y + shell.h - top" in library
 assert "s.press({Key::r1, Key::r1});" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
