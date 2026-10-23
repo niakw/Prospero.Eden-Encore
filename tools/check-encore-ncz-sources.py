@@ -65,6 +65,8 @@ assert "game.format = format;" in library
 formats=(".nsp",".xci",".nsz",".xcz",".nro",".nso",".nca",".nax",".kip")
 counter=library.split("const int regular = CountFiles(",1)[1].split(");",1)[0]
 assert "const int extracted = CountExeFsFolders(roms_path);" in library
+exefs_counter = library.split("int CountExeFsFolders(", 1)[1].split("unsigned int HashPath(", 1)[0]
+assert "ListEntries(directory, true, ok)" in exefs_counter
 assert "info.games = regular < 0 || extracted < 0 ? -1 : regular + extracted;" in library
 for extension in formats:
     assert '"'+extension+'"' in counter, ("format missing from folder count",extension)
