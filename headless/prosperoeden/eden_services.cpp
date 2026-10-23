@@ -367,7 +367,7 @@ bool CacheNlibJpeg(const std::string& endpoint, const std::string& path,
 // Optional real retail case images from the build-time filtered public catalog.
 // No full metadata archive, credentials, HTTP or XML parsing on the console.
 // Matching is exact and skips colliding release editions at index-generation time.
-using BoxIndex = std::unordered_map<std::string, std::array<std::vector<std::string>, 3>>;
+using BoxIndex = std::unordered_map<std::string, std::array<std::vector<std::string>, 6>>;
 
 std::string CaseKey(const std::string& title) {
     std::string key;
@@ -486,7 +486,7 @@ const BoxIndex& RetailCaseIndex() {
         }
         std::string row;
         while (std::getline(input, row) && items.size() < 20000) {
-            if (row.empty() || row[0] == '#' || row.size() > 2600) continue;
+            if (row.empty() || row[0] == '#' || row.size() > 5000) continue;
             const auto a = row.find('\t');
             if (a == std::string::npos) continue;
             const auto b = row.find('\t', a + 1);
@@ -496,7 +496,18 @@ const BoxIndex& RetailCaseIndex() {
             const std::string front = row.substr(a + 1, b - a - 1);
             const std::string back = row.substr(b + 1,
                 c == std::string::npos ? c : c - b - 1);
-            const std::string spine = c == std::string::npos ? "-" : row.substr(c + 1);
+            const auto d = c == std::string::npos ? c : row.find('\t', c + 1);
+            const std::string spine = c == std::string::npos ? "-" :
+                row.substr(c + 1, d == std::string::npos ? d : d - c - 1);
+            std::array<std::string, 3> scene_columns{"-", "-", "-"};
+            std::size_t start = d;
+            for (std::string& scene : scene_columns) {
+                if (start == std::string::npos) break; // v4 index remains supported
+                const std::size_t end = row.find('\t', start + 1);
+                scene = row.substr(start + 1,
+                    end == std::string::npos ? end : end - start - 1);
+                start = end;
+            }
             if (title.empty() || title.size() > 170) continue;
             const auto split_candidates = [](const std::string& value) {
                 std::vector<std::string> found;
@@ -522,8 +533,14 @@ const BoxIndex& RetailCaseIndex() {
             if ((front != "-" && fronts.empty()) ||
                 (back != "-" && backs.empty()) ||
                 (spine != "-" && spines.empty())) continue;
-            items.emplace(title, std::array<std::vector<std::string>, 3>{
-                std::move(fronts), std::move(backs), std::move(spines)});
+            std::array<std::vector<std::string>, 3> scenes{};
+            for (int i = 0; i < 3; ++i)
+                scenes[i] = split_candidates(scene_columns[i]);
+            // Invalid optional scene metadata must never invalidate valid
+            // original front/back/spine entries from the same row.
+            items.emplace(title, std::array<std::vector<std::string>, 6>{
+                std::move(fronts), std::move(backs), std::move(spines),
+                std::move(scenes[0]), std::move(scenes[1]), std::move(scenes[2])});
         }
         std::fprintf(stderr, "EDEN_CASE_INDEX status=%s entries=%zu path=%s\n",
                      opened ? "loaded" : "missing", items.size(), catalog_path.c_str());
@@ -536,6 +553,29 @@ std::string CaseFacePath(std::uint64_t title_id, const char* side) {
     char id[17]{};
     std::snprintf(id, sizeof(id), "%016llX", static_cast<unsigned long long>(title_id));
     return Eden::CoversDir() + "/box-" + side + "-" + id + ".tga";
+}
+
+// Scenic images are actual LaunchBox screenshots/fanart, cached separately
+// from genuine physical box scans. Original covers never read these paths.
+std::vector<std::string> CachedCaseScenes(std::uint64_t title_id) {
+    std::vector<std::string> scenes;
+    if (title_id == 0) return scenes;
+    for (int i = 1; i <= 3; ++i) {
+        const std::string side = "scene-" + std::to_string(i);
+        const std::string path = CaseFacePath(title_id, side.c_str());
+        if (ValidNlibTga(path)) scenes.push_back(path);
+    }
+    return scenes;
+}
+
+// Nlib screenshots are retained first; independent LaunchBox pictures fill
+// empty slots and support the rear collage, never the actual back scan.
+void AppendCaseScenes(std::vector<std::string>& screens, std::uint64_t title_id) {
+    for (const auto& scene : CachedCaseScenes(title_id)) {
+        if (screens.size() >= 6) break;
+        if (std::find(screens.begin(), screens.end(), scene) == screens.end())
+            screens.push_back(scene);
+    }
 }
 
 bool FetchCaseFace(const std::vector<std::string>& candidates,
@@ -645,10 +685,11 @@ unsigned EnsureRetailCase(std::uint64_t title_id, const std::string& name,
         return 0;
     }
     std::fprintf(stderr,
-                 "EDEN_CASE_LOOKUP title=%016llX status=match front=%zu back=%zu spine=%zu\n",
+                 "EDEN_CASE_LOOKUP title=%016llX status=match front=%zu back=%zu spine=%zu scenes=%zu/%zu/%zu\n",
                  static_cast<unsigned long long>(title_id),
                  selected->second[0].size(), selected->second[1].size(),
-                 selected->second[2].size());
+                 selected->second[2].size(), selected->second[3].size(),
+                 selected->second[4].size(), selected->second[5].size());
     // Both Home and Library may enrich the same title at once. Serialize
     // background fetches so the second worker reads the first worker's
     // finished cache, but never hold launcher teardown hostage to this wait.
@@ -676,7 +717,7 @@ unsigned EnsureRetailCase(std::uint64_t title_id, const std::string& name,
     const bool both_faces_cached_at_start =
         ValidNlibTga(CaseFacePath(title_id, "front")) &&
         ValidNlibTga(CaseFacePath(title_id, "back"));
-    for (int side = 0; side < 3; ++side) {
+    for (int side = 0; side < 6; ++side) {
         if (cancel && cancel->load(std::memory_order_acquire)) {
             // Aborted title switch must not lock the next attempt out for
             // five minutes after a partial or cancelled CDN transaction.
@@ -691,12 +732,15 @@ unsigned EnsureRetailCase(std::uint64_t title_id, const std::string& name,
             (!ValidNlibTga(CaseFacePath(title_id, "front")) ||
              !ValidNlibTga(CaseFacePath(title_id, "back")))) {
             all_ready = false;
-            break;
+            continue; // still fetch real scenic media for the missing back
         }
+        if (side >= 3 && ValidNlibTga(CaseFacePath(title_id, "back")))
+            continue; // authentic back never needs a constructed collage
         const auto candidates = LocaleCaseCandidates(selected->second[side], language_choice, side);
         if (candidates.empty()) continue;
-        const std::string path = CaseFacePath(
-            title_id, side == 0 ? "front" : side == 1 ? "back" : "spine");
+        const char* const names[] = {
+            "front", "back", "spine", "scene-1", "scene-2", "scene-3"};
+        const std::string path = CaseFacePath(title_id, names[side]);
         // User-provided original scans win. Cached low-resolution CDN scans
         // may be upgraded when a better ranked alternative becomes available.
         const std::string base = path.substr(0, path.size() - 4);
@@ -1591,6 +1635,7 @@ std::vector<pe::ui::Game> EdenServices::games(const std::atomic<bool>* cancel) {
                 if (!nlib.icon.empty()) game.cover = nlib.icon;
                 game.hero = nlib.hero;
                 game.screenshots = nlib.screenshots;
+                AppendCaseScenes(game.screenshots, game.title_id);
                 game.max_players = nlib.max_players;
                 if (!nlib.name.empty()) game.name = nlib.name;
                 game.intro = nlib.intro;
@@ -1677,6 +1722,9 @@ pe::ui::Game EdenServices::enrich_game_media(pe::ui::Game game,
         const auto box = box_art(game.title_id);
         if (!box.front.empty()) game.box_front = box.front;
         if (!box.back.empty()) game.box_back = box.back;
+        AppendCaseScenes(game.screenshots, game.title_id);
+        if (game.case_artwork_changed & (8u | 16u | 32u))
+            game.artwork_changed = true; // refresh GPU copies after replacement
     }
     return game;
 }
