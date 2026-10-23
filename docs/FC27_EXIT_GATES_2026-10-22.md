@@ -708,3 +708,33 @@ F07 : aucun test console ni promesse de gain de FPS ne découle de la
 réussite éventuelle du build. L'ajout du témoin F03 de vues NULL transitoires
 sous deux slots TIC protège la sélection texture quand le GPU cache vient
 à peine de recréer une vue valide.
+
+
+## 23 octobre — correctifs de prévalidation et reprise du build PS5
+
+La qualification native lancée sur `10991c3` a été bloquée **avant** le
+compilateur PS5 par quatre assertions restées sur des contrats abandonnés :
+la silhouette de jaquette à largeur variable, le test XCI-only de glyphes,
+`PreflightLargeGuestDraw` après l'introduction du contrôle exact, et
+la vérification de l'attente du ring descripteur. Les vérifications ont été
+réalignées sur les **sources actives** sans suppression des verrous, des
+synchronisations de textures ou du repli de taille historique.
+
+La prévalidation a également identifié un défaut réel de reproductibilité
+M07 : la variante DEV CPU→GPU différée n'avait pas hérité des protections
+de clipping GPU du rasterizer natif. Elle est maintenant reconstruite à
+partir de celui-ci en ne conservant que ses deux modifications de pont.
+Cette variante **reste désactivée** sur les builds normaux.
+
+Enfin, `eden-ps5-feedback-loop-no-depth-fastpath.patch` (modifié le
+23 octobre) et l'unité maintenue `eden-backports/src/video_core/texture_cache/texture_cache.h`
+(dernière matérialisation datant d'octobre 11) divergeaient : le patch
+ajoutait le cas `views.empty()`, absent de la source possédée.
+Le bloc est maintenant intégré, et `manifest.json` verrouille ses
+nouvelles empreintes **SHA-256 source + patch**, sans désactiver le
+rejeu octet à octet de `install-vendored-eden-backports.py --replay`.
+
+**Build [full-build] demandé à nouveau** avec cette base corrigée. La
+preuve attendue est la compilation/link native de ce SHA et la sélection
+des sources actualisées, pas un nouveau test de FC27 sur matériel.
+**F01–F06 demeurent ouverts (0/6)** et F07 demeure séparé.
