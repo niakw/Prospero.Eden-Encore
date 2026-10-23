@@ -532,3 +532,14 @@ The `[preview-ready]` workflow must prove pixel rendering, including
 missing retail-art front/back, before calling these visual changes
 verified. The `[full-build]` workflow separately checks PS5 compilation.
 A host OpenGL screenshot is **not** a device gameplay qualification.
+
+
+### 23 October — render-gate correction
+
+A real `[preview-ready]` run exposed an existing case-sensitive
+assertion error in `check-launch-case-artwork.py`: the footer text
+was lowercased but the split marker `const Rect footer` was not.
+The source contract is now corrected to `const rect footer`. This
+was a test bug, not evidence of missing back-cover pixels.
+The C++/OpenGL case rendering remains the acceptance criterion;
+the next host preview should advance past the source-only gate.
