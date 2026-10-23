@@ -257,6 +257,10 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
     launch_composed_back_ = 0;
     launch_composed_front_attempted_ = false;
     launch_composed_back_attempted_ = false;
+    launch_composed_front_failures_ = 0;
+    launch_composed_back_failures_ = 0;
+    launch_composed_front_retry_after_ = 0.0f;
+    launch_composed_back_retry_after_ = 0.0f;
     launch_case_game_ = Game{};
     launch_case_game_.name = title;
     launch_case_game_.cover = cover;
@@ -913,7 +917,12 @@ void Launcher::draw_launch(Canvas &c)
         std::uint32_t& page = rear ? launch_composed_back_ : launch_composed_front_;
         bool& attempted = rear ? launch_composed_back_attempted_
                                : launch_composed_front_attempted_;
+        unsigned& failures = rear ? launch_composed_back_failures_
+                                  : launch_composed_front_failures_;
+        float& retry_after = rear ? launch_composed_back_retry_after_
+                                  : launch_composed_front_retry_after_;
         if (!retail.empty() || page != 0 || attempted) return;
+        if (seconds < retry_after) return;
         // Last-resort blank ink is permitted only after giving asynchronous
         // images time to decode; it must never win the first-frame race.
         const bool allow_missing = seconds >= 4.0f;
@@ -930,6 +939,16 @@ void Launcher::draw_launch(Canvas &c)
         print.pop_transform();
         page = c.textures.render_case_page(
             print, c.fonts.font, c.fonts.texture, paper_w, paper_h);
+        if (page == 0) {
+            // A transient incomplete framebuffer must not freeze this face
+            // forever as a plain fallback. At most three actual GL attempts
+            // are made per side and title, spaced across separate UI frames.
+            ++failures;
+            if (failures < 3u) {
+                attempted = false;
+                retry_after = seconds + 0.25f * static_cast<float>(failures);
+            }
+        }
         if (page != 0)
             sys::log("EDEN_CASE_COMPOSE title=%016llX side=%s status=ready page=%u",
                      static_cast<unsigned long long>(launch_title_id_),

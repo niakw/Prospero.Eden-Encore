@@ -91,6 +91,23 @@ assert draw.index("if (use_composed)") < draw.index("} else if (artwork.texture 
 assert "attempted = true;" in draw
 assert "launch_composed_front_attempted_ = false;" in launch_setup
 assert "launch_composed_back_attempted_ = false;" in launch_setup
+# A failed compositor FBO can be transient. Each missing physical face may
+# retry at most twice after its initial failure; neither a retail scan nor a
+# successful composed face is ever regenerated inside the 60 Hz draw loop.
+for name in ("front", "back"):
+    assert f"launch_composed_{name}_failures_ = 0;" in launch_setup
+    assert f"launch_composed_{name}_retry_after_ = 0.0f;" in launch_setup
+    assert f"unsigned launch_composed_{name}_failures_ = 0;" in header
+    assert f"float launch_composed_{name}_retry_after_ = 0.0f;" in header
+for marker in (
+    "if (seconds < retry_after) return;",
+    "if (page == 0) {",
+    "++failures;",
+    "if (failures < 3u)",
+    "attempted = false;",
+    "retry_after = seconds + 0.25f * static_cast<float>(failures);",
+):
+    assert marker in draw, ("bounded transient compositor retry missing", marker)
 assert "const std::string& scan = back ? launch_box_back_ : launch_box_front_;" in draw
 assert "std::vector<std::string> launch_screenshots_;" in header
 assert "constexpr float kCaseBackHold = 4.50f;" in theme
