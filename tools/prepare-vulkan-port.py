@@ -654,12 +654,15 @@ adapt('src/video_core/renderer_vulkan/vk_update_descriptor.h',
         upload_start = payload_cursor;
     }
     template <typename WaitWorker>
-    [[nodiscard]] bool PreflightGuestDraw(WaitWorker&& wait_worker) {
-        // The common graphics descriptor reservation is at most 0x400
-        // entries. Overflow waits are not allowed to hold both cache locks.
-        constexpr size_t ordinary_reserve = 0x400;
+    [[nodiscard]] bool PreflightGuestDraw(WaitWorker&& wait_worker,
+                                          size_t required_entries = 0x400) {
+        // Preserve the old default for any other caller. Native draw/compute
+        // supply the exact positive descriptor count passed to Acquire().
+        const size_t reserve = required_entries != 0 ? required_entries : 0x400;
+        if (reserve >= frame_payload_size)
+            return false;
         const size_t used = static_cast<size_t>(payload_cursor - payload_start);
-        if (used + ordinary_reserve < frame_payload_size)
+        if (used + reserve < frame_payload_size)
             return false;
         wait_worker();
         payload_cursor = payload_start;
