@@ -85,6 +85,8 @@ cmake --build "$scratch/build" --target eden-headless eden-romfs-check eden-devi
 python3 -B "$root/tools/check-sparse-header.py" "$scratch/build"
 python3 -B "$root/tools/check-heap-growth.py"
 python3 -B "$root/tools/check-crash-report.py"
+python3 -B "$root/tools/check-encore-ncz-sources.py"
+python3 -B "$root/tools/check-ncz.py"
 "$scratch/build/bin/eden-scalar-check"
 "$scratch/build/bin/eden-memory-check"
 python3 -B "$root/headless/check_audio_shutdown.py" "$scratch/build/headless/core.cpp" "$scratch/source/src/core/core.cpp"
