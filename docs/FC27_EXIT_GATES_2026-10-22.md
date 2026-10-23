@@ -257,3 +257,33 @@ Le témoin `tools/check-native-hardware-composer-liveness-host.py` compile **les
 ## F03/F05 — 23 octobre : borne extrême de cadence du compositeur
 
 Dans `NormalizeSwapInterval`, l'extension des intervalles négatifs évaluait `1 - swap_interval` en entier signé **avant** conversion flottante. Pour `INT32_MIN`, cela débordait en C++ (UBSan). La conversion a été déplacée avant la soustraction, sans changer le comportement des intervalles usuels ; la transformation est désormais contrôlée octet par octet depuis la source épinglée. Le rejeu natif teste `INT32_MIN`, `-1` et `0` en `-O0`/`-O2`, et doit faire échouer l'ancienne fonction sous UBSan. L'installateur accepte exactement la version maintenue précédente pour mettre à jour les staging temporaires, sans accepter de variante inconnue. **Il s'agit d'une correction de sûreté du calendrier de présentation, pas d'une preuve de gain de FPS ni d'une clôture F03/F05.**
+
+
+## F05 — 23 octobre : un seul affichage par identifiant
+
+`SurfaceFlinger::AddDisplay` créait auparavant une nouvelle pile à chaque appel,
+même pour un `display_id` déjà présent. Or `FindDisplay` retourne la première
+pile, tandis que `RemoveDisplay` efface toutes celles portant cet identifiant
+après n'avoir libéré que les buffers de la première. Cela pouvait produire un
+état de propriété incohérent en cas de création en double.
+
+La source maintenue refuse désormais une création répétée avant
+`emplace_back`, en conservant l'ordre et le comportement des identifiants
+distincts. L'oracle `install-vendored-surface-lifecycle.py` vérifie le
+nouveau garde-fou et n'autorise que les empreintes exactes des versions
+maintenues précédentes lors d'un staging. Le test hôte
+`check-surface-lifecycle.py` exerce deux créations identiques, l'attachement
+d'une couche, son unique libération et la création d'autres affichages.
+
+**Commits de ce sous-chemin :** `4cb3fcf` (source), `c955eea` et
+`74229dc` (oracles/tests), `767a5d5`, `1475299` et
+`8d45284` (migration et corrections de témoin). Un témoin C++ local
+couvrant le scénario de doublon a réussi sous UBSan en `-O0`/`-O2`.
+La validation complète du test source-extrait, la prévalidation et le
+build natif doivent encore être vérifiés pour le dernier HEAD ; ne pas
+confondre le témoin local avec une preuve CI.
+
+**Portée :** sûreté d'un cas de duplication des piles d'affichage ;
+aucune trace historique FC27 n'établit que cette duplication se produisait.
+Aucun gain de FPS, de fraîcheur du HUD ou de déblocage du match n'est
+revendiqué. **F05 reste ouvert** jusqu'au rejeu IPC→buffers→fences→présentation.
