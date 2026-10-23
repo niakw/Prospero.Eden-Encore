@@ -23,7 +23,7 @@ jobs:
         with:
           persist-credentials: true
 
-      - name: Install Mesa and screenshot dependencies
+      - name: Install software renderer and screenshot dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential python3-pil libegl1-mesa-dev libgl1-mesa-dev libstb-dev nlohmann-json3-dev mesa-utils libgl1-mesa-dri ca-certificates git pkg-config
