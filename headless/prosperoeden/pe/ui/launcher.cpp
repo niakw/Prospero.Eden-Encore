@@ -252,6 +252,12 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
     selected_game_ = services_.game_path(file);
     launch_title_ = title;
     launch_cover_ = cover;
+    textures_.clear_case_pages();
+    launch_composed_front_ = 0;
+    launch_composed_back_ = 0;
+    launch_case_game_ = Game{};
+    launch_case_game_.name = title;
+    launch_case_game_.cover = cover;
     launch_hero_.clear();
     launch_description_.clear();
     launch_screenshots_.clear();
@@ -261,6 +267,7 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
     std::uint64_t title_id = 0;
     for (const Game& game : games_) {
         if (game.file != file) continue;
+        launch_case_game_ = game;
         title_id = game.title_id;
         launch_description_ = !game.description.empty() ? game.description : game.intro;
         launch_hero_ = game.hero;
@@ -288,6 +295,17 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
     }
     if (launch_hero_.empty() && !launch_screenshots_.empty())
         launch_hero_ = launch_screenshots_.front();
+    // Home and Recent launch routes may not have a fully populated Library
+    // snapshot. Use their actual cached metadata, never an invented scan.
+    launch_case_game_.name = title;
+    launch_case_game_.cover = cover;
+    launch_case_game_.hero = launch_hero_;
+    launch_case_game_.screenshots = launch_screenshots_;
+    launch_case_game_.description = launch_description_;
+    if (!launch_case_game_.cover.empty())
+        (void)textures_.cover(launch_case_game_.cover, 760.0f);
+    for (const auto& shot : launch_case_game_.screenshots)
+        if (!shot.empty()) (void)textures_.cover(shot, 760.0f);
     if (!launch_hero_.empty())
         (void)textures_.cover(launch_hero_, 1920.0f);
 
