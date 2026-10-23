@@ -1,4 +1,5 @@
 #include "metadata_bridge.h"
+#include "game_files.h"
 #include "assets_dir.h"
 #include "diagnostics.h"
 #include "glyph_version.h"
@@ -163,11 +164,11 @@ uint64_t eden_game_title_id(const char* rom_path) {
     std::string path = rom_path;
     std::transform(path.begin(), path.end(), path.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    if (path.ends_with(".xci")) {
+    if ((path.ends_with(".xci") || path.ends_with(".xcz"))) {
         FileSys::XCI image(file);
         return image.GetStatus() == Loader::ResultStatus::Success ? image.GetProgramTitleID() : 0;
     }
-    if (path.ends_with(".nsp")) {
+    if ((path.ends_with(".nsp") || path.ends_with(".nsz"))) {
         FileSys::NSP package(file);
         return package.GetStatus() == Loader::ResultStatus::Success ? package.GetProgramTitleID() : 0;
     }
@@ -186,7 +187,7 @@ int eden_extract_game_metadata(const char* rom_path, const char* keys_dir,
     std::string path = rom_path;
     std::transform(path.begin(), path.end(), path.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    const bool xci = path.size() >= 4 && path.substr(path.size() - 4) == ".xci";
+    const bool xci = (path.ends_with(".xci") || path.ends_with(".xcz"));
     const auto romfs = OpenControlRomFs(file, xci);
     if (!romfs) return 0;
     GameLanguages()[rom_path] = ReadLanguages(romfs);
@@ -213,7 +214,7 @@ uint32_t eden_game_supported_languages(const char* rom_path, const char* keys_di
         std::string path = rom_path;
         std::transform(path.begin(), path.end(), path.begin(),
                        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        const auto romfs = OpenControlRomFs(file, path.ends_with(".xci"));
+        const auto romfs = OpenControlRomFs(file, (path.ends_with(".xci") || path.ends_with(".xcz")));
         if (!romfs) return 0;
         return GameLanguages()[rom_path] = ReadLanguages(romfs);
     } catch (const std::exception& error) {
@@ -341,7 +342,7 @@ int eden_game_glyph_display_version(const char* rom_path, const char* keys_dir,
             std::string extension = std::filesystem::path(rom_path).extension().string();
             std::transform(extension.begin(), extension.end(), extension.begin(),
                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-            const bool is_xci = extension == ".xci";
+            const bool is_xci = (extension == ".xci" || extension == ".xcz");
             const auto control = OpenControlRomFs(file, is_xci);
             version = ReadGlyphDisplayVersion(control);
         }
