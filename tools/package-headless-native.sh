@@ -108,7 +108,14 @@ import sys
 source, destination = map(Path, sys.argv[1:3])
 destination.write_bytes(base64.b64decode(source.read_text().strip(), validate=True))
 PY_FIXED_CASE
-    "${image_convert[@]}" "$unpacked" -type TrueColorAlpha \
+    fixed_ink=()
+    if [[ $stem == switch-rear-footer ]]; then
+        # Preserve the gold seal of the user's original printed template.
+        # Apply only to ink inside the immutable seal rectangle.
+        fixed_ink=(-colorspace sRGB -region '82x80+182+195'
+                   -fill '#af884c' -opaque black +region)
+    fi
+    "${image_convert[@]}" "$unpacked" "${fixed_ink[@]}" -type TrueColorAlpha \
         -define tga:bits-per-pixel=32 -compress None "$target"
     python3 - "$target" <<'PY_FIXED_TGA'
 from pathlib import Path
