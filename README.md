@@ -78,7 +78,9 @@ Encore is **not** an official upstream release or a promise that every newer ups
 | Library game containers | **NSP** (`.nsp`), **XCI** (`.xci`) | Existing game discovery and launch |
 | Compressed game containers | **NSZ** (`.nsz`), **XCZ** (`.xcz`) | Experimental NCZ reader, games, updates and DLC; native and hardware qualification pending |
 | Internal executable compression | **LZ4**, **ZBIC / zstd** | Existing NSO segment decoding; **not** game-file extensions |
-| Direct-loader files | **NRO, NSO, NCA, NAX, KIP** | Selectable in the Library, but only boot when their contents are valid for the underlying Eden loader. Deconstructed directories remain a separate internal loader type. |
+| Direct-loader files | **NRO, NSO, NCA, NAX, KIP** | Selectable; successful execution depends on complete compatible contents. |
+
+**Extracted ExeFS directories** are also discovered when `roms/<title>/` contains real, non-symlinked `main` and `main.npdm` files. They appear as `EXEFS` in the Library; this is a directory layout, not another ROM extension.
 
 NCZ block compression permits random reads directly from the compressed file. Solid compression may unpack one running title to `/data/prosperoeden/user/cache/nsz/`; this can require approximately the full uncompressed game size. Outside a running game, bounded, validated pieces are reused for metadata reads. A developer build that contains the feature is not a console-tested release.
 
