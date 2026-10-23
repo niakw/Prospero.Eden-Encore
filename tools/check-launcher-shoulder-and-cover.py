@@ -51,10 +51,13 @@ contain = method(library, "void case_art_contain(", "void flat_front_fallback(")
 for token in ("const float aspect", "fitted.h = panel.w / aspect;",
               "fitted.w = panel.h * aspect;", "c.list.image(art.texture, fitted"):
     assert token in contain, token
+# An original square icon is cropped to full-bleed only when no scenic
+# artwork exists; never place a floating card within a tall retail face.
+assert 'else if (!game.cover.empty()) {' not in front
 # Front artwork must cover the whole paper; a fixed square label sits
 # exactly on the top-left corner and is never drawn on an original scan.
 for token in ("const bool scenic", "cover_crop(c, painting, r, 0.0f, 0.0f);",
-              "case_art_contain(c, game.cover,", "const Rect logo{r.x, r.y, logo_w,",
+              "const Rect logo{r.x, r.y, logo_w,",
               "c.textures.switch_logo() != 0"):
     assert token in front, token
 # Distinct back scenes come from the cached game, while the reference
