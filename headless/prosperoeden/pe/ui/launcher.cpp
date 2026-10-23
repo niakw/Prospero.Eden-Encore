@@ -255,6 +255,8 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
     textures_.clear_case_pages();
     launch_composed_front_ = 0;
     launch_composed_back_ = 0;
+    launch_composed_front_attempted_ = false;
+    launch_composed_back_attempted_ = false;
     launch_case_game_ = Game{};
     launch_case_game_.name = title;
     launch_case_game_.cover = cover;
@@ -905,7 +907,10 @@ void Launcher::draw_launch(Canvas &c)
     // per face, only after cached input images have finished their async
     // decode; no download, CPU image synthesis or repeated FBO pass in draw().
     std::uint32_t& composed_page = back ? launch_composed_back_ : launch_composed_front_;
-    if ((scan.empty() || artwork.texture == 0) && composed_page == 0) {
+    bool& compose_attempted = back ? launch_composed_back_attempted_
+                                   : launch_composed_front_attempted_;
+    if ((scan.empty() || artwork.texture == 0) &&
+        composed_page == 0 && !compose_attempted) {
         const auto is_ready = [&](const std::string& path) {
             if (path.empty()) return true;
             const Cover media = c.textures.cover(path, 760.0f);
@@ -916,6 +921,9 @@ void Launcher::draw_launch(Canvas &c)
         for (const auto& screenshot : launch_case_game_.screenshots)
             ready = is_ready(screenshot) && ready;
         if (ready) {
+            // A failed FBO is a platform capability decision, not something
+            // to reallocate/retry on every launch-animation frame.
+            compose_attempted = true;
             constexpr float ink_scale = 1.5f;
             constexpr int paper_w = 660, paper_h = 1056;
             gfx::DrawList print;
