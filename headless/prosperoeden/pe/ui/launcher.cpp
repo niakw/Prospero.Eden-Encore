@@ -902,43 +902,47 @@ void Launcher::draw_launch(Canvas &c)
             fallback = launch_cover_;
     }
     const Cover artwork = c.textures.cover(scan.empty() ? fallback : scan, 760.0f);
-    // Compose a real paper texture from exactly the same C++ drawing code
-    // as the Library's front/back replacement. The offscreen pass runs ONCE
-    // per face, only after cached input images have finished their async
-    // decode; no download, CPU image synthesis or repeated FBO pass in draw().
-    std::uint32_t& composed_page = back ? launch_composed_back_ : launch_composed_front_;
-    bool& compose_attempted = back ? launch_composed_back_attempted_
-                                   : launch_composed_front_attempted_;
-    if (scan.empty() && composed_page == 0 && !compose_attempted) {
-        const auto is_ready = [&](const std::string& path) {
-            if (path.empty()) return true;
-            const Cover media = c.textures.cover(path, 760.0f);
-            return media.missing || (media.texture != 0 && media.age >= 0.22f);
-        };
-        bool ready = is_ready(launch_case_game_.hero) &&
-                     is_ready(launch_case_game_.cover);
-        for (const auto& screenshot : launch_case_game_.screenshots)
-            ready = is_ready(screenshot) && ready;
-        if (ready) {
-            // A failed FBO is a platform capability decision, not something
-            // to reallocate/retry on every launch-animation frame.
-            compose_attempted = true;
-            constexpr float ink_scale = 1.5f;
-            constexpr int paper_w = 660, paper_h = 1056;
-            gfx::DrawList print;
-            Canvas ink{print, c.fonts, c.textures, c.backdrop, c.time};
-            print.push_transform(ink_scale, 0.0f, 0.0f, 0.0f, 0.0f);
-            draw_composed_case_face(ink, launch_case_game_,
-                                    {0.0f, 0.0f, 440.0f, 704.0f}, back);
-            print.pop_transform();
-            composed_page = c.textures.render_case_page(
-                print, c.fonts.font, c.fonts.texture, paper_w, paper_h);
-            if (composed_page != 0)
-                sys::log("EDEN_CASE_COMPOSE title=%016llX side=%s status=ready page=%u",
-                         static_cast<unsigned long long>(launch_title_id_),
-                         back ? "back" : "front", composed_page);
-        }
-    }
+    // Warm BOTH missing faces during the initial front hold. Previous code
+    // first requested the rear's small scene textures only AFTER turning,
+    // then permanently baked a black collage because its 760px prefetch
+    // represented a DIFFERENT cache entry than the 256/512px rear panels.
+    // Pre-render each side only after the exact compositor texture buckets
+    // are decoded. Authentic scans bypass this entire path.
+    const auto prepare_case_page = [&](bool rear) {
+        const std::string& retail = rear ? launch_box_back_ : launch_box_front_;
+        std::uint32_t& page = rear ? launch_composed_back_ : launch_composed_front_;
+        bool& attempted = rear ? launch_composed_back_attempted_
+                               : launch_composed_front_attempted_;
+        if (!retail.empty() || page != 0 || attempted) return;
+        // Last-resort blank ink is permitted only after giving asynchronous
+        // images time to decode; it must never win the first-frame race.
+        const bool allow_missing = seconds >= 4.0f;
+        if (!composed_case_face_ready(c.textures, launch_case_game_,
+                                      rear, allow_missing)) return;
+        attempted = true;
+        constexpr float ink_scale = 1.5f;
+        constexpr int paper_w = 660, paper_h = 1056;
+        gfx::DrawList print;
+        Canvas ink{print, c.fonts, c.textures, c.backdrop, c.time};
+        print.push_transform(ink_scale, 0.0f, 0.0f, 0.0f, 0.0f);
+        draw_composed_case_face(ink, launch_case_game_,
+                                {0.0f, 0.0f, 440.0f, 704.0f}, rear);
+        print.pop_transform();
+        page = c.textures.render_case_page(
+            print, c.fonts.font, c.fonts.texture, paper_w, paper_h);
+        if (page != 0)
+            sys::log("EDEN_CASE_COMPOSE title=%016llX side=%s status=ready page=%u",
+                     static_cast<unsigned long long>(launch_title_id_),
+                     rear ? "back" : "front", page);
+        else
+            sys::log("EDEN_CASE_COMPOSE title=%016llX side=%s status=failed",
+                     static_cast<unsigned long long>(launch_title_id_),
+                     rear ? "back" : "front");
+    };
+    prepare_case_page(false);
+    prepare_case_page(true);
+    const std::uint32_t composed_page =
+        back ? launch_composed_back_ : launch_composed_front_;
     const bool use_composed = scan.empty() && composed_page != 0;
     const std::uint32_t visible_texture =
         use_composed ? composed_page : artwork.texture;
