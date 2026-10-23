@@ -12,6 +12,7 @@ selected=src[b:e]
 assert "pipeline->HasDescriptorEntries()" in selected
 assert selected.count("pipeline_cache.CurrentGraphicsPipeline()") == 2
 assert "guest_descriptor_queue.PreflightGuestDraw(" in selected
+assert "pipeline->DescriptorEntryReservation()))" in selected
 assert selected.index("pipeline->HasDescriptorEntries()") < selected.index("PreflightGuestDraw(")
 assert selected.index("gpu_memory->FlushCaching();") > selected.index("PreflightGuestDraw(")
 assert selected.count("GraphicsDrawDrop::NoPipeline") == 2
@@ -32,6 +33,9 @@ void RecordGraphicsDrawDrop(GraphicsDrawDrop) { ++dropped; }
 struct GraphicsPipeline {
     std::size_t entries{};
     bool HasDescriptorEntries() const noexcept { return entries != 0; }
+    std::size_t DescriptorEntryReservation() const noexcept {
+        return entries == 0 ? 0x400 : entries;
+    }
 };
 struct PipelineCache {
     GraphicsPipeline* selected{};
@@ -54,7 +58,8 @@ struct DescriptorQueue {
     bool full{};
     unsigned checks{};
     template <class F>
-    bool PreflightGuestDraw(F&& worker) {
+    bool PreflightGuestDraw(F&& worker, std::size_t required_entries) {
+        assert(required_entries != 0 && required_entries < 0x400);
         ++checks;
         if (!full) return false;
         worker();
