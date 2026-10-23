@@ -507,3 +507,40 @@ correction des textures de maillots ou du HUD. F01, F03 et F04 restent ouverts.
 ## F01 — 23 octobre : hypothèse des prévalidations 1024 rejetée
 
 La revue de `GuestDescriptorQueue::PreflightLargeGuestDraw` révèle un retour immédiat lorsque `entries <= 0x400`. `DescriptorEntryReservation()` renvoie précisément `0x400` pour un shader sans descripteur. Les six précontrôles supplémentaires ne pouvaient donc pas provoquer le `WaitWorker` soupçonné. Les changements d'optimisation correspondants ont été **annulés** après cette contre-vérification, et le témoin reposant sur cette fausse hypothèse retiré de CI. Aucun gain de FPS ni de contention n'est revendiqué sur cette piste ; F01 reste ouvert.
+
+
+## F01 — 23 octobre : précontrôle exact des petits descripteurs après resélection
+
+**Défaut établi dans la logique du code :** `UpdateDescriptorQueue::Acquire`
+attend le worker lorsque `used + required_entries >= frame_payload_size`.
+Cependant, `PreflightLargeGuestDraw` ignorait toute réservation
+`entries <= 0x400`, même lorsqu'une attente était nécessaire. Cela
+pouvait laisser un nouveau shader à petits descripteurs découvert
+**après un premier drain et une resélection de pipeline** arriver à
+`Acquire` sous le double verrou GPU et y déclencher `WaitWorker`.
+
+Une première hypothèse, selon laquelle les shaders sans descripteurs
+attendaient inutilement, a été réfutée : leur nombre de secours
+`0x400` était explicitement ignoré par le précontrôle d'origine.
+Cette modification a été annulée, avec retrait de son test invalide.
+
+Le correctif retenu est différent : `PreflightExactGuestDraw`
+reproduit maintenant la condition exacte d'`Acquire` pour **tout
+nombre positif** d'entrées inférieur à la taille de la file. Il est
+appelé sur trois sites graphiques et trois sites compute,
+**uniquement si `HasDescriptorEntries()` est vrai**, avant de prendre
+les mutex des caches. Les changements sont synchronisés dans
+`vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp` et
+`tools/prepare-vulkan-port.py` ; le test de provenance du générateur
+doit empêcher le staging d'une ancienne implémentation.
+
+**Témoin :** `tools/check-ps5-exact-descriptor-preflight-host.py`
+extrait la méthode exacte issue du générateur et les six conditions
+C++ maintenues. Il vérifie le seuil `Acquire` sur une petite file,
+le contre-exemple historique (`4095/4096` entrées utilisées +
+`1` entrée demandée), et les resélections vers un shader vide
+ou de grande taille. Il est inscrit au fast gate hôte.
+**Résultat d'exécution CI/native non confirmé** au moment de cette
+mise à jour. Le cas reproduit est une possibilité de synchronisation
+sous verrou ; les anciennes traces de FC27 ne permettent pas
+d'attribuer un pic précis à ce chemin. **F01 reste ouvert.**
