@@ -51,6 +51,11 @@ struct Canvas
     float time = 0.0f; // seconds since the launcher appeared
 };
 
+// Print a metadata-based replacement jacket when a real front/back scan is
+// unavailable. The same native composition is used on Library sleeves and
+// in the launcher's 3D case (rendered once to a temporary GL texture).
+void draw_composed_case_face(Canvas &c, const Game &game, const Rect &paper, bool rear);
+
 // ---- text ----
 // Sizes are the design's: text is drawn at text_size(size), staying centred on its line.
 float text(Canvas &c, std::string_view value, float x, float baseline, float size, Color color,
