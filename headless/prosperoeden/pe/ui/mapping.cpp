@@ -80,9 +80,10 @@ void Launcher::press_mapping(Key key)
         cue(Cue::back);
         return;
     }
-    if (key == Key::up || key == Key::down)
+    if (key == Key::up || key == Key::down ||
+        key == Key::l1 || key == Key::r1)
     {
-        if (mapping_rows_.move(key == Key::down ? 1 : -1))
+        if (mapping_rows_.move(key == Key::down || key == Key::r1 ? 1 : -1))
         {
             message_.clear();
             cue(Cue::focus);
