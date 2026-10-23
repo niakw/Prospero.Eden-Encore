@@ -4,6 +4,7 @@
 
 #include "pe/ui/launcher.hpp"
 #include "pe/ui/video_presets.hpp"
+#include "pe/ui/case_media_selection.hpp"
 
 #include "pe/core/log.hpp"
 
@@ -142,18 +143,18 @@ void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
                               std::max(8.0f, r.h - brand_h - title_h - margin * 2.0f)};
         case_art_contain(c, game.cover, icon_panel);
     }
-    // A secondary real screenshot improves a missing poster without ever
-    // presenting one repeated screenshot as two independent scenes.
-    const std::string& secondary = game.screenshots.size() > 1
-                                      ? game.screenshots[1]
-                                      : !game.screenshots.empty()
-                                            ? game.screenshots.front()
-                                            : game.cover;
-    if (has_landscape && !secondary.empty() && secondary != painting &&
-        r.h >= 220.0f) {
+    // Choose a genuinely independent second scene across the entire
+    // cached screenshot set, including indexes 2+. If only a distinct
+    // square icon exists, preserve its aspect ratio in the printed panel.
+    const std::string* secondary =
+        case_media::FrontAlternate(painting, game.cover, game.screenshots);
+    if (has_landscape && secondary != nullptr && r.h >= 220.0f) {
         const Rect action{r.x + 2.0f, r.y + r.h * 0.64f,
                           r.w - 4.0f, r.h * 0.16f};
-        cover_crop(c, secondary, action, 0.0f, 0.0f);
+        if (*secondary == game.cover)
+            case_art_contain(c, *secondary, action);
+        else
+            cover_crop(c, *secondary, action, 0.0f, 0.0f);
         c.list.gradient_rect({action.x, action.y - 2.0f, action.w, 2.0f},
                              0.0f, Color::rgb(0xf3f5f8, 0.53f),
                              Color::rgb(0xf3f5f8, 0.53f));
@@ -201,15 +202,12 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
     const float gap = std::max(2.0f, r.w * 0.012f);
     const float row_y = r.y + r.h * 0.39f;
     const float row_h = r.h * 0.18f;
-    const std::string& shot_a = !game.screenshots.empty()
-                                    ? game.screenshots.front() : game.cover;
-    const std::string& shot_b = game.screenshots.size() > 1
-                                    ? game.screenshots[1] : game.cover;
-    // Only independent scenes count as back-cover captures: a single Nlib
-    // image must not be copied into the two separate screenshot windows.
-    const std::string* first = !shot_a.empty() && shot_a != hero ? &shot_a : nullptr;
-    const std::string* second = !shot_b.empty() && shot_b != hero &&
-                                (!first || shot_b != *first) ? &shot_b : nullptr;
+    // Two independent images from the full cached screenshot collection.
+    // If the feature art is screenshots[0], allow screenshots[2+] to
+    // provide the two lower panels instead of dropping them entirely.
+    const auto shots = case_media::BackScenes(hero, game.cover, game.screenshots);
+    const std::string* first = shots[0];
+    const std::string* second = shots[1];
     if (first && second) {
         const float shot_w = (r.w - gap * 3.0f) * 0.5f;
         cover_crop(c, *first, {r.x + gap, row_y, shot_w, row_h}, 0.0f, 0.0f);
