@@ -102,9 +102,10 @@ is preferable for large games on space-constrained consoles.
 
 **Format distinction:** NSP/XCI/NSZ/XCZ are game containers. **ZBIC,
 zstd and LZ4** are executable/NCZ compression methods, not standalone game
-file extensions. Eden also recognizes some NRO, NCA, NSO, NAX, KIP and
-deconstructed-directory input types internally; Encore does not currently
-treat all of these as standard Library entries.
+file extensions. The Library picker also accepts NRO, NCA, NSO, NAX and KIP
+files through Eden's direct loaders, but they are not guaranteed to be
+complete bootable games. Deconstructed-directory input remains a separate
+internal loader type.
 
 The program does not provide games, proprietary keys or firmware.
 
