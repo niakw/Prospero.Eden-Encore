@@ -144,7 +144,7 @@ for stem, wh, digest in (
 ):
     packed = (root / f"headless/prosperoeden/ui/art/{stem}.png.b64").read_text().strip()
     raw = base64.b64decode(packed, validate=True)
-    assert raw[:8] == b"\\x89PNG\\r\\n\\x1a\\n"
+    assert raw[:8] == bytes((137, 80, 78, 71, 13, 10, 26, 10))
     assert struct.unpack(">II", raw[16:24]) == wh
     assert hashlib.sha256(raw).hexdigest() == digest, stem
 loader = (root / "headless/prosperoeden/pe/ui/textures.cpp").read_text()
