@@ -402,3 +402,42 @@ front/back jackets share those same paper-vs-plastic rules.
 Visual validation runs only with the host OpenGL renderer (front, crossing
 spine, back and Library shelf/detail/zoom); do not compile the native PS5 app
 without the user's explicit authorization.
+
+
+## Recomposition when retail front/back are absent — 23 October 2026
+
+This is **native UI composition, not AI image generation**. The user-provided
+front-logo/back-footer decomposition is a visual layout reference; no retail
+example image is copied into the app and no third-party legal footer is
+reused for another game.
+
+- **Front:** cached real hero/cover image plus optional game screenshot,
+  red format mark and a lower title band; no enlarged lonely square icon.
+- **Back:** a wide scene, two game screenshot panels where available,
+  the existing Nlib/LaunchBox game description, and a fixed neutral footer.
+  Unknown ratings, official logos, player counts, manufacturer details
+  and barcodes are never fabricated.
+- **Scan priority:** existing physical Box - Front and Box - Back scans
+  always win independently and are presented unmodified.
+- **Cost:** reuse cached game media and ordinary UI draw operations, with
+  no per-frame downloader, no generated cover files and no extra worker.
+
+This iteration covers **static Library front/back sleeves, detail and
+rear zoom**. The spinning launcher retains its existing projective
+front/back fallback. A shared native composited texture for its rotating
+face requires a separate 3D renderer adaptation: projecting planar
+2D caption overlays over a rotating box would be visually incorrect.
+
+Launcher-only L1/R1 navigation now selects Settings sections, modal
+rows, per-game settings, mod rows and controller-mapping entries without
+changing values. Existing gameplay shortcuts are untouched.
+The source regression is tools/check-launcher-shoulder-and-cover.py.
+
+## Authentic README Home screenshot
+
+The workflow .github/workflows/launcher-readme-home-screenshot.yml renders
+the actual C++/OpenGL home UI with Mesa, validates the 1920x1080 PNG,
+then commits it under assets/screenshots/encore-home.png and swaps the
+README.md and README.fr.md links together. On failure neither the
+README nor the image is changed. This is real application UI rendered
+on a host computer; it is **not** a screenshot captured on PS5.
