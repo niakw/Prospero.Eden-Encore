@@ -95,6 +95,21 @@ qualification**, and is not a claim about the current published release.
 | Cache | Small decompressed block cache | Only the currently used game's unpacked copy plus bounded metadata pieces |
 | Cancellation | Ordinary title cancellation | Touchpad + L1 cancels unpack during title loading |
 
+**Extracted ExeFS games:** a deconstructed title may instead be stored as:
+
+```text
+<storage-root>/roms/<title>/main
+<storage-root>/roms/<title>/main.npdm
+<storage-root>/roms/<title>/rtld           (when required)
+<storage-root>/roms/<title>/subsdk0        (when present)
+```
+
+Encore lists the directory as an **EXEFS** game, validates the two
+required files and launches `main` using the native extracted-directory
+loader. Do not create symlinks in this layout; incomplete modules or
+missing metadata will still prevent a game from booting. Folders outside
+`roms/` and nested game directories are not auto-discovered.
+
 The app manages solid decompression under:
 `/data/prosperoeden/user/cache/nsz/`. When a game is not running, these
 regenerable files may be removed to recover space. Do **not** remove
