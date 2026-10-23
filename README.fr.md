@@ -72,7 +72,7 @@ Encore reste un fork communautaire indépendant, et non une version officielle d
 | Jeux dans la bibliothèque | **NSP** (`.nsp`), **XCI** (`.xci`) | Détection et lancement déjà présents |
 | Jeux compressés | **NSZ** (`.nsz`), **XCZ** (`.xcz`) | Lecteur NCZ expérimental, jeux, mises à jour et DLC ; compilation native et console encore à qualifier |
 | Compression interne des exécutables | **LZ4**, **ZBIC / zstd** | Décompression des segments NSO ; **ce ne sont pas des extensions de jeux** |
-| Autres types reconnus en interne par Eden | NRO, NSO, NCA, NAX, KIP et répertoires de jeux décompressés | Présents dans le chargeur amont, mais **pas tous proposés dans la bibliothèque** |
+| Fichiers chargeables directement | **NRO, NSO, NCA, NAX, KIP** | Proposés dans la bibliothèque, mais leur lancement dépend de leur contenu et du chargeur Eden. Les répertoires décompressés restent distincts. |
 
 La compression NCZ par blocs se lit directement. Un fichier « solid » peut être décompressé temporairement dans `/data/prosperoeden/user/cache/nsz/`, ce qui nécessite de l'espace pour sa taille décompressée. La lecture des métadonnées hors jeu conserve des fragments vérifiés et bornés. Il s'agit d'un support en développement, **pas encore d'une version qualifiée sur console**.
 
