@@ -132,12 +132,12 @@ VkRect2D GetScissorState(const Maxwell& regs, size_t index, u32 up_scale = 1, u3
         const s64 scaled = static_cast<s64>(value) * static_cast<s64>(up_scale);
         if (scaled >= std::numeric_limits<s32>::min() &&
             scaled <= std::numeric_limits<s32>::max() && down_shift < 32) {
-            // Keep the prior unsigned-shift behavior for all representable
-            // scaled coordinates, including negative offsets.
-            const u32 bits = static_cast<u32>(value) * up_scale;
-            const s32 as_i32 = static_cast<s32>(bits);
+            // Preserve the original signed arithmetic right shift for
+            // negative coordinates. Shifting the unsigned bits instead turns
+            // a negative scissor offset into a large positive value.
+            const s32 as_i32 = static_cast<s32>(scaled);
             const s64 adjustment = (up_scale >> down_shift) == 0 ? as_i32 % 2 : 0;
-            const s64 shifted = static_cast<s32>(bits >> down_shift);
+            const s64 shifted = static_cast<s64>(as_i32 >> down_shift);
             return bounded_s32(value < 0 ? (std::min)(shifted - adjustment, s64{-1})
                                          : (std::max)(shifted + adjustment, s64{1}));
         }
