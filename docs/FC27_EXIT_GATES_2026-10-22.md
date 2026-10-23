@@ -679,3 +679,32 @@ Elle ne demande **aucun test physique de FC27 ni aucun essai sur PS5**.
 Un artefact compilé prouverait la sélection du code native pour ce SHA,
 **pas** une suppression des gels, du lag ou de la corruption visuelle.
 F01–F06 restent ouverts et F07 demeure entièrement séparé.
+
+
+## 23 octobre — reprise de la compilation native après validation des prérequis
+
+Le [premier build natif déclenché au SHA `98291a0`](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40027498597)
+a exécuté les contrôles C++ JIT, paquets, formats NCZ, SDK et validation de
+l'interface, mais a **échoué avant de lancer la compilation native**.
+Trois contrats de source incompatibles avec le nouveau code ont été trouvés :
+
+1. `tools/check-nlib-ui-recovery.py` cherchait l'ancienne fonction
+   `fit_fallback_art` et interdisait `cover_crop`, alors que le front
+   reconstruit est désormais imprimé en plein format dans les deux vues.
+   Ce contrôle impose désormais le plein format et le même compositeur
+   Library/launcher.
+2. `tools/check-ps5-vulkan-cache-phases.py` attendait la déclaration
+   `PreflightDescriptorScratch() const`. Le passage en méthode mutable
+   est intentionnel : elle préalloue les vecteurs avant les deux mutex.
+   Le test vérifie la signature courante sans relâcher l'invariant
+   préallocation-avant-verrou.
+3. La politique de noms d'étapes CI refusait la mention d'une bibliothèque
+   tierce dans un workflow de capture du README. Le libellé est neutralisé
+   et la prévalidation se déclenche désormais lorsque ce workflow change.
+
+**Nouvelle compilation demandée volontairement** avec `[full-build]` afin
+de vérifier l'intégration PS5 de tous ces changements. Elle ne remplace pas
+F07 : aucun test console ni promesse de gain de FPS ne découle de la
+réussite éventuelle du build. L'ajout du témoin F03 de vues NULL transitoires
+sous deux slots TIC protège la sélection texture quand le GPU cache vient
+à peine de recréer une vue valide.
