@@ -262,6 +262,8 @@ class Launcher
     Game launch_case_game_;
     std::uint32_t launch_composed_front_ = 0;
     std::uint32_t launch_composed_back_ = 0;
+    bool launch_composed_front_attempted_ = false;
+    bool launch_composed_back_attempted_ = false;
     tween::Timer launch_;
     bool done_ = false;
     bool restart_requested_ = false;
