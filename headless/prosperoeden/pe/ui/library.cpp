@@ -220,17 +220,26 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
         if (path == game.cover) case_art_contain(c, path, area);
         else cover_crop(c, path, area, 0.0f, 0.0f);
     };
-    scene(hero, left);
-    // A square cover icon is never mistaken for a landscape screenshot.
-    // Prefer the available hero over repeating one small portrait app icon
-    // across the two scenic panels of the upper back.
-    const std::string& top_art =
-        first && *first != game.cover ? *first : hero;
-    const std::string& wide_art =
-        second && *second != game.cover ? *second :
-        first && *first != game.cover ? *first : hero;
-    scene(top_art, top_right);
-    scene(wide_art, panorama);
+    // No three copies of one banner. Three panels require THREE genuinely
+    // different cached scenic images. The ROM square icon never masquerades
+    // as a gameplay capture. When fewer images exist, use one full-bleed
+    // background and at most one genuinely different inset.
+    const bool has_first = first && *first != hero && *first != game.cover;
+    const bool has_second = second && *second != hero &&
+                            *second != game.cover && (!first || *second != *first);
+    if (has_first && has_second) {
+        scene(hero, left);
+        scene(*first, top_right);
+        scene(*second, panorama);
+    } else {
+        // Continuous upper artwork is ONE use of hero, not three copied
+        // screenshots in adjacent boxes. Description stays upper-right.
+        scene(hero, {r.x, r.y, r.w, dynamic_h});
+        if (has_first)
+            scene(*first, left);
+        else if (has_second)
+            scene(*second, left);
+    }
 
     c.list.rounded_rect(description, 0.0f, Color::rgb(0x030507, 0.98f));
     const std::string& desc = !game.description.empty() ? game.description :
