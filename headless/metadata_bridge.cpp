@@ -164,11 +164,11 @@ uint64_t eden_game_title_id(const char* rom_path) {
     std::string path = rom_path;
     std::transform(path.begin(), path.end(), path.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    if ((path.ends_with(".xci") || path.ends_with(".xcz"))) {
+    if (Eden::IsCardImageFile(path)) {
         FileSys::XCI image(file);
         return image.GetStatus() == Loader::ResultStatus::Success ? image.GetProgramTitleID() : 0;
     }
-    if ((path.ends_with(".nsp") || path.ends_with(".nsz"))) {
+    if (Eden::IsPackageFile(path)) {
         FileSys::NSP package(file);
         return package.GetStatus() == Loader::ResultStatus::Success ? package.GetProgramTitleID() : 0;
     }
@@ -187,8 +187,10 @@ int eden_extract_game_metadata(const char* rom_path, const char* keys_dir,
     std::string path = rom_path;
     std::transform(path.begin(), path.end(), path.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    const bool xci = (path.ends_with(".xci") || path.ends_with(".xcz"));
-    const auto romfs = OpenControlRomFs(file, xci);
+    // Direct NRO/NSO/NCA/NAX/KIP inputs have their own core loaders; they
+    // are not PFS/HFS containers and have no package Control RomFS.
+    if (!Eden::IsPackageFile(path) && !Eden::IsCardImageFile(path)) return 0;
+    const auto romfs = OpenControlRomFs(file, Eden::IsCardImageFile(path));
     if (!romfs) return 0;
     GameLanguages()[rom_path] = ReadLanguages(romfs);
 
@@ -214,7 +216,8 @@ uint32_t eden_game_supported_languages(const char* rom_path, const char* keys_di
         std::string path = rom_path;
         std::transform(path.begin(), path.end(), path.begin(),
                        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        const auto romfs = OpenControlRomFs(file, (path.ends_with(".xci") || path.ends_with(".xcz")));
+        if (!Eden::IsPackageFile(path) && !Eden::IsCardImageFile(path)) return 0;
+        const auto romfs = OpenControlRomFs(file, Eden::IsCardImageFile(path));
         if (!romfs) return 0;
         return GameLanguages()[rom_path] = ReadLanguages(romfs);
     } catch (const std::exception& error) {
@@ -342,8 +345,9 @@ int eden_game_glyph_display_version(const char* rom_path, const char* keys_dir,
             std::string extension = std::filesystem::path(rom_path).extension().string();
             std::transform(extension.begin(), extension.end(), extension.begin(),
                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-            const bool is_xci = (extension == ".xci" || extension == ".xcz");
-            const auto control = OpenControlRomFs(file, is_xci);
+            if (!Eden::IsPackageFile(extension) && !Eden::IsCardImageFile(extension))
+                return 0;
+            const auto control = OpenControlRomFs(file, Eden::IsCardImageFile(extension));
             version = ReadGlyphDisplayVersion(control);
         }
         if (version.empty() || version.size() >= capacity) return 0;
