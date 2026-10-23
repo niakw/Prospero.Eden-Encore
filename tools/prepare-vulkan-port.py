@@ -2623,3 +2623,79 @@ for relative, previous, corrected in (
     if text.count(previous) != 1:
         raise RuntimeError(f"Compute empty-descriptor native anchor changed: {relative}")
     selected.write_text(text.replace(previous, corrected))
+
+
+# F01/F03 native parity: strictly reconstruct the reviewed pipeline-lifetime
+# and feedback-view deltas from the immutable source generator's own output.
+# Require each exact preimage once. Never copy the tracked active file into
+# the generated tree or relax byte-for-byte validation.
+def apply_reviewed_delta(relative, old, new, label):
+    path = output / relative
+    data = path.read_text()
+    if data.count(old) != 1:
+        raise RuntimeError(f"Reviewed native Vulkan anchor drift: {label}")
+    path.write_text(data.replace(old, new, 1))
+
+pipeline = 'vk_graphics_pipeline_cost.cpp'
+mark = '''    if (shader_notify) {
+        shader_notify->MarkShaderBuilding();
+    }
+'''
+guard = '''    // Layout creation and descriptor setup below can throw before a worker
+    // owns the build. Return the shader notification if setup/queueing fails.
+    bool build_handed_off = false;
+    SCOPE_EXIT {
+        if (!build_handed_off && shader_notify) {
+            shader_notify->MarkShaderComplete();
+        }
+    };
+'''
+apply_reviewed_delta(pipeline, mark + '    for (size_t stage',
+                     mark + guard + '    for (size_t stage',
+                     'F01 shader notification RAII before metadata allocation')
+apply_reviewed_delta(pipeline,
+    '''    }};
+    if (worker_thread) {''',
+    '''    }};
+    // Complete all potentially throwing pipeline configuration before
+    // publishing the builder lambda that captures this pipeline by pointer.
+    // The worker must never see a partially constructed ConfigureFunc.
+    configure_func = ConfigureFunc(spv_modules, stage_infos);
+    if (worker_thread) {''',
+    'F01 configure before worker handoff')
+apply_reviewed_delta(pipeline,
+    '''            worker_thread->QueueWork(std::move(func));
+        }
+    } else {
+        func();
+    }
+    configure_func = ConfigureFunc(spv_modules, stage_infos);''',
+    '''            worker_thread->QueueWork(std::move(func));
+        }
+        // QueueWork returned successfully; the worker now owns completion,
+        // including paths where pipeline validation or compilation fails.
+        build_handed_off = true;
+    } else {
+        // Synchronous func() owns the completion callback from this point.
+        build_handed_off = true;
+        func();
+    }''',
+    'F01 release shader notification exactly once after QueueWork')
+
+texture = 'vulkan-cache/video_core/texture_cache/texture_cache.h'
+apply_reviewed_delta(texture,
+    '''#ifdef PS5_NATIVE
+    // A feedback barrier is only possible for a sampled depth attachment.''',
+    '''#ifdef PS5_NATIVE
+    // No sampled view can participate in a framebuffer feedback loop.
+    // Avoid even the view-key comparison and snapshot for untextured draws.
+    if (views.empty()) {
+        last_feedback_loop_serial = render_targets_serial;
+        last_feedback_texture_serial = texture_bindings_serial;
+        last_feedback_loop_result = false;
+        last_feedback_view_ids.clear();
+        return;
+    }
+
+    // A feedback barrier is only possible for a sampled depth attachment.''',
+    'F03/F04 empty-sampler feedback loop fast path')
