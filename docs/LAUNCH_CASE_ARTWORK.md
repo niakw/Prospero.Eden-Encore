@@ -572,3 +572,43 @@ The source CI also now rejects a stale NCZ/ExeFS scanner check and the
 old Vulkan `PreflightLargeGuestDraw` audit symbol. Both had prevented
 unrelated frontend changes from reaching the native compiler. They
 were test/register corrections, not gameplay performance claims.
+
+## User-provided missing-face paper template (October 23)
+
+This revision follows the supplied front/back reference montage. It does not
+generate new artwork. The original `Box - Front` and `Box - Back` remain
+**independent authoritative faces**, exactly as read from the local cache:
+
+| Real front | Real back | Display |
+| --- | --- | --- |
+| Available | Available | Original front and original back unchanged |
+| Available | Missing | Original front, reconstructed back |
+| Missing | Available | Reconstructed front, original back |
+| Missing | Missing | Both reconstructed from local art/metadata |
+
+When an original is still being decoded, its face stays neutral rather than
+briefly displaying an artificial label or footer. A true missing face is built
+once as a native OpenGL paper texture and rendered on the existing 3D shell.
+
+The replacement **front** uses full-paper artwork, a small title caption and
+the supplied fixed rectangular Switch logo anchored at (0,0), entirely within
+the printed sleeve. The replacement **back** uses an upper artwork/description
+montage (59%) and the fixed user-supplied lower insert (41%), rather than the
+old 14% Encore information footer. Dynamic screenshots and copy cannot
+overflow into the lower insert. Square icon substitutes are aspect-contained.
+
+Compact immutable raster sources are in `ui/art/switch-*.png.b64`, decoded
+offline to uncompressed native TGA by `render-art.py fixed` for host previews
+and by `package-headless-native.sh` for a native package. The sources are
+derived from the attached reference images, **not AI-rendered images**.
+Only missing-face paths access these fixed logos/panels.
+
+The static lower insert is a **reference facsimile**: it can contain the
+reference game's barcode or original legal text and must not be mistaken for
+authentic per-title regulatory information on a reconstructed cover. Real
+commercial scans are never modified or overprinted.
+
+Source checks validate the SHA-256 of both supplied fixed assets. The actual
+host C++/OpenGL preview additionally exercises the two mixed original/missing
+configurations and checks that only the missing side is composited; full-pair
+and no-pair paths retain their existing captures.
