@@ -74,6 +74,24 @@ for block in [graph_loop, compute_loop, *graph_guards, *compute_guards]:
     assert "PreflightLargeGuestDraw" in block
     assert "gpu_memory->FlushCaching()" in block
 
+# Rebuild the six previous unsafe call sites from exact selected snippets.
+# On a zero-descriptor pipeline these old blocks requested 0x400 entries and
+# could invoke WaitWorker even though Configure uses AcquireKnownEmpty.
+def old_guard(block: str, loop: bool) -> str:
+    removed = ("!pipeline->HasDescriptorEntries() ||\n            "
+               if loop else "pipeline->HasDescriptorEntries() &&\n            ")
+    assert block.count(removed) == 1
+    return block.replace(removed, "", 1)
+
+baseline = [
+    old_guard(graph_loop, True),
+    old_guard(graph_guards[0], False),
+    old_guard(graph_guards[1], False),
+    old_guard(compute_loop, True),
+    old_guard(compute_guards[0], False),
+    old_guard(compute_guards[1], False),
+]
+
 host = r"""
 #include <cassert>
 #include <cstddef>
@@ -142,6 +160,12 @@ struct Rig {
     void ComputeLoop() { COMPUTE_LOOP }
     void ComputeReuse() { COMPUTE_REUSE }
     void ComputeCapacity() { COMPUTE_CAPACITY }
+    void OldGraphLoop() { OLD_GLOOP_BODY }
+    void OldGraphReuse() { OLD_GREUSE_BODY }
+    void OldGraphCapacity() { OLD_GCAP_BODY }
+    void OldComputeLoop() { OLD_CLOOP_BODY }
+    void OldComputeReuse() { OLD_CREUSE_BODY }
+    void OldComputeCapacity() { OLD_CCAP_BODY }
 };
 using Method = void (Rig::*)();
 void scenario(Method fn) {
@@ -175,6 +199,16 @@ int main() {
         &Rig::GraphLoop, &Rig::GraphReuse, &Rig::GraphCapacity,
         &Rig::ComputeLoop, &Rig::ComputeReuse, &Rig::ComputeCapacity
     }) scenario(fn);
+    for (Method fn : {
+        &Rig::OldGraphLoop, &Rig::OldGraphReuse, &Rig::OldGraphCapacity,
+        &Rig::OldComputeLoop, &Rig::OldComputeReuse, &Rig::OldComputeCapacity
+    }) {
+        Rig original{false};
+        (original.*fn)();
+        assert(original.guest_descriptor_queue.calls != 0);
+        assert(original.guest_descriptor_queue.phantom != 0);
+        assert(original.scheduler.waits != 0);
+    }
     std::puts("EMPTY_DESCRIPTOR_SIX_NATIVE_PREFLIGHT_SITES_PASS");
 }
 """
@@ -185,6 +219,12 @@ for placeholder, body in [
     ("COMPUTE_LOOP", compute_loop),
     ("COMPUTE_REUSE", compute_guards[0]),
     ("COMPUTE_CAPACITY", compute_guards[1]),
+    ("OLD_GLOOP_BODY", baseline[0]),
+    ("OLD_GREUSE_BODY", baseline[1]),
+    ("OLD_GCAP_BODY", baseline[2]),
+    ("OLD_CLOOP_BODY", baseline[3]),
+    ("OLD_CREUSE_BODY", baseline[4]),
+    ("OLD_CCAP_BODY", baseline[5]),
 ]:
     assert host.count(placeholder) == 1
     host = host.replace(placeholder, body)
