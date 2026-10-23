@@ -287,3 +287,9 @@ confondre le témoin local avec une preuve CI.
 aucune trace historique FC27 n'établit que cette duplication se produisait.
 Aucun gain de FPS, de fraîcheur du HUD ou de déblocage du match n'est
 revendiqué. **F05 reste ouvert** jusqu'au rejeu IPC→buffers→fences→présentation.
+
+
+**Validation native demandée pour ce lot :** le workflow de build sur la branche
+`dev/ps5-sparse-jit` est déclenché par un commit portant `[full-build]`.
+Cette demande ne préjuge pas du résultat du fast gate, de la prévalidation,
+de CodeQL ou du package natif. Aucun test console F07 n'est demandé.
