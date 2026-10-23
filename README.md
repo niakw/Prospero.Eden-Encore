@@ -24,7 +24,7 @@
   <a href="LICENSE"><img alt="License GPL-3.0-or-later" src="https://img.shields.io/badge/license-GPL--3.0--or--later-31313a"></a>
 </p>
 
-<p align="center"><img src="assets/encore-background.jpg" alt="Encore tropical-night launcher artwork" width="860"></p>
+<p align="center"><img src="assets/screenshots/encore-home.png" alt="Real Eden Encore Home screen captured from the C++/OpenGL launcher" width="860"></p>
 
 > [!IMPORTANT]
 > **FC27 remaining exit gates:** [engine blockers and hardware acceptance tracker](docs/FC27_EXIT_GATES_2026-10-22.md). Source-review totals are not remaining optimization counts.

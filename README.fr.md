@@ -18,7 +18,7 @@
   </p>
 </div>
 
-<p align="center"><img src="assets/encore-background.jpg" alt="Identité visuelle tropicale néon d'Encore" width="860"></p>
+<p align="center"><img src="assets/screenshots/encore-home.png" alt="Accueil réel d'Eden Encore capturé depuis le lanceur C++/OpenGL" width="860"></p>
 
 > [!IMPORTANT]
 > **FC27 — ce qu'il reste vraiment :** [blocages moteur et critères de sortie](docs/FC27_EXIT_GATES_2026-10-22.md). Le nombre de sources examinées ne mesure pas les optimisations restantes.
