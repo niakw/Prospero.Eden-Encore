@@ -288,23 +288,47 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
 // Unlike the spinning launcher model, this is deliberately 2D, but BOTH
 // faces use one physical outline with identical inset paper dimensions.
 // Neither PNG nor the source art contains baked-in 3D plastic.
+// One physical jacket silhouette, regardless of available image aspect.
+// Its paper shape matches the 454x730 case with a 440x704 ink rectangle
+// used in the launcher 3D composite. The missing-art layout is authored
+// exactly once at native ink coordinates, then uniformly scaled.
+constexpr float kCaseShellAspect = 454.0f / 730.0f;
+constexpr float kCaseInkWidth = 440.0f;
+constexpr float kCaseInkHeight = 704.0f;
+
+void flat_composed_ink(Canvas& c, const Game& game,
+                       const Rect& paper, bool rear)
+{
+    const float scale = std::min(paper.w / kCaseInkWidth,
+                                 paper.h / kCaseInkHeight);
+    if (scale <= 0.0f) return;
+    // Uniform viewport inside the paper: no independent typography,
+    // altered collages, stretched fixed footer or clipped corner mark.
+    const float x = paper.x + (paper.w - kCaseInkWidth * scale) * 0.5f;
+    const float y = paper.y + (paper.h - kCaseInkHeight * scale) * 0.5f;
+    c.list.push_transform(scale, x, y, 0.0f, 0.0f);
+    draw_composed_case_face(c, game,
+                             {x, y, kCaseInkWidth, kCaseInkHeight}, rear);
+    c.list.pop_transform();
+}
+
 void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
                         bool rear, float shadow, float texture_scale = 1.0f)
 {
     // Keep the front nearly edge-to-edge: the retail scan should dominate
     // the jacket, not an oversized clear-plastic strip on its right.
     // The back retains its original print-preserving proportions.
-    const float side = rear ? std::clamp(shell.w * 0.012f, 1.75f, 5.0f)
-                            : std::clamp(shell.w * 0.006f, 0.9f, 2.0f);
-    const float top = rear ? std::max(5.0f, shell.h * 0.018f)
-                           : std::max(2.0f, shell.h * 0.008f);
+    // Physically scaled 7px lateral and 13px upper/lower lips, matching
+    // both 3D face planes. Never depend on original image dimensions.
+    const float side = shell.w * (7.0f / 454.0f);
+    const float top = shell.h * (13.0f / 730.0f);
     const float radius = std::max(5.0f, shell.w * 0.028f);
     // One continuous square-corner paper wrap, folded directly onto the
     // printed red spine: front touches its LEFT hinge, back its RIGHT hinge.
     // The ONLY exposed clear-plastic vertical opening is the opposite edge.
     // Front/back both use the same paper height; do not add a second frame.
-    const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top,
-                     shell.w - side, shell.h - 2.0f * top};
+    const Rect paper{shell.x + side, shell.y + top,
+                     shell.w - 2.0f * side, shell.h - 2.0f * top};
     if (shadow > 0.0f)
         c.list.shadow({shell.x + 2.0f, shell.y + 7.0f, shell.w - 4.0f,
                        shell.h - 1.0f}, radius, 21.0f * shadow,
@@ -353,10 +377,10 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
             c.list.gradient_rect(paper, 0.0f,
                                  Color::rgb(0x171c26), Color::rgb(0x0c1018));
         }
-    } else if (rear) {
-        flat_back_fallback(c, game, paper);
     } else {
-        flat_front_fallback(c, game, paper);
+        // Match the launcher's 440x704 compositing pass exactly. This also
+        // keeps the fixed top-left logo and bottom rear print in proportion.
+        flat_composed_ink(c, game, paper, rear);
     }
 
     // ONE physical shell: narrow top/bottom molded caps and ONE clear
@@ -1356,23 +1380,16 @@ void Launcher::draw_library(Canvas &c)
             const int slot = index - first;
             const Game& game = games_[static_cast<std::size_t>(index)];
             const bool selected = index == library_.selected;
-            // Size each front jacket from the actual scan aspect ratio.
-            // Width is constrained to its five-slot cell, while the whole
-            // image (including top and bottom) always remains visible.
-            const Cover front_scan = game.box_front.empty() ? Cover{} :
-                c.textures.cover(game.box_front, sleeve_h * 0.24f);
-            const float aspect = front_scan.texture != 0 ?
-                std::clamp(front_scan.aspect, 0.40f, 0.80f) : 872.0f / 1419.0f;
-            const float paper_height = sleeve_h -
-                2.0f * std::max(2.0f, sleeve_h * 0.008f);
-            const float sleeve_w = std::clamp(paper_height * aspect * 1.01f,
-                                              175.0f, 277.0f);
+            // Every case has the same retail silhouette. A decoded source
+            // with a different aspect is contained INSIDE that case instead
+            // of changing the jacket's height, width or anchor.
+            const float sleeve_w = sleeve_h * kCaseShellAspect;
             const float x = rail_x + float(slot) * (card_w + gap) +
                             (card_w - sleeve_w) * 0.5f;
             const Rect sleeve{x, rail_y, sleeve_w, sleeve_h};
-            list.push_transform(selected ? 1.025f : 1.0f,
-                                x + sleeve_w * 0.5f, rail_y + sleeve_h * 0.5f,
-                                0.0f, selected ? -4.0f : 0.0f);
+            // Focus changes the glow, not the dimensions of this case.
+            list.push_transform(1.0f, x + sleeve_w * 0.5f,
+                                rail_y + sleeve_h * 0.5f, 0.0f, 0.0f);
             list.shadow({x - 5.0f, rail_y - 4.0f, sleeve_w + 10.0f, sleeve_h + 13.0f},
                         8.0f, selected ? 30.0f : 17.0f,
                         theme::kScrim.with_alpha(0.72f));
@@ -1406,21 +1423,10 @@ void Launcher::draw_library(Canvas &c)
     {
         // Actual rear retail scan, never the old panoramic screenshot.
         // Cross on this jacket opens a full-screen, aspect-preserving preview.
-        // A fixed 181px wide rear shell left a broad plastic stripe whenever
-        // the original scan was narrower. Fit the *case* to the complete
-        // artwork instead of letterboxing the artwork inside a large case.
-        // Its right edge stays fixed to preserve the gap before the title.
-        const Cover back_scan = game->box_back.empty() ? Cover{} :
-            c.textures.cover(game->box_back, 150.0f);
-        const float rear_aspect = back_scan.texture != 0 ?
-            std::max(0.01f, back_scan.aspect) : 872.0f / 1419.0f;
-        constexpr float kRearMaxWidth = 181.0f, kRearMaxHeight = 247.0f;
-        const float rear_h = std::min(kRearMaxHeight,
-            (kRearMaxWidth - 2.5f) / rear_aspect + 10.0f);
-        const float rear_paper_h = rear_h -
-            2.0f * std::max(5.0f, rear_h * 0.018f);
-        const float rear_w = std::min(kRearMaxWidth,
-            rear_paper_h * rear_aspect + 2.5f);
+        // Rear detail has the exact same physical proportions as the
+        // front shelf and the 3D launcher, regardless of retail scan.
+        constexpr float rear_h = 247.0f;
+        constexpr float rear_w = rear_h * kCaseShellAspect;
         const Rect art{280.0f - rear_w, 882.0f - rear_h, rear_w, rear_h};
         flat_retail_sleeve(c, *game, art, true, 0.60f);
         // The focus ring is UI feedback only. No white plastic bezel
@@ -1536,7 +1542,8 @@ void Launcher::draw_library(Canvas &c)
                         35.0f, theme::kTitle, 1580.0f, Align::center);
             // Tall portrait matching the printed paper: no wide 670px
             // stretched-looking pane in the full-screen back-cover popup.
-            const Rect enlarged{710.0f, 111.0f, 500.0f, 807.0f};
+            const Rect enlarged{960.0f - 807.0f * kCaseShellAspect * 0.5f,
+                                111.0f, 807.0f * kCaseShellAspect, 807.0f};
             // Stable 700x807 viewport. Scale the original sleeve uniformly,
             // then pan beneath a screen-fixed clip; never scale X/Y separately.
             const Rect viewer{610.0f, 111.0f, 700.0f, 807.0f};
