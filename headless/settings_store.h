@@ -39,6 +39,7 @@
 #include "encore_overrides_generated.h"
 #include "encore_overrides_runtime.h"
 #include "storage_paths.h"
+#include "game_files.h"
 
 namespace Eden {
 enum class GraphicsBackend { OpenGL, Vulkan };
@@ -163,7 +164,7 @@ inline bool ValidRomFilename(std::string_view name) {
         if (c < 32 || c == 127 || c == '/' || c == '\\') return false;
     std::string extension(name.substr(name.size() - 4));
     for (char& c : extension) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-    return extension == ".nsp" || extension == ".xci";
+    return Eden::IsGameFile(name);
 }
 
 inline std::string SettingsFile() { return ConfigFile("prosperoeden.json"); }
