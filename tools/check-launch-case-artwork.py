@@ -109,6 +109,8 @@ widgets_src = (root / "headless/prosperoeden/pe/ui/widgets.hpp").read_text()
 for token in ("case_pages_.size() >= 2", "glCheckFramebufferStatus(GL_FRAMEBUFFER)",
               "glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(old_fbo));",
               "glDeleteFramebuffers(1, &framebuffer);",
+              "glIsEnabled(GL_SCISSOR_TEST)",
+              "if (old_scissor) glEnable(GL_SCISSOR_TEST);",
               "case_pages_.push_back(ink);",
               "clear_case_pages();"):
     assert token in textures_cpp, token
