@@ -258,6 +258,48 @@ jobs:
           print("ENCORE_LIBRARY_FLAT_JACKETS_ZOOM_PAN_CIRCLE_ONLY: PASS")
           PY
 
+      - name: Capture reconstructed Library paper using production OpenGL
+        env:
+          PE_LANG: fr-FR
+          PE_PREVIEW_LIBRARY_FALLBACK: "1"
+          PE_PREVIEW_NO_BOX_SCANS: "1"
+          PE_PREVIEW_BOTW: "1"
+          PE_PREVIEW_JOBS: "2"
+          PROSPEROEDEN_LAUNCHER_BUILD: ${{ runner.temp }}/encore-launcher-only
+        run: |
+          set -euo pipefail
+          mkdir -p build/launch-case-library-fallback
+          cp build/launch-case-render/botw-hero.tga build/launch-case-library-fallback/
+          bash tools/launcher/preview.sh build/launch-case-library-fallback 1920 1080 \
+            2>&1 | tee build-launch-case-library-fallback.log
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageStat, ImageChops
+          folder = Path("build/launch-case-library-fallback")
+          expected = ["00-library-fallback-front.png",
+                      "01-library-fallback-back.png",
+                      "02-library-fallback-zoom.png"]
+          assert sorted(p.name for p in folder.glob("*.png")) == expected
+          frames = []
+          for name in expected:
+              with Image.open(folder / name) as picture:
+                  assert picture.size == (1920, 1080)
+                  frames.append(picture.convert("RGB"))
+          # Inspect the actual selected shelf paper, reconstructed rear
+          # paper, and zoomed upper artwork/lower immutable footer.
+          regions = ((835, 215, 1080, 530),
+                     (140, 638, 277, 860),
+                     (800, 350, 1120, 845))
+          for frame, region in zip(frames, regions):
+              pixels = frame.crop(region)
+              detail = sum(ImageStat.Stat(pixels).stddev)
+              assert detail > 17.0, ("missing composited paper", region, detail)
+          a = frames[1].crop((130, 650, 280, 870))
+          b = frames[0].crop((130, 650, 280, 870))
+          assert max(ImageStat.Stat(ImageChops.difference(a, b)).mean) > 4
+          print("LIBRARY_RECONSTRUCTED_PAPER_OPENGL: PASS")
+          PY
+
       - name: Capture alternate layout theme (host only)
         if: ${{ github.ref == 'refs/heads/ui/encore-switch-theme-20261016' }}
         env:
@@ -344,6 +386,8 @@ jobs:
             build-launch-case-front-only.log
             build-launch-case-back-only.log
             build/launch-case-library/*.png
+            build/launch-case-library-fallback/*.png
+            build-launch-case-library-fallback.log
             build/launch-switch-theme/*.png
             build-launch-switch-theme.log
             build-launch-case-library.log
