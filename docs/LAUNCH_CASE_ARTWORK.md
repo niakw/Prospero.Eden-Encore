@@ -496,3 +496,39 @@ gates F01-F06 are unchanged by this UI work.
 is **pending verification**, not asserted successful here. Any failing
 visual check or native compilation must be resolved before declaring
 the animated fallback complete.
+
+
+## 23 October — distinct media, authentic README and reproducible previews
+
+The fallback compositor now uses one small C++20 source-owned selector
+(`pe/ui/case_media_selection.hpp`) for both printed faces:
+
+- The **front** chooses the first locally cached screenshot that differs
+  from the hero. If none exists, a distinct square icon is aspect-fitted
+  into the secondary panel rather than cropped into a fake scene.
+- The **back** considers *all* available cached screenshots, skipping
+  empty entries, duplicates and the hero. It selects up to two truly
+  different frames; if only one exists, the second slot can use a
+  distinct cached icon/poster, aspect-fitted. Missing images are never
+  invented or repeated to fill two apparent captures.
+- Original `Box - Front` and `Box - Back` scans always override the
+  generated print composition independently. This selector does not
+  change the physical 3D shell, add network calls or allocate a new
+  screenshot/description in the draw loop.
+
+`tools/check-encore-case-media-selection-host.py` compiles the actual
+selection header in C++20 and checks cases with duplicates, an icon-only
+fallback, and absent media. It runs during both source preflight and the
+OpenGL render-preview workflow. The two existing source-oracles have been
+updated to require the new selection rules.
+
+The README image is already a **real screenshot of the Encore C++/OpenGL
+Home**, stored at `assets/screenshots/encore-home.png`. The screenshot
+publisher is now *idempotent*: a fresh native render can update that same
+asset and its README links without failing because the old wallpaper
+has already been replaced. No generated illustration is involved.
+
+The `[preview-ready]` workflow must prove pixel rendering, including
+missing retail-art front/back, before calling these visual changes
+verified. The `[full-build]` workflow separately checks PS5 compilation.
+A host OpenGL screenshot is **not** a device gameplay qualification.
