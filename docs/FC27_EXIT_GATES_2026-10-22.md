@@ -504,40 +504,6 @@ un gain de `pair_held`, `late50` ou FPS. Ce n'est pas une preuve de
 correction des textures de maillots ou du HUD. F01, F03 et F04 restent ouverts.
 
 
-## F01 — 23 octobre : absence de prévalidation fictive pour les shaders sans descripteurs
+## F01 — 23 octobre : hypothèse des prévalidations 1024 rejetée
 
-Le moteur natif `vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp`
-comportait six chemins `PreflightLargeGuestDraw` : trois graphiques,
-trois compute. Le premier `PreflightGuestDraw` était déjà correctement
-conditionné à `HasDescriptorEntries()`, mais les six autres chemins
-appelaient `DescriptorEntryReservation()`, dont la valeur de secours
-était **1 024 entrées** lorsque le shader n'en écrivait aucune.
-Cela pouvait provoquer un `scheduler.WaitWorker()` hors verrou,
-mais inutile et perceptible en temps de frame, alors que les deux
-`Configure` utilisent déjà `AcquireKnownEmpty` pour ce cas.
-
-Les commits `14b52d0` et `40312f1` évitent désormais les six
-prévalidations pour `HasDescriptorEntries()==false`, dans la source
-active et dans le générateur C++ natif. Lorsqu'un shader possède des
-descripteurs, le comportement des prévalidations est inchangé :
-les attentes restent hors du double verrou
-`buffer_cache.mutex/texture_cache.mutex`. La vérification est
-**réappliquée après chaque resélection de pipeline**, car un drain
-peut changer les shaders invités.
-
-Le test `tools/check-ps5-no-phantom-descriptor-preflight-host.py`
-extrait les six blocs exacts de la source maintenue. Pour chaque bloc,
-il exige : aucune file ni attente pour un shader sans descripteurs ;
-un drain et une resélection lorsque des descripteurs existent ;
-puis la suppression des drains fictifs si le worker change de shader.
-Il reconstruit aussi les six anciennes conditions comme contrôles
-négatifs, où la file reçoit les 1 024 entrées fictives. Ce test est
-inscrit dans la prévalidation GitHub et vérifie également les
-marqueurs correspondants dans `tools/prepare-vulkan-port.py`.
-
-**Statut :** sources et tests intégrés. Exécution CI, compilation
-native complète et mesure `late50`/`pair_wait` sur le même
-exécutable **non confirmées**. Le correctif supprime une attente
-potentiellement inutile ; il ne démontre pas encore un gain de FPS
-ni la disparition des gels FC27. **F01 reste ouvert**, et aucun
-test console F07 n'est demandé à cette étape.
+La revue de `GuestDescriptorQueue::PreflightLargeGuestDraw` révèle un retour immédiat lorsque `entries <= 0x400`. `DescriptorEntryReservation()` renvoie précisément `0x400` pour un shader sans descripteur. Les six précontrôles supplémentaires ne pouvaient donc pas provoquer le `WaitWorker` soupçonné. Les changements d'optimisation correspondants ont été **annulés** après cette contre-vérification, et le témoin reposant sur cette fausse hypothèse retiré de CI. Aucun gain de FPS ni de contention n'est revendiqué sur cette piste ; F01 reste ouvert.
