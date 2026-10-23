@@ -24,7 +24,8 @@ if_marker = ("if (pipeline->HasDescriptorEntries() &&\n"
 assert native.count("if (!pipeline->HasDescriptorEntries() ||") == 2
 assert native.count(if_marker) == 4
 assert generator.count("if (!pipeline->HasDescriptorEntries() ||") == 2
-assert generator.count("if (pipeline->HasDescriptorEntries() &&") == 4
+# Generator has two additional, already-correct ordinary-queue guards.
+assert generator.count("if (pipeline->HasDescriptorEntries() &&") == 6
 assert native.count("AcquireKnownEmpty(uses_descriptor_buffer)") == 2 or (
     "AcquireKnownEmpty(uses_descriptor_buffer)" in
     (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
@@ -78,6 +79,7 @@ host = r"""
 #include <cstddef>
 #include <cstdio>
 #include <functional>
+#include <initializer_list>
 #include <utility>
 namespace Eden::Performance {
     enum class GraphicsDrawDrop { NoPipeline };
