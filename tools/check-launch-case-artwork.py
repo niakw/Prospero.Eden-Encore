@@ -163,6 +163,7 @@ for token in ("game.screenshots.front()",
               "ENCORE  /  GAME INFORMATION"):
     assert token in back_fallback, ("Back fallback dropped", token)
 assert 'case_media::FrontAlternate(painting, game.cover, game.screenshots)' in front
+assert 'if (*second == game.cover) case_art_contain(c, *second, right);' in back_fallback
 assert "if (!scan.empty()) {" in library
 assert library.index("if (!scan.empty()) {") < library.index("flat_back_fallback(c, game, paper);")
 # The non-official fallback footer must never invent regulatory labels,
