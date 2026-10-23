@@ -392,3 +392,43 @@ La protection contre les soustractions 32 bits overflow et le
 décalage hors plage est conservée. **F04 reste ouvert** tant que la
 fidélité du rendu invité n'est pas démontrée. Ne pas annoncer de
 résolution du HUD, des maillots ou du terrain de FC27.
+
+
+## F02 — 23 octobre : purge JIT sous verrou, y compris en pression mémoire
+
+Les interfaces maintenues `a64_interface_standard.cpp` et
+`a32_interface_native.cpp` utilisaient `invalidation_mutex` pour les
+demandes de vidage provenant d'autres threads, mais **deux chemins
+internes chacun** modifiaient directement le booléen partagé
+`invalidate_entire_cache` : moins de 1 Mio de code disponible,
+et nouvel essai après `std::bad_alloc` de `EnsureMemoryCommitted`.
+Ces quatre écritures hors mutex pouvaient se produire en parallèle
+avec `InvalidateCacheRange` / `ClearCache` et constituaient une
+course de données (undefined behavior en C++).
+
+**Correction appliquée :** les quatre chemins passent désormais par
+`ClearCache()`, qui détient le mutex pour déclarer le vidage complet
+et publier le signal `CacheInvalidation`, puis exécutent la méthode
+`PerformRequestedCacheInvalidation` existante. La remise à zéro
+des plages, le snapshot hors verrou, la taille limite d'1 Mio et le
+profil standard par cœur restent inchangés. Aucun réglage du cache
+JIT ou mode expérimental n'est activé.
+
+**Contrôles :** `tools/check-native-jit-invalidation-snapshot-host.py`
+recherche désormais exactement les **deux chemins** de purge de
+chaque source A32/A64, sans écritures directes dans l'état de vidage.
+Son témoin C++ utilise les méthodes d'invalidation extraites des
+sources, vérifie la publication sous un mutex instrumenté,
+rejoue une écriture invitée provenant d'un autre thread pendant
+`emitter.ClearCache()` et rejette l'ancienne affectation sans verrou
+par un contre-test négatif. Le contrat de reproduction octet à octet
+du code A32 épinglé dans
+`tools/check-maintained-a32-native-interface.py` a été actualisé
+afin de garantir que la source réellement compilée intègre le
+correctif sans modifications non revues.
+
+**Statut :** source et tests poussés ; exécution de la suite CI,
+ASan/UBSan du build complet et qualification native restent à
+confirmer. Ce correctif supprime une course de données à
+l'invalidation et **ne démontre pas** qu'il supprimera les
+pics de recompilation FC27. F02 reste ouvert.
