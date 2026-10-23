@@ -221,11 +221,16 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
         else cover_crop(c, path, area, 0.0f, 0.0f);
     };
     scene(hero, left);
-    if (first) scene(*first, top_right);
-    else scene(hero, top_right);
-    if (second) scene(*second, panorama);
-    else if (first) scene(*first, panorama);
-    else scene(hero, panorama);
+    // A square cover icon is never mistaken for a landscape screenshot.
+    // Prefer the available hero over repeating one small portrait app icon
+    // across the two scenic panels of the upper back.
+    const std::string& top_art =
+        first && *first != game.cover ? *first : hero;
+    const std::string& wide_art =
+        second && *second != game.cover ? *second :
+        first && *first != game.cover ? *first : hero;
+    scene(top_art, top_right);
+    scene(wide_art, panorama);
 
     c.list.rounded_rect(description, 0.0f, Color::rgb(0x030507, 0.98f));
     const std::string& desc = !game.description.empty() ? game.description :
