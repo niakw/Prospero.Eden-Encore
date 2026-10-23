@@ -1876,6 +1876,11 @@ int main(int argc, char** argv) {
                 // base game: Eden's ExternalContentProvider, which the patch manager checks first.
                 Settings::values.external_content_dirs = {Eden::AssetsPath("updates")};
                 system.GetFileSystemController().CreateFactories(*system.GetFilesystem());
+                // Title content registration may already read the far end of
+                // an NSZ update. Enable the solid cache before registration,
+                // not only before System::Load, and revoke on every exit.
+                Eden::Ncz::SetUnpackAllowed(true);
+                SCOPE_EXIT { Eden::Ncz::SetUnpackAllowed(false); };
                 // The game's own contents, registered as Eden's desktop frontends do before booting a
                 // game (ConfigureFilesystemProvider). An update's data is a patch on the base game's:
                 // the patch manager looks the base up here, and without it applied only the update's
@@ -1896,10 +1901,6 @@ int main(int argc, char** argv) {
                 Service::AM::FrontendAppletParameters params{
                     .applet_id = Service::AM::AppletId::Application,
                 };
-                // Permit solid NCZ unpack only while booting/playing this
-                // title; library scans use the bounded random-read pieces.
-                Eden::Ncz::SetUnpackAllowed(true);
-                SCOPE_EXIT { Eden::Ncz::SetUnpackAllowed(false); };
                 std::atomic<bool> left_while_loading{false};
                 std::jthread load_input;
                 if (pad && game) {
