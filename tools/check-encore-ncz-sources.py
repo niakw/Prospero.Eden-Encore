@@ -14,7 +14,7 @@ pairs=[
  ("file_sys/card_image.cpp","593c561689f1790b8c8ab673f3dd44d3d790f553","Ncz::Open"),
  ("loader/loader.cpp","90e23ccc11fb03672b22d169210dec6554e67f71","extension == \"xcz\""),
  ("loader/nsp.cpp","cfc908b4ef6e1b02636d88815aa5469052575784","\".ncz\""),
- ("file_sys/registered_cache.cpp","ce851e4d38ba752c626f51e29bae4d2303dbd39","extension == \"nsz\""),
+ ("file_sys/registered_cache.cpp","ce851e4d38ba752c626f51e29bae4d2303dbd39c","extension == \"nsz\""),
 ]
 # Each maintained owner must match its immutable pinned counterpart with
 # exactly one reviewed replacement: no hidden unrelated source edits.
