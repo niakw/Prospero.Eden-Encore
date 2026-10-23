@@ -103,6 +103,14 @@ jobs:
           printf '#include <boost/container/small_vector.hpp>\n' |
             clang++-18 -std=c++20 -x c++ -fsyntax-only -
 
+      - name: Verify NCZ source ownership and compressed-content decoding
+        if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y --no-install-recommends libssl-dev libzstd-dev
+          python3 -B tools/check-encore-ncz-sources.py
+          python3 -B tools/check-ncz.py
+
       - name: Upgrade Meson
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         run: |
