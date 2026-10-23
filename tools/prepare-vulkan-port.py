@@ -2707,7 +2707,7 @@ apply_reviewed_delta(texture,
 scissor_original_file = source / 'src/video_core/renderer_vulkan/vk_rasterizer.cpp'
 scissor_original_source = scissor_original_file.read_text()
 scissor_begin = 'VkRect2D GetScissorState('
-scissor_end = '\\nDrawParams MakeDrawParams('
+scissor_end = '\nDrawParams MakeDrawParams('
 if scissor_original_source.count(scissor_begin) != 1:
     raise RuntimeError('F04 pinned scissor signature changed')
 scissor_original_start = scissor_original_source.index(scissor_begin)
