@@ -472,7 +472,7 @@ void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {
 }
 
 #ifdef PS5_NATIVE
-void GraphicsPipeline::PreflightDescriptorScratch() const {
+void GraphicsPipeline::PreflightDescriptorScratch() {
     // Called by the GPU owner before PrepareDraw acquires the buffer/texture
     // cache pair. The immutable pipeline descriptor counts are safe here.
     // Nested Configure calls use their own scratch and fall back to reserve
@@ -487,6 +487,14 @@ void GraphicsPipeline::PreflightDescriptorScratch() const {
         scratch.views.reserve(num_image_elements);
     if (scratch.samplers.capacity() < num_textures)
         scratch.samplers.reserve(num_textures);
+    // Allocate the per-pipeline descriptor snapshot BEFORE the buffer/texture
+    // cache mutex pair. ConfigureDraw still reads, compares and publishes the
+    // actual guest descriptors only after taking both locks.
+    if (num_descriptor_entries != 0 && descriptor_set_layout &&
+        (uses_descriptor_buffer || !uses_push_descriptor) &&
+        last_descriptor_payload.capacity() < num_descriptor_entries) {
+        last_descriptor_payload.reserve(num_descriptor_entries);
+    }
 }
 #endif
 
