@@ -3,7 +3,7 @@
   "description": "Code optimization handling, not validation or inferred need for code edits",
   "base_commit": "82c531d08641d8b28124bd2cebf37fcf85674179",
   "snapshot_commit": "05846723c40c4ebfc593b4be2e3496079c25167c",
-  "owned_code_count_at_snapshot": 493,
+  "owned_code_count_at_snapshot": 504,
   "handled_paths": [
     {
       "path": "headless/assets_dir.h",
@@ -3788,6 +3788,97 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-surface-lifecycle.py",
       "evidence": "23 October: native-maintained compositor source selected by staged installer, with exact pinned-original transformation and host replay of released versus still-acquired frame reuse. F03/F05 unresolved until full display progression and HUD are proven."
+    }
+,
+    {
+      "path": "headless/game_files.h",
+      "disposition": "format_feature_source_integrated",
+      "source_scope": "header_only",
+      "reviewed_source_git_blob": "68fc45657fc87639d109592398003fb0e2859fb6",
+      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
+      "proof_ref": "tools/check-exefs-directory-host.py",
+      "evidence": "New format-loader code path inspected and pinned: Picker formats and ExeFS path restrictions; no guest draw/JIT hotpath. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
+    },
+    {
+      "path": "headless/ncz.cpp",
+      "disposition": "format_feature_source_integrated",
+      "source_scope": "native_adapter",
+      "reviewed_source_git_blob": "7deff2ea1a82574b9e756ad9c2f0d869aa94612b",
+      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
+      "proof_ref": "tools/check-encore-ncz-sources.py",
+      "evidence": "New format-loader code path inspected and pinned: NCZ reader adapter selected by CMake, cache and import behavior distinct from frame GPU. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
+    },
+    {
+      "path": "headless/ncz.h",
+      "disposition": "format_feature_source_integrated",
+      "source_scope": "header_only",
+      "reviewed_source_git_blob": "85ced3460d83be2a8011f189c0df406b4dd32b8c",
+      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
+      "proof_ref": "tools/check-ncz.py",
+      "evidence": "New format-loader code path inspected and pinned: NCZ streaming decompressor, bounded cache writes, tested host reconstruction. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
+    },
+    {
+      "path": "headless/ncz_check.cpp",
+      "disposition": "format_feature_source_integrated",
+      "source_scope": "host_test_only",
+      "reviewed_source_git_blob": "65c9e5f4eb3625140add52ced2ea82e66bd224ab",
+      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
+      "proof_ref": "tools/check-ncz.py",
+      "evidence": "New format-loader code path inspected and pinned: Host-only NCZ compressed block, solid cache and symlink safety witness. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
+    },
+    {
+      "path": "headless/ncz_vfs.h",
+      "disposition": "format_feature_source_integrated",
+      "source_scope": "header_only",
+      "reviewed_source_git_blob": "176d89e5d385fe140211350ab4c20a38f1f496bd",
+      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
+      "proof_ref": "tools/check-encore-ncz-sources.py",
+      "evidence": "New format-loader code path inspected and pinned: NCZ VFS bridge for selected maintained file system source owners. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/file_sys/card_image.cpp",
+      "disposition": "format_feature_source_integrated",
+      "source_scope": "native_maintained",
+      "reviewed_source_git_blob": "f843e7f9c977b509368e71eb6356066c1a5e0c50",
+      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
+      "proof_ref": "tools/check-encore-ncz-sources.py",
+      "evidence": "New format-loader code path inspected and pinned: Pinned source with exact reviewed NCZ adaptation; CMake selection verified. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/file_sys/registered_cache.cpp",
+      "disposition": "format_feature_source_integrated",
+      "source_scope": "native_maintained",
+      "reviewed_source_git_blob": "6826d02a68a33b8733b5d3a50d804dedf3179955",
+      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
+      "proof_ref": "tools/check-encore-ncz-sources.py",
+      "evidence": "New format-loader code path inspected and pinned: Pinned source with exact reviewed NSZ/XCZ cache routing; CMake selection verified. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/file_sys/submission_package.cpp",
+      "disposition": "format_feature_source_integrated",
+      "source_scope": "native_maintained",
+      "reviewed_source_git_blob": "29a46a6024cad1e867ac450a0bd651bebc1f0b29",
+      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
+      "proof_ref": "tools/check-encore-ncz-sources.py",
+      "evidence": "New format-loader code path inspected and pinned: Pinned source with exact reviewed embedded NCZ archive opening; CMake selection verified. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/loader/loader.cpp",
+      "disposition": "format_feature_source_integrated",
+      "source_scope": "native_maintained",
+      "reviewed_source_git_blob": "e2e87827700a0a670f0d418262e80860e79a683a",
+      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
+      "proof_ref": "tools/check-encore-ncz-sources.py",
+      "evidence": "New format-loader code path inspected and pinned: Pinned loader with exact NSZ/XCZ and NAX filename recognition; CMake selected. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/loader/nsp.cpp",
+      "disposition": "format_feature_source_integrated",
+      "source_scope": "native_maintained",
+      "reviewed_source_git_blob": "b56195d24778a849bb768d463fdf4ceef3d5c33f",
+      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
+      "proof_ref": "tools/check-encore-ncz-sources.py",
+      "evidence": "New format-loader code path inspected and pinned: Pinned NSP reader with exact .ncz member detection; CMake selected. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
     }
   ],
   "inventoried_including_pinned": 538,
