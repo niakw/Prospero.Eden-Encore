@@ -1096,6 +1096,13 @@ int main(int argc, char** argv) {
             std::filesystem::exists(Eden::AppFile("memory-region-scan.txt")));
 #endif
         if (safe_launch) Eden::Report("launch", "Safe launch active: OpenGL, Handheld, 1x, Bilinear, 60 Hz, 1080p, mods off");
+        // Revalidate extracted ExeFS content at launch: a directory or its
+        // main/NPDM files might have changed since the library worker scan.
+        // Never follow a symlink introduced after enumeration.
+        const auto selected_path = std::filesystem::path(selected_game);
+        if (selected_path.filename() == "main" &&
+            !Eden::IsDeconstructedGameDirectory(selected_path.parent_path()))
+            throw std::runtime_error("Extracted ExeFS title is incomplete or unsafe");
         const bool game = std::filesystem::is_regular_file(selected_game);
         if (!game) throw std::runtime_error("Selected ROM is no longer available");
         const char* guest = selected_game.c_str();
