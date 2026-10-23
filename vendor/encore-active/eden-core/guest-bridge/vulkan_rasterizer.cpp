@@ -120,26 +120,50 @@ VkViewport GetViewportState(const Device& device, const Maxwell& regs, size_t in
 VkRect2D GetScissorState(const Maxwell& regs, size_t index, u32 up_scale = 1, u32 down_shift = 0) {
     const auto& src = regs.scissor_test[index];
     VkRect2D scissor{};
+    // Handle guest scissor extremes without wrapping signed coordinate
+    // differences. Preserve the existing 32-bit results on ordinary draws.
+    const auto bounded_s32 = [](s64 value) -> s32 {
+        return static_cast<s32>((std::clamp)(
+            value, static_cast<s64>(std::numeric_limits<s32>::min()),
+            static_cast<s64>(std::numeric_limits<s32>::max())));
+    };
     const auto scale_up = [&](s32 value) -> s32 {
         if (value == 0) {
-            return 0U;
+            return 0;
         }
-        const s32 upset = value * up_scale;
-        s32 acumm = 0;
-        if ((up_scale >> down_shift) == 0) {
-            acumm = upset % 2;
+        const s64 scaled = static_cast<s64>(value) * static_cast<s64>(up_scale);
+        if (scaled >= std::numeric_limits<s32>::min() &&
+            scaled <= std::numeric_limits<s32>::max() && down_shift < 32) {
+            // Preserve pinned behavior: up_scale is unsigned, so the old
+            // value * up_scale and right shift operated on unsigned bits,
+            // even for negative guest coordinates. Sign-shifting would change
+            // otherwise valid clipping rectangles.
+            const u32 bits = static_cast<u32>(value) * up_scale;
+            const s32 as_i32 = static_cast<s32>(bits);
+            const s64 adjustment = (up_scale >> down_shift) == 0 ? as_i32 % 2 : 0;
+            const s64 shifted = static_cast<s32>(bits >> down_shift);
+            return bounded_s32(value < 0 ? (std::min)(shifted - adjustment, s64{-1})
+                                         : (std::max)(shifted + adjustment, s64{1}));
         }
-        const s32 converted_value = (value * up_scale) >> down_shift;
-        return value < 0 ? std::min<s32>(converted_value - acumm, -1)
-                         : std::max<s32>(converted_value + acumm, 1);
+        // Wide fallback for overflow-prone guest data or an oversized shift.
+        const u32 shift = (std::min)(down_shift, 63U);
+        const s64 adjustment = (down_shift >= 32 || (up_scale >> down_shift) == 0)
+                                   ? scaled % 2 : 0;
+        const s64 shifted = scaled >> shift;
+        return bounded_s32(value < 0 ? (std::min)(shifted - adjustment, s64{-1})
+                                     : (std::max)(shifted + adjustment, s64{1}));
     };
 
     const bool lower_left = regs.window_origin.mode != Maxwell::WindowOrigin::Mode::UpperLeft;
     const s32 clip_height = regs.surface_clip.height;
 
-    // Flip coordinates if lower left
-    s32 min_y = lower_left ? (clip_height - src.max_y) : src.min_y.Value();
-    s32 max_y = lower_left ? (clip_height - src.min_y) : src.max_y.Value();
+    // Flip coordinates without signed overflow before clamping to the render area.
+    s32 min_y = lower_left
+                    ? bounded_s32(static_cast<s64>(clip_height) - src.max_y)
+                    : src.min_y.Value();
+    s32 max_y = lower_left
+                    ? bounded_s32(static_cast<s64>(clip_height) - src.min_y)
+                    : src.max_y.Value();
 
     // Bound to render area
     min_y = (std::max)(min_y, 0);
@@ -148,8 +172,10 @@ VkRect2D GetScissorState(const Maxwell& regs, size_t index, u32 up_scale = 1, u3
     if (src.enable) {
         scissor.offset.x = scale_up(src.min_x);
         scissor.offset.y = scale_up(min_y);
-        scissor.extent.width = scale_up(src.max_x - src.min_x);
-        scissor.extent.height = scale_up(max_y - min_y);
+        scissor.extent.width =
+            scale_up(bounded_s32(static_cast<s64>(src.max_x) - src.min_x));
+        scissor.extent.height =
+            scale_up(bounded_s32(static_cast<s64>(max_y) - min_y));
     } else {
         scissor.offset.x = 0;
         scissor.offset.y = 0;
@@ -294,7 +320,8 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
     // Never hold guest cache locks while waiting. The worker may publish guest
     // remaps and change the selected pipeline, so reselect after a real drain.
     if (pipeline->HasDescriptorEntries() &&
-        guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {
+        guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); },
+                                                pipeline->DescriptorEntryReservation())) {
         gpu_memory->FlushCaching();
         pipeline = pipeline_cache.CurrentGraphicsPipeline();
         if (!pipeline) {
@@ -306,7 +333,8 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
 #endif
 #ifdef PS5_NATIVE
     for (unsigned preflight = 0; preflight != 2; ++preflight) {
-        if (!guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (!pipeline->HasDescriptorEntries() ||
+            !guest_descriptor_queue.PreflightExactGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation()))
             break;
         gpu_memory->FlushCaching();
@@ -334,7 +362,8 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
         }
         // A newly selected pipeline may reserve more guest descriptors.
         // Keep any worker wait ahead of the paired cache mutexes.
-        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (pipeline->HasDescriptorEntries() &&
+            guest_descriptor_queue.PreflightExactGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
             gpu_memory->FlushCaching();
             pipeline = pipeline_cache.CurrentGraphicsPipeline();
@@ -361,7 +390,8 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
         // This GPU drain can change the selected pipeline after the earlier
         // descriptor preflight. Check its NEW reservation before taking the
         // buffer/texture mutex pair, so Acquire cannot wait under both locks.
-        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (pipeline->HasDescriptorEntries() &&
+            guest_descriptor_queue.PreflightExactGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
             gpu_memory->FlushCaching();
             pipeline = pipeline_cache.CurrentGraphicsPipeline();
@@ -819,7 +849,8 @@ void RasterizerVulkan::DispatchCompute() {
     // legacy 1024-entry guest queue. After a real wait, consume guest page
     // invalidations and reselect the possibly changed compute shader.
     if (pipeline->HasDescriptorEntries() &&
-        guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {
+        guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); },
+                                                pipeline->DescriptorEntryReservation())) {
         gpu_memory->FlushCaching();
         pipeline = pipeline_cache.CurrentComputePipeline();
         if (!pipeline) return;
@@ -830,7 +861,8 @@ void RasterizerVulkan::DispatchCompute() {
     // Drain only necessary GPU fences while neither guest cache is locked.
     // Worker drains can publish guest shader/descriptor invalidations.
     for (unsigned preflight = 0; preflight != 2; ++preflight) {
-        if (!guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (!pipeline->HasDescriptorEntries() ||
+            !guest_descriptor_queue.PreflightExactGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation()))
             break;
         gpu_memory->FlushCaching();
@@ -842,7 +874,8 @@ void RasterizerVulkan::DispatchCompute() {
         gpu_memory->FlushCaching();
         pipeline = pipeline_cache.CurrentComputePipeline();
         if (!pipeline) return;
-        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (pipeline->HasDescriptorEntries() &&
+            guest_descriptor_queue.PreflightExactGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
             gpu_memory->FlushCaching();
             pipeline = pipeline_cache.CurrentComputePipeline();
@@ -854,7 +887,8 @@ void RasterizerVulkan::DispatchCompute() {
         gpu_memory->FlushCaching();
         pipeline = pipeline_cache.CurrentComputePipeline();
         if (!pipeline) return;
-        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (pipeline->HasDescriptorEntries() &&
+            guest_descriptor_queue.PreflightExactGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
             gpu_memory->FlushCaching();
             pipeline = pipeline_cache.CurrentComputePipeline();
