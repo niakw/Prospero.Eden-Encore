@@ -339,10 +339,11 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
             // A path alone does not prove the scan is readable. During an
             // asynchronous load (or after a failed decode), show the same
             // metadata composition instead of a blank plastic rectangle.
-            if (rear)
-                flat_back_fallback(c, game, paper);
-            else
-                flat_front_fallback(c, game, paper);
+            // An original scan is already known. Its asynchronous loading
+            // must never produce an artificial logo/footer for even one frame.
+            // The plain paper backing remains visible until the scan decodes.
+            c.list.gradient_rect(paper, 0.0f,
+                                 Color::rgb(0x171c26), Color::rgb(0x0c1018));
         }
     } else if (rear) {
         flat_back_fallback(c, game, paper);
