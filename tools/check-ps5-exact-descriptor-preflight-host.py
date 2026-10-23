@@ -75,6 +75,12 @@ def branches(source):
 
 gl, cl = loop(graphics), loop(compute)
 gb, cb = branches(graphics), branches(compute)
+for block in [gl, *gb]:
+    # Graphics generation inserts multiline C++ literally.
+    assert block in generator, "Graphics native source drifted from generator"
+for block in [cl, *cb]:
+    # Compute generator uses escaped newline strings in replace clauses.
+    assert block.replace("\n", r"\n") in generator, "Compute native source drifted from generator"
 for block in [gl, cl, *gb, *cb]:
     assert "HasDescriptorEntries()" in block
     assert "PreflightExactGuestDraw(" in block
