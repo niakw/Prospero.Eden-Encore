@@ -93,6 +93,35 @@ data = pathlib.Path(sys.argv[1]).read_bytes()
 if len(data) < 18 or data[1] != 0 or data[2] != 2 or data[16] not in (24, 32):
     raise SystemExit("Generated Encore brand.tga is not an uncompressed true-colour TGA")
 PY
+# Static inserts are ONLY for reconstructed faces when the respective real
+# flat front/back is absent. Decode the user-supplied compact PNG templates
+# without network access and convert them to native 32-bit uncompressed TGA.
+# Keep the source blobs out of the installed application.
+for stem in switch-logo switch-rear-footer; do
+    encoded="$app/ui/art/${stem}.png.b64"
+    unpacked="$app/ui/art/${stem}.png"
+    target="$app/ui/art/${stem}.tga"
+    python3 - "$encoded" "$unpacked" <<'PY_FIXED_CASE'
+import base64
+from pathlib import Path
+import sys
+source, destination = map(Path, sys.argv[1:3])
+destination.write_bytes(base64.b64decode(source.read_text().strip(), validate=True))
+PY_FIXED_CASE
+    "${image_convert[@]}" "$unpacked" -type TrueColorAlpha \
+        -define tga:bits-per-pixel=32 -compress None "$target"
+    python3 - "$target" <<'PY_FIXED_TGA'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+h = p.read_bytes()[:18]
+w, height = int.from_bytes(h[12:14], 'little'), int.from_bytes(h[14:16], 'little')
+if len(h) != 18 or h[2] != 2 or h[16] != 32 or w < 128 or height < 128:
+    raise SystemExit(f"Invalid fixed case art: {p.name}")
+PY_FIXED_TGA
+    rm -f "$encoded" "$unpacked"
+done
+
 # Filesystem access helper (headless/elevation, built for PPSA99008): elfldr runs it at startup.
 make -s -C "$root/headless/elevation/helper" OUTPUT="$root/build/elevation/sandbox-elevator.elf" \
     PS5_PAYLOAD_SDK="${PS5_ELEVATION_SDK:-/opt/ps5-payload-sdk}"
