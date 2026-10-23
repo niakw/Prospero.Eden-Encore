@@ -32,7 +32,7 @@ def pairs_for(rel):
             all(isinstance(item, ast.Constant) for item in n.elts)]
 
 header_pairs = pairs_for('src/video_core/renderer_vulkan/vk_update_descriptor.h')
-method_pairs = [(a,b) for a,b in header_pairs if 'PreflightLargeGuestDraw' in b]
+method_pairs = [(a,b) for a,b in header_pairs if 'PreflightExactGuestDraw' in b]
 assert len(method_pairs) == 1
 header = method_pairs[0][1]
 assert 'PreflightGuestDraw' in header
@@ -45,7 +45,7 @@ raster_pairs = pairs_for('src/video_core/renderer_vulkan/vk_rasterizer.cpp')
 # New compute dispatches also preflight large guest descriptors. R325 only
 # reconstructs the ORIGINAL graphics preparation contract.
 preflight_pairs = [(a,b) for a,b in raster_pairs
-                   if 'PreflightLargeGuestDraw(' in b
+                   if 'PreflightExactGuestDraw(' in b
                    and 'pipeline_cache.CurrentGraphicsPipeline()' in b]
 assert len(preflight_pairs) == 2
 early = [b for a,b in preflight_pairs if 'for (unsigned preflight = 0;' in b]
@@ -59,14 +59,14 @@ for raster in (early[0], late[0]):
     assert 'pipeline->DescriptorEntryReservation()' in raster
 assert 'descriptor_buffer_ring.PreflightCapacity(' in late[0]
 assert late[0].index('descriptor_buffer_ring.PreflightCapacity(') < late[0].rindex(
-    'guest_descriptor_queue.PreflightLargeGuestDraw(')
+    'guest_descriptor_queue.PreflightExactGuestDraw(')
 # The versioned native source also keeps the last check before both mutexes.
 native = (root / 'vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp').read_text()
 native_draw = native.split('void RasterizerVulkan::PrepareDraw(', 1)[1].split(
     'void RasterizerVulkan::Draw(', 1)[0]
-assert native_draw.count('guest_descriptor_queue.PreflightLargeGuestDraw(') == 3
+assert native_draw.count('guest_descriptor_queue.PreflightExactGuestDraw(') == 3
 assert native_draw.index('descriptor_buffer_ring.PreflightCapacity(') < native_draw.rindex(
-    'guest_descriptor_queue.PreflightLargeGuestDraw(') < native_draw.index(
+    'guest_descriptor_queue.PreflightExactGuestDraw(') < native_draw.index(
     'std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};')
 # The next original adaptation applies the paired locks to this same function.
 assert 'std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};' in generator
@@ -88,23 +88,23 @@ int main() {
     auto wait=[&] {++waits;};
     q.set_used(1000);
     assert(!q.PreflightGuestDraw(wait));
-    assert(!q.PreflightLargeGuestDraw(wait,1024));
-    assert(!q.PreflightLargeGuestDraw(wait,1500));
+    assert(!q.PreflightExactGuestDraw(wait,1024));
+    assert(!q.PreflightExactGuestDraw(wait,1500));
     assert(q.used()==1000 && waits==0);
     q.set_used(2596); // 2596 + 1500 = 4096, exactly full.
     assert(!q.PreflightGuestDraw(wait));
-    assert(q.PreflightLargeGuestDraw(wait,1500));
+    assert(q.PreflightExactGuestDraw(wait,1500));
     assert(q.used()==0 && waits==1);
     q.set_used(2500);
-    assert(!q.PreflightLargeGuestDraw(wait,1500));
+    assert(!q.PreflightExactGuestDraw(wait,1500));
     assert(q.used()==2500 && waits==1);
     q.set_used(3072);
     assert(q.PreflightGuestDraw(wait));
     assert(q.used()==0 && waits==2);
     q.set_used(3096);
-    assert(!q.PreflightLargeGuestDraw(wait,0));
-    assert(!q.PreflightLargeGuestDraw(wait,4096));
-    assert(!q.PreflightLargeGuestDraw(wait,100));
+    assert(!q.PreflightExactGuestDraw(wait,0));
+    assert(!q.PreflightExactGuestDraw(wait,4096));
+    assert(!q.PreflightExactGuestDraw(wait,100));
     assert(q.used()==3096 && waits==2);
 }
 '''
