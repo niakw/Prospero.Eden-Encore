@@ -126,24 +126,23 @@ void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
 {
     // Artwork occupies the WHOLE paper face; the corner logo is printed on
     // top of it, not placed beside it or clipped by the physical case lip.
-    c.list.gradient_rect(r, 0.0f, Color::rgb(0x192c40), Color::rgb(0x080b13));
+    // Solid printed paper under every face, including missing/undecoded
+    // artwork. This is not plastic: only the case shell draws that material.
+    c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));
+    c.list.gradient_rect(r, 0.0f, Color::rgb(0x20384c), Color::rgb(0x101e32));
     const bool scenic = !game.hero.empty() || !game.screenshots.empty();
     const std::string& painting = !game.hero.empty() ? game.hero :
                                   !game.screenshots.empty() ? game.screenshots.front() :
                                   game.cover;
-    if (!painting.empty()) {
+    if (scenic) {
         cover_crop(c, painting, r, 0.0f, 0.0f);
-        if (!scenic) {
-            // The only cached image may be a square app icon. Use its
-            // colours for full bleed, then print a complete, uncut icon.
-            c.list.gradient_rect(r, 0.0f,
-                                 Color::rgb(0x111725, 0.73f),
-                                 Color::rgb(0x0b101b, 0.62f));
-            const float side = r.w * 0.075f;
-            case_art_contain(c, game.cover,
-                             {r.x + side, r.y + r.h * 0.23f,
-                              r.w - side * 2.0f, r.h * 0.48f});
-        }
+    } else if (!game.cover.empty()) {
+        // A square ROM icon is always aspect-contained, never cropped,
+        // repeated, or enlarged until it resembles a retail box scan.
+        const float side = r.w * 0.075f;
+        case_art_contain(c, game.cover,
+                         {r.x + side, r.y + r.h * 0.23f,
+                          r.w - side * 2.0f, r.h * 0.48f});
     }
     // Keep a game title visible when no genuine logo/title-bearing retail
     // cover exists. This is a small transparent caption, not a poster band
