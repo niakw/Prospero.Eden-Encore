@@ -49,7 +49,7 @@ frame = rast.split("descriptor_buffer_ring.PreflightFrameReuse(scheduler)", 1)[1
     "descriptor_buffer_ring.PreflightCapacity(", 1)[0]
 assert "gpu_memory->FlushCaching();" in frame
 assert frame.count("pipeline = pipeline_cache.CurrentGraphicsPipeline();") == 2
-assert "guest_descriptor_queue.PreflightLargeGuestDraw(" in frame
+assert "guest_descriptor_queue.PreflightExactGuestDraw(" in frame
 hdr=(root/"tools/prepare-vulkan-port.py").read_text()
 assert "return uses_descriptor_buffer && descriptor_set_layout;" in hdr
 cpp=patched["src/video_core/renderer_vulkan/vk_descriptor_buffer.cpp"]
