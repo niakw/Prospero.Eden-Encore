@@ -150,3 +150,25 @@ in `.github/workflows/encore-core-preflight.yml`.
 Neither a full host prevalidation success nor a native PS5 build or
 hardware qualification is claimed. ExeFS is a loader capability,
 not evidence that the FC27 rendering/performance exits F01–F06 are closed.
+
+
+### ExeFS validation checkpoint
+
+- ExeFS discovery in the TV Library is **source-integrated**; the display
+  title is the containing folder and the canonical saved selection is
+  `<folder>/main`, never an arbitrary nested path.
+- Both files (`main` and `main.npdm`) must be regular, not symlinks;
+  the containing directory must also be non-symlink. The launcher repeats
+  these checks at game start.
+- The storage summary includes directory-mode enumeration
+  (`ListEntries(directory, true, ok)`), not the file-only enumeration
+  used by the nine extensions. The test contracts explicitly reject
+  accidental regression to file-only counts.
+- **Isolated native-C++-style host witness**: Clang and GCC, `-O0`
+  and `-O2`, UBSan — all four combinations passed on 23 October.
+  This replayed the maintained validation logic but does **not** substitute
+  for executing the repository's source-extracted
+  `tools/check-exefs-directory-host.py` in CI.
+- **Outstanding**: full GitHub host prevalidation, actual PS5 native build
+  and final hardware qualification; do not classify the path as released
+  or declare engine gate F01–F06 complete.
