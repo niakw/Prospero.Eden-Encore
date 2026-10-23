@@ -97,39 +97,84 @@ std::string library_format(const std::string& format)
 // Native procedural retail-style inserts: composed every frame from the
 // actual game art and metadata; never create a counterfeit front/back scan.
 // Physical plastic and 3D rotation are drawn by the existing case renderer.
+// Aspect-preserving insert for square icons and tall poster fragments.
+// Never fill a portrait retail sleeve by stretching a small app icon.
+void case_art_contain(Canvas& c, const std::string& path, const Rect& panel)
+{
+    c.list.gradient_rect(panel, 0.0f, Color::rgb(0x252a36), Color::rgb(0x0a101d));
+    if (path.empty()) return;
+    const Cover art = c.textures.cover(path, std::max(panel.w, panel.h));
+    if (art.texture == 0) return;
+    const float aspect = std::max(0.01f, art.aspect);
+    Rect fitted = panel;
+    if (aspect > panel.w / panel.h) {
+        fitted.h = panel.w / aspect;
+        fitted.y += (panel.h - fitted.h) * 0.5f;
+    } else {
+        fitted.w = panel.h * aspect;
+        fitted.x += (panel.w - fitted.w) * 0.5f;
+    }
+    c.list.image(art.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},
+                 Color::rgb(0xffffff, tween::cubic_out(art.age / 0.22f)));
+}
+
 void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
 {
-    c.list.gradient_rect(r, 0.0f, Color::rgb(0x20212b), Color::rgb(0x090c17));
+    // Full-bleed scenic art wins; a lone square icon is instead printed
+    // within a centered portrait composition, never enlarged/cropped into
+    // an indistinguishable full-height stretched background.
+    c.list.gradient_rect(r, 0.0f, Color::rgb(0x1b2535), Color::rgb(0x080d19));
+    const bool has_landscape = !game.hero.empty() || !game.screenshots.empty();
     const std::string& painting = !game.hero.empty() ? game.hero :
-                                  !game.cover.empty() ? game.cover :
-                                  !game.screenshots.empty() ? game.screenshots.front() : game.hero;
-    if (!painting.empty())
-        cover_crop(c, painting, r, 0.0f, 0.06f);
-    // Compose more than a square game icon: the lower third may use a second
-    // real screenshot, with the title printed on a distinct opaque panel.
-    const float title_h = std::clamp(r.h * 0.24f, 47.0f, 130.0f);
-    if (!game.screenshots.empty() && game.screenshots.front() != painting &&
-        r.h >= 180.0f) {
-        const Rect action{r.x, r.y + r.h * 0.60f,
-                          r.w, r.h * 0.40f - title_h * 0.45f};
-        if (action.h > 20.0f)
-            cover_crop(c, game.screenshots.front(), action, 0.0f, 0.08f);
-    }
-    c.list.gradient_rect({r.x, r.y + r.h - title_h, r.w, title_h}, 0.0f,
-                         Color::rgb(0x101522, 0.88f),
-                         Color::rgb(0x060811, 0.99f));
-    const float font = std::clamp(r.w * 0.095f, 14.0f, 33.0f);
-    text_shrink(c, game.name, r.x + r.w * 0.5f,
-                baseline(r.y + r.h - title_h, title_h, font),
-                font, theme::kTitle, r.w - 15.0f, Align::center);
-    // Red, format-specific sleeve mark; unlike a physical scan this is an
-    // application-rendered fallback, not a claim of licensed retail artwork.
+                                  !game.screenshots.empty() ? game.screenshots.front() :
+                                  game.cover;
+    const float title_h = std::clamp(r.h * 0.22f, 43.0f, 136.0f);
     const float brand_h = std::clamp(r.h * 0.13f, 23.0f, 78.0f);
+    if (has_landscape && !painting.empty()) {
+        cover_crop(c, painting, {r.x, r.y, r.w, r.h - title_h * 0.52f},
+                   0.0f, 0.0f);
+    } else if (!game.cover.empty()) {
+        // A square original icon remains square, against a subtle printed
+        // sleeve background, preserving its native proportions.
+        const float margin = std::max(7.0f, r.w * 0.065f);
+        const Rect icon_panel{r.x + margin, r.y + brand_h + margin,
+                              r.w - margin * 2.0f,
+                              std::max(8.0f, r.h - brand_h - title_h - margin * 2.0f)};
+        case_art_contain(c, game.cover, icon_panel);
+    }
+    // A secondary real screenshot improves a missing poster without ever
+    // presenting one repeated screenshot as two independent scenes.
+    const std::string& secondary = game.screenshots.size() > 1
+                                      ? game.screenshots[1]
+                                      : !game.screenshots.empty()
+                                            ? game.screenshots.front()
+                                            : game.cover;
+    if (has_landscape && !secondary.empty() && secondary != painting &&
+        r.h >= 220.0f) {
+        const Rect action{r.x + 2.0f, r.y + r.h * 0.64f,
+                          r.w - 4.0f, r.h * 0.16f};
+        cover_crop(c, secondary, action, 0.0f, 0.0f);
+        c.list.gradient_rect({action.x, action.y - 2.0f, action.w, 2.0f},
+                             0.0f, Color::rgb(0xf3f5f8, 0.53f),
+                             Color::rgb(0xf3f5f8, 0.53f));
+    }
+    // A fixed title print sits above the available imagery. No network work,
+    // asset composition or game-specific branching occurs in the draw loop.
+    const Rect title_panel{r.x, r.y + r.h - title_h, r.w, title_h};
+    c.list.gradient_rect(title_panel, 0.0f,
+                         Color::rgb(0x101725, 0.94f),
+                         Color::rgb(0x050910, 0.99f));
+    const float font = std::clamp(r.w * 0.094f, 13.0f, 34.0f);
+    text_shrink(c, game.name, r.x + r.w * 0.5f,
+                baseline(title_panel.y, title_h, font),
+                font, theme::kTitle, r.w - 17.0f, Align::center);
+
+    // Consistent vector sleeve marker. No third-party logo image or
+    // counterfeit official seal is copied into the application.
     const float brand_w = std::clamp(r.w * 0.28f, 41.0f, 100.0f);
     const Rect flag{r.x, r.y, brand_w, brand_h};
     c.list.rounded_rect(flag, 0.0f, Color::rgb(0xe31930));
     const float symbol_size = std::min(brand_h * 0.39f, brand_w * 0.29f);
-    // Controller-like glyph is vector ink: no scaled-up square app icon.
     const float glyph_y = r.y + brand_h * 0.12f;
     c.list.rounded_rect({r.x + brand_w * 0.38f - symbol_size * 0.74f,
                          glyph_y, symbol_size * 0.68f, symbol_size * 1.3f},
@@ -137,63 +182,77 @@ void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
     c.list.rounded_rect({r.x + brand_w * 0.43f,
                          glyph_y, symbol_size * 0.68f, symbol_size * 1.3f},
                         symbol_size * 0.25f, Color::rgb(0xffffff));
+    const float brand_font = std::max(8.0f, brand_h * 0.20f);
     text_shrink(c, "SWITCH", r.x + brand_w * 0.5f,
-                baseline(r.y + brand_h * 0.61f, brand_h * 0.32f,
-                         std::max(8.0f, brand_h * 0.20f)),
-                std::max(8.0f, brand_h * 0.20f), theme::kTitle,
-                brand_w - 5.0f, Align::center);
+                baseline(r.y + brand_h * 0.61f, brand_h * 0.32f, brand_font),
+                brand_font, theme::kTitle, brand_w - 5.0f, Align::center);
 }
 
 void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
 {
-    // Three image panels, the game's real LaunchBox/Nlib description and a
-    // fixed neutral information footer. Never copy another game's barcode,
-    // legal notices, player counts, certifications or publisher address.
-    c.list.gradient_rect(r, 0.0f, Color::rgb(0x172036), Color::rgb(0x090e19));
+    // Native recomposition based on actual title metadata and cached game
+    // imagery. Missing/duplicate screenshots never generate fake scenes.
+    c.list.gradient_rect(r, 0.0f, Color::rgb(0x162438), Color::rgb(0x0a101c));
     const std::string& hero = !game.hero.empty() ? game.hero :
                               !game.screenshots.empty() ? game.screenshots.front() :
                               game.cover;
     if (!hero.empty())
-        cover_crop(c, hero, {r.x, r.y, r.w, r.h * 0.39f}, 0.0f, 0.08f);
+        cover_crop(c, hero, {r.x, r.y, r.w, r.h * 0.38f}, 0.0f, 0.0f);
     const float gap = std::max(2.0f, r.w * 0.012f);
-    const float row_y = r.y + r.h * 0.40f;
+    const float row_y = r.y + r.h * 0.39f;
     const float row_h = r.h * 0.18f;
-    const float shot_w = (r.w - gap * 3.0f) * 0.5f;
-    const std::string& shot_a = !game.screenshots.empty() ?
-                                game.screenshots.front() : hero;
-    const std::string& shot_b = game.screenshots.size() > 1 ?
-                                game.screenshots[1] :
-                                !game.cover.empty() ? game.cover : shot_a;
-    if (!shot_a.empty())
-        cover_crop(c, shot_a, {r.x + gap, row_y, shot_w, row_h},
-                   0.0f, 0.05f);
-    if (!shot_b.empty())
+    const std::string& shot_a = !game.screenshots.empty()
+                                    ? game.screenshots.front() : hero;
+    const std::string& shot_b = game.screenshots.size() > 1
+                                    ? game.screenshots[1] : game.cover;
+    const bool split = !shot_a.empty() && !shot_b.empty() && shot_a != shot_b;
+    if (split) {
+        const float shot_w = (r.w - gap * 3.0f) * 0.5f;
+        cover_crop(c, shot_a, {r.x + gap, row_y, shot_w, row_h}, 0.0f, 0.0f);
         cover_crop(c, shot_b, {r.x + gap * 2.0f + shot_w, row_y,
-                               shot_w, row_h}, 0.0f, 0.05f);
-    const Rect copy{r.x, r.y + r.h * 0.59f, r.w, r.h * 0.26f};
-    c.list.rounded_rect(copy, 0.0f, Color::rgb(0x0b0e16, 0.96f));
+                               shot_w, row_h}, 0.0f, 0.0f);
+    } else if (!shot_a.empty() || !shot_b.empty()) {
+        const std::string& one = !shot_a.empty() ? shot_a : shot_b;
+        cover_crop(c, one, {r.x + gap, row_y, r.w - 2.0f * gap, row_h},
+                   0.0f, 0.0f);
+    }
+    const Rect copy{r.x, r.y + r.h * 0.58f, r.w, r.h * 0.27f};
+    c.list.rounded_rect(copy, 0.0f, Color::rgb(0x0b0e16, 0.97f));
     const std::string& desc = !game.description.empty() ? game.description :
                               !game.intro.empty() ? game.intro : game.name;
-    const float font = std::clamp(r.w * 0.055f, 10.0f, 20.0f);
+    const float font = std::clamp(r.w * 0.048f, 10.0f, 19.0f);
     text_block(c, desc, copy.x + r.w * 0.055f,
-               baseline(copy.y + copy.h * 0.07f, copy.h * 0.17f, font),
-               font, font * 1.17f, theme::kCopy,
-               r.w * 0.89f, 6, kShrink);
-    // A stable lower print field, analogous to the reference layout but
-    // explicitly without copied regulatory marks or invented game metadata.
+               baseline(copy.y + copy.h * 0.04f, copy.h * 0.14f, font),
+               font, font * 1.18f, theme::kCopy,
+               r.w * 0.89f, 7, kShrink);
+
+    // A constant lower panel reproduces the user's print layout proportions,
+    // not any publisher's legal claims, ratings or barcodes.
     const Rect footer{r.x, r.y + r.h * 0.86f, r.w, r.h * 0.14f};
     c.list.gradient_rect(footer, 0.0f,
-                         Color::rgb(0xf4f4f4), Color::rgb(0xe4e7eb));
-    c.list.rounded_rect({footer.x, footer.y, footer.w, std::max(1.0f, r.h * 0.009f)},
+                         Color::rgb(0xf5f6f8), Color::rgb(0xe4e7eb));
+    c.list.rounded_rect({footer.x, footer.y, footer.w,
+                         std::max(1.0f, r.h * 0.008f)},
                         0.0f, Color::rgb(0xc10f26));
+    const float label_font = std::max(9.0f, font * 0.86f);
     text_shrink(c, game.name, footer.x + footer.w * 0.5f,
-                baseline(footer.y + footer.h * 0.15f, footer.h * 0.38f,
-                         std::max(9.0f, font * 0.83f)),
-                std::max(9.0f, font * 0.83f), Color::rgb(0x252a32),
-                footer.w * 0.90f, Align::center);
+                baseline(footer.y + footer.h * 0.07f,
+                         footer.h * 0.34f, label_font),
+                label_font, Color::rgb(0x222a35),
+                footer.w * 0.91f, Align::center);
+    // Real metadata only: never infer or invent a regional age rating,
+    // manufacturer, locale, number of players or compatibility badge.
+    const std::string& credit = !game.publisher.empty() ? game.publisher :
+                                game.developer;
+    if (!credit.empty())
+        text_shrink(c, credit, footer.x + footer.w * 0.5f,
+                    baseline(footer.y + footer.h * 0.40f,
+                             footer.h * 0.25f, label_font * 0.74f),
+                    label_font * 0.74f, Color::rgb(0x454d59),
+                    footer.w * 0.90f, Align::center);
     text_shrink(c, "ENCORE  /  GAME INFORMATION",
                 footer.x + footer.w * 0.5f,
-                baseline(footer.y + footer.h * 0.60f, footer.h * 0.24f,
+                baseline(footer.y + footer.h * 0.69f, footer.h * 0.22f,
                          std::max(8.0f, font * 0.66f)),
                 std::max(8.0f, font * 0.66f), Color::rgb(0x59606a),
                 footer.w * 0.90f, Align::center);
