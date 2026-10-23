@@ -47,6 +47,10 @@ assert 'scan.empty() ? "fallback" : "retail"' in launcher
 assert 'launch_case_ready_mask_ & face_bit' in launcher
 assert "launch_description_" in launch_setup
 assert "launch_screenshots_" in launch_setup
+assert "launch_case_game_ = game;" in launch_setup
+assert "textures_.clear_case_pages();" in launch_setup
+assert "launch_composed_front_ = 0;" in launch_setup
+assert "launch_composed_back_ = 0;" in launch_setup
 assert "textures_.cover(launch_box_front_, 760.0f)" in launch_setup
 assert "textures_.cover(launch_box_back_, 760.0f)" in launch_setup
 assert "textures_.cover(launch_box_spine_, 760.0f)" in launch_setup
@@ -69,6 +73,22 @@ for fragment in (
     assert fragment in draw, fragment
 assert "MakeRequest" not in draw
 assert "progress%" not in draw
+# Missing box art follows the same native, source-independent compositing as
+# the Library. Rendered ink becomes ONE temporary texture on the existing 3D
+# face; no separate geometry, loader or network request is introduced.
+for fragment in (
+    "draw_composed_case_face(ink, launch_case_game_",
+    "c.textures.render_case_page(",
+    "if ((scan.empty() || artwork.texture == 0) && composed_page == 0)",
+    "const bool use_composed = (scan.empty() || artwork.texture == 0)",
+    "c.list.case_face(composed_page, face, angle, back, kWhite,",
+    "{0.0f, 1.0f, 1.0f, -1.0f}",
+    "EDEN_CASE_COMPOSE title=%016llX side=%s status=ready",
+    "launch_case_game_.screenshots",
+):
+    assert fragment in draw, ("native composed 3D jacket contract", fragment)
+assert draw.index("if (use_composed)") < draw.index("} else if (artwork.texture != 0)")
+assert "const std::string& scan = back ? launch_box_back_ : launch_box_front_;" in draw
 assert "std::vector<std::string> launch_screenshots_;" in header
 assert "constexpr float kCaseBackHold = 4.50f;" in theme
 assert "constexpr float kCaseTurnSeconds = 0.72f;" in theme
@@ -76,6 +96,25 @@ assert "constexpr float kCaseBackHold = 4.50f;" in theme
 assert "s.wait(0.51f); // instantaneous ~90-degree spine glimpse, no dwell" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
 assert "constexpr float kLaunchSeconds = kCaseFrontHold" in theme
+
+# The temporary FBO painter must be bounded (two faces) and cleaned up
+# when changing titles or leaving the native OpenGL context.
+textures_h = (root / "headless/prosperoeden/pe/ui/textures.hpp").read_text()
+textures_cpp = (root / "headless/prosperoeden/pe/ui/textures.cpp").read_text()
+library_src = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
+widgets_src = (root / "headless/prosperoeden/pe/ui/widgets.hpp").read_text()
+for token in ("case_pages_.size() >= 2", "glCheckFramebufferStatus(GL_FRAMEBUFFER)",
+              "glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(old_fbo));",
+              "glDeleteFramebuffers(1, &framebuffer);",
+              "case_pages_.push_back(ink);",
+              "clear_case_pages();"):
+    assert token in textures_cpp, token
+for token in ("render_case_page(", "void clear_case_pages();"):
+    assert token in textures_h, token
+assert "draw_composed_case_face(Canvas &c, const Game &game," in widgets_src
+assert "draw_composed_case_face(Canvas &c, const Game &game," in library_src
+assert "flat_front_fallback(c, game, paper);" in library_src
+assert "flat_back_fallback(c, game, paper);" in library_src
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
 assert math.cos(0.52) > 0 and math.sin(0.52) > 0
