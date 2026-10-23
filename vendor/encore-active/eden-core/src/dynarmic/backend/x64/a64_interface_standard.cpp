@@ -295,14 +295,18 @@ private:
             std::fprintf(stderr, "EDEN_JIT_PRESSURE core=%u capacity=%u remaining=%zu\n", unsigned(conf.processor_id), unsigned(conf.code_cache_size), block_of_code.SpaceRemaining());
 #endif
             // Immediately evacuate cache
-            invalidate_entire_cache = true;
+            // Publish the full-clear request under invalidation_mutex;
+            // concurrent range invalidations must not race with cache pressure.
+            ClearCache();
             PerformRequestedCacheInvalidation(HaltReason::CacheInvalidation);
         }
 #ifdef PS5_NATIVE
         try {
             block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);
         } catch (const std::bad_alloc&) {
-            invalidate_entire_cache = true;
+            // Publish the full-clear request under invalidation_mutex;
+            // concurrent range invalidations must not race with cache pressure.
+            ClearCache();
             PerformRequestedCacheInvalidation(HaltReason::CacheInvalidation);
             block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);
         }
