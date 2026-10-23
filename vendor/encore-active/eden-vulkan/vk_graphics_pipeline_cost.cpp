@@ -327,6 +327,14 @@ GraphicsPipeline::GraphicsPipeline(
     if (shader_notify) {
         shader_notify->MarkShaderBuilding();
     }
+    // Layout creation and descriptor setup below can throw before a worker
+    // owns the build. Return the shader notification if setup/queueing fails.
+    bool build_handed_off = false;
+    SCOPE_EXIT {
+        if (!build_handed_off && shader_notify) {
+            shader_notify->MarkShaderComplete();
+        }
+    };
     for (size_t stage = 0; stage < NUM_STAGES; ++stage) {
         const Shader::Info* const info{infos[stage]};
         if (!info) {
@@ -422,6 +430,10 @@ GraphicsPipeline::GraphicsPipeline(
             LOG_CRITICAL(Render_Vulkan, "Graphics pipeline build failed: unknown exception");
         }
     }};
+    // Complete all potentially throwing pipeline configuration before
+    // publishing the builder lambda that captures this pipeline by pointer.
+    // The worker must never see a partially constructed ConfigureFunc.
+    configure_func = ConfigureFunc(spv_modules, stage_infos);
     if (worker_thread) {
 #ifdef PS5_NATIVE
         if (::Eden::DevVulkan::fast_first_pipelines) {
@@ -444,10 +456,14 @@ GraphicsPipeline::GraphicsPipeline(
         {
             worker_thread->QueueWork(std::move(func));
         }
+        // QueueWork returned successfully; the worker now owns completion,
+        // including paths where pipeline validation or compilation fails.
+        build_handed_off = true;
     } else {
+        // Synchronous func() owns the completion callback from this point.
+        build_handed_off = true;
         func();
     }
-    configure_func = ConfigureFunc(spv_modules, stage_infos);
 }
 
 void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {
