@@ -31,7 +31,10 @@ assert "if (!error && !exists) publish(true);" in metadata_cpp
 assert "const std::lock_guard scan_job_guard{ScanAddOnsJobMutex()};" in metadata_cpp
 assert "ScannedAddOns().swap(scanned);" in metadata_cpp
 assert "const std::lock_guard lock{ScannedAddOnsMutex()};" in metadata_cpp
-assert 'const bool is_xci = extension == ".xci";' in metadata_cpp
+# The metadata reader handles XCI/XCZ and NSP/NSZ through the shared,
+# case-normalized format selector, not a hard-coded XCI-only condition.
+assert 'Eden::IsPackageFile(extension) && !Eden::IsCardImageFile(extension)' in metadata_cpp
+assert 'OpenControlRomFs(file, Eden::IsCardImageFile(extension))' in metadata_cpp
 assert "eden_game_glyph_display_version(" in metadata_cpp
 assert "eden_game_glyph_display_version(" in metadata_h
 assert "eden_game_glyph_display_version(" in main_cpp
