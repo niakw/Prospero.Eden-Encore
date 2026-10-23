@@ -220,6 +220,43 @@ void pictures(Stage &s)
     // Independently verify the game's real launch transition using the same
     // original C++ draw list, EGL context and shader backend as Home. This
     // takes *screenshots*, not image synthesis or a mock-up of the layout.
+    // Real C++/OpenGL Library visual evidence WITHOUT either retail face.
+    // Uses the same selected title and layout as the original-scan preview.
+    // This exercises the fixed corner logo, reconstructed rear footer and
+    // uniform-size shelf jackets, rather than only testing the 3D launch.
+    if (const char* missing = std::getenv("PE_PREVIEW_LIBRARY_FALLBACK");
+        missing != nullptr && std::strcmp(missing, "1") == 0)
+    {
+        s.restart(false);
+        s.wait(2.0f);
+        s.press({Key::up, Key::cross});
+        s.wait(1.0f);
+        s.press({Key::r1, Key::r1});
+        s.wait(0.3f);
+        const auto sample = s.services.games();
+        const auto case_scan = s.services.box_art(sample.at(10).title_id);
+        if (!case_scan.front.empty() || !case_scan.back.empty()) {
+            std::fprintf(stderr,
+                         "library-fallback-preview: original scan unexpectedly enabled\\n");
+            s.ok = false;
+            return;
+        }
+        // Do not capture the first asynchronous frame, when Nlib imagery may
+        // still be in the CPU decode queue. No UI repaint or alternate renderer.
+        for (int attempt = 0; attempt < 48; ++attempt) {
+            s.render();
+            std::this_thread::sleep_for(std::chrono::milliseconds(45));
+            s.launcher->update(1.0f / 60.0f);
+        }
+        s.shoot("00-library-fallback-front");
+        s.press({Key::down});
+        s.wait(0.22f);
+        s.shoot("01-library-fallback-back");
+        s.press({Key::cross});
+        s.wait(0.32f);
+        s.shoot("02-library-fallback-zoom");
+        return;
+    }
     if (const char* library_only = std::getenv("PE_PREVIEW_LIBRARY_ONLY");
         library_only != nullptr && std::strcmp(library_only, "1") == 0)
     {
