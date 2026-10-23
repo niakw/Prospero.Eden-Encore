@@ -330,7 +330,8 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
 #endif
 #ifdef PS5_NATIVE
     for (unsigned preflight = 0; preflight != 2; ++preflight) {
-        if (!guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (!pipeline->HasDescriptorEntries() ||
+            !guest_descriptor_queue.PreflightLargeGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation()))
             break;
         gpu_memory->FlushCaching();
@@ -358,7 +359,8 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
         }
         // A newly selected pipeline may reserve more guest descriptors.
         // Keep any worker wait ahead of the paired cache mutexes.
-        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (pipeline->HasDescriptorEntries() &&
+            guest_descriptor_queue.PreflightLargeGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
             gpu_memory->FlushCaching();
             pipeline = pipeline_cache.CurrentGraphicsPipeline();
@@ -385,7 +387,8 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
         // This GPU drain can change the selected pipeline after the earlier
         // descriptor preflight. Check its NEW reservation before taking the
         // buffer/texture mutex pair, so Acquire cannot wait under both locks.
-        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (pipeline->HasDescriptorEntries() &&
+            guest_descriptor_queue.PreflightLargeGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
             gpu_memory->FlushCaching();
             pipeline = pipeline_cache.CurrentGraphicsPipeline();
@@ -854,7 +857,8 @@ void RasterizerVulkan::DispatchCompute() {
     // Drain only necessary GPU fences while neither guest cache is locked.
     // Worker drains can publish guest shader/descriptor invalidations.
     for (unsigned preflight = 0; preflight != 2; ++preflight) {
-        if (!guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (!pipeline->HasDescriptorEntries() ||
+            !guest_descriptor_queue.PreflightLargeGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation()))
             break;
         gpu_memory->FlushCaching();
@@ -866,7 +870,8 @@ void RasterizerVulkan::DispatchCompute() {
         gpu_memory->FlushCaching();
         pipeline = pipeline_cache.CurrentComputePipeline();
         if (!pipeline) return;
-        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (pipeline->HasDescriptorEntries() &&
+            guest_descriptor_queue.PreflightLargeGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
             gpu_memory->FlushCaching();
             pipeline = pipeline_cache.CurrentComputePipeline();
@@ -878,7 +883,8 @@ void RasterizerVulkan::DispatchCompute() {
         gpu_memory->FlushCaching();
         pipeline = pipeline_cache.CurrentComputePipeline();
         if (!pipeline) return;
-        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (pipeline->HasDescriptorEntries() &&
+            guest_descriptor_queue.PreflightLargeGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
             gpu_memory->FlushCaching();
             pipeline = pipeline_cache.CurrentComputePipeline();
