@@ -470,6 +470,7 @@ jobs:
           python3 -B tools/check-launcher-translation-coverage.py
           python3 -B tools/check-home-media.py
           python3 -B tools/check-launch-case-artwork.py
+          python3 -B tools/check-launcher-shoulder-and-cover.py
           python3 -B tools/launcher/build-box-art-index.py --self-test
           python3 -B tools/check-encore-ux.py
           python3 -B tools/check-ps5-ui-controls-per-game.py
