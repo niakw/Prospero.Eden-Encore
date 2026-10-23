@@ -104,7 +104,7 @@ Avec un disque externe, seule la racine change : les sous-dossiers restent ident
 | Fonction | Description |
 | --- | --- |
 | **Accueil, Bibliothèque, Récents** | Navigation à la manette et métadonnées des jeux, avec repli hors ligne |
-| **Lancement animé** | Rotation du boîtier aux couleurs Eden : vraies jaquettes recto/verso locales en priorité, sinon composition à partir des visuels du jeu. [Détails](docs/LAUNCH_CASE_ARTWORK.md) |
+| **Lancement animé** | Véritable boîtier 3D : chaque scan recto/verso disponible reste prioritaire ; à défaut, reconstruction native avec artworks, captures distinctes, titre et descriptif, sans génération d'image. [Détails](docs/LAUNCH_CASE_ARTWORK.md) |
 | **Paramètres rapides** | Ajustements vidéo et préférences par titre |
 | **Profils vidéo** | **Minimum → Recommandé → Haute → Ultra**, puis **Personnalisé** |
 | **Safe Launch** | Pour une seule session : OpenGL, 1×, 1080p, bilinéaire, portable, 60 Hz, mods désactivés |
