@@ -43,17 +43,19 @@ assert "media_retry_timer_ >= 8.0f" in nav
 # permits a game to render with only its older cover/hero artwork.
 assert "const std::string& scan = rear ? game.box_back : game.box_front;" in lib
 assert "flat_front_fallback(c, game, paper);" in lib
-# The latest fallback deliberately uses aspect-fit (not crop), preserving
-# generic cover/hero titles when no authentic printed jacket is available.
+# Actual absent-front paper intentionally fills its entire physical sleeve,
+# using the same 440x704 ink renderer in Library and rotating 3D launch.
+# The old floating aspect-fit art and its helper have been removed.
 front_fallback = lib.split("void flat_front_fallback(", 1)[1].split(
     "void flat_back_fallback(", 1)[0]
-fit_art = lib.split("void fit_fallback_art(", 1)[1].split(
-    "void flat_front_fallback(", 1)[0]
-assert "if (!game.cover.empty()) fit_fallback_art(c, game.cover, art);" in front_fallback
-assert "else if (!game.hero.empty()) fit_fallback_art(c, game.hero, art);" in front_fallback
-assert "if (source > target)" in fit_art and "else if (source < target)" in fit_art
-assert "c.list.image(image.texture, fit, {0.0f, 0.0f, 1.0f, 1.0f}" in fit_art
-assert "cover_crop(" not in front_fallback
+assert 'const std::string& painting = !game.hero.empty() ? game.hero :' in front_fallback
+assert 'if (!painting.empty()) {' in front_fallback
+assert 'cover_crop(c, painting, r, 0.0f, 0.0f);' in front_fallback
+assert 'c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));' in front_fallback
+assert 'const Rect logo{r.x, r.y, logo_w,' in front_fallback
+assert "fit_fallback_art(" not in front_fallback
+assert "case_art_contain(c, game.cover" not in front_fallback
+assert "flat_composed_ink(c, game, paper, rear);" in lib
 assert "if (image.missing) continue;" in lib
 assert "Loading artwork" in home and "Artwork unavailable" in home
 assert "text_shrink(c, title_label" in home
