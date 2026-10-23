@@ -152,10 +152,15 @@ for fragment in ('load("art/switch-logo.tga", &switch_logo_)',
                  'load("art/switch-rear-footer.tga", &switch_rear_footer_)',
                  '&switch_logo_, &switch_rear_footer_'):
     assert fragment in loader
+# Host and PS5 packaging MUST reproduce the same gold reference seal ink.
+# A source-only grayscale conversion would silently lose this fixed element.
+render_fixed = (root / "tools/launcher/render-art.py").read_text()
+assert 'ink[x, y] = (175, 136, 76, alpha)' in render_fixed
 assert "brand fixed" in (root / "tools/launcher/preview.sh").read_text()
 package = (root / "tools/package-headless-native.sh").read_text()
 for fragment in ("for stem in switch-logo switch-rear-footer; do",
-                 "base64.b64decode", "tga:bits-per-pixel=32"):
+                 "base64.b64decode", "tga:bits-per-pixel=32",
+                 "-region '82x80+182+195'", "-fill '#af884c'"):
     assert fragment in package
 
 # Quarter turn becomes an edge; the full back is visible half a turn later.
