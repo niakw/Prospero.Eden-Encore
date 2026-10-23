@@ -55,6 +55,11 @@ struct Canvas
 // unavailable. The same native composition is used on Library sleeves and
 // in the launcher's 3D case (rendered once to a temporary GL texture).
 void draw_composed_case_face(Canvas &c, const Game &game, const Rect &paper, bool rear);
+// Poll the ACTUAL source-size texture buckets used by the renderer before
+// baking a one-shot GL paper page. A 760px prefetch is not proof that a
+// 256/512px inset scene has loaded (each is a separate cache entry).
+bool composed_case_face_ready(Textures &textures, const Game &game,
+                              bool rear, bool allow_missing);
 
 // ---- text ----
 // Sizes are the design's: text is drawn at text_size(size), staying centred on its line.
