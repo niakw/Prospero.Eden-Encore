@@ -547,6 +547,52 @@ void Damaged() {
         Expect(error.find("cannot create") != std::string::npos, "an unwritable unpack says so: " + error);
     }
 }
+// Cache files may be on writable console storage even when the runtime has
+// elevated filesystem access. Existing symlinks must never be dereferenced
+// for unpacked copies, compressed-pieces files or partial unpack writes.
+void RejectSymlinkCache() {
+    const std::string protected_file = CheckPath("protected-file");
+    {
+        std::FILE* out = std::fopen(protected_file.c_str(), "wb");
+        assert(out && std::fwrite("PROTECTED", 1, 9, out) == 9);
+        std::fclose(out);
+    }
+    const std::string unpacked = CheckPath("evil.unpacked");
+    const std::string part = unpacked + ".part";
+    const std::string pieces = CheckPath("evil.pieces");
+    for (const auto& path : {unpacked, part, pieces}) {
+        std::remove(path.c_str());
+        Expect(::symlink(protected_file.c_str(), path.c_str()) == 0,
+               "create hostile NCZ cache symlink");
+    }
+    Expect(Detail::OpenCacheFile(unpacked, O_RDONLY, "rb") == nullptr,
+           "unpacked copy must not follow a symlink");
+    Expect(Detail::OpenCacheFile(pieces, O_RDWR, "r+b") == nullptr,
+           "pieces file must not follow a symlink");
+    {
+        SolidPieces ignored(pieces);
+        (void)ignored;
+    }
+    Layout fake;
+    fake.nca_size = kHeaderSize + 512;
+    std::string error;
+    const auto no_data = [](u8*, std::size_t, u64) -> std::size_t { return 0; };
+    Expect(UnpackToFile(fake, no_data, unpacked, &error) == nullptr,
+           "unpack must not follow or overwrite existing .part");
+    Expect(error.find("cannot create") != std::string::npos,
+           "unsafe cache path rejected before decompression");
+    {
+        std::FILE* in = std::fopen(protected_file.c_str(), "rb");
+        char data[10]{};
+        Expect(in && std::fread(data, 1, 9, in) == 9 &&
+                   std::memcmp(data, "PROTECTED", 9) == 0,
+               "hostile symlinks never damage another file");
+        if (in) std::fclose(in);
+    }
+    for (const auto& path : {unpacked, part, pieces}) std::remove(path.c_str());
+    std::remove(protected_file.c_str());
+}
+
 } // namespace
 
 int main() {
@@ -584,6 +630,9 @@ int main() {
 
     std::puts("Damaged files:");
     Damaged();
+
+    std::puts("Cache symlink safety:");
+    RejectSymlinkCache();
 
     if (failures) {
         std::fprintf(stderr, "%d failure(s)\n", failures);
