@@ -126,7 +126,7 @@ assert "flat_back_fallback(c, game, paper);" in library_src
 assert "if (scan.empty() && composed_page == 0 && !compose_attempted)" in draw
 assert "const bool use_composed = scan.empty() && composed_page != 0;" in draw
 assert "if (scan.empty() || artwork.texture == 0)" not in draw
-assert "if (rear)\n                flat_back_fallback(c, game, paper);" not in library
+assert "if (rear)\n                flat_back_fallback(c, game, paper);" not in library_src
 assert 'if (std::getenv("PE_PREVIEW_NO_BOX_FRONT") == nullptr)' in (
     root / "headless/prosperoeden/host/fake_services.cpp").read_text()
 assert 'if (std::getenv("PE_PREVIEW_NO_BOX_BACK") == nullptr)' in (
