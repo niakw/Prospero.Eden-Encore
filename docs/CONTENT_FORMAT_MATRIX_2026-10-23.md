@@ -95,3 +95,32 @@ Encore's ZBIC/zstd segment path are retained, alongside the NCZ zstd
 block/solid reader for NSZ/XCZ. An executable/archive may be recognized
 but fail to boot when it lacks its companion files or required metadata.
 No blanket compatibility claim is made before native CI and hardware tests.
+
+
+## Final all-extension source checkpoint
+
+The TV Library's **actual scanning loop**, not just `ValidRomFilename`,
+now checks `Eden::IsGameFile(file)` from `headless/game_files.h` rather
+than the historical NSP/XCI-only conditional. This unifies discovery,
+saved/recents selection, development-ROM filtering and storage counts
+for the nine file extensions.
+
+The generic Metadata Bridge recognizes the distinction between full
+NSP/XCI-style containers and direct NRO/NSO/NCA/NAX/KIP files. Direct
+modules are never misparsed as submission packages for icon/language
+extraction. The native core makes the final decision about bootability.
+
+A recheck of **all five** NCZ-aware maintained source owners against the
+pinned Eden files confirmed byte-for-byte expected transformations,
+including the explicit NAX filename fallback. `check-encore-ncz-sources.py`
+contains a negative assertion that the legacy
+`format != "NSP" && format != "XCI"` scan condition cannot return.
+The source and host-test gate is committed, but the native build status
+for the latest HEAD remains unknown; these are **development** features,
+not a hardware-tested compatibility statement.
+
+The pre-existing FC27 performance and memory-correctness work remains
+separate. F01-F06 cannot be closed merely because more loading formats
+are visible in the front-end. A complete native compilation is requested
+with `[full-build]`, and F07 still requires the planned final PS5
+qualification, not an immediate test.
