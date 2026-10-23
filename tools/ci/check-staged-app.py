@@ -31,6 +31,11 @@ ui_expected = {
     for p in source_ui.rglob("*") if p.is_file()
 }
 ui_expected.discard("ui/art/backdrop-blur.tga")
+# Fixed user-supplied insert sources are decoded into native TGA only at
+# packaging time; encoded PNG text sources are deliberately not installed.
+for stem in ("switch-logo", "switch-rear-footer"):
+    ui_expected.discard(f"ui/art/{stem}.png.b64")
+    ui_expected.add(f"ui/art/{stem}.tga")
 ui_expected.add("ui/art/backdrop.tga")
 # Resumed builds restore the already staged catalog from an earlier Actions
 # run: the source-tree index is not regenerated during a stage resume.
