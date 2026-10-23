@@ -612,3 +612,26 @@ Source checks validate the SHA-256 of both supplied fixed assets. The actual
 host C++/OpenGL preview additionally exercises the two mixed original/missing
 configurations and checks that only the missing side is composited; full-pair
 and no-pair paths retain their existing captures.
+
+
+## Library/launch parity fix — October 23
+
+A visual discrepancy remained between the Library's 2D missing-art paper
+and the launch transition's 3D paper, despite sharing the fallback functions:
+the Library used each cell's actual pixel size, which changed text and caption
+clamp behavior. The fixed rear preview also used source-dependent aspect ratios
+and height while front shelf widths varied by game scan.
+
+The Library now draws *reconstructed* art in the same **440x704** ink coordinate
+space as the native 3D case, uniformly projected onto a fixed **454:730** shell
+in the five-slot shelf, selected rear detail and rear zoom. The molded paper
+insets are scaled from the same physical 7px-side, 13px-top/bottom geometry.
+Original Box - Front/Back scans are still independent and fully contained;
+their source proportions never resize the surrounding case. Selected/focused
+covers receive borders and glows, not a 2.5% enlargement.
+
+The host-only preview now captures a real Library view with neither scan
+present and checks the shelf, reconstructed rear, and zoomed paper. No
+separate image generator, thumbnail template, second cover engine or console
+test is used. The host OpenGL build and source gates must both pass before
+calling this visually verified.
