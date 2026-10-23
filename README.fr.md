@@ -5,7 +5,7 @@
 
   <h3>L'émulation native, pensée pour jouer depuis son canapé.</h3>
 
-  <p><strong>Une évolution maintenue de ProsperoEden, centrée sur le firmware 13.60, la stabilité du lancement, les jeux récents et une interface vraiment utilisable à la manette.</strong></p>
+  <p><strong>Une évolution maintenue de ProsperoEden, centrée sur le firmware 13.60, les formats NSP/XCI et NSZ/XCZ expérimentaux, la décompression ZBIC/zstd et une interface adaptée à la manette.</strong></p>
 
   <p><a href="README.md"><strong>English</strong></a> · <strong>Français</strong></p>
   <p><kbd>Firmware 13.60 · testé sur matériel</kbd> <kbd>Vulkan + OpenGL</kbd> <kbd>Interface TV</kbd> <kbd>Dynarmic</kbd></p>
@@ -36,7 +36,7 @@ Une bonne expérience d'émulation ne se résume pas à lancer un jeu. Il faut p
 | | Ce qu'apporte Encore |
 | --- | --- |
 | **🎮 Interface TV** | Accueil néon tropical, jeux récents, visuels, bibliothèque et navigation manette. |
-| **🧩 Jeux plus récents** | Chargement ZBIC/zstd des NSO récents, tout en conservant LZ4. |
+| **🧩 Jeux et compression** | NSP/XCI, NSZ/XCZ expérimentaux et décompression NSO LZ4 + ZBIC/zstd. |
 | **🛟 Mode récupération** | Safe Launch temporaire, remises à zéro confirmées et migration sécurisée. |
 | **⚙️ Profils par jeu** | **Minimum, Recommandé, Haute, Ultra**, puis **Personnalisé** en cas de modification. |
 | **🎨 Graphismes natifs** | Vulkan/RADV et OpenGL, filtres, mise à l'échelle, anticrénelage et caches. |
@@ -52,7 +52,7 @@ Une bonne expérience d'émulation ne se résume pas à lancer un jeu. Il faut p
 | --- | --- |
 | **Firmware** | Qualification prioritaire sur **13.60**, sans extrapolation aux autres versions |
 | **Interface** | Accueil, bibliothèque, récents et paramètres rapides repensés pour la TV |
-| **Chargement** | Conservation LZ4 + support ZBIC/zstd |
+| **Chargement** | NSP/XCI, NSZ/XCZ expérimentaux et NSO LZ4 + ZBIC/zstd |
 | **Récupération** | Safe Launch sur une seule session, sans écraser les préférences enregistrées |
 | **Stockage** | Même structure de dossiers sur stockage interne ou externe ; migration prudente |
 | **Manette** | Profils du launcher et réglages personnels ; actions enregistrées en jeu encore à qualifier |
@@ -62,6 +62,21 @@ Une bonne expérience d'émulation ne se résume pas à lancer un jeu. Il faut p
 Encore reste un fork communautaire indépendant, et non une version officielle des projets amont.
 
 </details>
+
+---
+
+## 📦 Formats de jeux et compression
+
+| Catégorie | Formats | Portée actuelle |
+| --- | --- | --- |
+| Jeux dans la bibliothèque | **NSP** (`.nsp`), **XCI** (`.xci`) | Détection et lancement déjà présents |
+| Jeux compressés | **NSZ** (`.nsz`), **XCZ** (`.xcz`) | Lecteur NCZ expérimental, jeux, mises à jour et DLC ; compilation native et console encore à qualifier |
+| Compression interne des exécutables | **LZ4**, **ZBIC / zstd** | Décompression des segments NSO ; **ce ne sont pas des extensions de jeux** |
+| Autres types reconnus en interne par Eden | NRO, NSO, NCA, NAX, KIP et répertoires de jeux décompressés | Présents dans le chargeur amont, mais **pas tous proposés dans la bibliothèque** |
+
+La compression NCZ par blocs se lit directement. Un fichier « solid » peut être décompressé temporairement dans `/data/prosperoeden/user/cache/nsz/`, ce qui nécessite de l'espace pour sa taille décompressée. La lecture des métadonnées hors jeu conserve des fragments vérifiés et bornés. Il s'agit d'un support en développement, **pas encore d'une version qualifiée sur console**.
+
+[Guide de stockage et des fichiers compressés](INSTALL.md#compressed-nsz-and-xcz-games) · [Lecteur et tests](headless/ncz.h)
 
 ---
 
