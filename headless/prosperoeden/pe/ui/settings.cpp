@@ -441,9 +441,10 @@ void Launcher::press_dialog(Key key)
         close_modal();
         return;
     }
-    if ((key == Key::up || key == Key::down) && modal_ == Modal::video)
+    if ((key == Key::up || key == Key::down ||
+         key == Key::l1 || key == Key::r1) && modal_ == Modal::video)
     {
-        if (video_rows_.move(key == Key::down ? 1 : -1))
+        if (video_rows_.move(key == Key::down || key == Key::r1 ? 1 : -1))
         {
             option_ = video_rows_.selected;
             message_.clear();
@@ -451,9 +452,10 @@ void Launcher::press_dialog(Key key)
         }
         return;
     }
-    if ((key == Key::up || key == Key::down) && rows > 1)
+    if ((key == Key::up || key == Key::down ||
+         key == Key::l1 || key == Key::r1) && rows > 1)
     {
-        option_ = (option_ + (key == Key::down ? 1 : rows - 1)) % rows;
+        option_ = (option_ + (key == Key::down || key == Key::r1 ? 1 : rows - 1)) % rows;
         message_.clear();
         cue(Cue::focus);
         return;
