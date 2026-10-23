@@ -630,6 +630,34 @@ if(EDEN_A32_FASTMEM)
     list(REMOVE_ITEM core_sources "loader/deconstructed_rom_directory.cpp")
     list(APPEND core_sources "${EDEN_MAINTAINED_CODE_LOADER}")
 endif()
+# NSZ/XCZ: select reviewed full C++ source owners instead of generating C++
+# with CMake string replacements. Preserve pinned Eden source unchanged.
+foreach(eden_ncz_relative IN ITEMS
+        "file_sys/submission_package.cpp"
+        "file_sys/card_image.cpp"
+        "loader/loader.cpp"
+        "loader/nsp.cpp"
+        "file_sys/registered_cache.cpp")
+    set(eden_ncz_maintained
+        "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/${eden_ncz_relative}")
+    if(NOT EXISTS "${eden_ncz_maintained}")
+        message(FATAL_ERROR "Missing maintained NCZ integration: ${eden_ncz_relative}")
+    endif()
+    list(FIND core_sources "${eden_ncz_relative}" eden_ncz_pinned_index)
+    if(eden_ncz_pinned_index LESS 0)
+        message(FATAL_ERROR "Pinned NCZ source selection changed: ${eden_ncz_relative}")
+    endif()
+    list(REMOVE_ITEM core_sources "${eden_ncz_relative}")
+    list(APPEND core_sources "${eden_ncz_maintained}")
+endforeach()
+list(APPEND core_sources "${EDEN_PORT_DIR}/ncz.cpp")
+# Both the adapter and the two NCZ-aware full source owners use this header.
+target_include_directories(core PRIVATE "${EDEN_PORT_DIR}")
+# The decompressor is the same pinned zstd library as the existing native NSO
+# ZBIC support; do not download or build an unrelated copy.
+if(TARGET libzstd_static)
+    target_link_libraries(core PRIVATE libzstd_static)
+endif()
 set_property(TARGET core PROPERTY SOURCES "${core_sources}")
 # The guest title is the owner of a zero-ID cache storage request.
 set(EDEN_MAINTAINED_SAVEDATA
