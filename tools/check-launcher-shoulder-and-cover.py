@@ -51,28 +51,32 @@ contain = method(library, "void case_art_contain(", "void flat_front_fallback(")
 for token in ("const float aspect", "fitted.h = panel.w / aspect;",
               "fitted.w = panel.h * aspect;", "c.list.image(art.texture, fitted"):
     assert token in contain, token
-assert "const bool has_landscape" in front
-assert "case_art_contain(c, game.cover, icon_panel);" in front
-assert "case_media::FrontAlternate(painting, game.cover, game.screenshots)" in front
-assert "case_art_contain(c, *secondary, action);" in front
-# Screenshots are title-keyed; never create an illusory second distinct
-# picture by repeating the same cached hero or screenshot.
-for token in ('const std::string* first = shots[0];',
-              'const std::string* second = shots[1];',
-              'if (first && second)', 'case_art_contain(c, one,'):
+# Front artwork must cover the whole paper; a fixed square label sits
+# exactly on the top-left corner and is never drawn on an original scan.
+for token in ("const bool scenic", "cover_crop(c, painting, r, 0.0f, 0.0f);",
+              "case_art_contain(c, game.cover,", "const Rect logo{r.x, r.y, logo_w,",
+              "c.textures.switch_logo() != 0"):
+    assert token in front, token
+# Distinct back scenes come from the cached game, while the reference
+# bottom section is immutable and cannot be overwritten by dynamic media.
+for token in ("const std::string* first = shots[0];",
+              "const std::string* second = shots[1];",
+              "const Rect left{", "const Rect top_right{", "const Rect panorama{",
+              "constexpr float kFixedFooter = 0.41f;",
+              "c.textures.switch_rear_footer() != 0",
+              "if (path == game.cover) case_art_contain(c, path, area);"):
     assert token in back, token
-# A square icon used as one of two lower panels must never be cropped.
-assert 'if (*second == game.cover) case_art_contain(c, *second, right);' in back
-assert "ENCORE  /  GAME INFORMATION" in back
-# A remote retail scan may have a valid pathname but not yet a GPU texture.
-# Falling back to a blank case face here would defeat the composition.
-assert 'if (artwork.texture != 0)' in render
-assert 'if (rear)\n                flat_back_fallback(c, game, paper);' in render
-assert 'else\n                flat_front_fallback(c, game, paper);' in render
-assert 'const std::string& credit = !game.publisher.empty()' in back
-# The fixed lower panel must not pretend that unknown regions, age labels,
-# publisher addresses, barcodes or classifications are official information.
-footer = back.split("const Rect footer",1)[1]
-for word in ("barcode", "PEGI", "HAC-P", "ESRB", "MADE IN JAPAN"):
+assert "ENCORE / GAME INFORMATION" in back
+assert "const std::string& credit = !game.publisher.empty()" in back
+# A real face remains untouched while asynchronous texture decoding runs;
+# a different missing face can still receive a reconstructed paper insert.
+assert "if (!scan.empty()) {" in render
+assert "if (artwork.texture != 0)" in render
+assert "c.list.gradient_rect(paper, 0.0f," in render
+assert "if (rear)\\n                flat_back_fallback(c, game, paper);" not in render
+# No invented regulatory content in the procedural fallback. The user-
+# supplied reference footer is drawn as a static asset only, separately.
+footer = back.split("if (c.textures.switch_rear_footer() != 0)",1)[1]
+for word in ("PEGI", "HAC-P", "ESRB", "MADE IN JAPAN"):
     assert word not in footer, word
 print("ENCORE_UI_SHOULDER_AND_COMPOSED_SLEEVES_PASS")
