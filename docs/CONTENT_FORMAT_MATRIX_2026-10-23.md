@@ -30,7 +30,7 @@ The reader and front-end adapter are `headless/ncz.h`, `headless/ncz.cpp`, `head
 - `loader/nsp.cpp` — accept NCZ member names during container identification
 - `file_sys/registered_cache.cpp` — include compressed update/DLC containers
 
-`headless/CMakeLists.txt` selects those five maintained source owners and compiles the NCZ adapter; it does not generate C++ by textual substitutions. Pinned Eden sources remain unchanged. Library filename checks are case-insensitive for the four extensions.
+`headless/CMakeLists.txt` selects those five maintained source owners and compiles the NCZ adapter; it does not generate C++ by textual substitutions. Pinned Eden sources remain unchanged. Library filename checks are case-insensitive for all **nine** picker extensions.
 
 ## Storage, memory and access model
 
@@ -43,7 +43,7 @@ The reader and front-end adapter are `headless/ncz.h`, `headless/ncz.cpp`, `head
 ## Evidence and remaining acceptance
 
 - **Source comparison:** the five maintained owners have been compared with their pinned baselines; each contains its reviewed NCZ adaptation, plus `ncz_vfs.h` inclusion where used. The maintained `loader.cpp` additionally includes the explicitly reviewed NAX extension fallback.
-- **Committed host checks:** `tools/check-ncz.py` runs synthetic block/solid NCZ reconstruction under ASan/UBSan; `tools/check-encore-ncz-sources.py` verifies native-owner selection and all eight case variants of the four accepted Library extensions.
+- **Committed host checks:** `tools/check-ncz.py` runs synthetic block/solid NCZ reconstruction under ASan/UBSan; `tools/check-encore-ncz-sources.py` verifies native-owner selection, all nine picker extensions in upper/lowercase, storage counts, and safe direct-loader metadata routing.
 - **Security regression:** `headless/ncz_check.cpp` exercises symlinked cache paths and verifies they cannot overwrite a protected file.
 - **Unverified:** full host CI and native PS5 package at the current HEAD; no console gameplay test of NSZ/XCZ.
 - **FC27:** engine exits F01–F06 remain open; this feature does not constitute a fix for stutter, missing textures or the in-game HUD. Console qualification F07 remains postponed until the engine is ready.
@@ -62,8 +62,8 @@ This document is an implementation/validation ledger, not a compatibility claim 
 - NCZ cache protection rejects path separators, embedded NULs, symlinked
   cache directories, symlinked cache files and pre-existing partial files.
 - A locally compiled **isolated reproduction** of the actual
-  `headless/game_files.h` code passes the eight accepted extension cases and
-  nine rejected examples under `-O0` and `-O2` with UBSan.
+  `headless/game_files.h` code passes the initial four-container extension cases and
+  nine rejected examples; the maintained CI oracle now covers all nine loader extensions under `-O0` and `-O2` with UBSan.
 - An isolated source-extracted NCZ cache open guard rejects symlinked
   `.unpacked`, `.part` and `.pieces` files under `-O0`/`-O2` with
   UBSan. The full `headless/ncz_check.cpp` suite is checked into the host CI.
@@ -72,3 +72,26 @@ This document is an implementation/validation ledger, not a compatibility claim 
   PlayStation 5 native package and NSZ/XCZ game runtime.
 - This checkpoint explicitly requests the native CI build using the commit
   marker `[full-build]`; a CI trigger does not itself mean the job passed.
+
+
+## All-format Library routing — 23 October
+
+The Encore game picker and its storage counter now accept these **nine**
+case-insensitive extensions: `.nsp`, `.xci`, `.nsz`, `.xcz`, `.nro`,
+`.nso`, `.nca`, `.nax`, `.kip`. Each is passed to the matching native
+Eden loader; for raw executable/archive types the Library uses filename or
+ID fallback rather than incorrectly opening them as NSP/XCI Control RomFS.
+`.nax` now also has an explicit filename-type fallback, while signature
+identification still takes precedence.
+
+The underlying loader additionally identifies an extracted-game `main`
+with its associated directory content, and special NAX-style `00`
+inputs; these are **layout-specific paths**, not ordinary extensions
+discovered by the TV Library. There is no independent game loader for
+raw `.ncz`, `.zst`, `.zbic` or `.lz4` files.
+
+**Compression remains separate:** the original LZ4 NSO segment path and
+Encore's ZBIC/zstd segment path are retained, alongside the NCZ zstd
+block/solid reader for NSZ/XCZ. An executable/archive may be recognized
+but fail to boot when it lacks its companion files or required metadata.
+No blanket compatibility claim is made before native CI and hardware tests.
