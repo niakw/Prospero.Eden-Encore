@@ -42,6 +42,9 @@ test = r"""
 struct ComputePipeline {
     std::size_t entries{};
     bool HasDescriptorEntries() const noexcept { return entries != 0; }
+    std::size_t DescriptorEntryReservation() const noexcept {
+        return entries != 0 ? entries : 0x400;
+    }
 };
 struct Scheduler {
     unsigned waits{};
@@ -64,7 +67,9 @@ struct GPU {
 struct Queue {
     bool full{};
     unsigned checks{}, empties{}, acquires{};
-    template<class W> bool PreflightGuestDraw(W&& worker) {
+    template<class W>
+    bool PreflightGuestDraw(W&& worker, std::size_t requested) {
+        assert(requested != 0 && requested != 0x400);
         ++checks;
         if (!full) return false;
         worker();
