@@ -29,6 +29,7 @@ jobs:
         run: |
           python3 -B tools/check-launch-case-artwork.py
           python3 -B tools/check-launcher-shoulder-and-cover.py
+          python3 -B tools/check-encore-case-media-selection-host.py
 
       - name: Install minimal software rendering dependencies
         run: |
