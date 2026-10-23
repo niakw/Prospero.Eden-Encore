@@ -5,7 +5,7 @@
 
   <h3>L'émulation native, pensée pour jouer depuis son canapé.</h3>
 
-  <p><strong>Une évolution maintenue de ProsperoEden, centrée sur le firmware 13.60, les formats NSP/XCI et NSZ/XCZ expérimentaux, la décompression ZBIC/zstd et une interface adaptée à la manette.</strong></p>
+  <p><strong>Un fork d'émulateur natif PS5 pour le firmware 13.60 : chargeurs NSP, XCI, NSZ, XCZ, NRO, NSO, NCA, NAX et KIP, décompression LZ4 + ZBIC/zstd, interface TV et compilation reproductible.</strong></p>
 
   <p><a href="README.md"><strong>English</strong></a> · <strong>Français</strong></p>
   <p><kbd>Firmware 13.60 · testé sur matériel</kbd> <kbd>Vulkan + OpenGL</kbd> <kbd>Interface TV</kbd> <kbd>Dynarmic</kbd></p>
@@ -36,7 +36,7 @@ Une bonne expérience d'émulation ne se résume pas à lancer un jeu. Il faut p
 | | Ce qu'apporte Encore |
 | --- | --- |
 | **🎮 Interface TV** | Accueil néon tropical, jeux récents, visuels, bibliothèque et navigation manette. |
-| **🧩 Jeux et compression** | NSP/XCI, NSZ/XCZ expérimentaux et décompression NSO LZ4 + ZBIC/zstd. |
+| **🧩 Fichiers et compression** | Sélection NSP, XCI, NSZ, XCZ, NRO, NSO, NCA, NAX, KIP ; décodage LZ4 et ZBIC/zstd. Certains fichiers ne démarrent qu'avec des contenus supplémentaires. |
 | **🛟 Mode récupération** | Safe Launch temporaire, remises à zéro confirmées et migration sécurisée. |
 | **⚙️ Profils par jeu** | **Minimum, Recommandé, Haute, Ultra**, puis **Personnalisé** en cas de modification. |
 | **🎨 Graphismes natifs** | Vulkan/RADV et OpenGL, filtres, mise à l'échelle, anticrénelage et caches. |
@@ -52,7 +52,7 @@ Une bonne expérience d'émulation ne se résume pas à lancer un jeu. Il faut p
 | --- | --- |
 | **Firmware** | Qualification prioritaire sur **13.60**, sans extrapolation aux autres versions |
 | **Interface** | Accueil, bibliothèque, récents et paramètres rapides repensés pour la TV |
-| **Chargement** | NSP/XCI, NSZ/XCZ expérimentaux et NSO LZ4 + ZBIC/zstd |
+| **Chargement** | NSP, XCI, NSZ, XCZ, NRO, NSO, NCA, NAX, KIP ; LZ4 + ZBIC/zstd |
 | **Récupération** | Safe Launch sur une seule session, sans écraser les préférences enregistrées |
 | **Stockage** | Même structure de dossiers sur stockage interne ou externe ; migration prudente |
 | **Manette** | Profils du launcher et réglages personnels ; actions enregistrées en jeu encore à qualifier |
