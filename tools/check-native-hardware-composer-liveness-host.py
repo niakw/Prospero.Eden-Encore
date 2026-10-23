@@ -284,7 +284,7 @@ with tempfile.TemporaryDirectory(prefix="encore-composer-full-") as td:
             "The pinned original unexpectedly passed the released-buffer"
             " multi-layer regression", opt, actual.stdout, actual.stderr[-1500:])
         print("PINNED_COMPOSITOR_STALE_FRAME_EXPECTED_FAIL_PASS", opt)
-        
+
         # Independent negative control for the previous signed-overflow path:
         # keep the corrected cache method, restore only the exact pinned
         # normalization helper, then require UBSan to reject INT32_MIN.
