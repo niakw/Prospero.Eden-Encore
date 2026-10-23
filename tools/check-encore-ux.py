@@ -128,16 +128,16 @@ assert 'card_w = (available - gap * 6.0f) / 7.0f' in recent_block
 assert 'constexpr int slots = 5;' in library
 assert 'constexpr float rail_x = 72.0f, rail_y = 204.0f, rail_w = 1776.0f;' in library
 assert 'constexpr float sleeve_h = 346.0f;' in library
-assert 'const float sleeve_w = std::clamp(paper_height * aspect * 1.01f,' in library
+assert 'const float sleeve_w = sleeve_h * kCaseShellAspect;' in library
 assert 'const Rect detail{72.0f, 620.0f, 1776.0f, 276.0f};' in library
-assert 'const float paper_height = sleeve_h -' in library
-assert 'front_scan.aspect' in library
-assert 'fit_fallback_art(c, game.cover, art);' in library
-assert 'fit_fallback_art(c, game.hero, art);' in library
+assert 'constexpr float kCaseInkHeight = 704.0f;' in library
+assert 'constexpr float kCaseInkWidth = 440.0f;' in library
+assert 'flat_composed_ink(c, game, paper, rear);' in library
+assert 'cover_crop(c, painting, r, 0.0f, 0.0f);' in library
 assert 'const float opening_x = rear ? shell.x : shell.x + shell.w - side;' in library
 assert 'c.list.gradient_rect({shell.x, shell.y, shell.w, top}' in library
 assert 'c.list.gradient_rect({shell.x, shell.y + shell.h - top,' in library
-assert 'const float side = rear ? std::clamp(shell.w * 0.012f, 1.75f, 5.0f)' in library
+assert 'const float side = shell.w * (7.0f / 454.0f);' in library
 assert 'c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},' in library
 assert 'fitted.x += rear ? paper.w - fitted.w : (paper.w - fitted.w) * 0.5f;' in library
 assert 'flat_retail_sleeve(c, game, sleeve, false, 0.24f);' in library
@@ -193,9 +193,9 @@ assert 'theme::kBody, kHeroContentWidth, 2, 0.90f)' in home
 assert 'label_area.x + label_area.w * 0.5f' in home
 # Rear jacket remains in the lower details pane; its title begins at x=337,
 # clear of the printed scan and its focus highlight.
-assert 'const float rear_aspect = back_scan.texture != 0 ?' in library
+assert 'constexpr float rear_w = rear_h * kCaseShellAspect;' in library
 assert 'const Rect art{280.0f - rear_w, 882.0f - rear_h, rear_w, rear_h};' in library
-assert 'rear_paper_h * rear_aspect + 2.5f' in library
+assert '807.0f * kCaseShellAspect' in library
 assert 'tr("Down: view back cover")' not in library
 assert 'text_shrink(c, game->name, 337.0f, baseline(633.0f, 52.0f, 40.0f)' in library
 assert 'text_block(c, game->name, 558.0f' not in library
