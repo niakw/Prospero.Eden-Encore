@@ -77,6 +77,39 @@ It does not support separate custom paths for keys, firmware, games, updates or 
 
 ---
 
+## Compressed NSZ and XCZ games
+
+Encore's development branch recognizes four **game container** extensions in the Library:
+`.nsp`, `.xci`, `.nsz` and `.xcz`. You may place them under the same
+`<root>/roms/` folder. A game's compressed updates and DLC can be placed
+under `<root>/updates/`. This feature is **under native-build and PS5
+qualification**, and is not a claim about the current published release.
+
+| | Block compression (often XCZ) | Solid compression (often NSZ) |
+| --- | --- | --- |
+| Read pattern | Random access directly from the compressed file | A continuous zstd stream; reaching a later offset can require decoding earlier data |
+| Space while playing | No full decompressed copy required | May need space for the game's uncompressed contents |
+| Cache | Small decompressed block cache | Only the currently used game's unpacked copy plus bounded metadata pieces |
+| Cancellation | Ordinary title cancellation | Touchpad + L1 cancels unpack during title loading |
+
+The app manages solid decompression under:
+`/data/prosperoeden/user/cache/nsz/`. When a game is not running, these
+regenerable files may be removed to recover space. Do **not** remove
+`user/` itself, the saved games, the installed files, keys or firmware.
+If there is insufficient room to unpack, the fallback seeks through the
+compressed stream and can be too slow for real-time play. Block compression
+is preferable for large games on space-constrained consoles.
+
+**Format distinction:** NSP/XCI/NSZ/XCZ are game containers. **ZBIC,
+zstd and LZ4** are executable/NCZ compression methods, not standalone game
+file extensions. Eden also recognizes some NRO, NCA, NSO, NAX, KIP and
+deconstructed-directory input types internally; Encore does not currently
+treat all of these as standard Library entries.
+
+The program does not provide games, proprietary keys or firmware.
+
+---
+
 ## Upgrading from ProsperoEden
 
 Encore preserves title ID `PPSA99008` and the existing persistent data root used by later
