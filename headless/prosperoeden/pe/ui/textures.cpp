@@ -37,6 +37,66 @@ std::uint32_t Textures::create(const gfx::Image &image)
     return image.empty() ? 0 : batch_.create_texture(image.width, image.height, image.rgba.data());
 }
 
+void Textures::clear_case_pages()
+{
+    for (const auto texture : case_pages_)
+        batch_.delete_texture(texture);
+    case_pages_.clear();
+}
+
+std::uint32_t Textures::render_case_page(const gfx::DrawList& drawing,
+                                          const gfx::Font* font,
+                                          std::uint32_t font_texture,
+                                          int width, int height)
+{
+    // A single title may have one composed front and one composed back.
+    // Refuse arbitrary dimensions or unbounded repeat allocations.
+    if (width <= 0 || width > 1024 || height <= 0 || height > 1536 ||
+        case_pages_.size() >= 2 || drawing.instances().empty())
+        return 0;
+    const std::uint32_t ink = batch_.create_texture(width, height, nullptr);
+    if (!ink) return 0;
+    GLint old_fbo = 0;
+    GLint old_viewport[4]{};
+    GLfloat old_clear[4]{};
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
+    glGetIntegerv(GL_VIEWPORT, old_viewport);
+    glGetFloatv(GL_COLOR_CLEAR_VALUE, old_clear);
+    GLuint framebuffer = 0;
+    glGenFramebuffers(1, &framebuffer);
+    if (!framebuffer) {
+        batch_.delete_texture(ink);
+        return 0;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                           GL_TEXTURE_2D, ink, 0);
+    const bool complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) ==
+                          GL_FRAMEBUFFER_COMPLETE;
+    if (complete) {
+        // Render only the paper ink. The original launcher still owns the
+        // shared 3D transparent shell, rounded plastic and red physical spine.
+        glDisable(GL_SCISSOR_TEST);
+        glViewport(0, 0, width, height);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        if (font && font_texture)
+            batch_.sync_font_texture(font_texture, *font);
+        batch_.draw(drawing, gfx::Viewport{}, width, height);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(old_fbo));
+    glViewport(old_viewport[0], old_viewport[1],
+               old_viewport[2], old_viewport[3]);
+    glClearColor(old_clear[0], old_clear[1], old_clear[2], old_clear[3]);
+    glDeleteFramebuffers(1, &framebuffer);
+    if (!complete) {
+        batch_.delete_texture(ink);
+        return 0;
+    }
+    case_pages_.push_back(ink);
+    return ink;
+}
+
 bool Textures::load_art(const std::string &directory)
 {
     const auto load = [&](const char *name, std::uint32_t *texture)
@@ -92,6 +152,7 @@ bool Textures::load_art(const std::string &directory)
 
 void Textures::release()
 {
+    clear_case_pages();
     // The worker only reads/decompresses CPU-side bytes. Its lifetime must
     // end before the Services reference backing it can be destroyed.
     if (decode_.valid()) {
