@@ -18,7 +18,7 @@ pairs=[
 ]
 # Each maintained owner must match its immutable pinned counterpart with
 # exactly one reviewed replacement: no hidden unrelated source edits.
-expected_deltas = [["file_sys/submission_package.cpp","                auto next_file = pfs->GetFile(fmt::format(\"{}.nca\", id_string));","                auto next_file = pfs->GetFile(fmt::format(\"{}.nca\", id_string));\n                if (next_file == nullptr)\n                    next_file = ::Eden::Ncz::Open(pfs->GetFile(fmt::format(\"{}.ncz\", id_string)));",1],["file_sys/card_image.cpp","    for (const VirtualFile& partition_file : partition->GetFiles()) {\n        if (partition_file->GetExtension() != \"nca\") {","    for (const VirtualFile& listed_file : partition->GetFiles()) {\n        const VirtualFile partition_file =\n            listed_file->GetExtension() == \"ncz\" ? ::Eden::Ncz::Open(listed_file) : listed_file;\n        if (partition_file == nullptr || partition_file->GetExtension() != \"nca\") {",1],["loader/loader.cpp","    else if (extension == \"xci\")\n        return FileType::XCI;\n    else if (extension == \"nsp\")\n        return FileType::NSP;","    else if (extension == \"xci\" || extension == \"xcz\")\n        return FileType::XCI;\n    else if (extension == \"nsp\" || extension == \"nsz\")\n        return FileType::NSP;",0],["loader/nsp.cpp","        if (name.size() >= 4 && name.substr(name.size() - 4) == \".nca\") {","        if (name.size() >= 4 &&\n            (name.substr(name.size() - 4) == \".nca\" || name.substr(name.size() - 4) == \".ncz\")) {",0],["file_sys/registered_cache.cpp","        if (extension == \"nsp\") {\n            ProcessNSP(file);\n        } else if (extension == \"xci\") {\n            ProcessXCI(file);","        if (extension == \"nsp\" || extension == \"nsz\") {\n            ProcessNSP(file);\n        } else if (extension == \"xci\" || extension == \"xcz\") {\n            ProcessXCI(file);",0]]
+expected_deltas = [["file_sys/submission_package.cpp","                auto next_file = pfs->GetFile(fmt::format(\"{}.nca\", id_string));","                auto next_file = pfs->GetFile(fmt::format(\"{}.nca\", id_string));\n                if (next_file == nullptr)\n                    next_file = ::Eden::Ncz::Open(pfs->GetFile(fmt::format(\"{}.ncz\", id_string)));",1],["file_sys/card_image.cpp","    for (const VirtualFile& partition_file : partition->GetFiles()) {\n        if (partition_file->GetExtension() != \"nca\") {","    for (const VirtualFile& listed_file : partition->GetFiles()) {\n        const VirtualFile partition_file =\n            listed_file->GetExtension() == \"ncz\" ? ::Eden::Ncz::Open(listed_file) : listed_file;\n        if (partition_file == nullptr || partition_file->GetExtension() != \"nca\") {",1],["loader/loader.cpp","    else if (extension == \"xci\")\n        return FileType::XCI;\n    else if (extension == \"nsp\")\n        return FileType::NSP;","    else if (extension == \"nax\")\n        return FileType::NAX;\n    else if (extension == \"xci\" || extension == \"xcz\")\n        return FileType::XCI;\n    else if (extension == \"nsp\" || extension == \"nsz\")\n        return FileType::NSP;",0],["loader/nsp.cpp","        if (name.size() >= 4 && name.substr(name.size() - 4) == \".nca\") {","        if (name.size() >= 4 &&\n            (name.substr(name.size() - 4) == \".nca\" || name.substr(name.size() - 4) == \".ncz\")) {",0],["file_sys/registered_cache.cpp","        if (extension == \"nsp\") {\n            ProcessNSP(file);\n        } else if (extension == \"xci\") {\n            ProcessXCI(file);","        if (extension == \"nsp\" || extension == \"nsz\") {\n            ProcessNSP(file);\n        } else if (extension == \"xci\" || extension == \"xcz\") {\n            ProcessXCI(file);",0]]
 assert {rel for rel, *_ in expected_deltas} == {rel for rel, *_ in pairs}
 
 for rel,sha,marker in pairs:
@@ -53,10 +53,15 @@ cpp=r"""
 #include <cassert>
 #include "game_files.h"
 int main() {
-    for(auto name:{"game.nsp","game.xci","game.nsz","game.xcz","GAME.NSP","GAME.XCI","GAME.NSZ","GAME.XCZ"})
+    for(auto name:{"game.nsp","game.xci","game.nsz","game.xcz","GAME.NSP","GAME.XCI","GAME.NSZ","GAME.XCZ",
+                   "program.nro","program.nso","program.nca","program.nax","program.kip",
+                   "PROGRAM.NRO","PROGRAM.NSO","PROGRAM.NCA","PROGRAM.NAX","PROGRAM.KIP"})
         assert(Eden::IsGameFile(name));
-    for(auto name:{"","game.nro","game.nso","game.nca","game.nax","game.kip","game.zstd","game.zbic","game.nsp.bak"})
+    for(auto name:{"","game.zstd","game.zbic","game.lz4","game.ncz","game.nsp.bak","main"})
         assert(!Eden::IsGameFile(name));
+    assert(Eden::IsPackageFile("game.NSZ"));
+    assert(Eden::IsCardImageFile("game.XCZ"));
+    assert(Eden::IsDirectLoaderFile("game.KIP"));
 }
 """
 compiler=shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
