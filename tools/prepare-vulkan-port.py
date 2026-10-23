@@ -2699,3 +2699,22 @@ apply_reviewed_delta(texture,
 
     // A feedback barrier is only possible for a sampled depth attachment.''',
     'F03/F04 empty-sampler feedback loop fast path')
+
+
+# Reviewed F04 scissor source body: reconstruct the exact overflow-safe
+# method from the pinned upstream method, WITHOUT consulting active code or
+# weakening the generated-versus-maintained source checker at runtime.
+scissor_original_file = source / 'src/video_core/renderer_vulkan/vk_rasterizer.cpp'
+scissor_original_source = scissor_original_file.read_text()
+scissor_begin = 'VkRect2D GetScissorState('
+scissor_end = '\\nDrawParams MakeDrawParams('
+if scissor_original_source.count(scissor_begin) != 1:
+    raise RuntimeError('F04 pinned scissor signature changed')
+scissor_original_start = scissor_original_source.index(scissor_begin)
+scissor_original_stop = scissor_original_source.index(scissor_end, scissor_original_start)
+scissor_original_method = scissor_original_source[
+    scissor_original_start:scissor_original_stop]
+apply_reviewed_delta(
+    'vulkan_rasterizer.cpp', scissor_original_method,
+    "VkRect2D GetScissorState(const Maxwell& regs, size_t index, u32 up_scale = 1, u32 down_shift = 0) {\n    const auto& src = regs.scissor_test[index];\n    VkRect2D scissor{};\n    // Handle guest scissor extremes without wrapping signed coordinate\n    // differences. Preserve the existing 32-bit results on ordinary draws.\n    const auto bounded_s32 = [](s64 value) -> s32 {\n        return static_cast<s32>((std::clamp)(\n            value, static_cast<s64>(std::numeric_limits<s32>::min()),\n            static_cast<s64>(std::numeric_limits<s32>::max())));\n    };\n    const auto scale_up = [&](s32 value) -> s32 {\n        if (value == 0) {\n            return 0;\n        }\n        const s64 scaled = static_cast<s64>(value) * static_cast<s64>(up_scale);\n        if (scaled >= std::numeric_limits<s32>::min() &&\n            scaled <= std::numeric_limits<s32>::max() && down_shift < 32) {\n            // Preserve pinned behavior: up_scale is unsigned, so the old\n            // value * up_scale and right shift operated on unsigned bits,\n            // even for negative guest coordinates. Sign-shifting would change\n            // otherwise valid clipping rectangles.\n            const u32 bits = static_cast<u32>(value) * up_scale;\n            const s32 as_i32 = static_cast<s32>(bits);\n            const s64 adjustment = (up_scale >> down_shift) == 0 ? as_i32 % 2 : 0;\n            const s64 shifted = static_cast<s32>(bits >> down_shift);\n            return bounded_s32(value < 0 ? (std::min)(shifted - adjustment, s64{-1})\n                                         : (std::max)(shifted + adjustment, s64{1}));\n        }\n        // Wide fallback for overflow-prone guest data or an oversized shift.\n        const u32 shift = (std::min)(down_shift, 63U);\n        const s64 adjustment = (down_shift >= 32 || (up_scale >> down_shift) == 0)\n                                   ? scaled % 2 : 0;\n        const s64 shifted = scaled >> shift;\n        return bounded_s32(value < 0 ? (std::min)(shifted - adjustment, s64{-1})\n                                     : (std::max)(shifted + adjustment, s64{1}));\n    };\n\n    const bool lower_left = regs.window_origin.mode != Maxwell::WindowOrigin::Mode::UpperLeft;\n    const s32 clip_height = regs.surface_clip.height;\n\n    // Flip coordinates without signed overflow before clamping to the render area.\n    s32 min_y = lower_left\n                    ? bounded_s32(static_cast<s64>(clip_height) - src.max_y)\n                    : src.min_y.Value();\n    s32 max_y = lower_left\n                    ? bounded_s32(static_cast<s64>(clip_height) - src.min_y)\n                    : src.max_y.Value();\n\n    // Bound to render area\n    min_y = (std::max)(min_y, 0);\n    max_y = (std::max)(max_y, 0);\n\n    if (src.enable) {\n        scissor.offset.x = scale_up(src.min_x);\n        scissor.offset.y = scale_up(min_y);\n        scissor.extent.width =\n            scale_up(bounded_s32(static_cast<s64>(src.max_x) - src.min_x));\n        scissor.extent.height =\n            scale_up(bounded_s32(static_cast<s64>(max_y) - min_y));\n    } else {\n        scissor.offset.x = 0;\n        scissor.offset.y = 0;\n        scissor.extent.width = (std::numeric_limits<s32>::max)();\n        scissor.extent.height = (std::numeric_limits<s32>::max)();\n    }\n    return scissor;\n}\n",
+    'F04 overflow-safe scissor coordinates with pinned ordinary behavior')
