@@ -5,7 +5,7 @@
 
   <h3>Console-native emulation, made for the living room.</h3>
 
-  <p><strong>A maintained, controller-first continuation of ProsperoEden — focused on firmware 13.60, safer startup, modern game loading, TV navigation and reproducible native builds.</strong></p>
+  <p><strong>A maintained, controller-first continuation of ProsperoEden — focused on firmware 13.60, NSP/XCI and experimental NSZ/XCZ loading, ZBIC/zstd support, TV navigation and reproducible native builds.</strong></p>
 
   <p><strong>English</strong> · <a href="README.fr.md">Français</a></p>
   <p><kbd>Firmware 13.60 · hardware-tested target</kbd> <kbd>Vulkan + OpenGL</kbd> <kbd>TV-first UI</kbd> <kbd>Dynarmic</kbd></p>
@@ -42,7 +42,7 @@ Emulation on a console is more than booting a game. It should be navigable from 
 | | What Encore brings |
 | --- | --- |
 | **🎮 TV-first experience** | Tropical-neon launcher, game artwork, recent titles, controller navigation, quick settings and language support. |
-| **🧩 Newer loading formats** | ZBIC/zstd support for newer NSO content while retaining LZ4. |
+| **🧩 Games and compression** | NSP/XCI plus experimental NSZ/XCZ compressed containers; NSO decoding retains LZ4 and ZBIC/zstd. |
 | **🛟 Recovery without surprises** | One-session Safe Launch, confirmed resets and guarded migration without silently overwriting saved preferences. |
 | **⚙️ Per-title profiles** | Minimum, Recommended, High and Ultra, plus Custom when you edit a preset. |
 | **🎨 Graphics choices** | Vulkan/RADV and OpenGL, shader cache management, upscaling and anti-aliasing controls. |
@@ -58,7 +58,7 @@ Emulation on a console is more than booting a game. It should be navigable from 
 | --- | --- | --- |
 | Hardware target | Broad upstream development | Firmware **13.60-focused** qualification |
 | Launcher | Native frontend | TV-first hero, library, recents and quick settings |
-| Content loading | Earlier formats | **ZBIC/zstd + LZ4** |
+| Content loading | Earlier formats | **NSP/XCI + experimental NSZ/XCZ; NSO LZ4 + ZBIC/zstd** |
 | Recovery | Base defaults | Temporary Safe Launch and confirmed resets |
 | Storage | Original path behavior | One internal/external root structure and guarded migration |
 | Controller settings | Base mappings | Controller-first launcher profiles; game-owned actions still under investigation |
@@ -68,6 +68,21 @@ Emulation on a console is more than booting a game. It should be navigable from 
 Encore is **not** an official upstream release or a promise that every newer upstream commit has been included.
 
 </details>
+
+---
+
+## 📦 Game formats and executable compression
+
+| Category | Formats | Current scope |
+| --- | --- | --- |
+| Library game containers | **NSP** (`.nsp`), **XCI** (`.xci`) | Existing game discovery and launch |
+| Compressed game containers | **NSZ** (`.nsz`), **XCZ** (`.xcz`) | Experimental NCZ reader, games, updates and DLC; native and hardware qualification pending |
+| Internal executable compression | **LZ4**, **ZBIC / zstd** | Existing NSO segment decoding; **not** game-file extensions |
+| Other upstream loader types | NRO, NSO, NCA, NAX, KIP and deconstructed game directories | Recognized by the underlying Eden loader; **not** all offered as Library game-file formats |
+
+NCZ block compression permits random reads directly from the compressed file. Solid compression may unpack one running title to `/data/prosperoeden/user/cache/nsz/`; this can require approximately the full uncompressed game size. Outside a running game, bounded, validated pieces are reused for metadata reads. A developer build that contains the feature is not a console-tested release.
+
+[Compressed games, space requirements and cancellation](INSTALL.md#compressed-nsz-and-xcz-games) · [Source and tests](headless/ncz.h)
 
 ---
 
