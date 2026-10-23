@@ -909,8 +909,7 @@ void Launcher::draw_launch(Canvas &c)
     std::uint32_t& composed_page = back ? launch_composed_back_ : launch_composed_front_;
     bool& compose_attempted = back ? launch_composed_back_attempted_
                                    : launch_composed_front_attempted_;
-    if ((scan.empty() || artwork.texture == 0) &&
-        composed_page == 0 && !compose_attempted) {
+    if (scan.empty() && composed_page == 0 && !compose_attempted) {
         const auto is_ready = [&](const std::string& path) {
             if (path.empty()) return true;
             const Cover media = c.textures.cover(path, 760.0f);
@@ -940,8 +939,7 @@ void Launcher::draw_launch(Canvas &c)
                          back ? "back" : "front", composed_page);
         }
     }
-    const bool use_composed = (scan.empty() || artwork.texture == 0) &&
-                              composed_page != 0;
+    const bool use_composed = scan.empty() && composed_page != 0;
     const std::uint32_t visible_texture =
         use_composed ? composed_page : artwork.texture;
     // One event per visible paper face and state, NEVER a per-frame log.
