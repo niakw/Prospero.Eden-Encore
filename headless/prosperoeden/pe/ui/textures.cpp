@@ -59,6 +59,7 @@ std::uint32_t Textures::render_case_page(const gfx::DrawList& drawing,
     GLint old_fbo = 0;
     GLint old_viewport[4]{};
     GLfloat old_clear[4]{};
+    const GLboolean old_scissor = glIsEnabled(GL_SCISSOR_TEST);
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
     glGetIntegerv(GL_VIEWPORT, old_viewport);
     glGetFloatv(GL_COLOR_CLEAR_VALUE, old_clear);
@@ -88,6 +89,8 @@ std::uint32_t Textures::render_case_page(const gfx::DrawList& drawing,
     glViewport(old_viewport[0], old_viewport[1],
                old_viewport[2], old_viewport[3]);
     glClearColor(old_clear[0], old_clear[1], old_clear[2], old_clear[3]);
+    if (old_scissor) glEnable(GL_SCISSOR_TEST);
+    else glDisable(GL_SCISSOR_TEST);
     glDeleteFramebuffers(1, &framebuffer);
     if (!complete) {
         batch_.delete_texture(ink);
