@@ -104,8 +104,22 @@ assert "flat_retail_sleeve(c, game, sleeve, false, 0.24f);" in library
 assert "const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top," in library
 assert "flat_back_fallback(c, game, paper);" in library
 assert "flat_front_fallback(c, game, paper);" in library
-assert "fit_fallback_art(c, game.cover, art);" in library
-assert "fit_fallback_art(c, game.hero, art);" in library
+# No retail face: compose the real game images and description into a
+# dynamic sleeve rather than leaving a square app icon on a blank backdrop.
+front = library.split("void flat_front_fallback(", 1)[1].split(
+    "void flat_back_fallback(", 1)[0]
+back_fallback = library.split("void flat_back_fallback(", 1)[1].split(
+    "// Static sleeve used", 1)[0]
+for token in ("game.hero", "game.cover", "game.screenshots", "cover_crop(",
+              "game.name", 'Color::rgb(0xe31930)', '"SWITCH"'):
+    assert token in front, ("Front fallback dropped", token)
+for token in ("game.screenshots.front()", "game.screenshots[1]",
+              "game.description", "text_block(c, desc,", "footer",
+              "ENCORE  /  GAME INFORMATION"):
+    assert token in back_fallback, ("Back fallback dropped", token)
+assert "if (!scan.empty()) {" in library
+assert library.index("if (!scan.empty()) {") < library.index("flat_back_fallback(c, game, paper);")
+assert "barcode" not in back_fallback.lower().split("const Rect footer",1)[1]
 assert "shell.y + shell.h - top" in library
 assert "s.press({Key::r1, Key::r1});" in (
     root / "headless/prosperoeden/host/preview_main.cpp").read_text()
