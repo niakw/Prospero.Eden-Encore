@@ -115,56 +115,109 @@ void fit_fallback_art(Canvas& c, const std::string& path, const Rect& bounds)
 // Native 2D jacket fallback only where no authentic retail scan exists.
 // The title/known art are displayed, never an invented rear scan or a 3D
 // prefabricated case. Supports both the shelf and the enlarged back view.
+// Native procedural retail-style inserts: composed every frame from the
+// actual game art and metadata; never create a counterfeit front/back scan.
+// Physical plastic and 3D rotation are drawn by the existing case renderer.
 void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
 {
-    c.list.gradient_rect(r, 0.0f, Color::rgb(0x2c1742), Color::rgb(0x0d1021));
-    const float band = std::max(20.0f, r.h * 0.12f);
-    c.list.rounded_rect({r.x, r.y, r.w, band}, 0.0f,
-                        Color::rgb(0xa32356, 0.98f));
-    text_shrink(c, "EDEN ENCORE", r.x + r.w * 0.5f,
-                baseline(r.y, band, std::max(11.0f, band * 0.42f)),
-                std::max(11.0f, band * 0.42f), theme::kTitle,
-                r.w - 20.0f, Align::center);
-    const Rect art{r.x + 3.0f, r.y + band + 3.0f,
-                   r.w - 6.0f, r.h - band - std::max(38.0f, r.h * 0.19f) - 6.0f};
-    if (!game.cover.empty()) fit_fallback_art(c, game.cover, art);
-    else if (!game.hero.empty()) fit_fallback_art(c, game.hero, art);
-    c.list.gradient_rect({r.x, r.y + r.h - std::max(41.0f, r.h * 0.21f),
-                          r.w, std::max(41.0f, r.h * 0.21f)}, 3.0f,
-                         theme::kGlass.with_alpha(0.90f),
-                         theme::kScrim.with_alpha(0.97f));
+    c.list.gradient_rect(r, 0.0f, Color::rgb(0x20212b), Color::rgb(0x090c17));
+    const std::string& painting = !game.hero.empty() ? game.hero :
+                                  !game.cover.empty() ? game.cover :
+                                  !game.screenshots.empty() ? game.screenshots.front() : game.hero;
+    if (!painting.empty())
+        cover_crop(c, painting, r, 0.0f, 0.06f);
+    // Compose more than a square game icon: the lower third may use a second
+    // real screenshot, with the title printed on a distinct opaque panel.
+    const float title_h = std::clamp(r.h * 0.24f, 47.0f, 130.0f);
+    if (!game.screenshots.empty() && game.screenshots.front() != painting &&
+        r.h >= 180.0f) {
+        const Rect action{r.x, r.y + r.h * 0.60f,
+                          r.w, r.h * 0.40f - title_h * 0.45f};
+        if (action.h > 20.0f)
+            cover_crop(c, game.screenshots.front(), action, 0.0f, 0.08f);
+    }
+    c.list.gradient_rect({r.x, r.y + r.h - title_h, r.w, title_h}, 0.0f,
+                         Color::rgb(0x101522, 0.88f),
+                         Color::rgb(0x060811, 0.99f));
+    const float font = std::clamp(r.w * 0.095f, 14.0f, 33.0f);
     text_shrink(c, game.name, r.x + r.w * 0.5f,
-                baseline(r.y + r.h - std::max(41.0f, r.h * 0.21f),
-                         std::max(41.0f, r.h * 0.21f),
-                         std::max(13.0f, r.w * 0.09f)),
-                std::max(13.0f, r.w * 0.09f), theme::kTitle,
-                r.w - 16.0f, Align::center);
+                baseline(r.y + r.h - title_h, title_h, font),
+                font, theme::kTitle, r.w - 15.0f, Align::center);
+    // Red, format-specific sleeve mark; unlike a physical scan this is an
+    // application-rendered fallback, not a claim of licensed retail artwork.
+    const float brand_h = std::clamp(r.h * 0.13f, 23.0f, 78.0f);
+    const float brand_w = std::clamp(r.w * 0.28f, 41.0f, 100.0f);
+    const Rect flag{r.x, r.y, brand_w, brand_h};
+    c.list.rounded_rect(flag, 0.0f, Color::rgb(0xe31930));
+    const float symbol_size = std::min(brand_h * 0.39f, brand_w * 0.29f);
+    // Controller-like glyph is vector ink: no scaled-up square app icon.
+    const float glyph_y = r.y + brand_h * 0.12f;
+    c.list.rounded_rect({r.x + brand_w * 0.38f - symbol_size * 0.74f,
+                         glyph_y, symbol_size * 0.68f, symbol_size * 1.3f},
+                        symbol_size * 0.25f, Color::rgb(0xffffff));
+    c.list.rounded_rect({r.x + brand_w * 0.43f,
+                         glyph_y, symbol_size * 0.68f, symbol_size * 1.3f},
+                        symbol_size * 0.25f, Color::rgb(0xffffff));
+    text_shrink(c, "SWITCH", r.x + brand_w * 0.5f,
+                baseline(r.y + brand_h * 0.61f, brand_h * 0.32f,
+                         std::max(8.0f, brand_h * 0.20f)),
+                std::max(8.0f, brand_h * 0.20f), theme::kTitle,
+                brand_w - 5.0f, Align::center);
 }
 
 void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
 {
-    c.list.gradient_rect(r, 0.0f, Color::rgb(0x201831), Color::rgb(0x0a1023));
-    const float font = std::clamp(r.w * 0.087f, 14.0f, 30.0f);
-    text_shrink(c, game.name, r.x + r.w * 0.5f,
-                baseline(r.y + r.h * 0.045f, r.h * 0.14f, font),
-                font, theme::kTitle, r.w - 20.0f, Align::center);
-    const float top = r.y + r.h * 0.21f;
-    const Rect shot{r.x + r.w * 0.06f, top, r.w * 0.88f, r.h * 0.31f};
-    const std::string& image = !game.screenshots.empty() ?
-        game.screenshots.front() : (!game.hero.empty() ? game.hero : game.cover);
-    if (!image.empty()) cover_crop(c, image, shot, 5.0f, 0.06f);
+    // Three image panels, the game's real LaunchBox/Nlib description and a
+    // fixed neutral information footer. Never copy another game's barcode,
+    // legal notices, player counts, certifications or publisher address.
+    c.list.gradient_rect(r, 0.0f, Color::rgb(0x172036), Color::rgb(0x090e19));
+    const std::string& hero = !game.hero.empty() ? game.hero :
+                              !game.screenshots.empty() ? game.screenshots.front() :
+                              game.cover;
+    if (!hero.empty())
+        cover_crop(c, hero, {r.x, r.y, r.w, r.h * 0.39f}, 0.0f, 0.08f);
+    const float gap = std::max(2.0f, r.w * 0.012f);
+    const float row_y = r.y + r.h * 0.40f;
+    const float row_h = r.h * 0.18f;
+    const float shot_w = (r.w - gap * 3.0f) * 0.5f;
+    const std::string& shot_a = !game.screenshots.empty() ?
+                                game.screenshots.front() : hero;
+    const std::string& shot_b = game.screenshots.size() > 1 ?
+                                game.screenshots[1] :
+                                !game.cover.empty() ? game.cover : shot_a;
+    if (!shot_a.empty())
+        cover_crop(c, shot_a, {r.x + gap, row_y, shot_w, row_h},
+                   0.0f, 0.05f);
+    if (!shot_b.empty())
+        cover_crop(c, shot_b, {r.x + gap * 2.0f + shot_w, row_y,
+                               shot_w, row_h}, 0.0f, 0.05f);
+    const Rect copy{r.x, r.y + r.h * 0.59f, r.w, r.h * 0.26f};
+    c.list.rounded_rect(copy, 0.0f, Color::rgb(0x0b0e16, 0.96f));
     const std::string& desc = !game.description.empty() ? game.description :
                               !game.intro.empty() ? game.intro : game.name;
-    text_block(c, desc, r.x + r.w * 0.07f,
-               baseline(r.y + r.h * 0.59f, r.h * 0.10f, font * 0.76f),
-               font * 0.76f, font * 1.28f, theme::kCopy,
-               r.w * 0.86f, 4, kShrink);
-    c.list.rounded_rect({r.x + r.w * 0.07f, r.y + r.h * 0.89f,
-                         r.w * 0.86f, 1.0f}, 0.0f,
-                        theme::kPanelEdge.with_alpha(0.60f));
-    text_shrink(c, "EDEN ENCORE", r.x + r.w * 0.5f,
-                baseline(r.y + r.h * 0.90f, r.h * 0.07f, font * 0.68f),
-                font * 0.68f, theme::kMeta, r.w * 0.88f, Align::center);
+    const float font = std::clamp(r.w * 0.055f, 10.0f, 20.0f);
+    text_block(c, desc, copy.x + r.w * 0.055f,
+               baseline(copy.y + copy.h * 0.07f, copy.h * 0.17f, font),
+               font, font * 1.17f, theme::kCopy,
+               r.w * 0.89f, 6, kShrink);
+    // A stable lower print field, analogous to the reference layout but
+    // explicitly without copied regulatory marks or invented game metadata.
+    const Rect footer{r.x, r.y + r.h * 0.86f, r.w, r.h * 0.14f};
+    c.list.gradient_rect(footer, 0.0f,
+                         Color::rgb(0xf4f4f4), Color::rgb(0xe4e7eb));
+    c.list.rounded_rect({footer.x, footer.y, footer.w, std::max(1.0f, r.h * 0.009f)},
+                        0.0f, Color::rgb(0xc10f26));
+    text_shrink(c, game.name, footer.x + footer.w * 0.5f,
+                baseline(footer.y + footer.h * 0.15f, footer.h * 0.38f,
+                         std::max(9.0f, font * 0.83f)),
+                std::max(9.0f, font * 0.83f), Color::rgb(0x252a32),
+                footer.w * 0.90f, Align::center);
+    text_shrink(c, "ENCORE  /  GAME INFORMATION",
+                footer.x + footer.w * 0.5f,
+                baseline(footer.y + footer.h * 0.60f, footer.h * 0.24f,
+                         std::max(8.0f, font * 0.66f)),
+                std::max(8.0f, font * 0.66f), Color::rgb(0x59606a),
+                footer.w * 0.90f, Align::center);
 }
 
 // Static sleeve used by the Library's front shelf, back detail, and zoom.
