@@ -15,6 +15,10 @@ on:
       - 'src/jit*.cpp'
       - 'src/*_performance.cpp'
       - 'tools/**'
+      # Review manifests are executable source-ownership contracts. Re-run
+      # their actual checks when a reviewed Git blob gets a new stamp.
+      - 'docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json'
+      - 'docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md'
       - '.github/workflows/encore-core-preflight.yml'
   workflow_dispatch:
 
