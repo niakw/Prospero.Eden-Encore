@@ -1111,6 +1111,18 @@ int CountFiles(const std::string& directory, std::initializer_list<const char*> 
     return ok ? count : -1;
 }
 
+// Unlike the nine regular file extensions, an extracted ExeFS game is a
+// symlink-free directory containing "main" and "main.npdm".
+int CountExeFsFolders(const std::string& directory) {
+    bool ok = false;
+    int count = 0;
+    for (const auto& name : ListEntries(directory, false, ok)) {
+        if (Eden::IsDeconstructedGameDirectory(std::filesystem::path(directory) / name))
+            ++count;
+    }
+    return ok ? count : -1;
+}
+
 unsigned int HashPath(const std::string& path) {
     unsigned int hash = 2166136261u;
     for (const unsigned char byte : path) hash = (hash ^ byte) * 16777619u;
@@ -2018,9 +2030,12 @@ pe::ui::FolderInfo EdenServices::folder_info(const std::string& directory) {
     pe::ui::FolderInfo info;
     info.keys = Eden::FileExists(JoinPath(directory, "keys/prod.keys"));
     info.firmware = CountFiles(JoinPath(directory, "firmware"), {".nca"});
-    info.games = CountFiles(JoinPath(directory, "roms"),
-                            {".nsp", ".xci", ".nsz", ".xcz", ".nro", ".nso",
-                             ".nca", ".nax", ".kip"});
+    const std::string roms_path = JoinPath(directory, "roms");
+    const int regular = CountFiles(roms_path,
+                                  {".nsp", ".xci", ".nsz", ".xcz", ".nro", ".nso",
+                                   ".nca", ".nax", ".kip"});
+    const int extracted = CountExeFsFolders(roms_path);
+    info.games = regular < 0 || extracted < 0 ? -1 : regular + extracted;
     return info;
 }
 
