@@ -241,6 +241,17 @@ assert 'if (has_scenic_media && has_first && has_second) {' in back_fallback
 assert 'scene(hero, {r.x, r.y, r.w, dynamic_h});' in back_fallback
 assert 'scene(*first, top_right);' in back_fallback
 assert 'scene(*second, panorama);' in back_fallback
+# With only a scenic hero and a separate app icon, the icon is a contained
+# inset. That same texture must be decoded before the rotating case page is
+# baked, or the 3D launcher would permanently capture an empty panel.
+assert 'else if (!game.cover.empty() && game.cover != hero) {' in back_fallback
+assert 'scene(game.cover, left);' in back_fallback
+ready_src = library.split("bool composed_case_face_ready(", 1)[1].split(
+    "\n\nvoid Launcher::start_scan()", 1
+)[0]
+assert 'if (!inset && !game.cover.empty() && game.cover != hero)' in ready_src
+assert 'inset = &game.cover;' in ready_src
+assert '(!inset || ready(*inset, std::max(left_w - gap, top_h)))' in ready_src
 # A native case's paper insert MUST be opaque even when NONE of its images
 # exist or have finished decoding. The real molded case is separate.
 for token in ('c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));',
