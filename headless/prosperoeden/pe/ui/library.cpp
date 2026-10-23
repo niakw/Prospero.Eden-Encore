@@ -234,6 +234,12 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
         scene(hero, {r.x, r.y, r.w, dynamic_h});
         if (has_first) scene(*first, left);
         else if (has_second) scene(*second, left);
+        else if (!game.cover.empty() && game.cover != hero) {
+            // BackScenes can deliberately return an independent app icon
+            // when there is no second scene. Render it as a contained inset,
+            // never as a repeated hero or a stretched panorama.
+            scene(game.cover, left);
+        }
     } else if (!game.cover.empty()) {
         // No scenic artwork at all: place the icon as a small, contained
         // illustration on the uniform paper colour, not full-bleed squares.
@@ -512,6 +518,10 @@ bool composed_case_face_ready(Textures& textures, const Game& game,
                ready(*second, paper_w);
     if (scenic) {
         const std::string* inset = has_first ? first : has_second ? second : nullptr;
+        // Match the drawn icon fallback exactly. The offscreen composer
+        // must never bake a blank inset while this independent icon decodes.
+        if (!inset && !game.cover.empty() && game.cover != hero)
+            inset = &game.cover;
         return ready(hero, paper_w) &&
                (!inset || ready(*inset, std::max(left_w - gap, top_h)));
     }
