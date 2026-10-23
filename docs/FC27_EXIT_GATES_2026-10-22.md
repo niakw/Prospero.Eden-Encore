@@ -297,25 +297,25 @@ de CodeQL ou du package natif. Aucun test console F07 n'est demandé.
 
 ## F04 — 23 octobre : scissor Vulkan, bornes de coordonnées invitées
 
-La source maintenue réellement sélectionnée \`vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp\`
-contenait des soustractions 32 bits \`src.max_x - src.min_x\` et
-\`clip_height - src.max_y\` susceptibles de déborder en cas de valeurs de
+La source maintenue réellement sélectionnée `vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp`
+contenait des soustractions 32 bits `src.max_x - src.min_x` et
+`clip_height - src.max_y` susceptibles de déborder en cas de valeurs de
 registres invitées extrêmes. Le décalage dépendait également d'un compteur
-\`down_shift\` sans borne. Un rectangle incorrect peut clipper un draw et
+`down_shift` sans borne. Un rectangle incorrect peut clipper un draw et
 faire apparaître une portion de géométrie manquante, sans qu'une perte
 de descripteur ou un draw rejeté soit nécessaire.
 
-Le correctif \`60a6661\` calcule les différences en 64 bits et borne la
-conversion au domaine \`s32\`. Pour les produits ordinaires représentables et
+Le correctif `60a6661` calcule les différences en 64 bits et borne la
+conversion au domaine `s32`. Pour les produits ordinaires représentables et
 les décalages valides, il conserve les règles 32 bits originales, y compris
 le traitement existant des coordonnées négatives ; la voie large ne couvre
 que les valeurs hors plage ou les décalages excessifs.
 
-Le témoin \`tools/check-ps5-scissor-extremes-host.py\` extrait la fonction
+Le témoin `tools/check-ps5-scissor-extremes-host.py` extrait la fonction
 active et l'ancienne fonction épinglée, exige leur identité de résultat sur
 un ensemble de rectangles ordinaires, et vérifie sous UBSan que la source
-antérieure échoue sur \`INT32_MIN\`/\`INT32_MAX\`, quand la version maintenue
-ne déborde pas. Les variantes \`-O0\` et \`-O2\` sont intégrées à la
+antérieure échoue sur `INT32_MIN`/`INT32_MAX`, quand la version maintenue
+ne déborde pas. Les variantes `-O0` et `-O2` sont intégrées à la
 prévalidation. Un témoin local de même logique a réussi avant intégration ;
 l'exécution CI source-extraite et le package natif restent à vérifier.
 
