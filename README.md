@@ -110,7 +110,7 @@ Changing to external storage changes the **root**, not the subdirectory layout. 
 | Feature | What to expect |
 | --- | --- |
 | **Home, Library, Recents** | Controller-friendly navigation, game metadata, cover/banner enrichment and offline fallback |
-| **Animated game launch** | Eden-branded case turn: local real front/back scans take priority; missing faces use cached game art. [Artwork details](docs/LAUNCH_CASE_ARTWORK.md) |
+| **Animated game launch** | Real 3D rotating case with authentic scans per face when available. Missing front/back are reconstructed from cached game art, distinct screenshots, title and description by the native OpenGL renderer, without image generation. [Artwork details](docs/LAUNCH_CASE_ARTWORK.md) |
 | **Quick Settings** | Per-title video changes without digging through debugging menus |
 | **Video profiles** | **Minimum → Recommended → High → Ultra**; Custom after manual adjustment |
 | **Safe Launch** | Conservative OpenGL, 1× internal resolution, 1080p, bilinear, handheld, 60 Hz and mods off for that run only |
