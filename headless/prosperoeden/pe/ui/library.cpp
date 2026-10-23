@@ -402,6 +402,16 @@ std::string controller_profile_name(int layout, const ButtonMapping& mapping)
 
 } // namespace
 
+void draw_composed_case_face(Canvas &c, const Game &game, const Rect &paper, bool rear)
+{
+    // The 2D shelf and rotating 3D case share the same ink. Physical plastic
+    // is drawn separately by the existing case shell, never baked into art.
+    if (rear)
+        flat_back_fallback(c, game, paper);
+    else
+        flat_front_fallback(c, game, paper);
+}
+
 void Launcher::start_scan()
 {
     if (!scan_cancel_.load(std::memory_order_acquire) &&
