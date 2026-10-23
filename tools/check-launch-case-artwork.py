@@ -126,7 +126,9 @@ assert 'return ready(hero, std::max(left_w - gap, top_h))' in library_src
 assert 'return ready(hero, paper_w)' in library_src
 assert 'prepare_case_page(false);' in draw
 assert 'prepare_case_page(true);' in draw
-assert 'Color::rgb(0x08111d, 0.57f)' in library_src
+assert 'Color::rgb(0x08111d, 0.44f)' in library_src
+assert '{r.x + left_w * 0.38f, r.y, r.w - left_w * 0.38f, dynamic_h}' in library_src
+assert 'c.list.hgradient_rect(description' not in back_fallback
 assert 'Color::rgb(0x030507, 0.98f)' not in library_src
 
 
