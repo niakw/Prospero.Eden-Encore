@@ -743,9 +743,9 @@
       "path": "headless/settings_store.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U75",
-      "reviewed_source_git_blob": "ec168add36f89f8800b32e875a8f7bd7b95cdf99",
+      "reviewed_source_git_blob": "ebcfe022c94cb74bbf20c74664ae28e04912289e",
       "source_review_document": "docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md",
-      "evidence": "Source code checked; Lecture/migration/écriture atomique du JSON de configuration, effectuées lors des actions de paramètres ou de lancement. Le fichier n'est pas décodé pour chaque instruction ou draw. Any mutation, reproducible failure or measured gameplay hotpath usage reopens this decision."
+      "evidence": "Re-reviewed 2026-10-23 against ec168add: saved game-selection validation now uses IsGameFile or a single-segment ExeFS <folder>/main, not merely NSP/XCI. No JIT, GPU, or in-game input path modified; docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md documents the exact source diff. Any later mutation reopens review."
     },
     {
       "path": "headless/shader_cache_check.cpp",
