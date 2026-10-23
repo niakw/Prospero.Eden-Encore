@@ -71,7 +71,7 @@ with tempfile.TemporaryDirectory(prefix="encore-case-media-") as temp:
             built = subprocess.run(
                 [compiler, "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
                  "-fsanitize=undefined", "-fno-sanitize-recover=all",
-                 "-I", str(root / "headless"), str(cpp), "-o", str(exe)],
+                 "-I", str(root / "headless/prosperoeden"), str(cpp), "-o", str(exe)],
                 capture_output=True, text=True, timeout=50
             )
             assert built.returncode == 0, (compiler, opt, built.stderr[-4000:])
