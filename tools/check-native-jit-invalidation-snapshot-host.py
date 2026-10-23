@@ -46,12 +46,27 @@ for arch, path in owners.items():
     assert "HaltExecution(HaltReason::CacheInvalidation);" in queue
     assert "HaltExecution(HaltReason::CacheInvalidation);" in clear
 
+    # Pressure and failed memory commitment must use the SAME lock-protected
+    # full-clear entry point as guest invalidations. The former unguarded
+    # writes of invalidate_entire_cache introduced a data race.
+    pressure_pair = ("            ClearCache();\n"
+                     "            PerformRequestedCacheInvalidation(HaltReason::CacheInvalidation);")
+    get_block = source[source.index("if (block_of_code.SpaceRemaining() < MINIMUM_REMAINING_CODESIZE)"):]
+    get_block = get_block[:get_block.index("        // JIT Compile") if "        // JIT Compile" in get_block else get_block.index("        // LocationDescriptor")]
+    assert get_block.count(pressure_pair) == 2, arch
+    assert "invalidate_entire_cache = true;" not in get_block, arch
+    pressure_methods = (
+        "    void PressureEvacuation() {\n" + pressure_pair + "\n    }\n"
+        "    void CommitFailureEvacuation() {\n" + pressure_pair + "\n    }"
+    )
+
     scalar = "u32" if arch == "a32" else "u64"
     fixture = r"""
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <functional>
 #include <mutex>
 #include <utility>
@@ -103,9 +118,31 @@ struct Emitter {
     void ClearCache(){++cleared; if(on_full)on_full();}
 };
 struct Conf {unsigned processor_id=2;};
+// The test fixture rejects writes to shared full-clear state without the
+// invalidation mutex. Old pressure code fails deterministically.
+struct TrackedMutex {
+    std::mutex inner;
+    static thread_local unsigned depth;
+    void lock() { inner.lock(); ++depth; }
+    bool try_lock() { if (!inner.try_lock()) return false; ++depth; return true; }
+    void unlock() { --depth; inner.unlock(); }
+};
+thread_local unsigned TrackedMutex::depth = 0;
+struct TrackedFlag {
+    bool state{};
+    operator bool() const { return state; }
+    TrackedFlag& operator=(bool next) {
+        if (!TrackedMutex::depth) {
+            std::fputs("UNSYNCHRONIZED_INVALIDATION_WRITE\n", stderr);
+            std::abort();
+        }
+        state = next;
+        return *this;
+    }
+};
 struct Probe {
-    std::mutex invalidation_mutex;
-    bool invalidate_entire_cache=false;
+    TrackedMutex invalidation_mutex;
+    TrackedFlag invalidate_entire_cache{};
     boost::icl::interval_set<Address> invalid_cache_ranges;
     unsigned halts=0, clear_halts=0;
     bool halted=false;
@@ -118,8 +155,18 @@ struct Probe {
 METHOD_CLEAR
 METHOD_QUEUE
 METHOD_APPLY
+PRESSURE_METHODS
+    void UnsafePressureForNegativeControl() {
+        invalidate_entire_cache = true;
+        PerformRequestedCacheInvalidation(HaltReason::CacheInvalidation);
+    }
 };
 int main(){
+#ifdef NEGATIVE_UNSYNCHRONIZED_PRESSURE
+    Probe broken;
+    broken.UnsafePressureForNegativeControl();
+    return 0;
+#endif
     Probe p;
     assert(!p.halted);
     p.PerformRequestedCacheInvalidation(HaltReason::None);
@@ -174,9 +221,32 @@ int main(){
     auto old_resets=p.jit_state.resets;
     p.PerformRequestedCacheInvalidation(HaltReason::CacheInvalidation);
     assert(p.jit_state.resets==old_resets);
+
+    // Test the TWO actual GetBlock pressure/commit-retry handoff snippets.
+    // A new guest invalidation raised during an emitter clear remains queued
+    // for the next drain; repeated pressure requests complete without loss.
+    detailed = false;
+    Probe pressured;
+    pressured.emitter.on_full = [&]() {
+        bool unlocked = pressured.invalidation_mutex.try_lock();
+        assert(unlocked);
+        pressured.invalidation_mutex.unlock();
+        if (pressured.emitter.cleared == 1)
+            pressured.InvalidateCacheRange(Address(0x400), 4);
+    };
+    pressured.InvalidateCacheRange(Address(0x300), 8);
+    pressured.PressureEvacuation();
+    assert(pressured.emitter.cleared == 1);
+    assert(pressured.halted && pressured.invalid_cache_ranges.spans.size() == 1);
+    assert(pressured.invalid_cache_ranges.spans[0] ==
+           std::make_pair(Address(0x400), Address(0x403)));
+    pressured.PerformRequestedCacheInvalidation(HaltReason::CacheInvalidation);
+    assert(pressured.invalid_cache_ranges.empty() && !pressured.halted);
+    pressured.CommitFailureEvacuation();
+    assert(pressured.emitter.cleared == 2 && !pressured.halted);
     std::puts("NATIVE_JIT_INVALIDATION_SNAPSHOT_PASS");
 }
-""".replace("ADDR", scalar).replace("METHOD_CLEAR",clear).replace("METHOD_QUEUE",queue).replace("METHOD_APPLY",apply)
+""".replace("ADDR", scalar).replace("METHOD_CLEAR",clear).replace("METHOD_QUEUE",queue).replace("METHOD_APPLY",apply).replace("PRESSURE_METHODS",pressure_methods)
     compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
     assert compiler, "C++20 compiler required"
     with tempfile.TemporaryDirectory(prefix="encore-jit-invalidation-") as temp:
@@ -193,3 +263,14 @@ int main(){
                                check=True,timeout=45)
                 subprocess.run([str(bin)],check=True,timeout=12)
                 print("JIT_SNAPSHOT_HOST_PASS",arch,variant,optimize)
+                negative_bin = Path(temp) / (arch + "-" + variant + optimize + "-old-race")
+                subprocess.run([compiler,"-std=c++20",optimize,"-pthread",
+                                "-Wall","-Wextra","-Werror","-fsanitize=undefined",
+                                "-fno-sanitize-recover=all",
+                                "-DNEGATIVE_UNSYNCHRONIZED_PRESSURE=1",*flags,
+                                str(file),"-o",str(negative_bin)],
+                               check=True,timeout=45)
+                old = subprocess.run([str(negative_bin)],capture_output=True,
+                                     text=True,timeout=12)
+                assert old.returncode != 0 and "UNSYNCHRONIZED_INVALIDATION_WRITE" in old.stderr
+                print("JIT_PRESSURE_OLD_UNGUARDED_WRITE_REJECTED",arch,variant,optimize)
