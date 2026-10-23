@@ -76,13 +76,13 @@ The native build previously inherited a boilerplate `param.json` without the opt
 <!-- BEGIN AUTO-UPSTREAM-COMPARISON -->
 ### Automated comparison (daily + manual)
 
-Checked in UTC: **2026-10-22 10:13 UTC**. Changes are commits relative to pins, not proven missing fixes.
+Checked in UTC: **2026-10-23 10:05 UTC**. Changes are commits relative to pins, not proven missing fixes.
 This workflow never imports source patches, modifies dependencies, or reads console data.
 
 | Dependency | Source | Pinned revision | Ahead / behind | Status |
 |---|---|---|---:|---|
 | eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +92 / -0 | upstream ahead |
-| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +4997 / -0 | upstream ahead |
+| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +5014 / -0 | upstream ahead |
 | fmt | [fmtlib/fmt](https://github.com/fmtlib/fmt) | 12.1.0 | +364 / -0 | upstream ahead |
 | zbic | [kinnay/zbic](https://github.com/kinnay/zbic) | 11b08f271226 | +0 / -0 | identical |
 | compiler-rt | frozen archive / binary | — | — | not comparable |
@@ -94,10 +94,10 @@ This workflow never imports source patches, modifies dependencies, or reads cons
 | ps5-mesa | [mihawk-99/PS5_Mesa](https://github.com/mihawk-99/PS5_Mesa) | 0b2d6d1a61d9 | +111 / -103 | diverged |
 | ps5-payload-sdk-fork | [mihawk-99/PS5_PayloadSDK](https://github.com/mihawk-99/PS5_PayloadSDK) | 95c08f27386f | +100 / -48 | diverged |
 | encore-overrides | [niakw/encore-overrides](https://github.com/niakw/encore-overrides) | 4fdb329e732a | +0 / -0 | identical |
-| opengl-opengnm-psbc | [PS4-OpenGNM/opengnm-psbc](https://github.com/PS4-OpenGNM/opengnm-psbc) | a92a1228ea3a | +0 / -0 | identical |
+| opengl-opengnm-psbc | [PS4-OpenGNM/opengnm-psbc](https://github.com/PS4-OpenGNM/opengnm-psbc) | a92a1228ea3a | +4 / -0 | upstream ahead |
 | opengl-opengnm | [PS4-OpenGNM/opengnm](https://github.com/PS4-OpenGNM/opengnm) | 4b295ca54c82 | +0 / -0 | identical |
 | opengl-spirv-headers | [KhronosGroup/SPIRV-Headers](https://github.com/KhronosGroup/SPIRV-Headers) | 0d25db97cb9b | +9 / -0 | upstream ahead |
-| opengl-vulkan-headers | [KhronosGroup/Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers) | b51f6b865c18 | +7 / -0 | upstream ahead |
+| opengl-vulkan-headers | [KhronosGroup/Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers) | b51f6b865c18 | +8 / -0 | upstream ahead |
 | opengl-imgui | [ocornut/imgui](https://github.com/ocornut/imgui) | f5befd2d29e6 | +1513 / -0 | upstream ahead |
 | opengl-nanovg | [memononen/nanovg](https://github.com/memononen/nanovg) | ce3bf745eb2d | +0 / -0 | identical |
 | opengl-sokol | [floooh/sokol](https://github.com/floooh/sokol) | 48c85905aeaa | +223 / -0 | upstream ahead |
@@ -229,6 +229,10 @@ These are upstream commit titles, not validated Encore integrations.
 - [7613b71460b8](https://github.com/mihawk-99/PS5_PayloadSDK/commit/7613b71460b8) — platform: each topology pair runs on two fresh threads
 - [3752be7e7812](https://github.com/mihawk-99/PS5_PayloadSDK/commit/3752be7e7812) — Block contended heap waits and expose shared memory availability
 
+**opengl-opengnm-psbc**
+- [29ae2427dd9b](https://github.com/PS4-OpenGNM/opengnm-psbc/commit/29ae2427dd9b) — psbc: build descriptor set layout, assign VS param exports and FS inputs
+- [28697f007862](https://github.com/PS4-OpenGNM/opengnm-psbc/commit/28697f007862) — Merge pull request #2 from sergiopoverony/ps4-fixes
+
 **opengl-spirv-headers**
 - [2f88364fbce8](https://github.com/KhronosGroup/SPIRV-Headers/commit/2f88364fbce8) — fix enabling capability for generic pointer instructions (#633)
 - [f1fa5178eced](https://github.com/KhronosGroup/SPIRV-Headers/commit/f1fa5178eced) — fix TaskPayloadWorkgroupEXT storage class version (#636)
@@ -241,6 +245,7 @@ These are upstream commit titles, not validated Encore integrations.
 - [b0c3dd6851e2](https://github.com/KhronosGroup/Vulkan-Headers/commit/b0c3dd6851e2) — Update for Vulkan-Docs 1.4.364
 - [3c65a01745e4](https://github.com/KhronosGroup/Vulkan-Headers/commit/3c65a01745e4) — Add vulkan_ubm.h to build.gn
 - [c46850864f46](https://github.com/KhronosGroup/Vulkan-Headers/commit/c46850864f46) — Update for Vulkan-Docs 1.4.365
+- [73814d006638](https://github.com/KhronosGroup/Vulkan-Headers/commit/73814d006638) — Update for Vulkan-Docs 1.4.366
 
 **opengl-imgui** (history excerpt; some commits omitted)
 - [1387d356aab8](https://github.com/ocornut/imgui/commit/1387d356aab8) — stb_textedit: subsequent fixes for next/prev word impl (not used by imgui) + PageUp/Home/End (no side effect but mo
