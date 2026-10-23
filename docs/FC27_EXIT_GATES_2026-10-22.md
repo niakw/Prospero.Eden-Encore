@@ -544,3 +544,34 @@ ou de grande taille. Il est inscrit au fast gate hôte.
 mise à jour. Le cas reproduit est une possibilité de synchronisation
 sous verrou ; les anciennes traces de FC27 ne permettent pas
 d'attribuer un pic précis à ce chemin. **F01 reste ouvert.**
+
+
+### F01 — ajustement final du seuil initial, source/en-tête natif vérifiés
+
+La prévalidation initiale `PreflightGuestDraw` anticipait une réservation
+fixe de **1 024 entrées**, même lorsqu'un pipeline graphique/compute
+utilisait quelques descripteurs. Elle reçoit désormais
+`pipeline->DescriptorEntryReservation()` et applique le seuil exact
+`used + reserve >= frame_payload_size` de l'`Acquire` réel.
+La valeur `0x400` reste disponible par défaut pour les autres appels
+non revus. Les méthodes initiale et de resélection sont présentes
+**à l'identique** dans `tools/prepare-vulkan-port.py` et dans
+l'en-tête maintenu sélectionné
+`vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h`.
+Les deux sites initiaux et six sites de resélection sont présents
+dans le rasterizer maintenu.
+
+`tools/check-ps5-graphics-pipeline-aware-preflight-host.py`
+a été adapté au paramètre supplémentaire ;
+`tools/check-ps5-exact-descriptor-preflight-host.py` exige maintenant
+la parité des deux méthodes dans l'en-tête et le générateur et vérifie
+le précontrôle initial à la frontière de la file.
+
+Une reproduction locale séparée du calcul a réussi sous GCC et
+Clang, `-O0`/`-O2`, UBSan : **110 couples** remplissage/réservation
+pour chaque configuration, contre-exemple historique inclus.
+Ce n'est pas la suite source-extraite du dépôt, dont l'exécution
+reste à confirmer. **Aucun gain en FPS n'est quantifié**, et les
+attentes F01 autres que celles-ci restent ouvertes. La compilation
+PS5 complète doit valider la cohérence des sources et du build
+avant F07.
