@@ -55,10 +55,18 @@ template<class P> struct TextureCache {
     Channel channel;
     Channel* channel_state=&channel;
     u32 texture_bindings_serial=0, prepared=0, views_created=0, samplers_found=0;
+    bool fail_first_view_creation=false;
     SamplerId GetSamplerId(u32,bool);
     ImageViewId VisitImageView(u32,bool);
     SamplerId FindSampler(int descriptor,bool) { ++samplers_found;return descriptor+300; }
-    ImageViewId CreateImageView(int descriptor) { ++views_created;return descriptor+100; }
+    ImageViewId CreateImageView(int descriptor) {
+        ++views_created;
+        if (fail_first_view_creation) {
+            fail_first_view_creation=false;
+            return NULL_IMAGE_VIEW_ID;
+        }
+        return descriptor+100;
+    }
     void PrepareImageView(ImageViewId id,bool,bool) { if (id) ++prepared; }
 };
 """ + sampler + image + r"""
@@ -99,6 +107,34 @@ int main() {
     assert(b.samplers_found==1);
     b.channel.compute_sampler_table.descriptor=8;
     assert(b.GetSamplerId(3,true)==308 && b.samplers_found==2);
+    // A cached descriptor can have failed to create a GPU image view
+    // without any guest TIC rewrite. The NEXT lookup must retry creation,
+    // publish a fresh binding serial, and avoid reusing the cached NULL.
+    TextureCache<int> transient;
+    transient.channel.graphics_image_table.descriptor=27;
+    transient.fail_first_view_creation=true;
+    assert(transient.VisitImageView(1,false)==NULL_IMAGE_VIEW_ID);
+    assert(transient.channel.image_views.at(27)==NULL_IMAGE_VIEW_ID);
+    assert(transient.channel.image_view_ids.at(1)==NULL_IMAGE_VIEW_ID);
+    assert(transient.texture_bindings_serial==0 && transient.views_created==1);
+    assert(transient.VisitImageView(1,false)==127);
+    assert(transient.channel.image_view_ids.at(1)==127);
+    assert(transient.texture_bindings_serial==1 && transient.views_created==2);
+    assert(transient.VisitImageView(1,false)==127);
+    assert(transient.views_created==2); // once live, never recreate each draw
+
+    // A different TIC slot sharing a previously NULL descriptor must
+    // also revive the original ImageView mapping with its own real view ID.
+    TextureCache<int> shared;
+    shared.channel.graphics_image_table.descriptor=29;
+    shared.fail_first_view_creation=true;
+    assert(shared.VisitImageView(1,false)==NULL_IMAGE_VIEW_ID);
+    assert(shared.VisitImageView(2,false)==129);
+    assert(shared.VisitImageView(1,false)==129);
+    assert(shared.channel.image_view_ids.at(1)==129);
+    assert(shared.channel.image_view_ids.at(2)==129);
+    assert(shared.views_created==2);
+
     // Invalid indexes preserve the NULL return, not an out-of-range lookup.
     assert(b.VisitImageView(99,false)==NULL_IMAGE_VIEW_ID);
     assert(b.GetSamplerId(99,false)==NULL_SAMPLER_ID);
