@@ -31,8 +31,8 @@ assert active != pinned
 assert "static_cast<s64>(src.max_x) - src.min_x" in active
 assert "static_cast<s64>(clip_height) - src.max_y" in active
 assert "down_shift < 32" in active
-assert "as_i32 >> down_shift" in active  # Must preserve signed clipping.
-assert "bits >> down_shift" not in active
+assert "bits >> down_shift" in active  # Pinned behavior: unsigned up_scale.
+assert "as_i32 >> down_shift" not in active
 assert "src.max_x - src.min_x" in pinned
 
 mock = r"""
@@ -72,12 +72,14 @@ checks = r"""
 int main() {
     Maxwell m;
     m.surface_clip.height = 1080;
-    // Regression: converting a negative signed coordinate to unsigned BEFORE
-    // shifting used to clip the left side to -1 instead of its actual offset.
+    // Up-scale is unsigned in the pinned expression. A negative coordinate
+    // multiplied by it is also unsigned and the shift yields -1 after the
+    // existing clamp; a signed shift would silently change guest rendering.
     m.scissor_test[0] = {true, Field{-96}, Field{8}, Field{10}, Field{60}};
-    const auto signed_scissor = GetScissorState(m, 0, 1, 1);
-    assert(signed_scissor.offset.x == -48);
-    assert(BaselineScissor(m, 0, 1, 1).offset.x == signed_scissor.offset.x);
+    const auto baseline_negative = BaselineScissor(m, 0, 1, 1);
+    const auto scaled_negative = GetScissorState(m, 0, 1, 1);
+    assert(baseline_negative.offset.x == -1);
+    assert(scaled_negative.offset.x == baseline_negative.offset.x);
     for (int x = -96; x < 96; x += 11) {
         for (int y = 0; y < 100; y += 13) {
             for (u32 scale = 1; scale <= 4; ++scale) {
