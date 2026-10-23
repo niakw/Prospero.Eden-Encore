@@ -872,12 +872,14 @@ void Launcher::draw_switch_dialog(Canvas& c, Modal modal, float opened) {
 }
 
 void Launcher::press_switch_settings(Key key) {
-    if(key==Key::down||key==Key::up||key==Key::left||key==Key::right) {
+    if(key==Key::down||key==Key::up||key==Key::left||key==Key::right||
+       key==Key::l1||key==Key::r1) {
         // System Settings in the reference stops at the first/last category.
         // Do not change the wrapping behavior of Encore's shared ListView.
         const bool original_wrap=settings_.wrap;
         settings_.wrap=false;
-        const bool moved=settings_.move(key==Key::down||key==Key::right?1:-1);
+        const bool moved=settings_.move(key==Key::down||key==Key::right||
+                                        key==Key::r1?1:-1);
         settings_.wrap=original_wrap;
         if(moved) {
             section_.snap(1.0f);cue(Cue::focus);
