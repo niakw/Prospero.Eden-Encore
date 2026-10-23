@@ -294,8 +294,12 @@ jobs:
               pixels = frame.crop(region)
               detail = sum(ImageStat.Stat(pixels).stddev)
               assert detail > 17.0, ("missing composited paper", region, detail)
-          a = frames[1].crop((130, 650, 280, 870))
-          b = frames[0].crop((130, 650, 280, 870))
+          # Merely moving focus to the existing rear paper need not alter
+          # its artwork; compare the enlarged overlay with the unzoomed
+          # Library instead of demanding a false content difference.
+          region = (800, 350, 1120, 845)
+          a = frames[2].crop(region)
+          b = frames[1].crop(region)
           assert max(ImageStat.Stat(ImageChops.difference(a, b)).mean) > 4
           print("LIBRARY_RECONSTRUCTED_PAPER_OPENGL: PASS")
           PY
