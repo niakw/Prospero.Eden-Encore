@@ -543,3 +543,17 @@ The source contract is now corrected to `const rect footer`. This
 was a test bug, not evidence of missing back-cover pixels.
 The C++/OpenGL case rendering remains the acceptance criterion;
 the next host preview should advance past the source-only gate.
+
+
+### 23 October — native host CI gate follow-up
+
+The first real case preview accepted the retail-scan and shoulder-key
+source contracts, then found the new case-media host test using the
+wrong include root (`-I headless` rather than
+`-I headless/prosperoeden`). This test harness path is now corrected.
+The NCZ source-gate's metadata bridge check has also been reconciled
+with the central `IsPackageFile/IsCardImageFile` predicates.
+
+The next marked commit requests another **actual C++/OpenGL render**
+and native compile, not a fabricated image or console test. Only
+published green workflow results count as verification.
