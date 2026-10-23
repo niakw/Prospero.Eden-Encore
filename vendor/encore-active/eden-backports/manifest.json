@@ -401,8 +401,8 @@
       "upstream": "fdd427fad337594874e3d6187d0769e531e61212234e80bd7cb97c85ebbf3f1e"
     },
     "src/video_core/texture_cache/texture_cache.h": {
-      "active": "df8fd6554753e05004547002cd0868c588f9d3f2782993b15f402a27feaf43a2",
-      "bytes": 116277,
+      "active": "46e0dcdd97e62dd113efa2e44eed5d9ed998f174a13084b1a979a478d1c1c09e",
+      "bytes": 116679,
       "upstream": "59f06d6839d09c96e9d7541a727a87fee680b7e7bebe763e82fec523a5caf498"
     },
     "src/video_core/texture_cache/texture_cache_base.h": {
@@ -433,7 +433,7 @@
     ".encore-backport-ps5-alias-current-tick-fastpath.sha256": "e11849187ad84f9d3411ae79a5ee124b6b9170df215052bafde54681f17167ae",
     ".encore-backport-ps5-bounded-logging.sha256": "b51127c02910670199bb45586978e06a1677daa8d4dfb63cb822d1b325f54772",
     ".encore-backport-ps5-crash-only-logging.sha256": "616dc7641e876fc4bbcd36bdedacad1460b4ba021fe785cebef39670332a704f",
-    ".encore-backport-ps5-feedback-loop-no-depth-fastpath.sha256": "f364c1f59a715a727da848f4b341b48610d7060bccb355744a64ae8b6ec5d1ef",
+    ".encore-backport-ps5-feedback-loop-no-depth-fastpath.sha256": "4a1d091039857192835253a58b511d26ef626bea72853cf5650cb73ddcd85abf",
     ".encore-backport-ps5-feedback-loop-view-key.sha256": "b8d64a022c96f7e3cc95b07a47d068fd174048995338882009aa1b152b7df636",
     ".encore-backport-ps5-gpu-asid-lifetime-guard.sha256": "11807b091a268a9ab306b7d0fca3ded9d91dfbeee6d30e29e514305644a7a96a",
     ".encore-backport-ps5-gpu-asid-no-reuse.sha256": "853e4ee5ed9a9ee0769fb8f83605c9482aa4525205196266e041d2863ce291a5",
