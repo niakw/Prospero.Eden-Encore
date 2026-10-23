@@ -39,7 +39,7 @@ assert "Compute empty-descriptor native anchor changed" in generator
 assert "python3 -B tools/check-ps5-compute-guest-descriptor-preflight-host.py" in workflow
 
 start = "    template <typename WaitWorker>\n    [[nodiscard]] bool PreflightGuestDraw("
-end = "    template <typename WaitWorker>\n    [[nodiscard]] bool PreflightLargeGuestDraw("
+end = "    template <typename WaitWorker>\n    [[nodiscard]] bool PreflightExactGuestDraw("
 assert header.count(start) == header.count(end) == 1
 method = header[header.index(start):header.index(end)]
 assert "wait_worker();" in method
