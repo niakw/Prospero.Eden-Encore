@@ -557,3 +557,18 @@ with the central `IsPackageFile/IsCardImageFile` predicates.
 The next marked commit requests another **actual C++/OpenGL render**
 and native compile, not a fabricated image or console test. Only
 published green workflow results count as verification.
+
+
+### Latest two-panel fallback correction
+
+When a real cached square cover icon fills one of the two lower rear
+panels, `flat_back_fallback` now aspect-fits the icon **on either side**.
+Only true landscape screenshots use the crop renderer. The prior
+distinct-media selector remains unchanged; two independent screenshots
+still take priority. Source regressions cover this branch, and a new
+native host OpenGL render must verify the actual paper face.
+
+The source CI also now rejects a stale NCZ/ExeFS scanner check and the
+old Vulkan `PreflightLargeGuestDraw` audit symbol. Both had prevented
+unrelated frontend changes from reaching the native compiler. They
+were test/register corrections, not gameplay performance claims.
