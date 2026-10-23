@@ -11,10 +11,10 @@
 | `.nsz` | NSP with compressed NCAs | Experimental | NSP + NCZ VFS |
 | `.xcz` | XCI with compressed NCAs | Experimental | XCI + NCZ VFS |
 | `.ncz` | Compressed NCA inside NSZ/XCZ | No | Translated to `.nca` by NCZ adapter |
-| `.nro` | Homebrew program | No, not a standard Encore game-library entry | Upstream NRO |
-| `.nso` | Executable module | No | Upstream NSO, including retained LZ4 and ZBIC/zstd |
-| `.nca` | Content archive | No | Upstream NCA |
-| NAX, KIP | Internal program/archive types | No | Upstream loaders (NAX identification / KIP) |
+| `.nro` | Homebrew program | **Selectable**, may not be a full game | Upstream NRO |
+| `.nso` | Executable module | **Selectable**, may require other program contents | Upstream NSO, retaining LZ4 and ZBIC/zstd |
+| `.nca` | Content archive | **Selectable**, only bootable when complete/valid | Upstream NCA |
+| `.nax`, `.kip` | Program/archive types | **Selectable**, not always bootable alone | Upstream NAX and KIP loaders |
 | Deconstructed game folder | Extracted content | No, not in the ordinary Library scan | Upstream deconstructed-directory loader |
 | `.zst`, `.zstd`, `.zbic` | Compression-oriented extensions | **No** | **Not** independent game containers |
 
@@ -42,7 +42,7 @@ The reader and front-end adapter are `headless/ncz.h`, `headless/ncz.cpp`, `head
 
 ## Evidence and remaining acceptance
 
-- **Source comparison:** the five maintained owners have been compared with their pinned baselines; each contains only its expected NCZ adaptation, plus `ncz_vfs.h` inclusion where used.
+- **Source comparison:** the five maintained owners have been compared with their pinned baselines; each contains its reviewed NCZ adaptation, plus `ncz_vfs.h` inclusion where used. The maintained `loader.cpp` additionally includes the explicitly reviewed NAX extension fallback.
 - **Committed host checks:** `tools/check-ncz.py` runs synthetic block/solid NCZ reconstruction under ASan/UBSan; `tools/check-encore-ncz-sources.py` verifies native-owner selection and all eight case variants of the four accepted Library extensions.
 - **Security regression:** `headless/ncz_check.cpp` exercises symlinked cache paths and verifies they cannot overwrite a protected file.
 - **Unverified:** full host CI and native PS5 package at the current HEAD; no console gameplay test of NSZ/XCZ.
