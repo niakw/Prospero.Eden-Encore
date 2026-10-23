@@ -33,6 +33,9 @@ assert "void PreflightDescriptorScratch();" in GENERATOR
 assert signature in GENERATOR
 assert "last_descriptor_payload.reserve(num_descriptor_entries);" in GENERATOR
 assert "last_descriptor_payload.reserve(num_descriptor_entries);" in method
+# The native selected implementation must be identical to the generator's
+# complete C++ body, not merely contain the expected marker.
+assert method.replace("\n", r"\n") in GENERATOR, "maintained pipeline preflight drifted from staging"
 assert "if (scratch.in_use) return;" in method
 assert "last_descriptor_payload.capacity() < num_descriptor_entries" in method
 assert RASTER.index("pipeline->PreflightDescriptorScratch();") < RASTER.index(
