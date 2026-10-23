@@ -160,9 +160,10 @@ inline int LanguageIndexForLocale(std::string_view locale) {
 
 inline bool ValidRomFilename(std::string_view name) {
     if (name.size() < 5 || name.size() > 255) return false;
+    const bool exefs = Eden::IsDeconstructedGameSelection(name);
     for (unsigned char c : name)
-        if (c < 32 || c == 127 || c == '/' || c == '\\') return false;
-    return Eden::IsGameFile(name) || Eden::IsDeconstructedGameSelection(name);
+        if (c < 32 || c == 127 || (c == '/' && !exefs) || c == '\\') return false;
+    return Eden::IsGameFile(name) || exefs;
 }
 
 inline std::string SettingsFile() { return ConfigFile("prosperoeden.json"); }
