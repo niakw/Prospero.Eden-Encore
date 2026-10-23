@@ -243,12 +243,14 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
     // With zero cached images, keep the completely painted blue paper and
     // description panel. A source failing to decode has the same safe result.
 
-    // Printed editorial copy should sit ON the illustration, not inside
-    // an opaque black UI rectangle. A soft transparent gradient keeps
-    // white text readable without erasing the underlying landscape.
-    c.list.hgradient_rect(description, 0.0f,
-                          Color::rgb(0x08111d, 0.24f),
-                          Color::rgb(0x08111d, 0.57f));
+    // No rectangle/panel behind printed editorial copy: instead shade the
+    // entire right-hand upper artwork with a progressive, edge-free fade.
+    // It starts well left of the caption and extends to the footer fold,
+    // so there is no abrupt boxed patch on the physical back jacket.
+    c.list.hgradient_rect(
+        {r.x + left_w * 0.38f, r.y, r.w - left_w * 0.38f, dynamic_h},
+        0.0f, Color::rgb(0x08111d, 0.0f),
+        Color::rgb(0x08111d, 0.44f));
     const std::string& desc = !game.description.empty() ? game.description :
                               !game.intro.empty() ? game.intro : game.name;
     const float copy_font = std::clamp(r.w * 0.042f, 8.0f, 18.0f);
