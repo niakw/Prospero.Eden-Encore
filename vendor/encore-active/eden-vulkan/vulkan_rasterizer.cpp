@@ -318,7 +318,8 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
     // Never hold guest cache locks while waiting. The worker may publish guest
     // remaps and change the selected pipeline, so reselect after a real drain.
     if (pipeline->HasDescriptorEntries() &&
-        guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {
+        guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); },
+                                                pipeline->DescriptorEntryReservation())) {
         gpu_memory->FlushCaching();
         pipeline = pipeline_cache.CurrentGraphicsPipeline();
         if (!pipeline) {
@@ -846,7 +847,8 @@ void RasterizerVulkan::DispatchCompute() {
     // legacy 1024-entry guest queue. After a real wait, consume guest page
     // invalidations and reselect the possibly changed compute shader.
     if (pipeline->HasDescriptorEntries() &&
-        guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {
+        guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); },
+                                                pipeline->DescriptorEntryReservation())) {
         gpu_memory->FlushCaching();
         pipeline = pipeline_cache.CurrentComputePipeline();
         if (!pipeline) return;
