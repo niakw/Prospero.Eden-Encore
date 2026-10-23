@@ -157,12 +157,17 @@ back_fallback = library.split("void flat_back_fallback(", 1)[1].split(
 for token in ("game.hero", "game.cover", "game.screenshots", "cover_crop(",
               "game.name", 'Color::rgb(0xe31930)', '"SWITCH"'):
     assert token in front, ("Front fallback dropped", token)
-for token in ("game.screenshots.front()", "game.screenshots[1]",
-              "game.description", "text_block(c, desc,", "footer",
+for token in ("game.screenshots.front()",
+              "case_media::BackScenes(hero, game.cover, game.screenshots)",
+              "game.description", "text_block(c, desc,", "const Rect footer",
               "ENCORE  /  GAME INFORMATION"):
     assert token in back_fallback, ("Back fallback dropped", token)
+assert 'case_media::FrontAlternate(painting, game.cover, game.screenshots)' in front
 assert "if (!scan.empty()) {" in library
 assert library.index("if (!scan.empty()) {") < library.index("flat_back_fallback(c, game, paper);")
+# The non-official fallback footer must never invent regulatory labels,
+# game ratings or scan-style barcodes.
+assert "const Rect footer" in back_fallback, "Back footer removed"
 assert "barcode" not in back_fallback.lower().split("const Rect footer",1)[1]
 assert "shell.y + shell.h - top" in library
 assert "s.press({Key::r1, Key::r1});" in (
