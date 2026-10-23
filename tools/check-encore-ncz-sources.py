@@ -29,6 +29,13 @@ for rel,sha,marker in pairs:
     old, new, header = next((a,b,c) for item,a,b,c in expected_deltas if item==rel)
     assert raw.decode().count(old)==1,("pinned source changed",rel)
     expected=raw.decode().replace(old,new)
+    if rel=="loader/loader.cpp":
+        # Encore also accepts the pinned native NAX format on filename
+        # fallback; a magic/signature probe still has first priority.
+        nax_before='    else if (extension == "nca")\n        return FileType::NCA;'
+        nax_after=nax_before+'\n    else if (extension == "nax")\n        return FileType::NAX;'
+        assert expected.count(nax_before)==1
+        expected=expected.replace(nax_before,nax_after)
     if header:
         expected=expected.replace('#include <memory>', '#include <memory>\n#include "ncz_vfs.h"')
         if '#include "ncz_vfs.h"' not in expected:
