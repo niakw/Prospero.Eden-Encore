@@ -91,6 +91,7 @@ jobs:
           python3 -B tools/check-ps5-empty-image-view-retirement-host.py
           python3 -B tools/check-ps5-texture-channel-missing-mapping-host.py
           python3 -B tools/check-ps5-scissor-extremes-host.py
+          python3 -B tools/check-ps5-pipeline-build-handoff-host.py
 
       - name: Audit generic graphics, JIT, runtime and filtered game networking
         run: |
