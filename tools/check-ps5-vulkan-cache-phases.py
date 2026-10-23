@@ -144,7 +144,7 @@ print("PASS R310: cache hotpath sample 1/16, max/delta/reset/quiet, pinned locks
 active = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
 assert "GraphicsDescriptorScratchLease scratch;" in active
 assert "std::optional<GraphicsDescriptorScratchLease> reused" not in active
-assert "void GraphicsPipeline::PreflightDescriptorScratch() const" in active
+assert "void GraphicsPipeline::PreflightDescriptorScratch()" in active
 assert "scratch.views.reserve(num_image_elements)" in active
 assert "scratch.samplers.reserve(num_textures)" in active
 assert "thread_local GraphicsDescriptorScratch graphics_descriptor_nested_scratch;" in active
@@ -152,7 +152,7 @@ assert "graphics_descriptor_nested_scratch" in generator
 assert "if (!nested) current->in_use = false;" in active
 header = (root / "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h").read_text()
 rasterizer = (root / "vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp").read_text()
-assert "void PreflightDescriptorScratch() const;" in header
+assert "void PreflightDescriptorScratch();" in header
 assert "pipeline->PreflightDescriptorScratch();" in rasterizer
 assert rasterizer.index("pipeline->PreflightDescriptorScratch();") < rasterizer.index(
     "std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};")
