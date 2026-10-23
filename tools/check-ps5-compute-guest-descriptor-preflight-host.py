@@ -13,7 +13,8 @@ workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
 
 compute = raster.split("void RasterizerVulkan::DispatchCompute() {", 1)[1].split(
     "\nvoid RasterizerVulkan::ResetCounter(", 1)[0]
-preflight = "guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })"
+preflight = ("guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); },\n"
+             "                                                pipeline->DescriptorEntryReservation())")
 select = "pipeline_cache.CurrentComputePipeline()"
 locks = "std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};"
 assert compute.count(preflight) == 1
@@ -43,6 +44,9 @@ assert header.count(start) == header.count(end) == 1
 method = header[header.index(start):header.index(end)]
 assert "wait_worker();" in method
 assert "payload_cursor = payload_start;" in method
+assert "size_t required_entries = 0x400" in method
+assert "const size_t reserve = required_entries != 0 ? required_entries : 0x400;" in method
+assert "pipeline->DescriptorEntryReservation()" in selection
 
 cpp = r"""
 #include <array>
@@ -77,10 +81,23 @@ int main() {
     // Repeated ordinary dispatches do not introduce new drains.
     assert(!queue.PreflightGuestDraw(wait_worker));
     assert(waits==1);
-    // Close to the end also drains; no double wait in the simulated Acquire.
+    // The selected compute pipeline asks for its exact 8 entries rather
+    // than 1024. A near-full but sufficient payload does NOT drain.
+    queue.SetUsed(4096-9);
+    assert(!queue.PreflightGuestDraw(wait_worker, 8));
+    assert(queue.Used()==4096-9 && waits==1);
+    // The 8-entry threshold drains exactly where Acquire would run out.
+    queue.SetUsed(4096-8);
+    assert(queue.PreflightGuestDraw(wait_worker, 8));
+    assert(queue.Used()==0 && waits==2);
+    // The default reservation remains available to other legacy callers.
     queue.SetUsed(4095);
     assert(queue.PreflightGuestDraw(wait_worker));
-    assert(queue.Used()==0 && waits==2);
+    assert(queue.Used()==0 && waits==3);
+    // Reject invalid reservations without waiting or rewriting the cursor.
+    queue.SetUsed(25);
+    assert(!queue.PreflightGuestDraw(wait_worker,4096));
+    assert(queue.Used()==25 && waits==3);
 }
 """.replace("__METHOD__", method)
 compiler=shutil.which("clang++-18") or shutil.which("clang++")
