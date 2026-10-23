@@ -42,8 +42,8 @@ front = method(library, "void flat_front_fallback(", "void flat_back_fallback(")
 back = method(library, "void flat_back_fallback(", "// Static sleeve used")
 for attr in ("game.hero","game.cover","game.screenshots","game.name","cover_crop"):
     assert attr in front, attr
-for attr in ("game.hero","game.screenshots[1]","game.description",
-             "text_block(c, desc,", "const Rect footer"):
+for attr in ("game.hero","case_media::BackScenes(hero, game.cover, game.screenshots)",
+             "game.description", "text_block(c, desc,", "const Rect footer"):
     assert attr in back, attr
 assert '"SWITCH"' in front
 # A square app icon cannot be stretched across an entire tall retail sleeve.
@@ -53,12 +53,13 @@ for token in ("const float aspect", "fitted.h = panel.w / aspect;",
     assert token in contain, token
 assert "const bool has_landscape" in front
 assert "case_art_contain(c, game.cover, icon_panel);" in front
-assert "secondary != painting" in front
+assert "case_media::FrontAlternate(painting, game.cover, game.screenshots)" in front
+assert "case_art_contain(c, *secondary, action);" in front
 # Screenshots are title-keyed; never create an illusory second distinct
 # picture by repeating the same cached hero or screenshot.
-for token in ('shot_a != hero', 'shot_b != hero',
-              'shot_b != *first', 'if (first && second)',
-              'case_art_contain(c, one,'):
+for token in ('const std::string* first = shots[0];',
+              'const std::string* second = shots[1];',
+              'if (first && second)', 'case_art_contain(c, one,'):
     assert token in back, token
 assert "ENCORE  /  GAME INFORMATION" in back
 # A remote retail scan may have a valid pathname but not yet a GPU texture.
