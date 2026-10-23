@@ -232,7 +232,8 @@ void RasterizerVulkan::DispatchCompute() {"""),
     }
 #ifdef PS5_NATIVE
     for (unsigned preflight = 0; preflight != 2; ++preflight) {
-        if (!guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (!pipeline->HasDescriptorEntries() ||
+            !guest_descriptor_queue.PreflightLargeGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation()))
             break;
         gpu_memory->FlushCaching();
@@ -281,7 +282,8 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
         }
         // A newly selected pipeline may reserve more guest descriptors.
         // Keep any worker wait ahead of the paired cache mutexes.
-        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (pipeline->HasDescriptorEntries() &&
+            guest_descriptor_queue.PreflightLargeGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
             gpu_memory->FlushCaching();
             pipeline = pipeline_cache.CurrentGraphicsPipeline();
@@ -308,7 +310,8 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
         // This GPU drain can change the selected pipeline after the earlier
         // descriptor preflight. Check its NEW reservation before taking the
         // buffer/texture mutex pair, so Acquire cannot wait under both locks.
-        if (guest_descriptor_queue.PreflightLargeGuestDraw(
+        if (pipeline->HasDescriptorEntries() &&
+            guest_descriptor_queue.PreflightLargeGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {
             gpu_memory->FlushCaching();
             pipeline = pipeline_cache.CurrentGraphicsPipeline();
@@ -453,7 +456,7 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
      "    gpu_memory->FlushCaching();\n#ifdef PS5_NATIVE\n    // Compute Configure runs under both guest cache locks. Drain the common\n    // descriptor queue overflow BEFORE taking those locks, exactly as Draw.\n    // The GPU worker may publish guest invalidations while it drains.\n    if (guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); })) {\n        gpu_memory->FlushCaching();\n    }\n#endif\n\n    ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline()};"),
 
     ("    ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline()};\n    if (!pipeline) {\n        return;\n    }\n    SCOPE_EXIT { SyncProbe(scheduler, \"dispatch\", pipeline); };\n    std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};",
-     "    ComputePipeline* pipeline{pipeline_cache.CurrentComputePipeline()};\n    if (!pipeline) {\n        return;\n    }\n#ifdef PS5_NATIVE\n    // Compute always allocates new descriptor-buffer space for a dispatch.\n    // Drain only necessary GPU fences while neither guest cache is locked.\n    // Worker drains can publish guest shader/descriptor invalidations.\n    for (unsigned preflight = 0; preflight != 2; ++preflight) {\n        if (!guest_descriptor_queue.PreflightLargeGuestDraw(\n                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation()))\n            break;\n        gpu_memory->FlushCaching();\n        pipeline = pipeline_cache.CurrentComputePipeline();\n        if (!pipeline) return;\n    }\n    if (pipeline->CanUseDescriptorBuffer() &&\n        descriptor_buffer_ring.PreflightFrameReuse(scheduler)) {\n        gpu_memory->FlushCaching();\n        pipeline = pipeline_cache.CurrentComputePipeline();\n        if (!pipeline) return;\n        if (guest_descriptor_queue.PreflightLargeGuestDraw(\n                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {\n            gpu_memory->FlushCaching();\n            pipeline = pipeline_cache.CurrentComputePipeline();\n            if (!pipeline) return;\n        }\n    }\n    if (descriptor_buffer_ring.PreflightCapacity(\n            scheduler, pipeline->DescriptorRingPreflightSize())) {\n        gpu_memory->FlushCaching();\n        pipeline = pipeline_cache.CurrentComputePipeline();\n        if (!pipeline) return;\n        if (guest_descriptor_queue.PreflightLargeGuestDraw(\n                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {\n            gpu_memory->FlushCaching();\n            pipeline = pipeline_cache.CurrentComputePipeline();\n            if (!pipeline) return;\n        }\n    }\n#endif\n    SCOPE_EXIT { SyncProbe(scheduler, \"dispatch\", pipeline); };\n    std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};"),
+     "    ComputePipeline* pipeline{pipeline_cache.CurrentComputePipeline()};\n    if (!pipeline) {\n        return;\n    }\n#ifdef PS5_NATIVE\n    // Compute always allocates new descriptor-buffer space for a dispatch.\n    // Drain only necessary GPU fences while neither guest cache is locked.\n    // Worker drains can publish guest shader/descriptor invalidations.\n    for (unsigned preflight = 0; preflight != 2; ++preflight) {\n        if (!pipeline->HasDescriptorEntries() ||\n            !guest_descriptor_queue.PreflightLargeGuestDraw(\n                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation()))\n            break;\n        gpu_memory->FlushCaching();\n        pipeline = pipeline_cache.CurrentComputePipeline();\n        if (!pipeline) return;\n    }\n    if (pipeline->CanUseDescriptorBuffer() &&\n        descriptor_buffer_ring.PreflightFrameReuse(scheduler)) {\n        gpu_memory->FlushCaching();\n        pipeline = pipeline_cache.CurrentComputePipeline();\n        if (!pipeline) return;\n        if (pipeline->HasDescriptorEntries() &&\n            guest_descriptor_queue.PreflightLargeGuestDraw(\n                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {\n            gpu_memory->FlushCaching();\n            pipeline = pipeline_cache.CurrentComputePipeline();\n            if (!pipeline) return;\n        }\n    }\n    if (descriptor_buffer_ring.PreflightCapacity(\n            scheduler, pipeline->DescriptorRingPreflightSize())) {\n        gpu_memory->FlushCaching();\n        pipeline = pipeline_cache.CurrentComputePipeline();\n        if (!pipeline) return;\n        if (pipeline->HasDescriptorEntries() &&\n            guest_descriptor_queue.PreflightLargeGuestDraw(\n                [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation())) {\n            gpu_memory->FlushCaching();\n            pipeline = pipeline_cache.CurrentComputePipeline();\n            if (!pipeline) return;\n        }\n    }\n#endif\n    SCOPE_EXIT { SyncProbe(scheduler, \"dispatch\", pipeline); };\n    std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};"),
 ])
 # Host conditional rendering (VK_EXT_conditional_rendering, dev_vulkan.h hcr_mode): count each
 # decision (EDEN_DEV_GUEST cond= slots 13-19); hcr=exact sends the conditions Eden would draw
