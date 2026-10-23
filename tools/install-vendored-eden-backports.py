@@ -127,10 +127,10 @@ def replay()->None:
                 name = mismatched[0]
                 generated = (stage / name).read_text(errors='replace').splitlines()
                 maintained = (ACTIVE / name).read_text(errors='replace').splitlines()
-                sample = '\\n'.join(list(difflib.unified_diff(
+                sample = '\n'.join(list(difflib.unified_diff(
                     maintained, generated, fromfile=f'maintained/{name}',
                     tofile=f'replayed/{name}', lineterm='', n=4))[:100])
-            raise RuntimeError(f'Active Eden backports differ from full replay: missing={missing},extra={extra},mismatched={mismatched}\\n{sample}')
+            raise RuntimeError(f'Active Eden backports differ from full replay: missing={missing},extra={extra},mismatched={mismatched}\n{sample}')
         receipts={p.name:p.read_text().strip() for p in stage.glob('.encore-backport-*.sha256')}
         if receipts!=spec['shipping_receipts']:raise RuntimeError('Missing or stale patch receipts')
         print(f'EDEN_COMPLETE_PATCH_REPLAY_OK files={len(observed)} receipts={len(receipts)}')
