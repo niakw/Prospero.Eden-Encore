@@ -110,8 +110,12 @@ void Launcher::press_settings(Key key)
         return;
     case Key::left:
     case Key::right:
+    case Key::l1:
+    case Key::r1:
     {
-        const int delta = key == Key::right ? 1 : -1;
+        // Shoulder buttons move between settings items without modifying
+        // the value of the currently selected option or opening a dialog.
+        const int delta = (key == Key::right || key == Key::r1) ? 1 : -1;
         if (settings_.move(delta))
         {
             if (settings_.selected == kDiagnostics)
