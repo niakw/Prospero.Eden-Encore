@@ -209,6 +209,10 @@ assert 'const Rect logo{r.x, r.y, logo_w,' in front
 assert 'cover_crop(c, painting, r, 0.0f, 0.0f);' in front
 assert 'constexpr float kFixedFooter = 0.41f;' in back_fallback
 assert 'c.textures.switch_rear_footer() != 0' in back_fallback
+assert 'if (has_first && has_second) {' in back_fallback
+assert 'scene(hero, {r.x, r.y, r.w, dynamic_h});' in back_fallback
+assert 'scene(*first, top_right);' in back_fallback
+assert 'scene(*second, panorama);' in back_fallback
 assert 'if (path == game.cover) case_art_contain(c, path, area);' in back_fallback
 assert "if (!scan.empty()) {" in library
 assert library.index("if (!scan.empty()) {") < library.index("flat_composed_ink(c, game, paper, rear);")
@@ -246,12 +250,23 @@ workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 packager = (root / "tools/package-headless-native.sh").read_text()
 assert "Nintendo Switch" in indexer
 assert "def candidates(items, limit=6):" in indexer
-assert "flat spine candidates" in indexer
+assert "flat spine candidates" in indexer or "two gameplay scenes" in indexer
 assert "Box - Front" in indexer and "Box - Back" in indexer
 assert "gamesdb.launchbox-app.com/Metadata.zip" in indexer
 assert "if len(matching) != 1:" in indexer
 assert "SafeCaseFilename" in native
-assert 'std::array<std::vector<std::string>, 3>' in native
+assert 'std::array<std::vector<std::string>, 6>' in native
+# A physical scan remains independent; only missing backs use LaunchBox
+# game-specific scenic art and all CDN traffic stays on the worker.
+assert '"Screenshot - Gameplay"' in indexer
+assert '"Fanart - Background"' in indexer
+assert '"Screenshot - Game Title"' in indexer
+assert 'AppendCaseScenes(game.screenshots, game.title_id);' in native
+assert 'side >= 3 && ValidNlibTga(CaseFacePath(title_id, "back"))' in native
+assert 'const char* const names[]' in native
+assert '"scene-1", "scene-2", "scene-3"' in native
+assert "for (int side = 0; side < 6; ++side)" in native
+assert 'scene_columns{"-", "-", "-"}' in native
 assert "best_source = filename;" in native
 assert "std::ofstream receipt(destination + \".source\"" in native
 assert "cached_source == candidates.front()" in native
