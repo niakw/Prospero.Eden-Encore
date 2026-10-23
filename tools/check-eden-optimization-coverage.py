@@ -27,7 +27,7 @@ assert handled<=owners,sorted(handled-owners)
 allowed={"code_changed_in_batch","reviewed_without_new_code_edit",
          "historical_host_contract_reviewed","previously_integrated_source_change",
          "shipping_backport_integrated_previously","historical_maintained_unit_parity","new_source_issue_corrected","historical_native_selected_unit",
-         "preexisting_generated_or_inactive_unit"}
+         "preexisting_generated_or_inactive_unit","format_feature_source_integrated"}
 assert all(e["disposition"] in allowed and e["evidence"] for e in entries)
 audit=(ROOT/"docs/EDEN_CORE_AUDIT_DEPENDENCIES.md").read_text()
 rows=audit.split("<!-- AUDIT_ROWS_START -->",1)[1].split("<!-- AUDIT_ROWS_END -->",1)[0]
@@ -99,6 +99,52 @@ for e in entries:
     assert e["proof_ref"].endswith(".py") and (ROOT/e["proof_ref"]).is_file()
     assert "python3 -B "+e["proof_ref"] in preflight
     assert (ROOT/e["path"]).is_file()
+# The NCZ/multi-format source owners added after the 493-source snapshot are
+# maintained or test-only code, not proven F01-F06 performance optimizations.
+# Pin their real blobs, reviewed source roles and native selection/witness.
+format_roots = {
+    "headless/game_files.h",
+    "headless/ncz.cpp",
+    "headless/ncz.h",
+    "headless/ncz_check.cpp",
+    "headless/ncz_vfs.h",
+}
+format_native = {
+    "file_sys/card_image.cpp", "file_sys/registered_cache.cpp",
+    "file_sys/submission_package.cpp", "loader/loader.cpp", "loader/nsp.cpp",
+}
+native_prefix = "vendor/encore-active/eden-core/src/core/"
+format_paths = format_roots | {native_prefix + p for p in format_native}
+format_entries = [e for e in entries if e["disposition"] == "format_feature_source_integrated"]
+assert len(format_entries) == len(format_paths) == 10
+assert {e["path"] for e in format_entries} == format_paths
+format_review = ROOT / "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md"
+review_text = format_review.read_text()
+cmake_formats = (ROOT / "headless/CMakeLists.txt").read_text()
+for e in format_entries:
+    path = e["path"]
+    assert e["proof_ref"] in {
+        "tools/check-encore-ncz-sources.py",
+        "tools/check-ncz.py",
+        "tools/check-exefs-directory-host.py",
+    }
+    assert "python3 -B " + e["proof_ref"] in preflight
+    assert e["feature_review_document"] == str(format_review.relative_to(ROOT))
+    assert "| \`" + path + "\` | \`" + e["reviewed_source_git_blob"] + "\` |" in review_text, path
+    if path.startswith(native_prefix):
+        assert e["source_scope"] == "native_maintained"
+        assert '"' + path.removeprefix(native_prefix) + '"' in cmake_formats, path
+    elif path == "headless/ncz.cpp":
+        assert e["source_scope"] == "native_adapter"
+        assert 'list(APPEND core_sources "${EDEN_PORT_DIR}/ncz.cpp")' in cmake_formats
+    elif path == "headless/ncz_check.cpp":
+        assert e["source_scope"] == "host_test_only"
+        assert e["proof_ref"] == "tools/check-ncz.py"
+    else:
+        assert e["source_scope"] == "header_only"
+# New features can carry independent runtime/performance debt; this registry
+# only records a reviewed integration, not performance measured on PS5.
+
 # Verify every historical selected native unit against its actual selector.
 # Optional/device support and console performance are not certified here.
 radv_sel=(ROOT/"tools/install-vendored-radv.py").read_text()
@@ -218,6 +264,7 @@ print("EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS",
       "shipping_integrated="+str(status["shipping_backport_integrated_previously"]),
       "historical_maintained="+str(status["historical_maintained_unit_parity"]),
       "new_code_fixes="+str(status["new_source_issue_corrected"]),
+      "format_feature_integrated_not_optimized="+str(status["format_feature_source_integrated"]),
       "native_selected="+str(status["historical_native_selected_unit"]),
       "preexisting_inactive_oracle="+str(status["preexisting_generated_or_inactive_unit"]),
       "remaining_emulator_to_optimize_review="+str(len(pending_code-launcher_pending)),
