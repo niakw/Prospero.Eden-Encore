@@ -166,7 +166,8 @@ void Textures::release()
         decode_.wait();
         try { (void)decode_.get(); } catch (...) {}
     }
-    for (std::uint32_t *texture : {&backdrop_, &backdrop_blur_, &brand_, &controller_})
+    for (std::uint32_t *texture : {&backdrop_, &backdrop_blur_, &brand_, &controller_,
+                                   &switch_logo_, &switch_rear_footer_})
     {
         batch_.delete_texture(*texture);
         *texture = 0;
