@@ -1514,16 +1514,17 @@ std::vector<pe::ui::Game> EdenServices::games(const std::atomic<bool>* cancel) {
     for (const auto& entry : entries) {
         if (cancel && cancel->load(std::memory_order_acquire))
             return {}; // discard partial results and stop per-title disk work
-        const std::string file = entry.path().filename().string();
-        const std::size_t dot = file.find_last_of('.');
-        if (file == "." || file == ".." || dot == std::string::npos) continue;
-        std::string format = file.substr(dot + 1);
+        const std::string entry_name = entry.path().filename().string();
+        const bool deconstructed = Eden::IsDeconstructedGameDirectory(entry.path());
+        // For ExeFS, select the actual native loader input "main" while
+        // displaying the containing folder as the game title.
+        const std::string file = deconstructed ? entry_name + "/main" : entry_name;
+        if (!Eden::ValidRomFilename(file)) continue;
+        const std::size_t dot = entry_name.find_last_of('.');
+        std::string format = deconstructed ? "EXEFS" :
+            (dot == std::string::npos ? std::string{} : entry_name.substr(dot + 1));
         std::transform(format.begin(), format.end(), format.begin(),
                        [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
-        // One format table for storage counts, recent titles and the TV
-        // library. Raw executable/archive loaders may reject incomplete
-        // content at boot; never silently hide them during the file scan.
-        if (!Eden::IsGameFile(file)) continue;
         ++rom_candidates;
         const std::string path = Eden::AssetsPath("roms/" + file);
         struct stat info {};
@@ -1543,7 +1544,7 @@ std::vector<pe::ui::Game> EdenServices::games(const std::atomic<bool>* cancel) {
         if (bytes >= 1073741824.0) std::snprintf(size, sizeof(size), "%.1f GB", bytes / 1073741824.0);
         else std::snprintf(size, sizeof(size), "%.1f MB", bytes / 1048576.0);
         pe::ui::Game game;
-        game.name = CleanTitle(file);
+        game.name = CleanTitle(entry_name);
         game.format = format;
         game.size = size;
         game.file = file;
