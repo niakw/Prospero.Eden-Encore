@@ -230,6 +230,15 @@ private:
 
 FileSys::VirtualFile Open(FileSys::VirtualFile file) {
     if (!file) return nullptr;
+    // The archive supplies this name and it becomes the filename of a
+    // regenerable cache entry. Reject separators and excessive lengths
+    // before the name can be used in any filesystem operation.
+    const std::string original_name = file->GetName();
+    if (original_name.empty() || original_name.size() > 96 ||
+        original_name.find_first_of("/\\") != std::string::npos) {
+        LOG_ERROR(Loader, "Unsafe NCZ archive entry name");
+        return nullptr;
+    }
     const ReadFn read = [&file](u8* data, std::size_t size, u64 offset) { return file->Read(data, size, offset); };
     std::string error;
     auto layout = ParseLayout(read, file->GetSize(), &error);
