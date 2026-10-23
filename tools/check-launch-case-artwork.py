@@ -79,16 +79,16 @@ assert "progress%" not in draw
 for fragment in (
     "draw_composed_case_face(ink, launch_case_game_",
     "c.textures.render_case_page(",
-    "composed_page == 0 && !compose_attempted",
+    "if (!retail.empty() || page != 0 || attempted) return;",
     "const bool use_composed = scan.empty() && composed_page != 0;",
     "c.list.case_face(composed_page, face, angle, back, kWhite,",
     "{0.0f, 1.0f, 1.0f, -1.0f}",
     "EDEN_CASE_COMPOSE title=%016llX side=%s status=ready",
-    "launch_case_game_.screenshots",
+    "composed_case_face_ready(c.textures, launch_case_game_",
 ):
     assert fragment in draw, ("native composed 3D jacket contract", fragment)
 assert draw.index("if (use_composed)") < draw.index("} else if (artwork.texture != 0)")
-assert "compose_attempted = true;" in draw
+assert "attempted = true;" in draw
 assert "launch_composed_front_attempted_ = false;" in launch_setup
 assert "launch_composed_back_attempted_ = false;" in launch_setup
 assert "const std::string& scan = back ? launch_box_back_ : launch_box_front_;" in draw
@@ -120,10 +120,19 @@ assert "draw_composed_case_face(Canvas &c, const Game &game," in widgets_src
 assert "draw_composed_case_face(Canvas &c, const Game &game," in library_src
 assert "flat_front_fallback(c, game, paper);" in library_src
 assert "flat_back_fallback(c, game, paper);" in library_src
+assert "bool composed_case_face_ready(Textures &textures, const Game &game," in widgets_src
+assert "bool composed_case_face_ready(Textures& textures, const Game& game," in library_src
+assert 'return ready(hero, std::max(left_w - gap, top_h))' in library_src
+assert 'return ready(hero, paper_w)' in library_src
+assert 'prepare_case_page(false);' in draw
+assert 'prepare_case_page(true);' in draw
+assert 'Color::rgb(0x08111d, 0.57f)' in library_src
+assert 'Color::rgb(0x030507, 0.98f)' not in library_src
+
 
 # A cached original face is authoritative even while its texture is pending.
 # Independent reconstruction occurs ONLY for the specific missing face.
-assert "if (scan.empty() && composed_page == 0 && !compose_attempted)" in draw
+assert "if (!retail.empty() || page != 0 || attempted) return;" in draw
 assert "const bool use_composed = scan.empty() && composed_page != 0;" in draw
 assert "if (scan.empty() || artwork.texture == 0)" not in draw
 assert "if (rear)\n                flat_back_fallback(c, game, paper);" not in library_src
@@ -224,8 +233,8 @@ for token in ('c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));',
 assert 'scene(hero, top_right)' not in back_fallback
 assert 'scene(hero, panorama)' not in back_fallback
 assert 'c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));' in front
-assert 'if (scenic) {' in front
-assert 'else if (!game.cover.empty()) {' in front
+assert 'if (!painting.empty()) {' in front
+assert 'cover_crop(c, painting, r, 0.0f, 0.0f);' in front
 assert 'if (path == game.cover) case_art_contain(c, path, area);' in back_fallback
 assert "if (!scan.empty()) {" in library
 assert library.index("if (!scan.empty()) {") < library.index("flat_composed_ink(c, game, paper, rear);")
