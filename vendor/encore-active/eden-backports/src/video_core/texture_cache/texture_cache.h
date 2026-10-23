@@ -263,6 +263,16 @@ void TextureCache<P>::CheckFeedbackLoop(std::span<const ImageViewInOut> views) {
     }
 
 #ifdef PS5_NATIVE
+    // No sampled view can participate in a framebuffer feedback loop.
+    // Avoid even the view-key comparison and snapshot for untextured draws.
+    if (views.empty()) {
+        last_feedback_loop_serial = render_targets_serial;
+        last_feedback_texture_serial = texture_bindings_serial;
+        last_feedback_loop_result = false;
+        last_feedback_view_ids.clear();
+        return;
+    }
+
     // A feedback barrier is only possible for a sampled depth attachment.
     // Avoid a per-draw view comparison and snapshot for color-only passes.
     if ((rt_active_mask & (1u << NUM_RT)) == 0) {
