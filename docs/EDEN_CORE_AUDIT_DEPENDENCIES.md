@@ -11,7 +11,7 @@ This is the **single place to resume this technical audit**.
 **P0 source review batch:** see [EDEN_P0_SOURCE_REVIEW_2026-10-20.md](EDEN_P0_SOURCE_REVIEW_2026-10-20.md) for ten explicitly inspected IPC/HLE/JIT/GPU source paths. The host IPC wake proof is not guest progress; no contract statuses or qualification debt counters are reduced.
 
 **Two-axis progress rule:** read [EDEN_TWO_AXIS_PROGRESS_2026-10-20.md](EDEN_TWO_AXIS_PROGRESS_2026-10-20.md). SOURCE+OPEN means *qualification pending*, **not** code files necessarily requiring further optimization. Do not repeatedly modify a recently fixed hotpath merely to lower that count; distinguish host test, current-SHA native build, and PS5/gameplay evidence.
-**Non, this is not an exhaustive repository-wide inventory.** The 479
+**Non, this is not an exhaustive repository-wide inventory.** The 485
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -245,22 +245,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 480 | 457 | 964 |
+| Graphe connu | 485 | 462 | 974 |
 | HOST — preuve ciblée hôte | 62 | 57 | 127 |
-| SOURCE — lecture effectuée, preuve insuffisante | 395 | 385 | 798 |
+| SOURCE — lecture effectuée, preuve insuffisante | 400 | 390 | 808 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **410** | **399** | **826** |
+| **Encore à qualifier (SOURCE + OPEN)** | **415** | **404** | **836** |
 | Dont priorité P0 (SOURCE + OPEN) | 101 | 96 | 230 |
 
-Le **noyau restant** compte donc 410 critères répartis sur
-399 fichiers et 826 mentions fonction/contrat :
-15 OPEN et 395 SOURCE.
+Le **noyau restant** compte donc 415 critères répartis sur
+404 fichiers et 836 mentions fonction/contrat :
+15 OPEN et 400 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-320 fichiers de code/en-têtes présents et 320 avec un chemin de
+326 fichiers de code/en-têtes présents et 326 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -814,6 +814,11 @@ function/contract tokens are checked by CI for existence only; the
 | F38 | P1 | F16 | vendor/encore-active/eden-core/src/core/loader/nso.cpp | AppLoader_NSO::LoadModule; AppLoader_NSO::Load | SOURCE | tools/check-maintained-nso.py | Native NSO loader relocated with byte-exact historical CMake replay and preserved build path; CI/native SDK and console runtime still pending | 🟡 Source étudiée |
 | F39 | P1 | F11,F16 | vendor/encore-active/eden-core/src/core/core_standard.cpp | GameSettings::LoadOverrides; ShutdownMainProcess | SOURCE | tools/check-maintained-core-system.py | Normal Core::System full-source parity and existing load/unwind ordering; CI and native gameplay not yet proven | 🟡 Source étudiée |
 | F40 | P0 | F39,F38 | vendor/encore-active/eden-core/src/core/core_native.cpp | ::Eden::ReportStep; GameSettings::LoadOverrides | SOURCE | tools/check-maintained-core-system.py | Native shutdown diagnostics and memory lifecycle preserved in maintained full-source variant; parity test added, runtime still unqualified | 🟡 Source étudiée |
+| F41 | P1 | F11 | vendor/encore-active/eden-core/src/core/file_sys/submission_package.cpp | NSP::NSP; NSP::GetProgramStatus | SOURCE | tools/check-encore-ncz-sources.py | NCZ-aware package source is selected by the native CMake owner list; native decompression, package metadata and console startup remain to qualify | 🟡 Source étudiée |
+| F42 | P1 | F41 | vendor/encore-active/eden-core/src/core/file_sys/card_image.cpp | XCI::XCI; ::Eden::Ncz::Open | SOURCE | tools/check-encore-ncz-sources.py | NCZ-bearing secure partition source is tracked; card traversal, malformed archives and native console startup remain to qualify | 🟡 Source étudiée |
+| F43 | P1 | F41,F42 | vendor/encore-active/eden-core/src/core/file_sys/registered_cache.cpp | ContentProviderEntry::DebugInfo; ProcessNSP | SOURCE | tools/check-encore-ncz-sources.py | NCZ-aware content-provider registration is tracked; installed title indexing and native lifecycle remain unverified | 🟡 Source étudiée |
+| F44 | P1 | F43 | vendor/encore-active/eden-core/src/core/loader/loader.cpp | ResolveIndexedProgram; extension == "xcz" | SOURCE | tools/check-encore-ncz-sources.py | Extension dispatch for NCZ package types is source-selected; real archive detection and fallback behavior remain unverified on console | 🟡 Source étudiée |
+| F45 | P1 | F41,F44 | vendor/encore-active/eden-core/src/core/loader/nsp.cpp | AppLoader_NSP::AppLoader_NSP; ".ncz" | SOURCE | tools/check-encore-ncz-sources.py | NSP/NCA loader supports the NCZ file extension in the maintained source; mixed-content launch and error paths remain unverified on console | 🟡 Source étudiée |
 | L01 | P0 | H47 | vendor/encore-active/eden-backports/src/core/hle/service/am/frontend/applets.cpp | FrontendApplet; child_applets; RequestUpdate | SOURCE | tools/check-active-source-inventory.py | Shipping backport child applet unlink and window update; runtime correctness unproved | 🟡 Source étudiée |
 | L02 | P0 | L01 | vendor/encore-active/eden-backports/src/core/hle/service/am/service/library_applet_accessor.cpp | ILibraryAppletAccessor; RequestFocusStateChangedNotification | SOURCE | tools/check-active-source-inventory.py | Shipping backport frontend focus notification; runtime correctness unproved | 🟡 Source étudiée |
 | L03 | P1 | L02,F25 | vendor/encore-active/eden-backports/src/core/hle/service/am/service/library_applet_creator.cpp | ILibraryAppletCreator; CreateProcess; HOS_VERSION_MAJOR | SOURCE | tools/check-active-source-inventory.py | Shipping backport applet creation with firmware-major argument; runtime correctness unproved | 🟡 Source étudiée |

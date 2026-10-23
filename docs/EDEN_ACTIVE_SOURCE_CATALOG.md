@@ -1,14 +1,14 @@
 # Eden Encore — inventaire exhaustif des sources actives
 
-**Branche :** `dev/ps5-sparse-jit`. **Relevé :** 18 octobre 2026.
+**Branche :** `dev/ps5-sparse-jit`. **Relevé :** 24 octobre 2026.
 
 Cet inventaire recense chaque fichier C/C++, en-tête, fragment source et
 source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **321 fichiers** de code et d'en-têtes enregistrés.
-- **321 fichiers** possèdent une correspondance de chemin *exacte*
+- **326 fichiers** de code et d'en-têtes enregistrés.
+- **326 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -172,10 +172,13 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/core_native.cpp` | `maintained-override` | F40 |
 | `eden-core/src/core/core_standard.cpp` | `maintained-override` | F39 |
 | `eden-core/src/core/file_sys/bis_factory.cpp` | `maintained-override` | F14 |
+| `eden-core/src/core/file_sys/card_image.cpp` | `maintained-override` | F42 |
 | `eden-core/src/core/file_sys/fsmitm_romfsbuild.cpp` | `maintained-override` | F12 |
 | `eden-core/src/core/file_sys/ips_layer.cpp` | `maintained-override` | F37 |
 | `eden-core/src/core/file_sys/patch_manager.cpp` | `maintained-override` | F35 |
+| `eden-core/src/core/file_sys/registered_cache.cpp` | `maintained-override` | F43 |
 | `eden-core/src/core/file_sys/savedata_factory.cpp` | `maintained-override` | F15 |
+| `eden-core/src/core/file_sys/submission_package.cpp` | `maintained-override` | F41 |
 | `eden-core/src/core/hle/kernel/k_page_table_base.cpp` | `maintained-override` | B27 |
 | `eden-core/src/core/hle/kernel/k_process.cpp` | `maintained-override` | H53 |
 | `eden-core/src/core/hle/kernel/k_spin_lock.cpp` | `maintained-override` | H30 |
@@ -208,7 +211,9 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/internal_network/network.cpp` | `maintained-override` | N19 |
 | `eden-core/src/core/internal_network/network_interface.cpp` | `maintained-override` | F10 |
 | `eden-core/src/core/loader/deconstructed_rom_directory.cpp` | `maintained-override` | F16 |
+| `eden-core/src/core/loader/loader.cpp` | `maintained-override` | F44 |
 | `eden-core/src/core/loader/nso.cpp` | `maintained-override` | F38 |
+| `eden-core/src/core/loader/nsp.cpp` | `maintained-override` | F45 |
 | `eden-core/src/core/memory.cpp` | `maintained-override` | M11 |
 | `eden-core/src/core/memory_native_a32.cpp` | `maintained-override` | V98 |
 | `eden-core/src/core/memory_native_standard.cpp` | `maintained-override` | V97 |
@@ -371,7 +376,7 @@ Les fichiers source/en-tête/fragment de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 Les chemins du graphe moteur y ont un propriétaire exact ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 320/320 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 326/326 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
