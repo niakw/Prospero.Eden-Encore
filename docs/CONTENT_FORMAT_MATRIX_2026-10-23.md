@@ -49,3 +49,26 @@ The reader and front-end adapter are `headless/ncz.h`, `headless/ncz.cpp`, `head
 - **FC27:** engine exits F01–F06 remain open; this feature does not constitute a fix for stutter, missing textures or the in-game HUD. Console qualification F07 remains postponed until the engine is ready.
 
 This document is an implementation/validation ledger, not a compatibility claim for released binaries.
+
+
+## October 23 integration checkpoint
+
+- Selected maintained code is byte-for-byte equal to the five pinned Eden
+  sources after the five reviewed NCZ transformations, with only the required
+  VFS include on the two affected source owners.
+- The launcher now enables solid unpack **before content/update registration**,
+  avoids enabling it for ordinary Library discovery, and turns it off during
+  game cancellation/teardown.
+- NCZ cache protection rejects path separators, embedded NULs, symlinked
+  cache directories, symlinked cache files and pre-existing partial files.
+- A locally compiled **isolated reproduction** of the actual
+  `headless/game_files.h` code passes the eight accepted extension cases and
+  nine rejected examples under `-O0` and `-O2` with UBSan.
+- An isolated source-extracted NCZ cache open guard rejects symlinked
+  `.unpacked`, `.part` and `.pieces` files under `-O0`/`-O2` with
+  UBSan. The full `headless/ncz_check.cpp` suite is checked into the host CI.
+- **Still not independently verified:** complete `check-ncz.py` execution
+  on the current repository tree, CMake-generated native target linkage, full
+  PlayStation 5 native package and NSZ/XCZ game runtime.
+- This checkpoint explicitly requests the native CI build using the commit
+  marker `[full-build]`; a CI trigger does not itself mean the job passed.
