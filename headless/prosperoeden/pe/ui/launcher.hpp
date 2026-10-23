@@ -264,6 +264,12 @@ class Launcher
     std::uint32_t launch_composed_back_ = 0;
     bool launch_composed_front_attempted_ = false;
     bool launch_composed_back_attempted_ = false;
+    // Retry only a bounded number of times after a transient GL/FBO failure.
+    // A failed first allocation must not permanently suppress the missing side.
+    unsigned launch_composed_front_failures_ = 0;
+    unsigned launch_composed_back_failures_ = 0;
+    float launch_composed_front_retry_after_ = 0.0f;
+    float launch_composed_back_retry_after_ = 0.0f;
     tween::Timer launch_;
     bool done_ = false;
     bool restart_requested_ = false;
