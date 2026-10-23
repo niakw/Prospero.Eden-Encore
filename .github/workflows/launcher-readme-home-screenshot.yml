@@ -66,8 +66,14 @@ jobs:
                      f' alt="{old_alt}" width="860"></p>')
               new = ('<p align="center"><img src="assets/screenshots/encore-home.png"'
                      f' alt="{new_alt}" width="860"></p>')
-              assert source.count(old) == 1, filename
-              path.write_text(source.replace(old, new), encoding="utf-8")
+              # Re-renders must work after the first README screenshot is
+              # published. Reject unrelated images instead of overwriting
+              # an arbitrary marketing graphic or silently duplicating it.
+              if source.count(old) == 1:
+                  source = source.replace(old, new)
+              else:
+                  assert source.count(old) == 0 and source.count(new) == 1, filename
+              path.write_text(source, encoding="utf-8")
           print("REAL_ENCORE_HOME_SCREENSHOT_PREPARED")
           PY
 
