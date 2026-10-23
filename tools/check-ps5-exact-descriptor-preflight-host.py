@@ -233,18 +233,15 @@ int main() {
 }
 """
 for tag, block in [
-    ("HELPER", helper), ("OLD_HELPER", prior),
+    ("OLD_HELPER", prior), ("HELPER", helper),
     ("GRAPH_LOOP", gl), ("GRAPH_REUSE", gb[0]), ("GRAPH_CAPACITY", gb[1]),
     ("COMPUTE_LOOP", cl), ("COMPUTE_REUSE", cb[0]),
     ("COMPUTE_CAPACITY", cb[1])
 ]:
-    # Replace longer placeholder first to avoid "HELPER" inside "OLD_HELPER".
-    if tag == "HELPER":
-        assert cpp.count("OLD_HELPER") == 1
-        cpp = cpp.replace("OLD_HELPER", "__PRIOR_METHOD__")
+    # Replace the longer OLD_HELPER placeholder first; replacing HELPER
+    # before it would corrupt the old-method declaration.
     assert cpp.count(tag) == 1, tag
     cpp = cpp.replace(tag, block)
-cpp = cpp.replace("__PRIOR_METHOD__", prior)
 assert cpp.count("__INITIAL_METHOD__") == 1
 cpp = cpp.replace("__INITIAL_METHOD__", initial)
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
