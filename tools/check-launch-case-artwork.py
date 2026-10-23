@@ -209,10 +209,23 @@ assert 'const Rect logo{r.x, r.y, logo_w,' in front
 assert 'cover_crop(c, painting, r, 0.0f, 0.0f);' in front
 assert 'constexpr float kFixedFooter = 0.41f;' in back_fallback
 assert 'c.textures.switch_rear_footer() != 0' in back_fallback
-assert 'if (has_first && has_second) {' in back_fallback
+assert 'if (has_scenic_media && has_first && has_second) {' in back_fallback
 assert 'scene(hero, {r.x, r.y, r.w, dynamic_h});' in back_fallback
 assert 'scene(*first, top_right);' in back_fallback
 assert 'scene(*second, panorama);' in back_fallback
+# A native case's paper insert MUST be opaque even when NONE of its images
+# exist or have finished decoding. The real molded case is separate.
+for token in ('c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));',
+              'c.list.gradient_rect({r.x, r.y, r.w, dynamic_h}, 0.0f,',
+              'else if (!game.cover.empty()) {',
+              'if (has_scenic_media && has_first && has_second)',
+              'scene(hero, {r.x, r.y, r.w, dynamic_h});'):
+    assert token in back_fallback, token
+assert 'scene(hero, top_right)' not in back_fallback
+assert 'scene(hero, panorama)' not in back_fallback
+assert 'c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));' in front
+assert 'if (scenic) {' in front
+assert 'else if (!game.cover.empty()) {' in front
 assert 'if (path == game.cover) case_art_contain(c, path, area);' in back_fallback
 assert "if (!scan.empty()) {" in library
 assert library.index("if (!scan.empty()) {") < library.index("flat_composed_ink(c, game, paper, rear);")
