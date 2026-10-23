@@ -2629,12 +2629,22 @@ for relative, previous, corrected in (
 # and feedback-view deltas from the immutable source generator's own output.
 # Require each exact preimage once. Never copy the tracked active file into
 # the generated tree or relax byte-for-byte validation.
-def apply_reviewed_delta(relative, old, new, label):
+def apply_reviewed_delta(relative, old, new, label, *, allow_preapplied=False):
     path = output / relative
     data = path.read_text()
-    if data.count(old) != 1:
-        raise RuntimeError(f"Reviewed native Vulkan anchor drift: {label}")
-    path.write_text(data.replace(old, new, 1))
+    before = data.count(old)
+    after = data.count(new)
+    if before == 1 and after == 0:
+        path.write_text(data.replace(old, new, 1))
+        return
+    # The shipping Eden backport now includes the exact empty-view fast path.
+    # The generator also runs against pristine older bases: both are allowed,
+    # but *only* this reviewed already-patched block may be skipped. All
+    # other deltas still require their unmodified source anchors.
+    if allow_preapplied and before == 0 and after == 1:
+        return
+    raise RuntimeError(f"Reviewed native Vulkan anchor drift: {label} "
+                       f"(before={before}, after={after})")
 
 pipeline = 'vk_graphics_pipeline_cost.cpp'
 mark = '''    if (shader_notify) {
@@ -2698,7 +2708,7 @@ apply_reviewed_delta(texture,
     }
 
     // A feedback barrier is only possible for a sampled depth attachment.''',
-    'F03/F04 empty-sampler feedback loop fast path')
+    'F03/F04 empty-sampler feedback loop fast path', allow_preapplied=True)
 
 
 # Reviewed F04 scissor source body: reconstruct the exact overflow-safe
