@@ -91,6 +91,7 @@ jobs:
           python3 -B tools/check-native-amd-logic-op-register-host.py
           python3 -B tools/check-ps5-graphics-stage-view-cursors-host.py
           python3 -B tools/check-ps5-graphics-pipeline-aware-preflight-host.py
+          python3 -B tools/check-ps5-exact-descriptor-preflight-host.py
           python3 -B tools/check-ps5-graphics-payload-preflight-host.py
           python3 -B tools/check-ps5-empty-image-view-retirement-host.py
           python3 -B tools/check-ps5-texture-channel-missing-mapping-host.py
