@@ -69,6 +69,15 @@ class Textures
     void pump(float dt, int budget = 2);
     // Called only when Nlib atomically replaces an image with the same path.
     void invalidate(const std::string &path);
+    // Compose one offline artwork sleeve with the REAL C++/OpenGL UI painter.
+    // Only called once per missing case face after cached input images load.
+    // Returns 0 if this GL context cannot render to a texture; caller uses
+    // the previous single-artwork fallback without failing the launch.
+    std::uint32_t render_case_page(const gfx::DrawList& drawing,
+                                   const gfx::Font* font,
+                                   std::uint32_t font_texture,
+                                   int width, int height);
+    void clear_case_pages();
     // Output pixels per virtual pixel: picks how much detail a cover needs.
     void set_output_scale(float scale)
     {
@@ -100,6 +109,8 @@ class Textures
 
     gfx::GlBatch &batch_;
     Services &services_;
+    // At most two short-lived GPU pages for the current launch transition.
+    std::vector<std::uint32_t> case_pages_;
     std::uint32_t backdrop_ = 0;
     std::uint32_t backdrop_blur_ = 0;
     std::uint32_t brand_ = 0;
