@@ -66,7 +66,10 @@ assert main.count("Eden::Ncz::SetUnpackAllowed(false);")>=2
 # The game format matrix must be wired through every end-user entrypoint,
 # not only the file picker. Direct inputs do NOT get NSP/XCI metadata parsing.
 library=(root/"headless/prosperoeden/eden_services.cpp").read_text()
-assert "if (!Eden::IsGameFile(file)) continue;" in library
+# The TV scanner also accepts validated ExeFS folders, so it must use
+# ValidRomFilename rather than the old extension-only IsGameFile gate.
+assert "if (!Eden::ValidRomFilename(file)) continue;" in library
+assert "Eden::IsDeconstructedGameDirectory(entry.path())" in library
 assert 'format != "NSP" && format != "XCI"' not in library
 assert "game.format = format;" in library
 formats=(".nsp",".xci",".nsz",".xcz",".nro",".nso",".nca",".nax",".kip")
