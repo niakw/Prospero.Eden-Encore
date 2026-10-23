@@ -186,16 +186,20 @@ void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
 
 void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
 {
-    // Fixed LOWER paper panel is never covered by screenshots or description.
-    // This matches the user's example-back layout, instead of the old 14%
-    // footer that resembled a generic application's information card.
+    // Every missing paper side is FULLY OPAQUE before any asynchronous
+    // texture becomes available. No empty scene can reveal the 3D plastic
+    // substrate, nor can a missing screenshot cause hero duplication.
     constexpr float kFixedFooter = 0.41f;
     const float footer_h = r.h * kFixedFooter;
     const float dynamic_h = r.h - footer_h;
     const float gap = std::max(2.0f, r.w * 0.007f);
-    c.list.gradient_rect(r, 0.0f, Color::rgb(0x121b2a),
-                         Color::rgb(0x070b14));
+    // Consistent ink stock for BOTH front and back; images may load later.
+    c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));
+    c.list.gradient_rect({r.x, r.y, r.w, dynamic_h}, 0.0f,
+                         Color::rgb(0x20384c), Color::rgb(0x101e32));
 
+    const bool has_scenic_media = !game.hero.empty() ||
+                                  !game.screenshots.empty();
     const std::string& hero = !game.hero.empty() ? game.hero :
                               !game.screenshots.empty() ? game.screenshots.front() :
                               game.cover;
@@ -203,8 +207,9 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
     const std::string* first = shots[0];
     const std::string* second = shots[1];
 
-    // Upper-left tall scene + upper-right horizontal art and description.
-    // Below them, one edge-to-edge panorama, as in the supplied maquettage.
+    // Upper-left vertical scene, top-right scenic banner and caption,
+    // lower panoramic scene. All empty panels inherit a single matching
+    // paper colour, never transparent case plastic.
     const float left_w = r.w * 0.39f;
     const float top_h = dynamic_h * 0.47f;
     const Rect left{r.x, r.y, left_w - gap, top_h};
@@ -220,26 +225,28 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
         if (path == game.cover) case_art_contain(c, path, area);
         else cover_crop(c, path, area, 0.0f, 0.0f);
     };
-    // No three copies of one banner. Three panels require THREE genuinely
-    // different cached scenic images. The ROM square icon never masquerades
-    // as a gameplay capture. When fewer images exist, use one full-bleed
-    // background and at most one genuinely different inset.
     const bool has_first = first && *first != hero && *first != game.cover;
     const bool has_second = second && *second != hero &&
                             *second != game.cover && (!first || *second != *first);
-    if (has_first && has_second) {
+    if (has_scenic_media && has_first && has_second) {
+        // Three ACTUAL independent media, zero repeated frames.
         scene(hero, left);
         scene(*first, top_right);
         scene(*second, panorama);
-    } else {
-        // Continuous upper artwork is ONE use of hero, not three copied
-        // screenshots in adjacent boxes. Description stays upper-right.
+    } else if (has_scenic_media) {
+        // Only one/two photos: show hero ONCE as the contiguous background.
+        // Never fill the other two slots with copies of the same banner.
         scene(hero, {r.x, r.y, r.w, dynamic_h});
-        if (has_first)
-            scene(*first, left);
-        else if (has_second)
-            scene(*second, left);
+        if (has_first) scene(*first, left);
+        else if (has_second) scene(*second, left);
+    } else if (!game.cover.empty()) {
+        // No scenic artwork at all: place the icon as a small, contained
+        // illustration on the uniform paper colour, not full-bleed squares.
+        scene(game.cover, {left.x + gap, left.y + gap,
+                           left.w - gap * 2.0f, left.h - gap * 2.0f});
     }
+    // With zero cached images, keep the completely painted blue paper and
+    // description panel. A source failing to decode has the same safe result.
 
     c.list.rounded_rect(description, 0.0f, Color::rgb(0x030507, 0.98f));
     const std::string& desc = !game.description.empty() ? game.description :
