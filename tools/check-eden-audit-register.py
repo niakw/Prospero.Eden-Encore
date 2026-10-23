@@ -43,6 +43,11 @@ for raw in table.splitlines():
     state_totals[state] += 1
     records.append((priority, source, len(symbols_list), state))
 assert len(entries) >= 62, len(entries)
+# F01's selected descriptor-queue helper was renamed when its capacity
+# check became exact. Audit entries must follow compiled symbols, not stale
+# source-count snapshots that quietly block all host/native CI gates.
+v42 = next((line for line in table.splitlines() if line.startswith("| V42 |")), "")
+assert "PreflightExactGuestDraw" in v42 and "PreflightLargeGuestDraw" not in v42
 assert doc.count("img.shields.io/badge/") >= 28
 for ident, deps in entries.items():
     assert len(deps) == len(set(deps)), ("repeated dependency", ident)
