@@ -483,7 +483,17 @@ int main(int argc, char** argv) {
             const std::string ncz_cache = Eden::UserDir() + "/cache/nsz";
             std::error_code ncz_error;
             std::filesystem::create_directories(ncz_cache, ncz_error);
-            if (!ncz_error) {
+            // A symlink on either cache directory would defeat O_NOFOLLOW
+            // at the file level. Refuse the cache root rather than escaping
+            // into a different persistent-data subtree.
+            const auto plain_directory = [](const std::filesystem::path& path) {
+                std::error_code status_error;
+                const auto status = std::filesystem::symlink_status(path, status_error);
+                return !status_error && std::filesystem::is_directory(status) &&
+                       !std::filesystem::is_symlink(status);
+            };
+            if (!ncz_error && plain_directory(std::filesystem::path{Eden::UserDir()} / "cache") &&
+                plain_directory(ncz_cache)) {
                 Eden::Ncz::SetUnpackFolder(
                     ncz_cache, [ncz_cache](const std::function<bool(const std::string&)>& keep) {
                         std::error_code error;
