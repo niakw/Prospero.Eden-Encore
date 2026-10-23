@@ -162,8 +162,6 @@ inline bool ValidRomFilename(std::string_view name) {
     if (name.size() < 5 || name.size() > 255) return false;
     for (unsigned char c : name)
         if (c < 32 || c == 127 || c == '/' || c == '\\') return false;
-    std::string extension(name.substr(name.size() - 4));
-    for (char& c : extension) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
     return Eden::IsGameFile(name);
 }
 
