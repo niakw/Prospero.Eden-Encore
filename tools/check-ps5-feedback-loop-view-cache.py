@@ -38,6 +38,7 @@ with tempfile.TemporaryDirectory(prefix="eden-r315-feedback-view-") as folder:
     end=source.index("\ntemplate <class P>", start)
     fn=source[start:end]
     assert "&& identical_bound_views" in fn
+    assert fn.index("if (views.empty())") < fn.index("if ((rt_active_mask & (1u << NUM_RT)) == 0)")
     assert fn.index("if ((rt_active_mask & (1u << NUM_RT)) == 0)") < fn.index("identical_bound_views")
     assert fn.index("last_feedback_view_ids.push_back") < fn.index("if (rt_active_mask == 0)")
     prologue=r"""
@@ -97,6 +98,9 @@ int main() {
     assert(tc.runtime.calls==3); // valid cached barrier still issued
     tc.CheckFeedbackLoop(std::span<const ImageViewInOut>{});
     assert(tc.runtime.calls==3); // empty image set correctly invalidates
+    assert(tc.last_feedback_view_ids.empty());
+    tc.CheckFeedbackLoop(std::span<const ImageViewInOut>{});
+    assert(tc.runtime.calls==3); // repeated untextured draw stays barrier-free
     tc.CheckFeedbackLoop(samples_depth);
     assert(tc.runtime.calls==4);
     tc.rt_active_mask=0;
