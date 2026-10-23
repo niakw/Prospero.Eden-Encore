@@ -247,8 +247,15 @@ with tempfile.TemporaryDirectory(prefix="eden-surface-lifecycle-") as tmp:
     # Reproduce the exact previous maintained TU from the current one, without
     # storing a second source copy. Only its immutable Git blob may migrate.
     dedup_guard = "    // A layer is identified by its consumer binder within a display stack.\n    // Duplicate insertion would compose the same acquired BufferItem twice on\n    // each refresh and could needlessly retain an otherwise released slot.\n    if (std::any_of(display->stack.layers.begin(), display->stack.layers.end(),\n                    [consumer_binder_id](const auto& attached) {\n                        return attached->consumer_id == consumer_binder_id;\n                    })) {\n        return;\n    }\n\n"
+    display_guard = (
+        "    // A display ID must identify exactly one stack and buffer owner.\n"
+        "    if (FindDisplay(display_id) != nullptr) {\n"
+        "        return;\n"
+        "    }\n"
+    )
     assert source.count(dedup_guard) == 1
-    previous = source.replace(dedup_guard, "").encode()
+    assert source.count(display_guard) == 1
+    previous = source.replace(dedup_guard, "").replace(display_guard, "").encode()
     assert module.blob_sha(previous) == module.PREVIOUS_ACTIVE_GIT_BLOB
     target.write_bytes(previous)
     module.install(stage)
@@ -257,13 +264,6 @@ with tempfile.TemporaryDirectory(prefix="eden-surface-lifecycle-") as tmp:
 
     # Also upgrade the immediately preceding F05 lifecycle release, which
     # already contained the per-layer deduplication but not display-ID dedup.
-    display_guard = (
-        "    // A display ID must identify exactly one stack and buffer owner.\n"
-        "    if (FindDisplay(display_id) != nullptr) {\n"
-        "        return;\n"
-        "    }\n"
-    )
-    assert source.count(display_guard) == 1
     preceding_display_release = source.replace(display_guard, "").encode()
     assert module.blob_sha(preceding_display_release) == module.SURFACE_PRE_DUPLICATE_DISPLAY_GIT_BLOB
     target.write_bytes(preceding_display_release)
