@@ -1846,10 +1846,10 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-active-source-inventory.py",
       "shipping_relpath": "src/video_core/texture_cache/texture_cache.h",
-      "shipping_active_sha256": "df8fd6554753e05004547002cd0868c588f9d3f2782993b15f402a27feaf43a2",
+      "shipping_active_sha256": "46e0dcdd97e62dd113efa2e44eed5d9ed998f174a13084b1a979a478d1c1c09e",
       "shipping_upstream_sha256": "59f06d6839d09c96e9d7541a727a87fee680b7e7bebe763e82fec523a5caf498",
-      "shipping_bytes": 116277,
-      "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract V52. No new FPS or native progress claim."
+      "shipping_bytes": 116679,
+      "evidence": "Shipping texture cache re-reviewed after 23 Oct PS5 empty-sampled-view feedback short-circuit. Maintained complete source, hash and byte size match refreshed backport manifest; strict pinned full patch replay is a separate mandatory CI gate. No proof of FC27 HUD stability on console."
     },
     {
       "path": "vendor/encore-active/eden-backports/src/video_core/texture_cache/util.cpp",
@@ -3788,8 +3788,7 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-surface-lifecycle.py",
       "evidence": "23 October: native-maintained compositor source selected by staged installer, with exact pinned-original transformation and host replay of released versus still-acquired frame reuse. F03/F05 unresolved until full display progression and HUD are proven."
-    }
-,
+    },
     {
       "path": "headless/game_files.h",
       "disposition": "format_feature_source_integrated",
