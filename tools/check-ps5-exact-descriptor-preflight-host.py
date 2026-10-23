@@ -23,6 +23,19 @@ assert generator.count(signature) == 1
 start = generator.index(signature)
 end = generator.index("\n    }\n#endif", start) + len("\n    }")
 helper = generator[start:end]
+header = (root / "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h").read_text()
+assert helper in header, "Native maintained header has a stale exact helper"
+initial_signature = ("    template <typename WaitWorker>\n"
+                     "    [[nodiscard]] bool PreflightGuestDraw(")
+assert generator.count(initial_signature) == 1
+initial_start = generator.index(initial_signature)
+initial_end = generator.index("\n    }\n    template <typename WaitWorker>", initial_start) + len("\n    }")
+initial = generator[initial_start:initial_end]
+assert initial in header, "Native maintained header has a stale first preflight"
+assert "required_entries != 0 ? required_entries : 0x400" in initial
+assert "if (used + reserve < frame_payload_size)" in initial
+assert native.count("guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); },") == 2
+assert generator.count("guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); },") == 2
 assert "if (entries == 0 || entries >= frame_payload_size)" in helper
 assert "if (used + entries < frame_payload_size)" in helper
 assert "payload_cursor = payload_start;" in helper
@@ -116,6 +129,7 @@ struct Queue {
     char storage[frame_payload_size]{};
     char* payload_start{storage};
     char* payload_cursor{storage};
+__INITIAL_METHOD__
 HELPER
 OLD_HELPER
 };
@@ -196,6 +210,21 @@ int main() {
     int exact_waits = 0;
     assert(q.PreflightExactGuestDraw([&] { ++exact_waits; }, 1));
     assert(exact_waits == 1 && q.payload_cursor == q.payload_start);
+
+    // The first/pre-lock preflight now uses the known exact count, not
+    // the conservative 1024-entry default, avoiding a premature drain.
+    Queue room;
+    room.payload_cursor += 4000;
+    int early_waits = 0;
+    assert(!room.PreflightGuestDraw([&] { ++early_waits; }, 1));
+    assert(early_waits == 0);
+    assert(room.PreflightGuestDraw([&] { ++early_waits; }));
+    assert(early_waits == 1);
+    Queue edge;
+    edge.payload_cursor += 4095;
+    int edge_waits = 0;
+    assert(edge.PreflightGuestDraw([&] { ++edge_waits; }, 1));
+    assert(edge_waits == 1 && edge.payload_cursor == edge.payload_start);
     for (Method method : {
         &Rig::GraphLoop, &Rig::GraphReuse, &Rig::GraphCapacity,
         &Rig::ComputeLoop, &Rig::ComputeReuse, &Rig::ComputeCapacity
@@ -216,6 +245,8 @@ for tag, block in [
     assert cpp.count(tag) == 1, tag
     cpp = cpp.replace(tag, block)
 cpp = cpp.replace("__PRIOR_METHOD__", prior)
+assert cpp.count("__INITIAL_METHOD__") == 1
+cpp = cpp.replace("__INITIAL_METHOD__", initial)
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
 assert compiler, "C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="encore-exact-preflight-") as d:
