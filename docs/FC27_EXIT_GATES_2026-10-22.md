@@ -661,3 +661,21 @@ les verrous.
 **Ne pas interpréter « 0 source moteur à revoir » comme « F01–F06
 terminés ».** Les six critères restent à prouver au niveau bout-en-bout ;
 F07 reste la seule validation physique sur PS5.
+
+
+## 23 octobre — demande de qualification native du lot F01–F06
+
+Le sous-contrôle source F01–F06 a donné **12/12 témoins hôte réussis**
+sur la dernière base inspectée, et le registre exact a passé
+`EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS` à 504/441.
+La prévalidation complète et le fast gate demeurent des contrôles
+**indépendants**. L'empreinte de la source A64 standard a été
+réexaminée dans `tools/ci/check-final-engine-owner-contracts.py`
+après l'introduction de deux purges via `ClearCache()` sous mutex.
+
+La demande de compilation `[full-build]` est volontaire et porte
+exclusivement sur la branche unique `dev/ps5-sparse-jit`.
+Elle ne demande **aucun test physique de FC27 ni aucun essai sur PS5**.
+Un artefact compilé prouverait la sélection du code native pour ce SHA,
+**pas** une suppression des gels, du lag ou de la corruption visuelle.
+F01–F06 restent ouverts et F07 demeure entièrement séparé.
