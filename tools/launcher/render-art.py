@@ -12,6 +12,8 @@ render-art.py [name...] renders only the named pictures (brand, controller).
 """
 
 import sys
+import base64
+from io import BytesIO
 
 from pathlib import Path
 
@@ -70,9 +72,24 @@ def controller():
     return icon
 
 
+def fixed():
+    """Decode user's immutable packaging panels for missing retail faces only.
+
+    No image generation, web request or redraw: these are byte-for-byte
+    encoded source templates and a deterministic PNG -> native TGA conversion.
+    """
+    for stem in ("switch-logo", "switch-rear-footer"):
+        source = ART / f"{stem}.png.b64"
+        raw = base64.b64decode(source.read_text().strip(), validate=True)
+        with Image.open(BytesIO(raw)) as packed:
+            packed.load()
+            save_tga(packed.convert("RGBA"), f"{stem}.tga")
+
+
+
 def main():
     ART.mkdir(parents=True, exist_ok=True)
-    wanted = set(sys.argv[1:]) or {"brand", "controller"}
+    wanted = set(sys.argv[1:]) or {"brand", "controller", "fixed"}
     unknown = wanted - {"brand", "controller"}
     if unknown:
         raise SystemExit("unknown Encore launcher art: " + ", ".join(sorted(unknown)))
@@ -83,6 +100,8 @@ def main():
         save_tga(icon, "brand.tga")
     if "controller" in wanted:
         save_tga(controller(), "controller.tga")
+    if "fixed" in wanted:
+        fixed()
 
 
 if __name__ == "__main__":
