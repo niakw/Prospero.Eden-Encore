@@ -178,6 +178,8 @@ FileType GuessFromFilename(const std::string& name) {
         return FileType::NSO;
     else if (extension == "nca")
         return FileType::NCA;
+    else if (extension == "nax")
+        return FileType::NAX;
     else if (extension == "xci" || extension == "xcz")
         return FileType::XCI;
     else if (extension == "nsp" || extension == "nsz")
