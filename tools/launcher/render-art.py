@@ -83,7 +83,18 @@ def fixed():
         raw = base64.b64decode(source.read_text().strip(), validate=True)
         with Image.open(BytesIO(raw)) as packed:
             packed.load()
-            save_tga(packed.convert("RGBA"), f"{stem}.tga")
+            artwork = packed.convert("RGBA")
+            if stem == "switch-rear-footer":
+                # Restore the original reference's gold approval seal. The
+                # source is a compact 1-bit print to keep install size low;
+                # only the historic seal's fixed ink region is recoloured.
+                ink = artwork.load()
+                for y in range(195, 275):
+                    for x in range(182, 264):
+                        r, g, b, alpha = ink[x, y]
+                        if r == 0 and g == 0 and b == 0:
+                            ink[x, y] = (175, 136, 76, alpha)
+            save_tga(artwork, f"{stem}.tga")
 
 
 
