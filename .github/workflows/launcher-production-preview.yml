@@ -156,6 +156,50 @@ jobs:
           print("UNIVERSAL_CASE_NO_RETAIL_ART: PASS")
           PY
 
+      - name: Verify mixed original/reconstructed faces separately
+        env:
+          PE_LANG: fr-FR
+          PE_PREVIEW_JOBS: "2"
+          PE_PREVIEW_LAUNCH_ONLY: "1"
+          PE_PREVIEW_BOTW: "1"
+          PROSPEROEDEN_LAUNCHER_BUILD: ${{ runner.temp }}/encore-launcher-only
+        run: |
+          set -euo pipefail
+          for kind in front-only back-only; do
+            mkdir -p "build/launch-case-${kind}"
+            cp build/launch-case-render/botw-*.tga "build/launch-case-${kind}/"
+            if [[ $kind == front-only ]]; then
+              export PE_PREVIEW_NO_BOX_BACK=1
+              unset PE_PREVIEW_NO_BOX_FRONT
+            else
+              export PE_PREVIEW_NO_BOX_FRONT=1
+              unset PE_PREVIEW_NO_BOX_BACK
+            fi
+            bash tools/launcher/preview.sh "build/launch-case-${kind}" 1920 1080 \
+              2>&1 | tee "build-launch-case-${kind}.log"
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageStat
+          for kind, missing, original in (("front-only", "back", "front"),
+                                          ("back-only", "front", "back")):
+              log = Path(f"build-launch-case-{kind}.log").read_text(errors="replace")
+              assert f"side={missing} status=ready" in log and "EDEN_CASE_COMPOSE" in log, (kind, "missing side not composed")
+              assert f"side={original} status=ready source=retail" in log, (kind, "genuine side not used")
+              for line in log.splitlines():
+                  if "EDEN_CASE_COMPOSE" in line:
+                      assert f"side={original}" not in line, (kind, "original side was recomposed", line)
+              path = Path("build") / f"launch-case-{kind}"
+              expected = ["00-launch-case-front.png", "01-launch-case-spine.png",
+                          "02-launch-case-back.png"]
+              assert sorted(p.name for p in path.glob("*.png")) == expected, kind
+              for name in (expected[0], expected[2]):
+                  with Image.open(path / name) as frame:
+                      assert frame.size == (1920, 1080)
+                      assert sum(ImageStat.Stat(frame.convert("RGB").crop((480, 270, 565, 620))).stddev) > 17, (kind, name)
+              print(f"INDEPENDENT_CASE_FACE_{kind.upper()}: PASS")
+          PY
+
       - name: Capture real Library jackets, focus and back enlargement
         env:
           PE_LANG: fr-FR
@@ -295,6 +339,10 @@ jobs:
           path: |
             build/launch-case-render/*.png
             build/launch-case-generic/*.png
+            build/launch-case-front-only/*.png
+            build/launch-case-back-only/*.png
+            build-launch-case-front-only.log
+            build-launch-case-back-only.log
             build/launch-case-library/*.png
             build/launch-switch-theme/*.png
             build-launch-switch-theme.log
