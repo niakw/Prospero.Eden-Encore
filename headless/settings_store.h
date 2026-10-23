@@ -162,7 +162,7 @@ inline bool ValidRomFilename(std::string_view name) {
     if (name.size() < 5 || name.size() > 255) return false;
     for (unsigned char c : name)
         if (c < 32 || c == 127 || c == '/' || c == '\\') return false;
-    return Eden::IsGameFile(name);
+    return Eden::IsGameFile(name) || Eden::IsDeconstructedGameSelection(name);
 }
 
 inline std::string SettingsFile() { return ConfigFile("prosperoeden.json"); }
