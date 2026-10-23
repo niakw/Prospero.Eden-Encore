@@ -13,7 +13,7 @@ root = Path(__file__).resolve().parents[1]
 header = root / "headless/prosperoeden/pe/ui/case_media_selection.hpp"
 renderer = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
 assert '#include "pe/ui/case_media_selection.hpp"' in renderer
-assert 'case_media::FrontAlternate(painting, game.cover, game.screenshots)' in renderer
+assert 'cover_crop(c, painting, r, 0.0f, 0.0f);' in renderer
 assert 'case_media::BackScenes(hero, game.cover, game.screenshots)' in renderer
 source = r"""
 #include <cassert>
