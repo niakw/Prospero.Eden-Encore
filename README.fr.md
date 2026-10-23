@@ -76,7 +76,7 @@ Encore reste un fork communautaire indépendant, et non une version officielle d
 
 La compression NCZ par blocs se lit directement. Un fichier « solid » peut être décompressé temporairement dans `/data/prosperoeden/user/cache/nsz/`, ce qui nécessite de l'espace pour sa taille décompressée. La lecture des métadonnées hors jeu conserve des fragments vérifiés et bornés. Il s'agit d'un support en développement, **pas encore d'une version qualifiée sur console**.
 
-[Guide de stockage et des fichiers compressés](INSTALL.md#compressed-nsz-and-xcz-games) · [Lecteur et tests](headless/ncz.h)
+[Guide de stockage et des fichiers compressés](INSTALL.md#compressed-nsz-and-xcz-games) · [Lecteur et tests](headless/ncz.h) · [Matrice complète des formats](docs/CONTENT_FORMAT_MATRIX_2026-10-23.md)
 
 ---
 
