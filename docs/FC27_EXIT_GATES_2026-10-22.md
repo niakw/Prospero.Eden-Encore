@@ -575,3 +575,49 @@ reste à confirmer. **Aucun gain en FPS n'est quantifié**, et les
 attentes F01 autres que celles-ci restent ouvertes. La compilation
 PS5 complète doit valider la cohérence des sources et du build
 avant F07.
+
+
+## 23 octobre — reprise F01–F06 sans nouveau test console
+
+La dernière revue initiale recense **0 chemin moteur à parcourir de nouveau** ;
+ce chiffre n'est toujours ni un compte de correctifs restant à écrire ni
+une preuve d'optimisation FPS. Les **62 sources du lanceur** sont traitées
+dans leur propre chantier. Les **six sorties F01–F06 restent ouvertes** tant
+que les invariants complets du tableau initial ne sont pas démontrés.
+
+Pour rendre les reprises diagnostiquables sans attendre le succès de tous les
+contrôles génériques, `tools/check-fc27-six-gates-host.py` exécute maintenant
+**douze témoins C++ source-extraits** indépendamment :
+
+- **F01 :** réservation du payload avant mutex buffer/texture et déduplication
+  de samplers ;
+- **F02 :** invalidations JIT réentrantes A32/A64 et bornes du code JIT ;
+- **F03 :** remappage TIC/TSC sans entrée et réutilisation correcte des couches
+  HardwareComposer ;
+- **F04 :** coordonnées scissor extrêmes et plages BufferCache multipages ;
+- **F05 :** gestion des affichages SurfaceFlinger et réveil de producteur après
+  détachement de buffer ;
+- **F06 :** persistance de la conversion physique→guest au lancement et
+  cadence HID du runtime.
+
+Ce point de contrôle est exécuté dans la prévalidation hôte avec
+`if: always()` : un échec indépendant de cartographie ou de reproduction de
+source ne masque plus le résultat de chaque critère. **Il reste bloquant en
+cas d'échec de l'un des douze témoins** et inscrit le résultat détaillé dans
+le résumé du workflow. Un `HOST_SUBPATH_PASS` est un progrès de preuve
+partielle, **pas une clôture de F01–F06**, ni un résultat PS5.
+
+Le contrôle strict d'empreinte U13 a été remis à jour **après inspection des
+six modifications** de `metadata_bridge.cpp` liées à la classification des
+conteneurs. Le chemin CPU/GPU/JIT n'est pas modifié par cette revue et son
+empreinte restera verrouillée. En parallèle, le fast gate de reproduction
+Vulkan a signalé un écart entre le générateur et quatre sources maintenues
+(`vk_graphics_pipeline.h`, `vk_graphics_pipeline_cost.cpp`,
+`texture_cache.h`, `vulkan_rasterizer.cpp`) : **ne pas certifier la
+parité/native de F01, F03 ou F04 sans résolution de cet écart**. Ne jamais
+modifier l'oracle pour simplement ignorer la différence.
+
+Le profil de livraison conserve le JIT normal, les verrous nécessaires, les
+fences et les invalidations GPU. Aucun changement automatique de fréquence,
+affinité, résolution, taille des caches ou file Vulkan. Une seule validation
+matérielle finale demeure réservée à F07.
