@@ -1116,7 +1116,7 @@ int CountFiles(const std::string& directory, std::initializer_list<const char*> 
 int CountExeFsFolders(const std::string& directory) {
     bool ok = false;
     int count = 0;
-    for (const auto& name : ListEntries(directory, false, ok)) {
+    for (const auto& name : ListEntries(directory, true, ok)) {
         if (Eden::IsDeconstructedGameDirectory(std::filesystem::path(directory) / name))
             ++count;
     }
