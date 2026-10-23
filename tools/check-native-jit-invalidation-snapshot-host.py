@@ -69,6 +69,7 @@ for arch, path in owners.items():
 #include <cstdlib>
 #include <functional>
 #include <mutex>
+#include <thread>
 #include <utility>
 #include <vector>
 using u32=std::uint32_t;
@@ -231,8 +232,15 @@ int main(){
         bool unlocked = pressured.invalidation_mutex.try_lock();
         assert(unlocked);
         pressured.invalidation_mutex.unlock();
-        if (pressured.emitter.cleared == 1)
-            pressured.InvalidateCacheRange(Address(0x400), 4);
+        if (pressured.emitter.cleared == 1) {
+            // The real writer runs on another host thread while the JIT
+            // invalidates its prior snapshot. Join would deadlock if the
+            // JIT still owned invalidation_mutex across emitter.ClearCache.
+            std::thread guest_writer([&] {
+                pressured.InvalidateCacheRange(Address(0x400), 4);
+            });
+            guest_writer.join();
+        }
     };
     pressured.InvalidateCacheRange(Address(0x300), 8);
     pressured.PressureEvacuation();
