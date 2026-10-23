@@ -56,6 +56,18 @@ main=(root/"headless/main.cpp").read_text()
 assert "Eden::Ncz::SetUnpackFolder(" in main
 assert "Eden::Ncz::SetUnpackAllowed(true);" in main
 assert main.count("Eden::Ncz::SetUnpackAllowed(false);")>=2
+# The game format matrix must be wired through every end-user entrypoint,
+# not only the file picker. Direct inputs do NOT get NSP/XCI metadata parsing.
+library=(root/"headless/prosperoeden/eden_services.cpp").read_text()
+formats=(".nsp",".xci",".nsz",".xcz",".nro",".nso",".nca",".nax",".kip")
+counter=library.split("info.games = CountFiles(",1)[1].split(");",1)[0]
+for extension in formats:
+    assert '"'+extension+'"' in counter, ("format missing from folder count",extension)
+metadata=(root/"headless/metadata_bridge.cpp").read_text()
+assert "if (!Eden::IsPackageFile(path) && !Eden::IsCardImageFile(path)) return 0;" in metadata
+loader=(active/"loader/loader.cpp").read_text()
+assert 'extension == "nax"' in loader
+assert 'extension == "nsz"' in loader and 'extension == "xcz"' in loader
 cpp=r"""
 #include <cassert>
 #include "game_files.h"
