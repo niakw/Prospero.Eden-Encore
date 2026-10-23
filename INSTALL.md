@@ -80,7 +80,10 @@ It does not support separate custom paths for keys, firmware, games, updates or 
 ## Compressed NSZ and XCZ games
 
 Encore's development branch recognizes four **game container** extensions in the Library:
-`.nsp`, `.xci`, `.nsz` and `.xcz`. You may place them under the same
+`.nsp`, `.xci`, `.nsz` and `.xcz`. It also exposes five
+**direct native loader** extensions: `.nro`, `.nso`, `.nca`,
+`.nax`, `.kip`. Direct files may not be complete bootable games;
+the core validates them and reports a loader error when content is missing. You may place them under the same
 `<root>/roms/` folder. A game's compressed updates and DLC can be placed
 under `<root>/updates/`. This feature is **under native-build and PS5
 qualification**, and is not a claim about the current published release.
@@ -100,9 +103,12 @@ If there is insufficient room to unpack, the fallback seeks through the
 compressed stream and can be too slow for real-time play. Block compression
 is preferable for large games on space-constrained consoles.
 
-**Format distinction:** NSP/XCI/NSZ/XCZ are game containers. **ZBIC,
-zstd and LZ4** are executable/NCZ compression methods, not standalone game
-file extensions. The Library picker also accepts NRO, NCA, NSO, NAX and KIP
+**Format distinction:** NSP/XCI/NSZ/XCZ are game containers.
+NRO/NSO/NCA/NAX/KIP are direct executable or archive inputs whose ability
+to boot depends on their contents. **LZ4**, **ZBIC** and **zstd** are
+compression methods used inside executables or NCZ files, not standalone
+game file extensions. A `.ncz` is an internal member of an NSZ/XCZ, not
+a ROM to launch by itself. The Library picker also accepts NRO, NCA, NSO, NAX and KIP
 files through Eden's direct loaders, but they are not guaranteed to be
 complete bootable games. Deconstructed-directory input remains a separate
 internal loader type.
