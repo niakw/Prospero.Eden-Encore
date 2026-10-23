@@ -1120,11 +1120,15 @@ unsigned int HashPath(const std::string& path) {
 // A title from the file's name: without its extension and the tags dumps carry
 // ("Name [0100...][v0]", "Name (USA)").
 std::string CleanTitle(const std::string& filename) {
-    std::string title = std::filesystem::path(filename).stem().string();
+    const auto selected_path = std::filesystem::path(filename);
+    const std::string base = Eden::IsDeconstructedGameSelection(filename)
+                                 ? selected_path.parent_path().filename().string()
+                                 : selected_path.stem().string();
+    std::string title = base;
     if (title.rfind("[Game] ", 0) == 0) title.erase(0, 7);
     if (const auto tag = title.find_first_of("[("); tag != std::string::npos && tag > 0) title.erase(tag);
     while (!title.empty() && (title.back() == ' ' || title.back() == '_' || title.back() == '-')) title.pop_back();
-    return title.empty() ? std::filesystem::path(filename).stem().string() : title;
+    return title.empty() ? base : title;
 }
 
 // Covers are keyed by the ROM's file name, not its full path, so they survive a new game
@@ -1195,7 +1199,10 @@ int CountInstalledGames() {
     int count = 0;
     for (const auto& entry : entries) {
         const std::string filename = entry.path().filename().string();
-        if (Eden::ValidRomFilename(filename) && IsFile(Eden::AssetsPath("roms/" + filename))) ++count;
+        const bool exefs = Eden::IsDeconstructedGameDirectory(entry.path());
+        const std::string selection = exefs ? filename + "/main" : filename;
+        if (Eden::ValidRomFilename(selection) &&
+            IsFile(Eden::AssetsPath("roms/" + selection))) ++count;
     }
     return count;
 }
