@@ -1,9 +1,21 @@
 name: Encore launcher render preview (host only)
 
 on:
-  # Main development stays opt-in; every isolated UI verification push renders.
+  # Run automatically for the ONLY active development branch when the UI,
+  # cached artwork pipeline, its fixtures or this preview workflow changes.
+  # Unrelated GPU/JIT changes do not spend a full render CI run.
   push:
-    branches: [dev/ps5-sparse-jit, ui/encore-topbar-library-cover-20261016, ui/encore-switch-theme-20261016]
+    branches: [dev/ps5-sparse-jit]
+    paths:
+      - ".github/workflows/launcher-production-preview.yml"
+      - "headless/prosperoeden/**"
+      - "tools/launcher/**"
+      - "tools/check-launch-case-artwork.py"
+      - "tools/check-launcher-shoulder-and-cover.py"
+      - "tools/check-encore-case-media-selection-host.py"
+      - "tools/check-launcher-translation-coverage.py"
+      - "tools/check-switch-theme-layout.py"
+      - "tools/package-headless-native.sh"
   workflow_dispatch:
 
 permissions:
@@ -17,8 +29,8 @@ concurrency:
 
 jobs:
   preview:
-    # Always validate UI-only pushes; keep core development opt-in.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/ui/encore-topbar-library-cover-20261016' || github.ref == 'refs/heads/ui/encore-switch-theme-20261016' || contains(github.event.head_commit.message, '[preview-ready]') }}
+    # Path-filtered push or explicit manual dispatch; no commit-message
+    # magic string required. A "skipped" UI preview hid regressions.
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
