@@ -82,7 +82,7 @@ Encore is **not** an official upstream release or a promise that every newer ups
 
 NCZ block compression permits random reads directly from the compressed file. Solid compression may unpack one running title to `/data/prosperoeden/user/cache/nsz/`; this can require approximately the full uncompressed game size. Outside a running game, bounded, validated pieces are reused for metadata reads. A developer build that contains the feature is not a console-tested release.
 
-[Compressed games, space requirements and cancellation](INSTALL.md#compressed-nsz-and-xcz-games) · [Source and tests](headless/ncz.h)
+[Compressed games, space requirements and cancellation](INSTALL.md#compressed-nsz-and-xcz-games) · [Source and tests](headless/ncz.h) · [Complete format matrix](docs/CONTENT_FORMAT_MATRIX_2026-10-23.md)
 
 ---
 
