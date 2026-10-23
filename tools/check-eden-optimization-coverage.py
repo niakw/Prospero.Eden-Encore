@@ -130,7 +130,7 @@ for e in format_entries:
     }
     assert "python3 -B " + e["proof_ref"] in preflight
     assert e["feature_review_document"] == str(format_review.relative_to(ROOT))
-    assert "| \`" + path + "\` | \`" + e["reviewed_source_git_blob"] + "\` |" in review_text, path
+    assert "| `" + path + "` | `" + e["reviewed_source_git_blob"] + "` |" in review_text, path
     if path.startswith(native_prefix):
         assert e["source_scope"] == "native_maintained"
         assert '"' + path.removeprefix(native_prefix) + '"' in cmake_formats, path
