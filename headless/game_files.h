@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: Copyright 2026 Oliv3rmoon
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The game files ProsperoEden plays: NSP and XCI, and NSZ and XCZ, the same compressed by nsz
-// (headless/ncz.h reads what they hold back as it was).
+// File selection for the nine extensions recognized by Encore's game picker:
+// NSP/XCI, their NCZ-compressed NSZ/XCZ variants, and direct NRO/NSO/NCA/NAX/KIP.
+// Direct inputs can require external program contents and are not guaranteed
+// to boot. Internal .ncz, NSO LZ4 and ZBIC/zstd are not standalone games.
 #pragma once
 #include <cctype>
 #include <string_view>
