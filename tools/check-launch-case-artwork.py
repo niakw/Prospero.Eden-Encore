@@ -79,7 +79,7 @@ assert "progress%" not in draw
 for fragment in (
     "draw_composed_case_face(ink, launch_case_game_",
     "c.textures.render_case_page(",
-    "if ((scan.empty() || artwork.texture == 0) && composed_page == 0)",
+    "composed_page == 0 && !compose_attempted",
     "const bool use_composed = (scan.empty() || artwork.texture == 0)",
     "c.list.case_face(composed_page, face, angle, back, kWhite,",
     "{0.0f, 1.0f, 1.0f, -1.0f}",
@@ -88,6 +88,9 @@ for fragment in (
 ):
     assert fragment in draw, ("native composed 3D jacket contract", fragment)
 assert draw.index("if (use_composed)") < draw.index("} else if (artwork.texture != 0)")
+assert "compose_attempted = true;" in draw
+assert "launch_composed_front_attempted_ = false;" in launch_setup
+assert "launch_composed_back_attempted_ = false;" in launch_setup
 assert "const std::string& scan = back ? launch_box_back_ : launch_box_front_;" in draw
 assert "std::vector<std::string> launch_screenshots_;" in header
 assert "constexpr float kCaseBackHold = 4.50f;" in theme
