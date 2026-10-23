@@ -5,7 +5,7 @@
 
   <h3>Console-native emulation, made for the living room.</h3>
 
-  <p><strong>A maintained, controller-first continuation of ProsperoEden — focused on firmware 13.60, NSP/XCI and experimental NSZ/XCZ loading, ZBIC/zstd support, TV navigation and reproducible native builds.</strong></p>
+  <p><strong>A controller-first PS5 emulator fork for firmware 13.60: NSP, XCI, NSZ, XCZ, NRO, NSO, NCA, NAX and KIP loaders, LZ4 + ZBIC/zstd decoding, TV navigation and reproducible builds.</strong></p>
 
   <p><strong>English</strong> · <a href="README.fr.md">Français</a></p>
   <p><kbd>Firmware 13.60 · hardware-tested target</kbd> <kbd>Vulkan + OpenGL</kbd> <kbd>TV-first UI</kbd> <kbd>Dynarmic</kbd></p>
@@ -42,7 +42,7 @@ Emulation on a console is more than booting a game. It should be navigable from 
 | | What Encore brings |
 | --- | --- |
 | **🎮 TV-first experience** | Tropical-neon launcher, game artwork, recent titles, controller navigation, quick settings and language support. |
-| **🧩 Games and compression** | NSP/XCI plus experimental NSZ/XCZ compressed containers; NSO decoding retains LZ4 and ZBIC/zstd. |
+| **🧩 Game files and compression** | NSP, XCI, NSZ, XCZ, NRO, NSO, NCA, NAX and KIP selection; LZ4 and ZBIC/zstd decoding. Some files require extra program content to boot. |
 | **🛟 Recovery without surprises** | One-session Safe Launch, confirmed resets and guarded migration without silently overwriting saved preferences. |
 | **⚙️ Per-title profiles** | Minimum, Recommended, High and Ultra, plus Custom when you edit a preset. |
 | **🎨 Graphics choices** | Vulkan/RADV and OpenGL, shader cache management, upscaling and anti-aliasing controls. |
@@ -58,7 +58,7 @@ Emulation on a console is more than booting a game. It should be navigable from 
 | --- | --- | --- |
 | Hardware target | Broad upstream development | Firmware **13.60-focused** qualification |
 | Launcher | Native frontend | TV-first hero, library, recents and quick settings |
-| Content loading | Earlier formats | **NSP/XCI + experimental NSZ/XCZ; NSO LZ4 + ZBIC/zstd** |
+| Content loading | Earlier formats | **NSP, XCI, NSZ, XCZ, NRO, NSO, NCA, NAX, KIP; LZ4 + ZBIC/zstd** |
 | Recovery | Base defaults | Temporary Safe Launch and confirmed resets |
 | Storage | Original path behavior | One internal/external root structure and guarded migration |
 | Controller settings | Base mappings | Controller-first launcher profiles; game-owned actions still under investigation |
