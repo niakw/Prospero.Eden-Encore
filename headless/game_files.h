@@ -6,7 +6,9 @@
 // to boot. Internal .ncz, NSO LZ4 and ZBIC/zstd are not standalone games.
 #pragma once
 #include <cctype>
+#include <filesystem>
 #include <string_view>
+#include <system_error>
 
 namespace Eden {
 inline bool EndsWithNoCase(std::string_view name, std::string_view suffix) {
@@ -35,5 +37,34 @@ inline bool IsDirectLoaderFile(std::string_view name) {
 }
 inline bool IsGameFile(std::string_view name) {
     return IsPackageFile(name) || IsCardImageFile(name) || IsDirectLoaderFile(name);
+}
+
+// A deconstructed ExeFS title uses a directory containing both "main" and
+// "main.npdm". The canonical launcher selection is ONLY <folder>/main:
+// neither arbitrary nested paths nor '..' are valid persisted ROM entries.
+inline bool IsDeconstructedGameSelection(std::string_view name) {
+    constexpr std::string_view suffix{"/main"};
+    if (!name.ends_with(suffix)) return false;
+    const std::string_view folder = name.substr(0, name.size() - suffix.size());
+    if (folder.empty() || folder == "." || folder == ".." ||
+        folder.find_first_of("/\\") != std::string_view::npos) return false;
+    return true;
+}
+
+// Symlink-free detection avoids treating arbitrary ROM directories or
+// symlink targets outside the selected storage root as launchable titles.
+inline bool IsDeconstructedGameDirectory(const std::filesystem::path& folder) {
+    namespace fs = std::filesystem;
+    std::error_code error;
+    const auto directory_status = fs::symlink_status(folder, error);
+    if (error || !fs::is_directory(directory_status) || fs::is_symlink(directory_status))
+        return false;
+    for (const char* name : {"main", "main.npdm"}) {
+        error.clear();
+        const auto status = fs::symlink_status(folder / name, error);
+        if (error || !fs::is_regular_file(status) || fs::is_symlink(status))
+            return false;
+    }
+    return true;
 }
 } // namespace Eden
