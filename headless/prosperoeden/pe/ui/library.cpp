@@ -1930,7 +1930,9 @@ void Launcher::press_mods(Key key)
         return;
     case Key::up:
     case Key::down:
-        if (mod_rows_.move(key == Key::down ? 1 : -1))
+    case Key::l1:
+    case Key::r1:
+        if (mod_rows_.move(key == Key::down || key == Key::r1 ? 1 : -1))
         {
             message_.clear();
             cue(Cue::focus);
