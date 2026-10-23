@@ -324,3 +324,44 @@ non représentatif du GPU PS5, la voie sécurisée a été environ 3–4 ns
 plus coûteuse par appel que la voie historique sur l'échantillon ordinaire.
 Le gain de sûreté ne clôt donc ni les saccades F01, ni la fidélité FC27 F04.
 Aucun test console demandé avant F07.
+
+
+## F01/F05 — 23 octobre : notification de construction Vulkan sans fuite
+
+**Source native sélectionnée :** `vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp`
+(`GraphicsPipeline::GraphicsPipeline`). Avant ce lot, `MarkShaderBuilding`
+était exécuté au début du constructeur, tandis que le seul
+`MarkShaderComplete` garanti était dans la fonction de compilation,
+créée après la préparation des métadonnées shader, des layouts,
+des allocations de descripteurs et autres opérations pouvant lever
+une exception. Un échec pendant cette préparation ou pendant
+`QueueWork` pouvait laisser une construction comptabilisée
+sans notification de fin.
+
+La correction `c5652a3` ajoute une garde RAII au constructeur :
+tant que la construction n'a pas été confiée à la fonction synchrone
+ou au worker, toute sortie exceptionnelle appelle
+`MarkShaderComplete`. Le constructeur achève maintenant
+`ConfigureFunc(spv_modules, stage_infos)` **avant**
+`worker_thread->QueueWork`, évitant qu'un worker lancé tôt
+voie cette fonction de configuration incomplète. Une fois la mise en
+file réussie, le worker conserve son `SCOPE_EXIT` original pour
+publier `is_built`, réveiller `build_condvar` et notifier la fin
+même en cas d'échec de validation ou de compilation.
+
+**Preuve :** `tools/check-ps5-pipeline-build-handoff-host.py` extrait
+la garde réelle et vérifie les invariants d'ordre du constructeur
+natif. Son témoin C++ simule les échecs de préparation et de
+queue, la compilation synchrone/asynchrone, un worker en échec
+et l'absence de notificateur ; son témoin négatif démontre la fuite
+de notification de l'ancien comportement. Les cas simulés ont
+réussi localement sous GCC/Clang, `-O0`/`-O2` et UBSan. Ce
+témoin ne compile pas la totalité de `GraphicsPipeline` ni Vulkan :
+la prévalidation et le build natif doivent encore être confirmés.
+
+**Portée limitée :** correction d'un risque démontrable d'attente
+prolongée sur notification absente et d'initialisation asynchrone
+incomplète. Aucun ancien log FC27 ne prouve que la création
+d'un pipeline lançait l'une de ces exceptions. Cette correction
+ne valide ni un gain de FPS, ni l'absence de freeze en match.
+**F01/F05 restent ouverts**, ainsi que F02–F04/F06.
