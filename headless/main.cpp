@@ -51,6 +51,8 @@
 #include "error_applet.h"
 #include "preferences.h"
 #include "metadata_bridge.h"
+#include "game_files.h"
+#include "ncz_vfs.h"
 #include "title_id_fallback.h"
 #ifdef EDEN_PS5_OPENGL
 #include "graphics.h"
@@ -474,6 +476,33 @@ int main(int argc, char** argv) {
         }
         if (Eden::FilesystemAccess()) MigrateLegacyInstallAssets();
         PrepareStorageLayout();
+        // Solid NCZs need random reads during guest execution. Keep their
+        // temporary unpack and bounded scan-pieces under Encore's user cache.
+        // Do not follow symlinks or clean unrelated files during retirement.
+        {
+            const std::string ncz_cache = Eden::UserDir() + "/cache/nsz";
+            std::error_code ncz_error;
+            std::filesystem::create_directories(ncz_cache, ncz_error);
+            if (!ncz_error) {
+                Eden::Ncz::SetUnpackFolder(
+                    ncz_cache, [ncz_cache](const std::function<bool(const std::string&)>& keep) {
+                        std::error_code error;
+                        for (const auto& entry : Eden::ReadNativeDirectory(ncz_cache, error)) {
+                            const auto status = entry.symlink_status(error);
+                            if (error) break;
+                            if (!std::filesystem::is_regular_file(status) ||
+                                std::filesystem::is_symlink(status)) continue;
+                            if (!keep(entry.path().filename().string())) {
+                                std::filesystem::remove(entry.path(), error);
+                                if (error) break;
+                            }
+                        }
+                    });
+            } else {
+                Eden::Report("ncz", ("Unable to initialize compressed-content cache: " +
+                                     ncz_error.message()).c_str());
+            }
+        }
         Eden::BootTrace::Line("persistent storage layout prepared");
         // Resolve the persisted setting AFTER the storage layout and before opening any
         // normal runtime log. A crash report is written independently of this toggle.
@@ -811,8 +840,7 @@ int main(int argc, char** argv) {
             std::error_code rom_error;
             for (const auto& entry : Eden::ReadNativeDirectory(folder, rom_error)) {
                 const auto filename = entry.path().filename().string();
-                const auto extension = entry.path().extension();
-                if (extension != ".nsp" && extension != ".xci") continue;
+                if (!Eden::IsGameFile(filename)) continue;
                 const auto path = folder + "/" + filename;
                 if (filename.find(development_id) != std::string::npos ||
                     eden_game_title_id(path.c_str()) == development_title) {
@@ -1858,6 +1886,10 @@ int main(int argc, char** argv) {
                 Service::AM::FrontendAppletParameters params{
                     .applet_id = Service::AM::AppletId::Application,
                 };
+                // Permit solid NCZ unpack only while booting/playing this
+                // title; library scans use the bounded random-read pieces.
+                Eden::Ncz::SetUnpackAllowed(true);
+                SCOPE_EXIT { Eden::Ncz::SetUnpackAllowed(false); };
                 std::atomic<bool> left_while_loading{false};
                 std::jthread load_input;
                 if (pad && game) {
@@ -1867,6 +1899,7 @@ int main(int argc, char** argv) {
                             (void)pad->TakeHudToggle();
                             if (pad->TakeReturnToMenu()) {
                                 Eden::Report("exit", "Touchpad + L1 while loading; requesting bounded return");
+                                Eden::Ncz::SetUnpackAllowed(false);
                                 left_while_loading = true;
                                 Eden::StopLimit::Begin();
                                 break;
