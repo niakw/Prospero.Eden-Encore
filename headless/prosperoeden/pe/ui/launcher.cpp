@@ -926,6 +926,10 @@ void Launcher::draw_launch(Canvas &c)
             print.pop_transform();
             composed_page = c.textures.render_case_page(
                 print, c.fonts.font, c.fonts.texture, paper_w, paper_h);
+            if (composed_page != 0)
+                sys::log("EDEN_CASE_COMPOSE title=%016llX side=%s status=ready page=%u",
+                         static_cast<unsigned long long>(launch_title_id_),
+                         back ? "back" : "front", composed_page);
         }
     }
     const bool use_composed = (scan.empty() || artwork.texture == 0) &&
