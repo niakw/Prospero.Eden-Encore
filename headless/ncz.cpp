@@ -235,7 +235,8 @@ FileSys::VirtualFile Open(FileSys::VirtualFile file) {
     // before the name can be used in any filesystem operation.
     const std::string original_name = file->GetName();
     if (original_name.empty() || original_name.size() > 96 ||
-        original_name.find_first_of("/\\") != std::string::npos) {
+        original_name.find_first_of("/\\") != std::string::npos ||
+        original_name.find('\0') != std::string::npos) {
         LOG_ERROR(Loader, "Unsafe NCZ archive entry name");
         return nullptr;
     }
