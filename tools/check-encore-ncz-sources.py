@@ -49,9 +49,16 @@ assert "write_derived" not in segment
 assert segment.count("list(REMOVE_ITEM core_sources")==1
 assert "ncz.cpp" in segment
 for rel,_,_ in pairs: assert '"'+rel+'"' in segment
-for path in ["headless/main.cpp","headless/settings_store.h","headless/metadata_bridge.cpp","headless/prosperoeden/eden_services.cpp"]:
+for path in ["headless/main.cpp","headless/settings_store.h",
+             "headless/prosperoeden/eden_services.cpp"]:
     data=(root/path).read_text()
     assert (".nsz" in data or "IsGameFile" in data) and (".xcz" in data or "IsGameFile" in data),path
+# The metadata bridge intentionally delegates extension matching to the
+# central case-insensitive package/card predicates; demanding a literal
+# '.nsz' token would reject the *correct* implementation.
+metadata_source=(root/"headless/metadata_bridge.cpp").read_text()
+assert "Eden::IsPackageFile(path)" in metadata_source
+assert "Eden::IsCardImageFile(path)" in metadata_source
 main=(root/"headless/main.cpp").read_text()
 assert "Eden::Ncz::SetUnpackFolder(" in main
 assert "Eden::Ncz::SetUnpackAllowed(true);" in main
