@@ -30,9 +30,9 @@ for rel,sha,marker in pairs:
     assert raw.decode().count(old)==1,("pinned source changed",rel)
     expected=raw.decode().replace(old,new)
     if header:
-        expected=expected.replace('#include <memory>', '#include <memory>\\n#include "ncz_vfs.h"')
+        expected=expected.replace('#include <memory>', '#include <memory>\n#include "ncz_vfs.h"')
         if '#include "ncz_vfs.h"' not in expected:
-            expected='#include "ncz_vfs.h"\\n'+expected
+            expected='#include "ncz_vfs.h"\n'+expected
     assert text==expected,("unreviewed source change",rel)
     assert marker in text,rel
     print("NCZ_SOURCE_OWNER_PASS",rel)
