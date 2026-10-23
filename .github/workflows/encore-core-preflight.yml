@@ -488,3 +488,12 @@ jobs:
           # but never silently rewrite external pinned source snapshots or packs.
           git diff --check FETCH_HEAD HEAD -- . ':(exclude)vendor/sources/**' ':(exclude)vendor/objects/**' ':(exclude)vendor/encore-active/**'
           echo CORE_PREFLIGHT_ALL_PASS
+
+      - name: Independently replay F01-F06 source-extracted technical subpaths
+        # Do not let a separate source-audit or generator failure hide which
+        # of the six native paths actually passed their focused host tests.
+        # This is still fail-closed; the job cannot turn green if one fails.
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          python3 -B tools/check-fc27-six-gates-host.py
