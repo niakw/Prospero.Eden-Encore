@@ -46,7 +46,7 @@ assert "wait_worker();" in method
 assert "payload_cursor = payload_start;" in method
 assert "size_t required_entries = 0x400" in method
 assert "const size_t reserve = required_entries != 0 ? required_entries : 0x400;" in method
-assert "pipeline->DescriptorEntryReservation()" in selection
+assert "pipeline->DescriptorEntryReservation()" in compute
 
 cpp = r"""
 #include <array>
