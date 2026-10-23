@@ -318,8 +318,13 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
                          Color::rgb(0xffffff,
                                     tween::cubic_out(artwork.age / 0.22f)));
         } else {
-            c.list.gradient_rect(paper, 0.0f, Color::rgb(0x191a28),
-                                 Color::rgb(0x10111b));
+            // A path alone does not prove the scan is readable. During an
+            // asynchronous load (or after a failed decode), show the same
+            // metadata composition instead of a blank plastic rectangle.
+            if (rear)
+                flat_back_fallback(c, game, paper);
+            else
+                flat_front_fallback(c, game, paper);
         }
     } else if (rear) {
         flat_back_fallback(c, game, paper);
