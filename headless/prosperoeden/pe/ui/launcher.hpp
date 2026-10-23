@@ -257,6 +257,11 @@ class Launcher
     unsigned launch_case_ready_mask_ = 0;
     std::string launch_description_;
     std::vector<std::string> launch_screenshots_;
+    // Snapshot the selected title once. These pages are rendered from the
+    // same code as the Library's replacement sleeves, never remote fetches.
+    Game launch_case_game_;
+    std::uint32_t launch_composed_front_ = 0;
+    std::uint32_t launch_composed_back_ = 0;
     tween::Timer launch_;
     bool done_ = false;
     bool restart_requested_ = false;
