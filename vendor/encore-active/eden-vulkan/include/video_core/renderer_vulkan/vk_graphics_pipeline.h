@@ -130,7 +130,7 @@ public:
 #ifdef PS5_NATIVE
     // Reserve graphics descriptor scratch before acquiring both guest caches.
     // No descriptor content is read outside the locks.
-    void PreflightDescriptorScratch() const;
+    void PreflightDescriptorScratch();
 #endif
 
     bool Configure(bool is_indexed) {
