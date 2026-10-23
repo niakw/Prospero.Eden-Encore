@@ -414,7 +414,8 @@ reused for another game.
 - **Front:** cached real hero/cover image plus optional game screenshot,
   red format mark and a lower title band; no enlarged lonely square icon.
 - **Back:** a wide scene, two game screenshot panels where available,
-  the existing Nlib/LaunchBox game description, and a fixed neutral footer.
+  the cached title-specific Nlib description or intro (not fabricated
+  from artwork), and a fixed neutral footer.
   Unknown ratings, official logos, player counts, manufacturer details
   and barcodes are never fabricated.
 - **Scan priority:** existing physical Box - Front and Box - Back scans
@@ -422,11 +423,35 @@ reused for another game.
 - **Cost:** reuse cached game media and ordinary UI draw operations, with
   no per-frame downloader, no generated cover files and no extra worker.
 
-This iteration covers **static Library front/back sleeves, detail and
-rear zoom**. The spinning launcher retains its existing projective
-front/back fallback. A shared native composited texture for its rotating
-face requires a separate 3D renderer adaptation: projecting planar
-2D caption overlays over a rotating box would be visually incorrect.
+The **static Library** and **spinning launcher** now use the same
+`draw_composed_case_face` native C++ front/back painter. For the animated
+case, Encore renders each face once into a bounded 660×1056 temporary
+OpenGL framebuffer after locally cached input artwork has decoded. That
+texture is then mapped onto the unchanged projective front/back planes
+of the **same physical 3D box**; the red spine and clear plastic remain
+separate true-volume geometry. The framebuffer image is Y-flipped only
+at the case texture boundary. No flat text overlay is glued onto the
+rotating 3D box.
+
+The artistically assembled paper contains a scenic hero or real screenshot,
+a correctly proportioned cover/icon, the title, and (on the back) available
+real Nlib synopsis plus a neutral information footer. If a second genuine
+screenshot is not available, the back uses one distinct scene, never two
+fake copies. Physical retail scans always supersede the composition per
+face, including scans received asynchronously.
+
+**Resource ceiling:** two temporary pages (front/back), each 660×1056
+RGBA8 ≈2.7 MiB, cleared when changing titles and at texture teardown.
+An unavailable offscreen framebuffer is attempted only once per face;
+the prior single-artwork fallback remains valid. Neither the native
+compression path nor game emulator graphics shaders are affected.
+
+**Validation gate:** the source-contract tests verify this ownership,
+and `.github/workflows/launcher-production-preview.yml` must confirm
+the actual C++/OpenGL animated front/spine/back screenshots with the
+retail scans disabled. Pending that host visual run (and later console
+qualification), no claim is made that the 3D presentation is visually
+approved on hardware.
 
 Launcher-only L1/R1 navigation now selects Settings sections, modal
 rows, per-game settings, mod rows and controller-mapping entries without
