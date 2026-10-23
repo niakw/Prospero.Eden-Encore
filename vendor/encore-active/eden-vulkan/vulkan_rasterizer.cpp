@@ -118,26 +118,48 @@ VkViewport GetViewportState(const Device& device, const Maxwell& regs, size_t in
 VkRect2D GetScissorState(const Maxwell& regs, size_t index, u32 up_scale = 1, u32 down_shift = 0) {
     const auto& src = regs.scissor_test[index];
     VkRect2D scissor{};
+    // Handle guest scissor extremes without wrapping signed coordinate
+    // differences. Preserve the existing 32-bit results on ordinary draws.
+    const auto bounded_s32 = [](s64 value) -> s32 {
+        return static_cast<s32>((std::clamp)(
+            value, static_cast<s64>(std::numeric_limits<s32>::min()),
+            static_cast<s64>(std::numeric_limits<s32>::max())));
+    };
     const auto scale_up = [&](s32 value) -> s32 {
         if (value == 0) {
-            return 0U;
+            return 0;
         }
-        const s32 upset = value * up_scale;
-        s32 acumm = 0;
-        if ((up_scale >> down_shift) == 0) {
-            acumm = upset % 2;
+        const s64 scaled = static_cast<s64>(value) * static_cast<s64>(up_scale);
+        if (scaled >= std::numeric_limits<s32>::min() &&
+            scaled <= std::numeric_limits<s32>::max() && down_shift < 32) {
+            // Keep the prior unsigned-shift behavior for all representable
+            // scaled coordinates, including negative offsets.
+            const u32 bits = static_cast<u32>(value) * up_scale;
+            const s32 as_i32 = static_cast<s32>(bits);
+            const s64 adjustment = (up_scale >> down_shift) == 0 ? as_i32 % 2 : 0;
+            const s64 shifted = static_cast<s32>(bits >> down_shift);
+            return bounded_s32(value < 0 ? (std::min)(shifted - adjustment, s64{-1})
+                                         : (std::max)(shifted + adjustment, s64{1}));
         }
-        const s32 converted_value = (value * up_scale) >> down_shift;
-        return value < 0 ? std::min<s32>(converted_value - acumm, -1)
-                         : std::max<s32>(converted_value + acumm, 1);
+        // Wide fallback for overflow-prone guest data or an oversized shift.
+        const u32 shift = (std::min)(down_shift, 63U);
+        const s64 adjustment = (down_shift >= 32 || (up_scale >> down_shift) == 0)
+                                   ? scaled % 2 : 0;
+        const s64 shifted = scaled >> shift;
+        return bounded_s32(value < 0 ? (std::min)(shifted - adjustment, s64{-1})
+                                     : (std::max)(shifted + adjustment, s64{1}));
     };
 
     const bool lower_left = regs.window_origin.mode != Maxwell::WindowOrigin::Mode::UpperLeft;
     const s32 clip_height = regs.surface_clip.height;
 
-    // Flip coordinates if lower left
-    s32 min_y = lower_left ? (clip_height - src.max_y) : src.min_y.Value();
-    s32 max_y = lower_left ? (clip_height - src.min_y) : src.max_y.Value();
+    // Flip coordinates without signed overflow before clamping to the render area.
+    s32 min_y = lower_left
+                    ? bounded_s32(static_cast<s64>(clip_height) - src.max_y)
+                    : src.min_y.Value();
+    s32 max_y = lower_left
+                    ? bounded_s32(static_cast<s64>(clip_height) - src.min_y)
+                    : src.max_y.Value();
 
     // Bound to render area
     min_y = (std::max)(min_y, 0);
@@ -146,8 +168,10 @@ VkRect2D GetScissorState(const Maxwell& regs, size_t index, u32 up_scale = 1, u3
     if (src.enable) {
         scissor.offset.x = scale_up(src.min_x);
         scissor.offset.y = scale_up(min_y);
-        scissor.extent.width = scale_up(src.max_x - src.min_x);
-        scissor.extent.height = scale_up(max_y - min_y);
+        scissor.extent.width =
+            scale_up(bounded_s32(static_cast<s64>(src.max_x) - src.min_x));
+        scissor.extent.height =
+            scale_up(bounded_s32(static_cast<s64>(max_y) - min_y));
     } else {
         scissor.offset.x = 0;
         scissor.offset.y = 0;
