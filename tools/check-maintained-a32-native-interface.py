@@ -16,14 +16,18 @@ pressure="            invalidate_entire_cache = true;"
 pressure_replacement=(
  '            static thread_local unsigned pressure_count;\n'
  '            if (++pressure_count <= 3) std::printf("EDEN_JIT_PRESSURE bits=32 core=%u capacity=%u remaining=%zu\\n", unsigned(conf.processor_id), unsigned(conf.code_cache_size), block_of_code.SpaceRemaining());\n'
- '            invalidate_entire_cache = true;'
+ '            // Publish the full-clear request under invalidation_mutex;\n'
+ '            // concurrent range invalidations must not race with cache pressure.\n'
+ '            ClearCache();'
 )
 commit="        block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);"
 retry=(
  '        try {\n'
  '            block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);\n'
  '        } catch (const std::bad_alloc&) {\n'
- '            invalidate_entire_cache = true;\n'
+ '            // Publish the full-clear request under invalidation_mutex;\n'
+ '            // concurrent range invalidations must not race with cache pressure.\n'
+ '            ClearCache();\n'
  '            PerformRequestedCacheInvalidation(HaltReason::CacheInvalidation);\n'
  '            block_of_code.EnsureMemoryCommitted(MINIMUM_REMAINING_CODESIZE);\n'
  '        }'
