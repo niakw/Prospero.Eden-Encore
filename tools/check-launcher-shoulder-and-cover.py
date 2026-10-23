@@ -61,6 +61,8 @@ for token in ('const std::string* first = shots[0];',
               'const std::string* second = shots[1];',
               'if (first && second)', 'case_art_contain(c, one,'):
     assert token in back, token
+# A square icon used as one of two lower panels must never be cropped.
+assert 'if (*second == game.cover) case_art_contain(c, *second, right);' in back
 assert "ENCORE  /  GAME INFORMATION" in back
 # A remote retail scan may have a valid pathname but not yet a GPU texture.
 # Falling back to a blank case face here would defeat the composition.
