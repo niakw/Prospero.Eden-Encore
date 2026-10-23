@@ -15,7 +15,7 @@
 | `.nso` | Executable module | **Selectable**, may require other program contents | Upstream NSO, retaining LZ4 and ZBIC/zstd |
 | `.nca` | Content archive | **Selectable**, only bootable when complete/valid | Upstream NCA |
 | `.nax`, `.kip` | Program/archive types | **Selectable**, not always bootable alone | Upstream NAX and KIP loaders |
-| Deconstructed game folder | Extracted content | No, not in the ordinary Library scan | Upstream deconstructed-directory loader |
+| Deconstructed ExeFS title directory | `roms/<name>/main` plus `main.npdm` | **Yes**; displayed as EXEFS, symlinks rejected | Upstream deconstructed-directory loader |
 | `.zst`, `.zstd`, `.zbic` | Compression-oriented extensions | **No** | **Not** independent game containers |
 
 **Do not conflate file formats:** zstd is used by the NCZ decompressor and the separately retained ZBIC path. LZ4 remains supported for NSO segments. This does **not** mean a raw `.zst` or `.zbic` is a playable title.
@@ -85,9 +85,12 @@ ID fallback rather than incorrectly opening them as NSP/XCI Control RomFS.
 identification still takes precedence.
 
 The underlying loader additionally identifies an extracted-game `main`
-with its associated directory content, and special NAX-style `00`
-inputs; these are **layout-specific paths**, not ordinary extensions
-discovered by the TV Library. There is no independent game loader for
+with its associated directory content and special NAX-style `00`
+inputs. Encore now discovers the former when a direct child of `roms/`
+contains regular non-symlink `main` and `main.npdm`, and persists
+only a `<folder>/main` selection. These are **directory layouts**, not
+ordinary file extensions. NAX-style `00` remains an internal layout,
+not a standard top-level Library file format. There is no independent game loader for
 raw `.ncz`, `.zst`, `.zbic` or `.lz4` files.
 
 **Compression remains separate:** the original LZ4 NSO segment path and
@@ -124,3 +127,26 @@ separate. F01-F06 cannot be closed merely because more loading formats
 are visible in the front-end. A complete native compilation is requested
 with `[full-build]`, and F07 still requires the planned final PS5
 qualification, not an immediate test.
+
+## ExeFS host regression — 23 October
+
+Maintained title discovery now supports **nine file extensions plus
+deconstructed ExeFS directories** under `roms/<folder>/`. Each candidate
+must contain regular non-symlink `main` and `main.npdm` files.
+Only `<folder>/main` is an admissible persisted selection: arbitrary
+nested paths, `../`, backslashes, symlinked directories and symlinked
+required files are excluded. The frontend revalidates this structure
+immediately before native title loading. Saved/recent titles, dev
+autoboot, launcher file counts, and the displayed folder title are
+covered by dedicated code paths.
+
+`tools/check-exefs-directory-host.py` compiles the maintained ExeFS
+selector and the real saved-ROM validator with C++20/UBSan on available
+host compilers, covering valid layouts, symlink attacks, invalid selection
+paths and ordinary game containers. Its host CI registration is included
+in `.github/workflows/encore-core-preflight.yml`.
+
+**Status:** source changes and regression test are committed.
+Neither a full host prevalidation success nor a native PS5 build or
+hardware qualification is claimed. ExeFS is a loader capability,
+not evidence that the FC27 rendering/performance exits F01–F06 are closed.
