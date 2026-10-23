@@ -81,7 +81,7 @@ MARK
 #ifndef NEGATIVE_CONTROL
 GUARD
 #else
-    bool build_handed_off = false;
+    [[maybe_unused]] bool build_handed_off = false;
 #endif
     if (test.setup_fail) throw std::runtime_error("setup");
     if (test.configure_fail) throw std::runtime_error("configure");
