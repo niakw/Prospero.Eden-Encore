@@ -11,7 +11,7 @@ This is the **single place to resume this technical audit**.
 **P0 source review batch:** see [EDEN_P0_SOURCE_REVIEW_2026-10-20.md](EDEN_P0_SOURCE_REVIEW_2026-10-20.md) for ten explicitly inspected IPC/HLE/JIT/GPU source paths. The host IPC wake proof is not guest progress; no contract statuses or qualification debt counters are reduced.
 
 **Two-axis progress rule:** read [EDEN_TWO_AXIS_PROGRESS_2026-10-20.md](EDEN_TWO_AXIS_PROGRESS_2026-10-20.md). SOURCE+OPEN means *qualification pending*, **not** code files necessarily requiring further optimization. Do not repeatedly modify a recently fixed hotpath merely to lower that count; distinguish host test, current-SHA native build, and PS5/gameplay evidence.
-**Non, this is not an exhaustive repository-wide inventory.** The 485
+**Non, this is not an exhaustive repository-wide inventory.** The 489
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -245,17 +245,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 485 | 462 | 974 |
+| Graphe connu | 489 | 466 | 982 |
 | HOST — preuve ciblée hôte | 62 | 57 | 127 |
-| SOURCE — lecture effectuée, preuve insuffisante | 400 | 390 | 808 |
+| SOURCE — lecture effectuée, preuve insuffisante | 404 | 394 | 816 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **415** | **404** | **836** |
+| **Encore à qualifier (SOURCE + OPEN)** | **419** | **408** | **844** |
 | Dont priorité P0 (SOURCE + OPEN) | 101 | 96 | 230 |
 
-Le **noyau restant** compte donc 415 critères répartis sur
-404 fichiers et 836 mentions fonction/contrat :
-15 OPEN et 400 SOURCE.
+Le **noyau restant** compte donc 419 critères répartis sur
+408 fichiers et 844 mentions fonction/contrat :
+15 OPEN et 404 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
@@ -940,6 +940,10 @@ function/contract tokens are checked by CI for existence only; the
 | U79 | P2 | J01 | headless/ps5_amd_topology_evidence.h | struct AmdCpuEvidence; inline AmdCpuEvidenceResult ValidateAmdSmtEvidence( | PARKED | tools/check-headless-final-owners.py | Isolated Sony/AMD topology evidence validator, introduced without native runtime pinning; no certified caller, defer integration until qualified | ⚪ Suspendu |
 | U80 | P1 | H21 | vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc_standard.cpp | ReplyAndReceiveImpl(; SendSyncRequestImpl( | SOURCE | tools/verify/hle/check-native-hle-ipc-timeout-host.py | Normal IPC SVC signed deadline overflow repaired in maintained source; DEV profiler preserved separately; host sanitizer does not prove FC27 freeze recovery | 🟡 Source étudiée |
 | U81 | P0 | V01,M01 | vendor/encore-active/eden-core/src/video_core/engines/maxwell_dma.cpp | MaxwellDMA::CopyBlockLinearToPitch(; MaxwellDMA::CopyPitchToBlockLinear( | SOURCE | tools/check-native-dma-extent-host.py | Native accelerated and fallback DMA extent checks, UBSan host source extraction; console gameplay unverified | 🟡 Source étudiée |
+| U82 | P1 | U01 | headless/game_files.h | inline bool IsGameFile(; inline bool IsDeconstructedGameDirectory( | SOURCE | tools/check-encore-ncz-sources.py | Package, card, direct-loader and ExeFS selection checked on host; no console launch evidence | 🟡 Source étudiée |
+| U83 | P1 | F41,F42 | headless/ncz.cpp | FileSys::VirtualFile Open(; void SetUnpackAllowed( | SOURCE | tools/check-encore-ncz-sources.py | NCZ virtual NCA and solid-unpack lifecycle; source selection checked, PS5 disk and CPU cost unmeasured | 🟡 Source étudiée |
+| U84 | P1 | U83 | headless/ncz.h | inline std::optional<Layout> ParseLayout(; class BlockPlaintext final | SOURCE | tools/check-ncz.py | NCZ section parser and decompression reader; host samples do not certify all files on device | 🟡 Source étudiée |
+| U85 | P1 | U83 | headless/ncz_vfs.h | FileSys::VirtualFile Open(; void SetUnpackFolder( | SOURCE | tools/check-encore-ncz-sources.py | NCZ VFS declarations paired with native implementation and selection; no gameplay qualification | 🟡 Source étudiée |
 <!-- AUDIT_ROWS_END -->
 
 

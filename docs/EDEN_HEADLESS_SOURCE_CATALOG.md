@@ -1,10 +1,10 @@
 # Eden Encore — catalogue des fichiers C/C++ hors encore-active : headless
 
-**Branche :** `dev/ps5-sparse-jit`. **Date du relevé :** 19 octobre 2026.
+**Branche :** `dev/ps5-sparse-jit`. **Date du relevé :** 24 octobre 2026.
 
-Ce registre complémentaire couvre les **168 chemins** de code, en-têtes et
+Ce registre complémentaire couvre les **174 chemins** de code, en-têtes et
 fragments `.c/.cc/.cpp/.h/.hpp/.inc/.cl` du dossier `headless/`.
-Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 317 fichiers
+Il ne remplace pas `EDEN_ACTIVE_SOURCE_CATALOG.md` : les 326 fichiers
 de `vendor/encore-active` sont déjà inventoriés séparément.
 
 **Attention :** une entrée ici ne prouve pas que le fichier est compilé ni
@@ -13,9 +13,9 @@ pour suivi séparé et n'autorise aucune modification du launcher depuis
 l'audit moteur. Un chemin noté « À qualifier » peut avoir été audité sous
 une autre forme : il manque seulement la référence de chemin exacte.
 
-- **168** chemins sous `headless/`, dont **58** sources C/C++ et **110** en-têtes/fragments.
-- **90** chemins déjà présents dans le graphe moteur.
-- **78** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
+- **174** chemins sous `headless/`, dont **60** sources C/C++ et **114** en-têtes/fragments.
+- **94** chemins déjà présents dans le graphe moteur.
+- **80** chemins sans propriétaire exact dans ce graphe, à trier selon leur rôle réel et leur sélection.
 - Les deux générateurs de profils `headless/encore_overrides_generated.h`,
   `headless/glyph_overrides_generated.h` et les autres ressources générées
   sont des entrées de l'inventaire, **pas** de nouveaux patchs CMake.
@@ -24,19 +24,19 @@ une autre forme : il manque seulement la référence de chemin exacte.
 
 Ce décompte distingue l'incomplétude du **graphe de fonctions** des
 déplacements de sources réellement nécessaires. Le registre physique couvre
-toujours 168/168 chemins ; il n'y a pas 78 overrides de dépendances oubliés.
+toujours 174/174 chemins ; il n'y a pas 80 overrides de dépendances oubliés.
 
 | Rôle indicatif | Chemins sans ID exact |
 | --- | ---: |
-| `launcher/UI` | **63** |
-| `harness/test` | **9** |
+| `launcher/UI` | **64** |
+| `harness/test` | **10** |
 | `outil auxiliaire` | **4** |
 | `données générées` | **2** |
 | `en-tête/fragment` | **0** |
-| **Total non indexé** | **78** |
+| **Total non indexé** | **80** |
 
-Les 63 chemins du launcher sont réservés au périmètre UI séparé.
-Les 9 harnais, 4 outils et 2 ressources générées ne sont pas déclarés
+Les 64 chemins du launcher sont réservés au périmètre UI séparé.
+Les 10 harnais, 4 outils et 2 ressources générées ne sont pas déclarés
 comme unités de correction moteur. `ps5_amd_topology_evidence.h` porte désormais l'ID U79 au statut
 **PARKED** : ses fonctions sont inventoriées, mais le commit d'origine
 `45f9c01` précise « no runtime pinning ». Aucun consommateur natif
@@ -96,6 +96,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/experimental_performance.h` | en-tête/fragment | U23 | Chemin indexé, preuve dépend du graphe |
 | `headless/fastmem_handler.cpp` | runtime/bridge | J07 | Chemin indexé, preuve dépend du graphe |
 | `headless/filesystem_probe.h` | en-tête/fragment | U35 | Chemin indexé, preuve dépend du graphe |
+| `headless/game_files.h` | en-tête/fragment | U82 | Chemin indexé, preuve dépend du graphe |
 | `headless/game_liveness.h` | en-tête/fragment | U67 | Chemin indexé, preuve dépend du graphe |
 | `headless/glyph_overrides_generated.h` | données générées | — | À qualifier |
 | `headless/glyph_overrides_runtime.h` | en-tête/fragment | U61 | Chemin indexé, preuve dépend du graphe |
@@ -130,6 +131,10 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/mods.h` | en-tête/fragment | U62 | Chemin indexé, preuve dépend du graphe |
 | `headless/mods_check.cpp` | harness/test | — | À qualifier |
 | `headless/native_directory.h` | en-tête/fragment | U41 | Chemin indexé, preuve dépend du graphe |
+| `headless/ncz.cpp` | runtime/bridge | U83 | Chemin indexé, preuve dépend du graphe |
+| `headless/ncz.h` | en-tête/fragment | U84 | Chemin indexé, preuve dépend du graphe |
+| `headless/ncz_check.cpp` | harness/test | — | À qualifier |
+| `headless/ncz_vfs.h` | en-tête/fragment | U85 | Chemin indexé, preuve dépend du graphe |
 | `headless/network_audit.c` | runtime/bridge | U05 | Chemin indexé, preuve dépend du graphe |
 | `headless/network_audit.h` | en-tête/fragment | U39 | Chemin indexé, preuve dépend du graphe |
 | `headless/network_audit_sockets.c` | runtime/bridge | U06 | Chemin indexé, preuve dépend du graphe |
@@ -186,6 +191,7 @@ que des fichiers C/C++ apparaissent dans `headless/` sans être ajoutés
 | `headless/prosperoeden/pe/platform/display_egl.cpp` | launcher/UI | — | À qualifier |
 | `headless/prosperoeden/pe/platform/display_egl.hpp` | launcher/UI | — | À qualifier |
 | `headless/prosperoeden/pe/ui/browse.cpp` | launcher/UI | — | À qualifier |
+| `headless/prosperoeden/pe/ui/case_media_selection.hpp` | launcher/UI | — | À qualifier |
 | `headless/prosperoeden/pe/ui/dualsense_mask_asset.hpp` | launcher/UI | — | À qualifier |
 | `headless/prosperoeden/pe/ui/hero_text_layout.hpp` | launcher/UI | — | À qualifier |
 | `headless/prosperoeden/pe/ui/home.cpp` | launcher/UI | — | À qualifier |
