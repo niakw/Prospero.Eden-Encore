@@ -202,19 +202,28 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
     const float row_y = r.y + r.h * 0.39f;
     const float row_h = r.h * 0.18f;
     const std::string& shot_a = !game.screenshots.empty()
-                                    ? game.screenshots.front() : hero;
+                                    ? game.screenshots.front() : game.cover;
     const std::string& shot_b = game.screenshots.size() > 1
                                     ? game.screenshots[1] : game.cover;
-    const bool split = !shot_a.empty() && !shot_b.empty() && shot_a != shot_b;
-    if (split) {
+    // Only independent scenes count as back-cover captures: a single Nlib
+    // image must not be copied into the two separate screenshot windows.
+    const std::string* first = !shot_a.empty() && shot_a != hero ? &shot_a : nullptr;
+    const std::string* second = !shot_b.empty() && shot_b != hero &&
+                                (!first || shot_b != *first) ? &shot_b : nullptr;
+    if (first && second) {
         const float shot_w = (r.w - gap * 3.0f) * 0.5f;
-        cover_crop(c, shot_a, {r.x + gap, row_y, shot_w, row_h}, 0.0f, 0.0f);
-        cover_crop(c, shot_b, {r.x + gap * 2.0f + shot_w, row_y,
-                               shot_w, row_h}, 0.0f, 0.0f);
-    } else if (!shot_a.empty() || !shot_b.empty()) {
-        const std::string& one = !shot_a.empty() ? shot_a : shot_b;
-        cover_crop(c, one, {r.x + gap, row_y, r.w - 2.0f * gap, row_h},
-                   0.0f, 0.0f);
+        cover_crop(c, *first, {r.x + gap, row_y, shot_w, row_h}, 0.0f, 0.0f);
+        cover_crop(c, *second, {r.x + gap * 2.0f + shot_w, row_y,
+                                shot_w, row_h}, 0.0f, 0.0f);
+    } else if (first || second) {
+        const std::string& one = first ? *first : *second;
+        if (one == game.cover) {
+            case_art_contain(c, one, {r.x + gap, row_y,
+                                     r.w - 2.0f * gap, row_h});
+        } else {
+            cover_crop(c, one, {r.x + gap, row_y,
+                                r.w - 2.0f * gap, row_h}, 0.0f, 0.0f);
+        }
     }
     const Rect copy{r.x, r.y + r.h * 0.58f, r.w, r.h * 0.27f};
     c.list.rounded_rect(copy, 0.0f, Color::rgb(0x0b0e16, 0.97f));
