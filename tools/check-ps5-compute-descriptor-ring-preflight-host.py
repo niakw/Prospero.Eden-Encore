@@ -55,7 +55,7 @@ compute=raster.split("void RasterizerVulkan::DispatchCompute() {",1)[1].split(
 pair="std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};"
 assert compute.count("descriptor_buffer_ring.PreflightFrameReuse(scheduler)") == 1
 assert compute.count("descriptor_buffer_ring.PreflightCapacity(") == 1
-assert compute.count("guest_descriptor_queue.PreflightLargeGuestDraw(") == 3
+assert compute.count("guest_descriptor_queue.PreflightExactGuestDraw(") == 3
 # Native compute chooses the immutable shader before a queue preflight:
 # zero-entry shaders cannot reserve the fallback 1024 guest descriptors.
 # A real worker drain still precedes the paired cache mutexes and reselects
@@ -75,11 +75,11 @@ between_frame_and_capacity = compute[
     compute.index("descriptor_buffer_ring.PreflightCapacity(")]
 assert "gpu_memory->FlushCaching();" in between_frame_and_capacity
 assert "pipeline = pipeline_cache.CurrentComputePipeline();" in between_frame_and_capacity
-assert "PreflightLargeGuestDraw(" in between_frame_and_capacity
+assert "PreflightExactGuestDraw(" in between_frame_and_capacity
 after_capacity=compute.split("descriptor_buffer_ring.PreflightCapacity(",1)[1].split(pair,1)[0]
 assert "pipeline = pipeline_cache.CurrentComputePipeline();" in after_capacity
 assert "gpu_memory->FlushCaching();" in after_capacity
-assert "PreflightLargeGuestDraw(" in after_capacity
+assert "PreflightExactGuestDraw(" in after_capacity
 assert "    if (!pipeline) return;" in after_capacity
 assert compute.index("SCOPE_EXIT { SyncProbe") < compute.index(pair)
 # The pinned transformation and the final native source-preserving
