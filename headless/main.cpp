@@ -850,8 +850,9 @@ int main(int argc, char** argv) {
             std::error_code rom_error;
             for (const auto& entry : Eden::ReadNativeDirectory(folder, rom_error)) {
                 const auto filename = entry.path().filename().string();
-                if (!Eden::IsGameFile(filename)) continue;
-                const auto path = folder + "/" + filename;
+                const bool exefs = Eden::IsDeconstructedGameDirectory(entry.path());
+                if (!Eden::IsGameFile(filename) && !exefs) continue;
+                const auto path = folder + "/" + filename + (exefs ? "/main" : "");
                 if (filename.find(development_id) != std::string::npos ||
                     eden_game_title_id(path.c_str()) == development_title) {
                     selected_game = path;
