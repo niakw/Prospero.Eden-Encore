@@ -90,7 +90,7 @@ def fixed():
 def main():
     ART.mkdir(parents=True, exist_ok=True)
     wanted = set(sys.argv[1:]) or {"brand", "controller", "fixed"}
-    unknown = wanted - {"brand", "controller"}
+    unknown = wanted - {"brand", "controller", "fixed"}
     if unknown:
         raise SystemExit("unknown Encore launcher art: " + ", ".join(sorted(unknown)))
     if "brand" in wanted:
