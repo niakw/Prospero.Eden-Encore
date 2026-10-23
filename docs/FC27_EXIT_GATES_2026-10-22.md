@@ -432,3 +432,43 @@ ASan/UBSan du build complet et qualification native restent à
 confirmer. Ce correctif supprime une course de données à
 l'invalidation et **ne démontre pas** qu'il supprimera les
 pics de recompilation FC27. F02 reste ouvert.
+
+
+
+## F01 — 23 octobre : allocations de snapshots GPU hors verrou partagé
+
+**Source active :** `vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp`.
+`GraphicsPipeline::ConfigureDraw` mémorise la charge utile des descripteurs
+Vulkan dans `last_descriptor_payload`. Son premier `assign` pouvait
+réserver de la mémoire alors que `PrepareDraw` détenait simultanément
+`buffer_cache.mutex` et `texture_cache.mutex`, contribuant à la durée
+de détention du verrou lors de la première utilisation d'un pipeline.
+
+Le correctif `e633f3d` déplace **uniquement la réservation de capacité**
+dans `GraphicsPipeline::PreflightDescriptorScratch`, déjà exécuté
+par le propriétaire GPU **avant** les deux mutex. La réservation est
+limitée au nombre immuable `num_descriptor_entries` et seulement aux
+pipelines qui conservent réellement un snapshot (buffer de descripteurs
+ou ensembles classiques, hors mode push-only). Les vues TIC/TSC,
+les lectures mémoire invitées, les uploads et le contenu du payload ne
+sont pas lus ou copiés hors du verrou. La branche de repli imbriquée
+conserve ses gardes de réentrance.
+
+Le générateur `tools/prepare-vulkan-port.py` et la déclaration C++
+native générée ont été mis en cohérence (`4454bbf`), de sorte
+qu'un staging natif ne réintroduise pas l'ancienne signature `const`.
+Le test `tools/check-ps5-graphics-payload-preflight-host.py`
+(`72265ac`, renforcé par `a9743ef`) extrait la vraie méthode
+maintenue, vérifie l'identité octet à octet du corps dans le générateur,
+et compile sa logique avec un allocateur instrumenté qui refuse une
+allocation sous le double verrou. Il contrôle l'ensemble classique,
+le buffer de descripteurs, le push-only, le pipeline vide et le
+scratch imbriqué ; l'ancien code provoque le refus attendu.
+
+Une **reproduction locale** de la méthode et de son allocateur a
+réussi sous Clang et GCC, `-O0` et `-O2`, UBSan. Le script
+source-extrait est intégré à la prévalidation ; il attend encore
+une preuve CI sur le dernier HEAD. Ce changement retire une allocation
+de la section critique lors de certaines premières utilisations,
+mais **aucun gain de FPS, de `pair_held` ou de `late50` sur console
+n'est encore démontré**. F01 reste ouvert.
