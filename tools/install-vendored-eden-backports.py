@@ -117,7 +117,20 @@ def replay()->None:
             missing=sorted(set(observed)-set(spec['entries']))
             extra=sorted(set(spec['entries'])-set(observed))
             mismatched=sorted(n for n in observed.keys()&spec['entries'].keys() if observed[n]!=spec['entries'][n])
-            raise RuntimeError(f'Active Eden backports differ from full replay: missing={missing},extra={extra},mismatched={mismatched}')
+            # A hash alone does not show which reviewed source edit drifted.
+            # Keep the parity gate strict and include a bounded textual diff
+            # for the FIRST mismatch so a native backport can be repaired at
+            # its source instead of copying the generated tree over it.
+            import difflib
+            sample = ''
+            if mismatched:
+                name = mismatched[0]
+                generated = (stage / name).read_text(errors='replace').splitlines()
+                maintained = (ACTIVE / name).read_text(errors='replace').splitlines()
+                sample = '\\n'.join(list(difflib.unified_diff(
+                    maintained, generated, fromfile=f'maintained/{name}',
+                    tofile=f'replayed/{name}', lineterm='', n=4))[:100])
+            raise RuntimeError(f'Active Eden backports differ from full replay: missing={missing},extra={extra},mismatched={mismatched}\\n{sample}')
         receipts={p.name:p.read_text().strip() for p in stage.glob('.encore-backport-*.sha256')}
         if receipts!=spec['shipping_receipts']:raise RuntimeError('Missing or stale patch receipts')
         print(f'EDEN_COMPLETE_PATCH_REPLAY_OK files={len(observed)} receipts={len(receipts)}')
