@@ -148,6 +148,20 @@ mathematical oscillators and deterministic noise. They contain no third-party
 audio samples, recordings, model-generated clips, or external audio-service
 output. The generation script and generated assets are distributed as part of
 Encore under the project's applicable GPL-3.0-or-later terms.
+## Compressed-container reader (NSZ/XCZ)
+
+The in-place NCZ reader, Eden VFS adapter and associated synthetic-format
+regression fixtures under `headless/ncz.h`, `headless/ncz.cpp`,
+`headless/ncz_vfs.h`, `headless/ncz_check.cpp`, `headless/game_files.h`,
+and `tools/check-ncz.py` originate from the community contribution
+[`ProsperoEden` PR #285](https://github.com/Swordpdf/ProsperoEden/pull/285)
+by Oliv3rmoon (Copyright 2026), licensed under **GPL-3.0-or-later**.
+
+Encore retains the original source copyright and license notices and adds
+native C++ source-owner adaptations, symlink-safe cache access, tests and
+project-specific integrations. These formats do not bundle games, proprietary
+keys, firmware or proprietary compression algorithms.
+
 ## Names, logos and trademarks
 
 Prospero.Eden Encore is an **unofficial community fork**. It is not affiliated
