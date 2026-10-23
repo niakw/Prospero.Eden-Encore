@@ -136,6 +136,22 @@ jobs:
               with Image.open(filepath) as frame:
                   assert frame.size == (1920, 1080)
                   assert sum(ImageStat.Stat(frame.convert("RGB").resize((64, 36))).stddev) > 12
+          # Host screenshots are from the real C++/OpenGL pipeline. If the
+          # missing-scan paths quietly revert to one square icon on both
+          # faces, source tests alone cannot detect that visual regression.
+          from PIL import ImageChops
+          with Image.open(folder / "00-launch-case-front.png") as front:
+              with Image.open(folder / "02-launch-case-back.png") as back:
+                  area = (440, 175, 780, 840)
+                  diff = ImageChops.difference(
+                      front.convert("RGB").crop(area),
+                      back.convert("RGB").crop(area))
+                  assert max(ImageStat.Stat(diff).mean) > 8, "front and back look identical"
+          generic_log = Path("build-launch-case-generic.log").read_text(errors="replace")
+          for side in ("front", "back"):
+              assert (f"EDEN_CASE_COMPOSE title=" in generic_log and
+                      f"side={side} status=ready" in generic_log), (
+                          "native composited sleeve did not reach GL", side)
           print("UNIVERSAL_CASE_NO_RETAIL_ART: PASS")
           PY
 
