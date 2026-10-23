@@ -18,10 +18,15 @@ expected={
  # J10 was a "reviewed without edit" historical source. The JIT drain
  # is now a source correction; retain the old hash below as provenance and
  # pin the new reviewed source with the source-extracted reentrant witness.
- "jit": "26ae49088a528c4cf27712f639948604de2260d4",
+ "jit": "aaff079cedf068b1d032af6cb3abc5f8b5e72178",
 }
 def gitblob(data: bytes)->str:
     return hashlib.sha1(b"blob "+str(len(data)).encode()+b"\0"+data).hexdigest()
+# Historical pre-pressure-rollback source: 26ae49088a528c4cf27712f639948604de2260d4.
+# Reviewed delta at new SHA: the two unprotected invalidate_entire_cache=true
+# writes on low JIT code-space and bad_alloc now use ClearCache(), which
+# publishes under invalidation_mutex. The source-extracted host witness
+# checks both paths and reentrant guest requests.
 JIT_PREVIOUS_REVIEW_BLOB = "20362a046adfe89d65225c1822104f2910eeb2c5"
 assert expected["jit"] != JIT_PREVIOUS_REVIEW_BLOB
 sources={key:(root/path).read_text() for key,path in paths.items()}
@@ -66,6 +71,7 @@ for invariant in ("#if defined(EDEN_JIT_A64_BATCH)",
                   "if (length - 1 > (~u64{0} - start_address))"):
     assert invariant in jit,invariant
 assert jit.index("ranges.swap(invalid_cache_ranges);") < jit.index("emitter.InvalidateCacheRanges(ranges);")
+assert jit.count("Publish the full-clear request under invalidation_mutex;") == 2
 assert "emitter.InvalidateCacheRanges(invalid_cache_ranges);" not in jit
 # Reviewed source must be tied to a HOST proof, not just a new opaque digest.
 proof = (root/"tools/check-native-jit-invalidation-snapshot-host.py").read_text()
