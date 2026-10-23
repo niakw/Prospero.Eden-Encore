@@ -20,6 +20,9 @@ on:
       - 'docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json'
       - 'docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md'
       - '.github/workflows/encore-core-preflight.yml'
+      # The preflight audits neutral step descriptions across ALL workflows,
+      # including this authentic-readme screenshot producer.
+      - '.github/workflows/launcher-readme-home-screenshot.yml'
   workflow_dispatch:
 
 permissions:
