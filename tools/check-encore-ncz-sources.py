@@ -16,13 +16,25 @@ pairs=[
  ("loader/nsp.cpp","cfc908b4ef6e1b02636d88815aa5469052575784","\".ncz\""),
  ("file_sys/registered_cache.cpp","ce851e4d38ba752c626f51e29bae4d2303dbd39","extension == \"nsz\""),
 ]
+# Each maintained owner must match its immutable pinned counterpart with
+# exactly one reviewed replacement: no hidden unrelated source edits.
+expected_deltas = [["file_sys/submission_package.cpp","                auto next_file = pfs->GetFile(fmt::format(\"{}.nca\", id_string));","                auto next_file = pfs->GetFile(fmt::format(\"{}.nca\", id_string));\n                if (next_file == nullptr)\n                    next_file = ::Eden::Ncz::Open(pfs->GetFile(fmt::format(\"{}.ncz\", id_string)));",1],["file_sys/card_image.cpp","    for (const VirtualFile& partition_file : partition->GetFiles()) {\n        if (partition_file->GetExtension() != \"nca\") {","    for (const VirtualFile& listed_file : partition->GetFiles()) {\n        const VirtualFile partition_file =\n            listed_file->GetExtension() == \"ncz\" ? ::Eden::Ncz::Open(listed_file) : listed_file;\n        if (partition_file == nullptr || partition_file->GetExtension() != \"nca\") {",1],["loader/loader.cpp","    else if (extension == \"xci\")\n        return FileType::XCI;\n    else if (extension == \"nsp\")\n        return FileType::NSP;","    else if (extension == \"xci\" || extension == \"xcz\")\n        return FileType::XCI;\n    else if (extension == \"nsp\" || extension == \"nsz\")\n        return FileType::NSP;",0],["loader/nsp.cpp","        if (name.size() >= 4 && name.substr(name.size() - 4) == \".nca\") {","        if (name.size() >= 4 &&\n            (name.substr(name.size() - 4) == \".nca\" || name.substr(name.size() - 4) == \".ncz\")) {",0],["file_sys/registered_cache.cpp","        if (extension == \"nsp\") {\n            ProcessNSP(file);\n        } else if (extension == \"xci\") {\n            ProcessXCI(file);","        if (extension == \"nsp\" || extension == \"nsz\") {\n            ProcessNSP(file);\n        } else if (extension == \"xci\" || extension == \"xcz\") {\n            ProcessXCI(file);",0]]
+assert {rel for rel, *_ in expected_deltas} == {rel for rel, *_ in pairs}
+
 for rel,sha,marker in pairs:
     raw=(pinned/rel).read_bytes()
     digest=hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
     assert digest==sha,("Pinned Eden changed",rel)
     text=(active/rel).read_text()
-    assert marker in text and text!=raw.decode(),rel
-    if marker=="Ncz::Open": assert '#include "ncz_vfs.h"' in text
+    old, new, header = next((a,b,c) for item,a,b,c in expected_deltas if item==rel)
+    assert raw.decode().count(old)==1,("pinned source changed",rel)
+    expected=raw.decode().replace(old,new)
+    if header:
+        expected=expected.replace('#include <memory>', '#include <memory>\\n#include "ncz_vfs.h"')
+        if '#include "ncz_vfs.h"' not in expected:
+            expected='#include "ncz_vfs.h"\\n'+expected
+    assert text==expected,("unreviewed source change",rel)
+    assert marker in text,rel
     print("NCZ_SOURCE_OWNER_PASS",rel)
 cmake=(root/"headless/CMakeLists.txt").read_text()
 segment=cmake.split("# NSZ/XCZ: select reviewed full C++ source owners",1)[1].split("# The guest title is the owner",1)[0]
@@ -58,4 +70,7 @@ with tempfile.TemporaryDirectory() as d:
                           capture_output=True,text=True,timeout=45)
     assert result.returncode==0,result.stderr
     subprocess.run([str(exe)],check=True,timeout=12)
+assert "O_NOFOLLOW" in (root/"headless/ncz.h").read_text()
+assert "O_CREAT | O_EXCL" in (root/"headless/ncz.h").read_text()
+assert "find_first_of" in (root/"headless/ncz.cpp").read_text()
 print("NCZ_FORMATS_AND_SELECTION_PASS")
