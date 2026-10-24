@@ -1,0 +1,15 @@
+--- a/src/video_core/texture_cache/texture_cache.h
++++ b/src/video_core/texture_cache/texture_cache.h
+@@ -291,4 +291,10 @@
+-    bool identical_bound_views = last_feedback_view_ids.size() == views.size();
+-    if (identical_bound_views) {
++    // Changing render targets or descriptors forces a fresh decision anyway.
++    // Compare previously bound view IDs only when BOTH generations still match.
++    const bool same_feedback_serials =
++        render_targets_serial == last_feedback_loop_serial &&
++        texture_bindings_serial == last_feedback_texture_serial;
++    bool identical_bound_views = false;
++    if (same_feedback_serials && last_feedback_view_ids.size() == views.size()) {
++        identical_bound_views = true;
+         for (size_t i = 0; i < views.size(); ++i) {
+             if (last_feedback_view_ids[i] != views[i].id) {

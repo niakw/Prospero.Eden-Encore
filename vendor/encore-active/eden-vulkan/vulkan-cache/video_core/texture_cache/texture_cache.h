@@ -475,8 +475,14 @@ void TextureCache<P>::CheckFeedbackLoop(std::span<const ImageViewInOut> views) {
     // The same TIC/TSC table can feed different shaders and texture indices
     // without advancing texture_bindings_serial. Only reuse the cached
     // barrier decision if the actual bound view IDs also match.
-    bool identical_bound_views = last_feedback_view_ids.size() == views.size();
-    if (identical_bound_views) {
+    // Changing render targets or descriptors forces a fresh decision anyway.
+    // Compare previously bound view IDs only when BOTH generations still match.
+    const bool same_feedback_serials =
+        render_targets_serial == last_feedback_loop_serial &&
+        texture_bindings_serial == last_feedback_texture_serial;
+    bool identical_bound_views = false;
+    if (same_feedback_serials && last_feedback_view_ids.size() == views.size()) {
+        identical_bound_views = true;
         for (size_t i = 0; i < views.size(); ++i) {
             if (last_feedback_view_ids[i] != views[i].id) {
                 identical_bound_views = false;
