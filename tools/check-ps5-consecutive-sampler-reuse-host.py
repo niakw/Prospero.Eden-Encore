@@ -70,7 +70,7 @@ struct TexCache {
             std::uint64_t value = handle + generation_offset;
             for (unsigned i = 0; i < 1024; ++i)
                 value = (value * 1664525ULL + 1013904223ULL) ^ (value >> 7);
-            pressure ^= value;
+            pressure += value;
         }
         return handle + generation_offset;
     }
@@ -112,7 +112,7 @@ static CaseResult configure_reference(const std::array<Info, 2>& stages,
 }
 // Host-only same-draw lock A/B using native-extracted descriptor loops.
 // Multiple medians and alternating order reduce scheduler/cache-warm-up bias.
-struct LockBudget {std::uint64_t held_ns{}, wait_ns{}; unsigned lookups{};};
+struct LockBudget {std::uint64_t held_ns{}, wait_ns{}, checksum{}; unsigned lookups{};};
 using Clock = std::chrono::steady_clock;
 using Config = CaseResult(*)(const std::array<Info,2>&,TexCache&);
 static LockBudget lock_budget(Config config, const std::array<Info,2>& stages) {
@@ -145,6 +145,8 @@ static LockBudget lock_budget(Config config, const std::array<Info,2>& stages) {
     running.store(false,std::memory_order_relaxed);
     contender.join();
     result.lookups=cache.lookups;
+    result.checksum=cache.pressure;
+    assert(result.checksum != 0); // prevent benchmark optimizer eliminating lookup work
     // The waiter is a real concurrent mutex contender, not a virtual cost.
     assert(contender_entries.load(std::memory_order_relaxed)>0);
     return result;
