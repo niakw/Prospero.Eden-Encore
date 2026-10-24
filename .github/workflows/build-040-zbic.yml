@@ -237,6 +237,7 @@ jobs:
           python3 -B tools/check-ps5-compute-sampler-memo-host.py
           python3 -B tools/check-ps5-texture-page-range-host.py
           python3 -B tools/check-ps5-texture-tic-layer-host.py
+          python3 -B tools/check-ps5-remapped-texture-view-host.py
           python3 -B tools/check-ps5-present-equal-copy.py
           python3 -B tools/check-ps5-vulkan-layer-lifetime.py
           python3 -B tools/check-ps5-vulkan-aa-lifetime.py
