@@ -406,8 +406,8 @@
       "upstream": "59f06d6839d09c96e9d7541a727a87fee680b7e7bebe763e82fec523a5caf498"
     },
     "src/video_core/texture_cache/texture_cache_base.h": {
-      "active": "a773d449cf040600e55fc630d182e3d109b9f23317ebbc235b8a617b1fde4b70",
-      "bytes": 20656,
+      "active": "db1a3c64c4ff6f7efec01fdd68d63ada1099c383dc8ece9d4a15827b209e57f4",
+      "bytes": 21314,
       "upstream": "36a3fd563bd620d51bfbfb0ae2d5381d77eb19c9c18d16cbe0c169c37eaecc5b"
     },
     "src/video_core/texture_cache/util.cpp": {
@@ -463,6 +463,7 @@
     ".encore-backport-ps5-nvmap-alloc-rollback.sha256": "69c03c023a23f498944f5c87e0d6507618feb3445f04350e5547b2ff673883da",
     ".encore-backport-ps5-software-bilinear-source-coordinates.sha256": "f2bd32408da89f268379a5c30879a9fa859dbe8f2ed59e1555402e31a130df0f",
     ".encore-backport-ps5-texture-descriptor-residency.sha256": "6e6e81d918f962bd810c9ac57c64f3e8164484012ef7d91c16f5320212bd34ca",
+    ".encore-backport-ps5-texture-page-range-guards.sha256": "cc3682ecb84afc07d8b081c726e81ecb61565a4e01d8c5e230fec07cf671fad9",
     ".encore-backport-ps5-texture-null-view-remap.sha256": "2748e9b17c91e72a1fc832a256254cb237acb1572ec3f852dd07ad00603d5a20",
     ".encore-backport-ps5-texture-shared-null-new-slot.sha256": "b8c299afca56172a93a54c7d6b1732775e1a17e1114d31e5a696a60e8212018c",
     ".encore-backport-runtime-hid.sha256": "863056323aeb23c6aafabaa47224e623946d41919aee5d5f3605be4adacf45f9"
