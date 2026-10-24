@@ -143,6 +143,7 @@ jobs:
           python3 -B tools/check-ps5-compute-sampler-memo-host.py
           python3 -B tools/check-ps5-texture-page-range-host.py
           python3 -B tools/check-ps5-texture-tic-layer-host.py
+          python3 -B tools/check-ps5-remapped-texture-view-host.py
           python3 -B tools/check-native-dma-extent-host.py
           python3 -B tools/check-native-dma-contiguous-host.py
           python3 -B tools/check-ps5-buffer-pages-r437.py
