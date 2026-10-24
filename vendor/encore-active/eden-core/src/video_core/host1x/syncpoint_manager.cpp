@@ -80,16 +80,24 @@ void SyncpointManager::Increment(std::atomic<u32>& syncpoint, std::condition_var
                                  std::list<RegisteredAction>& action_storage) {
     auto new_value{syncpoint.fetch_add(1, std::memory_order_acq_rel) + 1};
 
-    std::scoped_lock lk(guard);
-    auto it = action_storage.begin();
-    while (it != action_storage.end()) {
-        if (it->expected_value > new_value) {
-            break;
+    // Claim ready callbacks atomically against deregistration without
+    // allocating or executing arbitrary callbacks under the Host1x guard.
+    std::list<RegisteredAction> ready_actions;
+    {
+        std::scoped_lock lk(guard);
+        auto it = action_storage.begin();
+        while (it != action_storage.end() && it->expected_value <= new_value) {
+            ++it;
         }
-        it->action();
-        it = action_storage.erase(it);
+        ready_actions.splice(ready_actions.end(), action_storage,
+                             action_storage.begin(), it);
+        wait_cv.notify_all();
     }
-    wait_cv.notify_all();
+    // Cancellation can prevent an action only before the claim above.
+    // Execute the already-claimed batch without holding the global guard.
+    for (auto& ready : ready_actions) {
+        ready.action();
+    }
 }
 
 void SyncpointManager::Wait(std::atomic<u32>& syncpoint, std::condition_variable& wait_cv,
