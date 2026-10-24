@@ -3019,3 +3019,74 @@ apply_reviewed_delta(
 }
 ''',
     'F04 native TIC layer view safety', allow_preapplied=True)
+
+
+# F03/F04: remapped framebuffer attachments must be marked dirty on PS5.
+# Patched shipping Eden may already contain this exact guarded method; in
+# pristine legacy generator fixtures, reconstruct the reviewed delta here.
+apply_reviewed_delta(
+    'vulkan-cache/video_core/texture_cache/texture_cache.h',
+    '''void TextureCache<P>::UnmapGPUMemory(size_t as_id, GPUVAddr gpu_addr, size_t size) {
+    boost::container::small_vector<ImageId, 16> deleted_images;
+    ForEachImageInRegionGPU(as_id, gpu_addr, size,
+                            [&](ImageId id, Image&) { deleted_images.push_back(id); });
+    for (const ImageId id : deleted_images) {
+        Image& image = slot_images[id];
+        if (False(image.flags & ImageFlagBits::CpuModified)) {
+            image.flags |= ImageFlagBits::CpuModified;
+            if (True(image.flags & ImageFlagBits::Tracked)) {
+                UntrackImage(image, id);
+            }
+        }
+        if (True(image.flags & ImageFlagBits::Remapped)) {
+            continue;
+        }
+        image.flags |= ImageFlagBits::Remapped;
+    }
+}
+''',
+    '''void TextureCache<P>::UnmapGPUMemory(size_t as_id, GPUVAddr gpu_addr, size_t size) {
+    boost::container::small_vector<ImageId, 16> deleted_images;
+    ForEachImageInRegionGPU(as_id, gpu_addr, size,
+                            [&](ImageId id, Image&) { deleted_images.push_back(id); });
+    for (const ImageId id : deleted_images) {
+        Image& image = slot_images[id];
+        if (False(image.flags & ImageFlagBits::CpuModified)) {
+            image.flags |= ImageFlagBits::CpuModified;
+            if (True(image.flags & ImageFlagBits::Tracked)) {
+                UntrackImage(image, id);
+            }
+        }
+        if (True(image.flags & ImageFlagBits::Remapped)) {
+            continue;
+        }
+        image.flags |= ImageFlagBits::Remapped;
+#ifdef PS5_NATIVE
+        // A sampled view is checked on its next TIC lookup, but render
+        // targets can bypass that lookup. Force only attached remapped views
+        // through the normal framebuffer rebinding path on the next draw.
+        bool framebuffer_affected = false;
+        auto& dirty = maxwell3d->dirty.flags;
+        for (const ImageViewId view_id : image.image_view_ids) {
+            if (view_id == NULL_IMAGE_VIEW_ID) {
+                continue;
+            }
+            if (view_id == render_targets.depth_buffer_id) {
+                dirty[Dirty::ZetaBuffer] = true;
+                framebuffer_affected = true;
+            }
+            for (size_t rt = 0; rt < NUM_RT; ++rt) {
+                if (view_id == render_targets.color_buffer_ids[rt]) {
+                    dirty[Dirty::ColorBuffer0 + rt] = true;
+                    framebuffer_affected = true;
+                }
+            }
+        }
+        if (framebuffer_affected) {
+            dirty[Dirty::RenderTargets] = true;
+        }
+#endif
+    }
+}
+''',
+    'F03 F04 remap framebuffer invalidation', allow_preapplied=True)
