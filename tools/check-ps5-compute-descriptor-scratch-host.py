@@ -14,8 +14,9 @@ src = (root / "vendor/encore-active/eden-vulkan/vk_compute_pipeline_cost.cpp").r
 hdr = (root / "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h").read_text()
 raster = (root / "vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp").read_text()
 generator = (root / "tools/prepare-vulkan-port.py").read_text()
-cmake = (root / "headless/CMakeLists.txt").read_text()
-assert "vk_compute_pipeline_cost.cpp" in cmake
+cmake = (root / "headless/vulkan.cmake").read_text()
+assert '"${PORT_BUILD_DIR}/vk_compute_pipeline_cost.cpp"' in cmake
+assert 'set(EDEN_ACTIVE_VULKAN "${PORT_ROOT}/vendor/encore-active/eden-vulkan")' in cmake
 assert 'F01 PS5 per-thread reentrant compute descriptor storage' in generator
 assert 'F01 compute scratch reservation precedes both guest cache mutexes' in generator
 assert "#include <memory>" in src
