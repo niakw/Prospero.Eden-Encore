@@ -73,6 +73,42 @@ def phase_summary(rows: list[dict], phase: str) -> dict:
     }
 
 
+def f01_paired_lock_phases(rows: list[dict]) -> dict:
+    """Compare overlapping sampled lock-hold and Configure time, same draws.
+
+    Configure runs inside PrepareDraw's paired mutexes. Comparing samples
+    across unmatched counts or event families invents a contribution ratio.
+    These are 1-in-16 sampled GPU-owner intervals, NOT full guest-thread
+    blocked time and never a controlled baseline/new-build comparison.
+    """
+    pairs = []
+    for row in rows:
+        held_ns = row.get("phase_ms:pair_held")
+        configure_ns = row.get("phase_ms:pipeline_configure")
+        held_samples = row.get("phase_samples:pair_held")
+        configure_samples = row.get("phase_samples:pipeline_configure")
+        if (held_ns is None or configure_ns is None or
+                held_samples is None or configure_samples is None or
+                held_samples <= 0 or held_samples != configure_samples or
+                held_ns <= 0 or configure_ns < 0 or
+                configure_ns > held_ns * 1.02):
+            continue
+        pairs.append(row)
+    if not pairs:
+        return {"status": "NOT_MEASURED", "matched_windows": 0,
+                "reason": "No comparable positive 1-in-16 pair-held/Configure deltas"}
+    held = sum(r["phase_ms:pair_held"] for r in pairs)
+    configured = sum(r["phase_ms:pipeline_configure"] for r in pairs)
+    samples = sum(r["phase_samples:pair_held"] for r in pairs)
+    return {"status": "SAMPLED_PAIR", "matched_windows": len(pairs),
+            "matched_draw_samples": samples,
+            "pair_held_mean_us": round(held * 1000 / samples, 3),
+            "pipeline_configure_mean_us": round(configured * 1000 / samples, 3),
+            "configure_share_of_sampled_lock_time": round(configured / held, 4),
+            "scope": "same sampled GPU draws; nested times not additive; "
+                     "NOT guest-thread wait or FC27 before-after speedup"}
+
+
 def jit_cache_deltas(log: str) -> dict[int, dict]:
     """Separate scope-tagged, cumulative JIT-cache snapshots per guest core.
 
@@ -427,6 +463,7 @@ def analyze(log: str) -> dict:
                         "guest_dequeue_ms", "guest_ipc_ms", "cache_wait_ms",
                         "jit_ms", "delta_dispatch_calls")
         },
+        "f01_paired_lock_phases": f01_paired_lock_phases(rows),
         "cache_phases": {
             phase: phase_summary(rows, phase)
             for phase in sorted(phases)
@@ -486,6 +523,8 @@ def self_test() -> None:
         "EDEN_GPU_PULLER_SEMAPHORE frame=150 calls=4 ns=500000 active_ns=5000000",
         "EDEN_DEV_GUEST cpu_write_calls=100 cpu_write_ns=10000000 cpu_read_calls=30 cpu_read_ns=3000000",
         "EDEN_GPU_CACHE_PHASE frame=150 phase=pair_wait samples=10 total_ns=1000000",
+        "EDEN_GPU_CACHE_PHASE frame=150 phase=pair_held samples=10 total_ns=5000000",
+        "EDEN_GPU_CACHE_PHASE frame=150 phase=pipeline_configure samples=10 total_ns=4300000",
         "EDEN_GPU_CACHE_PHASE frame=150 phase=guest_write_buffer_wait samples=3 total_ns=200000 max_ns=150000",
         "EDEN_VULKAN_FRAME total=300 frames=150 seconds=5 fps=30 worst_ms=35 late50=0",
         "EDEN_FRAME_PRESSURE frame=300 gpu_full_ms=0 gpu_idle_ms=3800 gpu_dispatch_ms=1050 jit_ms=7",
@@ -498,6 +537,8 @@ def self_test() -> None:
         "EDEN_GPU_PULLER_SEMAPHORE frame=300 calls=6 ns=2300000 active_ns=0",
         "EDEN_DEV_GUEST cpu_write_calls=250 cpu_write_ns=40000000 cpu_read_calls=75 cpu_read_ns=9000000",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=pair_wait samples=14 total_ns=1400000",
+        "EDEN_GPU_CACHE_PHASE frame=300 phase=pair_held samples=14 total_ns=7000000",
+        "EDEN_GPU_CACHE_PHASE frame=300 phase=pipeline_configure samples=14 total_ns=6200000",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=guest_write_buffer_wait samples=7 total_ns=600000 max_ns=270000",
         "EDEN_GUEST_CACHE_DOMAIN frame=150 domain=buffer contended=8 blocked=5 wait_ns=10000000 window_contended=8 window_blocked=5 window_wait_ns=10000000",
         "EDEN_GUEST_CACHE_DOMAIN frame=150 domain=texture contended=4 blocked=4 wait_ns=2000000 window_contended=4 window_blocked=4 window_wait_ns=2000000",
@@ -612,6 +653,22 @@ def self_test() -> None:
     assert result["cache_phases"]["pair_wait"]["samples"] == 4
     assert result["cache_phases"]["pair_wait"]["sampling"] == "gpu_draw_1_in_16_nominal"
     assert result["cache_phases"]["pair_wait"]["mean_us_per_sample"] == 100
+    f01 = result["f01_paired_lock_phases"]
+    assert f01["status"] == "SAMPLED_PAIR" and f01["matched_windows"] == 1
+    assert f01["matched_draw_samples"] == 4
+    assert f01["pair_held_mean_us"] == 500.0
+    assert f01["pipeline_configure_mean_us"] == 475.0
+    assert f01["configure_share_of_sampled_lock_time"] == .95
+    # Missing, mismatched and impossible nested phase samples never become
+    # fabricated evidence of lock-time improvement or FPS changes.
+    missing = analyze(sample.replace("phase=pipeline_configure", "phase=missing"))
+    assert missing["f01_paired_lock_phases"]["status"] == "NOT_MEASURED"
+    mismatch = analyze(sample.replace("phase=pipeline_configure samples=14",
+                                      "phase=pipeline_configure samples=13"))
+    assert mismatch["f01_paired_lock_phases"]["status"] == "NOT_MEASURED"
+    impossible = analyze(sample.replace("pipeline_configure samples=14 total_ns=6200000",
+                                        "pipeline_configure samples=14 total_ns=9000000"))
+    assert impossible["f01_paired_lock_phases"]["status"] == "NOT_MEASURED"
     guest_phase = result["cache_phases"]["guest_write_buffer_wait"]
     assert guest_phase["samples"] == 4
     assert guest_phase["sampling"] == "guest_write_1_in_64"
@@ -712,6 +769,7 @@ def main() -> None:
               report["guest_cpu_write_late50_correlations"])
     else:
         print("GUEST_CPU_WRITE_GROUPS unavailable (no two successive paired guest samples)")
+    print("F01_MATCHED_LOCK_CONFIGURE", report["f01_paired_lock_phases"])
     for name, value in sorted(report["cache_phases"].items(),
                               key=lambda item: (item[1]["sampling"], item[0])):
         print("CACHE_PHASE", name, value)
