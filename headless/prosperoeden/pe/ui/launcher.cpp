@@ -932,8 +932,8 @@ void Launcher::draw_launch(Canvas &c)
         // Refreshes reuse its GL ID: only two case pages are ever allocated.
         const bool inputs_ready = composed_case_face_ready(
             c.textures, launch_case_game_, rear, false);
-        if (page != 0 && !inputs_ready) return;
-        if (!inputs_ready && seconds < 4.0f) return;
+        if (!case_media::PageInputReady(page != 0, inputs_ready, seconds))
+            return;
         const bool refreshing = page != 0;
         attempted = true;
         constexpr float ink_scale = 1.5f;
