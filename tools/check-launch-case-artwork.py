@@ -267,8 +267,8 @@ assert 'glClearColor(17.0f / 255.0f, 34.0f / 255.0f,' in textures_cpp
 assert '53.0f / 255.0f, 1.0f);' in textures_cpp
 assert 'const Cover artwork = scan.empty() ? Cover{} : c.textures.cover(scan, 760.0f);' in draw
 assert 'std::string fallback;' not in draw
-assert "if (!scan.empty()) {" in library
-assert library.index("if (!scan.empty()) {") < library.index("flat_composed_ink(c, game, paper, rear);")
+assert "if (!scan.empty() && !artwork.missing) {" in library
+assert library.index("if (!scan.empty() && !artwork.missing) {") < library.index("flat_composed_ink(c, game, paper, rear);")
 # The non-official fallback footer must never invent regulatory labels,
 # game ratings or scan-style barcodes.
 assert "const Rect footer" in back_fallback, "Back footer removed"
