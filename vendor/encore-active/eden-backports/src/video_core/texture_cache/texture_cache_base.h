@@ -265,6 +265,14 @@ private:
     template <typename Func>
     static void ForEachCPUPage(DAddr addr, size_t size, Func&& func) {
         static constexpr bool RETURNS_BOOL = std::is_same_v<std::invoke_result<Func, u64>, bool>;
+#ifdef PS5_NATIVE
+        // A zero byte region has no pages. An overflowing exclusive end
+        // cannot refer to a valid guest mapping: do not wrap into a huge
+        // page scan (notably addr=0, size=0).
+        if (size == 0 || size - 1 > (std::numeric_limits<u64>::max)() - addr) {
+            return;
+        }
+#endif
         const u64 page_end = (addr + size - 1) >> YUZU_PAGEBITS;
         for (u64 page = addr >> YUZU_PAGEBITS; page <= page_end; ++page) {
             if constexpr (RETURNS_BOOL) {
@@ -280,6 +288,14 @@ private:
     template <typename Func>
     static void ForEachGPUPage(GPUVAddr addr, size_t size, Func&& func) {
         static constexpr bool RETURNS_BOOL = std::is_same_v<std::invoke_result<Func, u64>, bool>;
+#ifdef PS5_NATIVE
+        // A zero byte region has no pages. An overflowing exclusive end
+        // cannot refer to a valid guest mapping: do not wrap into a huge
+        // page scan (notably addr=0, size=0).
+        if (size == 0 || size - 1 > (std::numeric_limits<u64>::max)() - addr) {
+            return;
+        }
+#endif
         const u64 page_end = (addr + size - 1) >> YUZU_PAGEBITS;
         for (u64 page = addr >> YUZU_PAGEBITS; page <= page_end; ++page) {
             if constexpr (RETURNS_BOOL) {
