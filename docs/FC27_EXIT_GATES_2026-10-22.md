@@ -787,3 +787,23 @@ sélecteur, mais l'arrivée des images sur console n'est pas prouvée par la CI.
 
 **Ne pas comptabiliser ces correctifs graphiques du launcher comme une
 clôture des critères moteur F01–F06.**
+
+## 24 octobre — contrôle du fallback de jaquettes et de sa texture GPU
+
+Les corrections de la bibliothèque et du rendu 3D ont été mises à jour sur
+`dev/ps5-sparse-jit` : une jaquette officielle référencée mais devenue
+illisible cède la place à la reconstruction au lieu de montrer seulement le
+papier uni. Si le fichier officiel devient disponible plus tard, il reprend
+la priorité. Une page GPU provisoire, construite avant que toutes les scènes
+locales soient décodées, peut maintenant être réimprimée **sur le même ID de
+texture** après leur arrivée, sans dépasser deux pages pour le titre.
+
+Le contrôle hôte `check-encore-case-media-selection-host.py` couvre la
+politique de rafraîchissement (délai, réussite tardive, absence de boucle
+incomplète), et vérifie les invariants de source de réutilisation du GPU.
+La commande compile les tests C++ hôtes ; **elle ne valide pas, à elle seule,
+le pilote GL PS5 ni les textures observées en jeu**.
+
+Ces changements traitent la présentation des jaquettes du lanceur, **pas**
+les objectifs d'émulation F01–F06, qui restent ouverts. Aucun chiffre de
+fichiers « restant à optimiser » n'est inféré de cette intervention.
