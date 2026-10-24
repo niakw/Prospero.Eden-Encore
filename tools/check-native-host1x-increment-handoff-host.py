@@ -25,6 +25,10 @@ assert 'list(REMOVE_ITEM video_sources host1x/syncpoint_manager.cpp)' in CM
 assert ACT.count("ready_actions.splice(")==1 and ACT.count("ready.action();")==1
 assert ACT.index("ready.action();") < ACT.index("wait_cv.notify_all();", ACT.index("ready.action();"))
 assert "ready_actions" not in PIN
+hs=ACT.index("namespace {\n// Each domain")
+he=ACT.index("\nSyncpointManager::ActionHandle",hs)
+helpers=ACT[hs:he]
+assert "GuestDispatchLocks()" in helpers and "HostDispatchLocks()" in helpers
 def extract(source, name):
     assert source.count(name)==1,name
     a=source.index(name)
@@ -198,7 +202,7 @@ with tempfile.TemporaryDirectory(prefix="encore-host1x-handoff-") as tmp:
                          ("pinned-negative",PIN,"-O0")):
         source=Path(tmp)/(name+".cpp")
         executable=Path(tmp)/name
-        source.write_text(CPP.replace("__NATIVE__",methods(src)))
+        source.write_text(CPP.replace("__NATIVE__", (helpers if name!="pinned-negative" else "") + "\n" + methods(src)))
         result=subprocess.run([compiler,"-std=c++20",opt,"-pthread",
                                "-Wall","-Wextra","-Werror","-fsanitize=undefined",
                                "-fno-sanitize-recover=all",str(source),"-o",str(executable)],

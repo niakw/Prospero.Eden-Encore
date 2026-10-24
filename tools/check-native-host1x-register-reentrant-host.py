@@ -37,10 +37,17 @@ assert PIN.count(old)==ACT.count(new)==1
 increment_old="    std::scoped_lock lk(guard);\n    auto it = action_storage.begin();\n    while (it != action_storage.end()) {\n        if (it->expected_value > new_value) {\n            break;\n        }\n        it->action();\n        it = action_storage.erase(it);\n    }\n    wait_cv.notify_all();"
 increment_new="    // Claim ready callbacks atomically against deregistration without\n    // allocating or executing arbitrary callbacks under the Host1x guard.\n    std::list<RegisteredAction> ready_actions;\n    {\n        std::scoped_lock lk(guard);\n        auto it = action_storage.begin();\n        while (it != action_storage.end() && it->expected_value <= new_value) {\n            ++it;\n        }\n        ready_actions.splice(ready_actions.end(), action_storage,\n                             action_storage.begin(), it);\n    }\n    // Cancellation can prevent an action only before the claim above.\n    // Execute the already-claimed batch without holding the global guard.\n    for (auto& ready : ready_actions) {\n        ready.action();\n    }\n    // Preserve the original contract: guest/host waiters are notified\n    // only after all due callbacks have completed, never before dispatch.\n    wait_cv.notify_all();"
 guest_old="void SyncpointManager::IncrementGuest(u32 syncpoint_id) {\n    Increment(syncpoints_guest[syncpoint_id], wait_guest_cv, guest_action_storage[syncpoint_id]);\n}"
-guest_new="void SyncpointManager::IncrementGuest(u32 syncpoint_id) {\n    // The old global guard serialized callbacks for this id. Keep their\n    // submission order without blocking independent guest syncpoints.\n    static std::array<std::recursive_mutex, 192> dispatch_mutexes{};\n    std::scoped_lock dispatch_lock{dispatch_mutexes[syncpoint_id]};\n    Increment(syncpoints_guest[syncpoint_id], wait_guest_cv, guest_action_storage[syncpoint_id]);\n}"
+guest_new="void SyncpointManager::IncrementGuest(u32 syncpoint_id) {\n    // The old global guard serialized callbacks for this id. Keep their\n    // submission order without blocking independent guest syncpoints.\n    std::scoped_lock dispatch_lock{GuestDispatchLocks()[syncpoint_id]};\n    Increment(syncpoints_guest[syncpoint_id], wait_guest_cv, guest_action_storage[syncpoint_id]);\n}"
 host_old="void SyncpointManager::IncrementHost(u32 syncpoint_id) {\n    Increment(syncpoints_host[syncpoint_id], wait_host_cv, host_action_storage[syncpoint_id]);\n}"
-host_new="void SyncpointManager::IncrementHost(u32 syncpoint_id) {\n    static std::array<std::recursive_mutex, 192> dispatch_mutexes{};\n    std::scoped_lock dispatch_lock{dispatch_mutexes[syncpoint_id]};\n    Increment(syncpoints_host[syncpoint_id], wait_host_cv, host_action_storage[syncpoint_id]);\n}"
-assert PIN.replace(old,new).replace(increment_old,increment_new).replace(guest_old,guest_new).replace(host_old,host_new)==ACT
+host_new="void SyncpointManager::IncrementHost(u32 syncpoint_id) {\n    std::scoped_lock dispatch_lock{HostDispatchLocks()[syncpoint_id]};\n    Increment(syncpoints_host[syncpoint_id], wait_host_cv, host_action_storage[syncpoint_id]);\n}"
+deregister_guest_old="void SyncpointManager::DeregisterGuestAction(u32 syncpoint_id, const ActionHandle& handle) {\n    DeregisterAction(guest_action_storage[syncpoint_id], handle);\n}"
+deregister_guest_new="void SyncpointManager::DeregisterGuestAction(u32 syncpoint_id, const ActionHandle& handle) {\n    // Return only after an action already claimed on this id has finished.\n    // nvhost event teardown relies on this rendezvous for callback lifetime.\n    std::scoped_lock dispatch_lock{GuestDispatchLocks()[syncpoint_id]};\n    DeregisterAction(guest_action_storage[syncpoint_id], handle);\n}"
+deregister_host_old="void SyncpointManager::DeregisterHostAction(u32 syncpoint_id, const ActionHandle& handle) {\n    DeregisterAction(host_action_storage[syncpoint_id], handle);\n}"
+deregister_host_new="void SyncpointManager::DeregisterHostAction(u32 syncpoint_id, const ActionHandle& handle) {\n    std::scoped_lock dispatch_lock{HostDispatchLocks()[syncpoint_id]};\n    DeregisterAction(host_action_storage[syncpoint_id], handle);\n}"
+dispatch_helpers="namespace {\n// Each domain/id serializes cancellation against callback completion.\n// Recursive: a running callback may cancel another pending action on its id.\n// The shared action-list guard is never held while a callback executes.\nstd::array<std::recursive_mutex, 192>& GuestDispatchLocks() {\n    static std::array<std::recursive_mutex, 192> locks{};\n    return locks;\n}\n\nstd::array<std::recursive_mutex, 192>& HostDispatchLocks() {\n    static std::array<std::recursive_mutex, 192> locks{};\n    return locks;\n}\n} // namespace\n"
+assert PIN.replace("namespace Host1x {\n\n","namespace Host1x {\n\n"+dispatch_helpers).replace(old,new).replace(increment_old,increment_new).replace(guest_old,guest_new).replace(host_old,host_new).replace(deregister_guest_old,deregister_guest_new).replace(deregister_host_old,deregister_host_new)==ACT
+
+helpers=dispatch_helpers.replace("std::array<std::recursive_mutex, 192>& HostDispatchLocks()", "[[maybe_unused]] std::array<std::recursive_mutex, 192>& HostDispatchLocks()")
 
 def extract(text,name):
     assert text.count(name)==1,name
@@ -158,7 +165,7 @@ with tempfile.TemporaryDirectory(prefix="encore-host1x-") as tmp:
                            ("pinned_negative",methods(PIN),"-O0")):
         source=Path(tmp)/(name+".cpp")
         exe=Path(tmp)/name
-        source.write_text(CPP.replace("__METHODS__",code))
+        source.write_text(CPP.replace("__METHODS__", (helpers if name!="pinned_negative" else "") + "\n" + code))
         built=subprocess.run([compiler,"-std=c++20",mode,"-Wall","-Wextra",
                               "-Werror","-pthread","-fsanitize=undefined",
                               "-fno-sanitize-recover=all",str(source),"-o",str(exe)],
