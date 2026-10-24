@@ -67,6 +67,7 @@ on:
       - 'tools/check-native-large-buffer-pages-host.py'
       - 'tools/check-native-buffer-pages-wide-probe-host.py'
       - 'tools/check-native-zero-write-tick-fence-host.py'
+      - 'tools/check-native-uniform-mask-rebind-host.py'
       - 'tools/check-native-unmapped-uniform-buffer-host.py'
       - 'tools/check-native-wide-vertex-buffer-range-host.py'
       - 'tools/check-native-wide-index-buffer-range-host.py'
@@ -193,6 +194,7 @@ jobs:
           python3 -B tools/check-native-large-buffer-pages-host.py
           python3 -B tools/check-native-buffer-pages-wide-probe-host.py
           python3 -B tools/check-native-zero-write-tick-fence-host.py
+          python3 -B tools/check-native-uniform-mask-rebind-host.py
           python3 -B tools/check-native-unmapped-uniform-buffer-host.py
           python3 -B tools/check-native-wide-vertex-buffer-range-host.py
           python3 -B tools/check-native-wide-index-buffer-range-host.py

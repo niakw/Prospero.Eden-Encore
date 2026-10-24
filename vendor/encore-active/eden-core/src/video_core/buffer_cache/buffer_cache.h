@@ -423,8 +423,11 @@ void BufferCache<P>::SetUniformBuffersState(const std::array<u32, NUM_STAGES>& m
             channel_state->dirty_uniform_buffers.fill(~u32{0});
             channel_state->uniform_buffer_binding_sizes.fill({});
         }
+        // A repeat pipeline already has the mask: avoid rewriting all stage
+        // entries on every draw while the buffer/texture cache locks are held.
+        channel_state->enabled_uniform_buffer_masks = mask;
     }
-    channel_state->enabled_uniform_buffer_masks = mask;
+    // Equal enabled masks do not imply equal uniform sizes across pipelines.
     channel_state->uniform_buffer_sizes = sizes;
 }
 
