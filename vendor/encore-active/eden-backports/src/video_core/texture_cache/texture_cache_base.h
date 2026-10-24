@@ -264,7 +264,13 @@ private:
     /// Iterate over all page indices in a range
     template <typename Func>
     static void ForEachCPUPage(DAddr addr, size_t size, Func&& func) {
+#ifdef PS5_NATIVE
+        // invoke_result is the trait struct, not the callback return type.
+        // Respect early-stop bool callbacks after the first matching image.
+        static constexpr bool RETURNS_BOOL = std::is_same_v<std::invoke_result_t<Func, u64>, bool>;
+#else
         static constexpr bool RETURNS_BOOL = std::is_same_v<std::invoke_result<Func, u64>, bool>;
+#endif
 #ifdef PS5_NATIVE
         // A zero byte region has no pages. An overflowing exclusive end
         // cannot refer to a valid guest mapping: do not wrap into a huge
@@ -287,7 +293,13 @@ private:
 
     template <typename Func>
     static void ForEachGPUPage(GPUVAddr addr, size_t size, Func&& func) {
+#ifdef PS5_NATIVE
+        // invoke_result is the trait struct, not the callback return type.
+        // Respect early-stop bool callbacks after the first matching image.
+        static constexpr bool RETURNS_BOOL = std::is_same_v<std::invoke_result_t<Func, u64>, bool>;
+#else
         static constexpr bool RETURNS_BOOL = std::is_same_v<std::invoke_result<Func, u64>, bool>;
+#endif
 #ifdef PS5_NATIVE
         // A zero byte region has no pages. An overflowing exclusive end
         // cannot refer to a valid guest mapping: do not wrap into a huge
