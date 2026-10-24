@@ -5,6 +5,7 @@ The unchanged upstream dirty-range walk is checked alongside the new clean
 shortcut. This proves CPU/GPU dirty-range semantics on host, NOT an FPS gain.
 """
 from pathlib import Path
+import hashlib
 import shutil
 import subprocess
 import tempfile
@@ -29,6 +30,36 @@ assert method.index(guard) < method.index("#endif") < method.index("upload_copie
 assert "gpu_modified_ranges.ForEachInRange" in method
 assert "memory_tracker.ForEachUploadRange" in method
 assert "UploadMemory(buffer, total_size_bytes, largest_copy, copies_span);" in method
+# Replay the exact shipping patch on the source BEFORE F01. This catches a
+# syntactically valid-looking patch that does not actually apply to the
+# pinned pre-F01 shipping snapshot.
+guard_block = """#ifdef PS5_NATIVE
+    // F01: the common clean-buffer draw has no ranges to upload. Avoid the
+    // destructive upload-range walk and list rebuild unless CPU dirty bits
+    // are present; never skip real dirty pages or GPU-overlap filtering.
+    if (!memory_tracker.IsRegionCpuModified(device_addr, size)) {
+        return true;
+    }
+#endif
+"""
+assert shipping.count(guard_block) == 1
+baseline = shipping.replace(guard_block, "")
+assert hashlib.sha256(baseline.encode()).hexdigest() == (
+    "bfbac4c35e80488dfb846feab980f4781821f7e98eda6988e467cddd24a372aa")
+with tempfile.TemporaryDirectory(prefix="encore-f01-patch-replay-") as temp:
+    stage = Path(temp)
+    target = stage / "src/video_core/buffer_cache/buffer_cache.h"
+    target.parent.mkdir(parents=True)
+    target.write_text(baseline)
+    patchfile = stage / "clean-upload.patch"
+    patchfile.write_text(patch)
+    for args in (["git", "apply", "--check", str(patchfile)],
+                 ["git", "apply", str(patchfile)]):
+        result = subprocess.run(args, cwd=stage, capture_output=True,
+                                text=True, timeout=15)
+        assert result.returncode == 0, (args, result.stderr[-2500:])
+    assert target.read_text() == shipping, "shipping patch replay differs"
+print("ENCORE_F01_PINNED_BUFFER_PATCH_REPLAY_PASS")
 # This test extracts the selected native method. Testing a stand-in algorithm
 # without compiling the actual maintained source would not prove selection.
 prologue = r"""
