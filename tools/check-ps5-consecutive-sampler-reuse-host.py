@@ -9,6 +9,13 @@ root = Path(__file__).resolve().parents[1]
 native = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
 memo_marker = "    // Sampler table mapping is stable while the paired guest cache locks are"
 assert native.count(memo_marker) == 1
+# This is the source compiled by the native PS5 Vulkan CMake target; do not
+# measure an inactive generator or an unselected standalone copy.
+cmake=(root/"headless/vulkan.cmake").read_text()
+assert 'file(COPY ' in cmake and 'EDEN_ACTIVE_VULKAN' in cmake
+assert 'vk_graphics_pipeline' in cmake and '_cost.cpp' in cmake
+assert 'PORT_BUILD_DIR' in cmake
+
 begin = native.index(memo_marker)
 end = native.index("    const auto config_stage{[&](size_t stage)", begin)
 memo = native[begin:end]
@@ -31,10 +38,15 @@ assert native.index("texture_cache.UpdateRenderTargets(false)") > fill_end
 assert native.index("texture_cache.CheckFeedbackLoop(") > fill_end
 
 program = r"""
+#include <algorithm>
 #include <array>
+#include <atomic>
 #include <cassert>
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <mutex>
+#include <thread>
 #include <utility>
 #include <vector>
 using u32 = std::uint32_t;
@@ -47,9 +59,19 @@ struct Info { std::vector<Descriptor> texture_descriptors; };
 struct TexCache {
     unsigned lookups{};
     u32 generation_offset{100};
+    bool expensive_lookup{};
+    std::uint64_t pressure{};
     VideoCommon::SamplerId GetSamplerId(u32 handle, bool compute) {
         assert(!compute);
         ++lookups;
+        if (expensive_lookup) {
+            // Fixed synthetic cost on BOTH paths. Never represent this as a
+            // measurement of real GPU/driver cache lookup latency.
+            std::uint64_t value = handle + generation_offset;
+            for (unsigned i = 0; i < 1024; ++i)
+                value = (value * 1664525ULL + 1013904223ULL) ^ (value >> 7);
+            pressure ^= value;
+        }
         return handle + generation_offset;
     }
 };
@@ -87,6 +109,49 @@ static CaseResult configure_reference(const std::array<Info, 2>& stages,
         }
     }
     return result;
+}
+// Host-only same-draw lock A/B using native-extracted descriptor loops.
+// Multiple medians and alternating order reduce scheduler/cache-warm-up bias.
+struct LockBudget {std::uint64_t held_ns{}, wait_ns{}; unsigned lookups{};};
+using Clock = std::chrono::steady_clock;
+using Config = CaseResult(*)(const std::array<Info,2>&,TexCache&);
+static LockBudget lock_budget(Config config, const std::array<Info,2>& stages) {
+    TexCache cache{};
+    cache.expensive_lookup = true;
+    std::mutex mutex;
+    std::atomic<bool> running{true};
+    std::atomic<unsigned> contender_entries{};
+    std::thread contender([&] {
+        while (running.load(std::memory_order_relaxed)) {
+            {std::lock_guard lk(mutex);++contender_entries;}
+            std::this_thread::yield();
+        }
+    });
+    LockBudget result{};
+    constexpr unsigned draws = 2048;
+    for (unsigned i = 0; i < draws; ++i) {
+        const auto started=Clock::now();
+        mutex.lock();
+        const auto entered=Clock::now();
+        const auto descriptors=config(stages,cache);
+        const auto finished=Clock::now();
+        mutex.unlock();
+        result.wait_ns+=static_cast<std::uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(entered-started).count());
+        result.held_ns+=static_cast<std::uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(finished-entered).count());
+        assert(descriptors.samplers==std::vector<u32>{107,107,109,107,109,109,107});
+    }
+    running.store(false,std::memory_order_relaxed);
+    contender.join();
+    result.lookups=cache.lookups;
+    // The waiter is a real concurrent mutex contender, not a virtual cost.
+    assert(contender_entries.load(std::memory_order_relaxed)>0);
+    return result;
+}
+static std::uint64_t median_held(std::array<std::uint64_t,5> ns) {
+    std::sort(ns.begin(),ns.end());
+    return ns[2];
 }
 int main() {
     TexCache cache{};
@@ -146,6 +211,42 @@ int main() {
     auto refreshed = configure(stages, cache);
     assert(cache.lookups == 11);
     assert((refreshed.samplers == std::vector<u32>{207,209,207}));
+
+    // Lock budget before/after for the SAME seven-descriptor workload.
+    // This is an executed C++ synthetic-cost host stress, NOT measured FPS.
+    std::array<std::uint64_t,5> old_hold{},current_hold{};
+    std::array<std::uint64_t,5> old_wait{},current_wait{};
+    for (unsigned round=0;round<5;++round) {
+        const auto run_old = [&] {
+            auto m=lock_budget(configure_reference,stages);
+            assert(m.lookups==2048*7);
+            old_hold[round]=m.held_ns;old_wait[round]=m.wait_ns;
+        };
+        const auto run_new = [&] {
+            auto m=lock_budget(configure,stages);
+            assert(m.lookups==2048*2);
+            current_hold[round]=m.held_ns;current_wait[round]=m.wait_ns;
+        };
+        if (round%2) {run_new();run_old();}
+        else {run_old();run_new();}
+    }
+    const auto old_median=median_held(old_hold);
+    const auto new_median=median_held(current_hold);
+    assert(old_median>new_median);
+    // Guard against fixture regressions, not a claim of real PS5 gains.
+    assert(new_median*10 < old_median*9);
+    std::sort(old_wait.begin(),old_wait.end());
+    std::sort(current_wait.begin(),current_wait.end());
+    std::printf("F01_NATIVE_SOURCE_LOCK_BUDGET draws=2048 descriptors=7 "
+                "prior_calls=14336 maintained_calls=4096 "
+                "prior_held_ns=%llu maintained_held_ns=%llu "
+                "prior_wait_ns=%llu maintained_wait_ns=%llu "
+                "scope=host_synthetic_lookup_and_real_contender\n",
+                static_cast<unsigned long long>(old_median),
+                static_cast<unsigned long long>(new_median),
+                static_cast<unsigned long long>(old_wait[2]),
+                static_cast<unsigned long long>(current_wait[2]));
+    std::puts("F01_NATIVE_SELECTION_SOURCE_PASS ps5_real_latency_unmeasured");
 }
 """
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
