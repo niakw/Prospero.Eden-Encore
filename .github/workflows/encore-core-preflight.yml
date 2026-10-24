@@ -202,6 +202,7 @@ jobs:
           python3 -B tools/check-native-gpu-queue-stop-fastpath-host.py
           python3 -B tools/check-native-gpu-fence-release-publication-host.py
           python3 -B tools/check-native-gpu-composite-syncpoint-host.py
+          python3 -B tools/check-native-host1x-register-reentrant-host.py
           python3 -B tools/check-native-vulkan-renderer-handoff-host.py
           python3 -B tools/check-native-gpu-worker-restart-drain-host.py
           python3 -B tools/audit-cloud-worklist.py
