@@ -500,8 +500,8 @@ assert (paper_l, width - paper_r) == (7.0, 7.0)
 assert paper_h == 704.0 and paper_top + paper_h == box_h - paper_bottom
 lib_sleeve = library.split("void flat_retail_sleeve(", 1)[1].split(
     "std::string controller_profile_name(", 1)[0]
-assert "const Rect paper{shell.x + side, shell.y + top," in lib_sleeve
-assert "shell.w - 2.0f * side, shell.h - 2.0f * top" in lib_sleeve
+assert "const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top," in lib_sleeve
+assert "shell.w - side, shell.h - 2.0f * top" in lib_sleeve
 assert "const Cover artwork = c.textures.cover(" in lib_sleeve
 assert "scan, std::max(paper.w, paper.h) * texture_scale);" in lib_sleeve
 assert "const float other_x" not in lib_sleeve
@@ -522,8 +522,8 @@ shelf_height = 346.0
 shelf_width = shelf_height * (454.0 / 730.0)
 paper_side = shelf_width * (7.0 / 454.0)
 paper_top = shelf_height * (13.0 / 730.0)
-actual_paper_aspect = (shelf_width - 2*paper_side) / (shelf_height - 2*paper_top)
-assert abs(actual_paper_aspect - 440.0/704.0) < 1.e-6
+actual_paper_aspect = (shelf_width - paper_side) / (shelf_height - 2*paper_top)
+assert abs(actual_paper_aspect - 447.0/704.0) < 1.e-6
 assert "const float sleeve_w = sleeve_h * kCaseShellAspect;" in library
 assert "const Cover front_scan = game.box_front.empty() ? Cover{} :" not in library
 assert "list.push_transform(1.0f, x + sleeve_w * 0.5f," in library
@@ -560,12 +560,12 @@ for height in (247.0, 346.0, 807.0):
     width = height * (454.0/730.0)
     side = width * 7.0/454.0
     top = height * 13.0/730.0
-    assert abs((width - 2.0*side)/(height - 2.0*top) - 440/704) < 1.e-6
+    assert abs((width - side)/(height - 2.0*top) - 447/704) < 1.e-6
 
 # The 3D caps run the SAME 13px plastic skirt on either projected face.
 assert "float from_cap = min(v_st.y, 1.0 - v_st.y)" in shader
 assert "max(rim_intensity, cap_intensity)" in shader
-assert "shell.w - 2.0f * side, shell.h - 2.0f * top" in lib_sleeve
+assert "shell.w - side, shell.h - 2.0f * top" in lib_sleeve
 assert "const float opening_x = rear ? shell.x : shell.x + shell.w - side;" in lib_sleeve
 
 assert "c.list.bordered_rect(shell, radius" not in lib_sleeve
