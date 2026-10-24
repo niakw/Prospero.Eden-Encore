@@ -979,3 +979,42 @@ Clang/GCC en O0/O2, avec et sans `PS5_NATIVE`, UBSan activé
 (8 combinaisons). Ce test **ne prouve pas** la compilation complète du
 moteur, ni le retour du HUD en jeu. La CI globale, le rejeu intégral,
 le build PS5 et la qualification FC27 restent requis. F04 reste ouvert.
+
+
+## 24 octobre — F03/F04, invalidation des vues remappées
+
+**Anomalie de cache vérifiée dans les sources, qualification PS5 ouverte.**
+Après `TextureCache::UnmapGPUMemory`, l'ancienne image peut porter
+`ImageFlagBits::Remapped` alors que les octets de sa table TIC n'ont pas
+changé. `VisitImageView` conservait alors une vue déjà résolue sur cette
+image et appelait `PrepareImageView` dessus. Ce chemin ne vérifiait pas
+le drapeau `Remapped`, même si la recherche de nouvelles images sait
+explicitement ignorer les images remappées.
+
+La réparation **sur PS5 seulement** contrôle ce drapeau avant de
+réutiliser une vue mise en cache. Elle recrée une vue si le backing
+guest est de nouveau résident ; sinon elle enregistre une vue nulle et
+invalide le cache de décision de synchronisation associé. Les vues
+de type buffer ne passent pas par ce contrôle d'image, et les vues
+normales non remappées ne sont pas recréées.
+
+- Sources : `vendor/encore-active/eden-backports/src/video_core/texture_cache/texture_cache.h`
+  et `vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h`.
+- Rejeu : `headless/backports/eden-ps5-texture-remapped-view-rebind.patch`
+  après les autres patches de texture, avec validateur dans
+  `tools/apply-eden-backports.sh`.
+- Générateur : transformation stricte de la version shipping en version
+  Vulkan, en conservant le cas supplémentaire des associations
+  de canal absentes, déjà géré par ce backend.
+- Régression : `tools/check-ps5-remapped-texture-view-host.py`,
+  inscrite en prévalidation et au workflow de build ; compile la
+  méthode Vulkan extraite et vérifie vue normale, remap résident,
+  remap indisponible puis rétabli, table TIC relue, mapping absent,
+  vues buffer, et branche non-PS5.
+- Empreintes source/patch et inventaire mis à jour.
+
+La correspondance textuelle de la transformation shipping → Vulkan
+a été vérifiée. **La nouvelle régression n'a pas encore de résultat
+CI confirmé**, pas plus que la compilation native du moteur ou un
+test du HUD FC27. F03 et F04 demeurent ouverts, sans déclaration de
+résolution des textures observées en jeu.
