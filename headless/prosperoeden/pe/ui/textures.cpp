@@ -47,14 +47,23 @@ void Textures::clear_case_pages()
 std::uint32_t Textures::render_case_page(const gfx::DrawList& drawing,
                                           const gfx::Font* font,
                                           std::uint32_t font_texture,
-                                          int width, int height)
+                                          int width, int height,
+                                          std::uint32_t existing)
 {
-    // A single title may have one composed front and one composed back.
-    // Refuse arbitrary dimensions or unbounded repeat allocations.
+    // A single title owns at most two live pages (front/back). Refreshing
+    // existing ink must never allocate a third page or change its GL ID.
     if (width <= 0 || width > 1024 || height <= 0 || height > 1536 ||
-        case_pages_.size() >= 2 || drawing.instances().empty())
+        drawing.instances().empty())
         return 0;
-    const std::uint32_t ink = batch_.create_texture(width, height, nullptr);
+    const bool refresh = existing != 0;
+    if (refresh) {
+        if (std::find(case_pages_.begin(), case_pages_.end(), existing) ==
+            case_pages_.end()) return 0;
+    } else if (case_pages_.size() >= 2) {
+        return 0;
+    }
+    const std::uint32_t ink = refresh ? existing :
+        batch_.create_texture(width, height, nullptr);
     if (!ink) return 0;
     GLint old_fbo = 0;
     GLint old_viewport[4]{};
@@ -66,7 +75,7 @@ std::uint32_t Textures::render_case_page(const gfx::DrawList& drawing,
     GLuint framebuffer = 0;
     glGenFramebuffers(1, &framebuffer);
     if (!framebuffer) {
-        batch_.delete_texture(ink);
+        if (!refresh) batch_.delete_texture(ink);
         return 0;
     }
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -98,10 +107,10 @@ std::uint32_t Textures::render_case_page(const gfx::DrawList& drawing,
     else glDisable(GL_SCISSOR_TEST);
     glDeleteFramebuffers(1, &framebuffer);
     if (!complete) {
-        batch_.delete_texture(ink);
+        if (!refresh) batch_.delete_texture(ink);
         return 0;
     }
-    case_pages_.push_back(ink);
+    if (!refresh) case_pages_.push_back(ink);
     return ink;
 }
 
