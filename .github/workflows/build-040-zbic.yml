@@ -86,6 +86,16 @@ jobs:
           # The derivation fails closed when no R revision exists.
           fetch-depth: 0
 
+      # Fail on source/ownership drift before apt, SDK staging, or shader builds.
+      # These pure-Python witnesses need only the versioned checkout and must
+      # not modify the pinned vendor tree or any cached dependency archive.
+      - name: Early native source ownership and cache replay gate
+        if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
+        run: |
+          set -euo pipefail
+          python3 -B tools/check-vendor-consolidation-debt.py
+          python3 -B tools/check-vendored-eden-cache-rebase-host.py
+
       - name: Install build toolchain
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         run: |
