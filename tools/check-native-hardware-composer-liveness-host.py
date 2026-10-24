@@ -311,13 +311,17 @@ int main() {
     paced_hud_consumer->pending.push_back(frame(9002, 1));
     assert(paced.ComposeLocked(&speed, paced_display, paced_gpu) == 1);
     assert((paced_gpu.composed.back() == std::vector<int>{9001, 9002}));
-    assert(paced_game_consumer->acquires == steady_ticks / 2 + 1);
+    // acquire attempts also count the twelve expected NoBufferAvailable
+    // polls while the guest is paused; successful game frames do not.
+    assert(paced_game_consumer->acquires ==
+           steady_ticks / 2 + no_game_ticks + 1);
     assert(paced_hud_consumer->releases == steady_ticks + no_game_ticks);
     assert(paced_gpu.wait_count == steady_ticks + no_game_ticks + 1);
-    std::printf("F05_COMPOSITOR_CADENCE_REPLAY_PASS guest_game=%d hud=%d paused=%d "
+    std::printf("F05_COMPOSITOR_CADENCE_REPLAY_PASS game_success=%d "
+                "game_poll_attempts=%u hud_success=%d paused_polls=%d "
                 "recovery=1 scope=source_extracted_host\\n",
-                steady_ticks / 2 + 1, steady_ticks + no_game_ticks + 1,
-                no_game_ticks);
+                steady_ticks / 2 + 1, paced_game_consumer->acquires,
+                steady_ticks + no_game_ticks + 1, no_game_ticks);
     std::puts("HARDWARE_COMPOSER_FULL_LIVENESS_PASS");
 }
 """
