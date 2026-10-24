@@ -51,6 +51,18 @@ int main() {
     assert(categorized[0] && *categorized[0] == indexed[3]);
     assert(categorized[1] && *categorized[1] == indexed[2]);
     assert(categorized[2] && *categorized[2] == indexed[1]);
+    const std::vector<std::string> missing_fanart{
+        "/cache/box-scene-2-ABCD.tga", "/cache/box-scene-3-ABCD.tga"};
+    const auto role_stable = BackScenes(hero, icon, missing_fanart);
+    assert(!role_stable[0]);
+    assert(role_stable[1] && *role_stable[1] == missing_fanart[0]);
+    assert(role_stable[2] && *role_stable[2] == missing_fanart[1]);
+    const std::vector<std::string> nlib_fallback{
+        "/cache/box-scene-2-ABCD.tga", "nlib/independent-scene.tga"};
+    const auto filled = BackScenes(hero, icon, nlib_fallback);
+    assert(filled[0] && *filled[0] == nlib_fallback[1]);
+    assert(filled[1] && *filled[1] == nlib_fallback[0]);
+    assert(!filled[2]);
 
     // Only independent screenshot sources may appear on the back.
     // Never insert an app icon as a synthetic second picture.

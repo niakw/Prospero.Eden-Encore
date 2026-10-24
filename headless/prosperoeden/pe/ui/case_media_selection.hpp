@@ -54,16 +54,24 @@ inline std::array<const std::string*, 3> BackScenes(
     // These canonical local filenames are built by EnsureRetailCase; unlike
     // arbitrary Nlib screenshots they identify three actual media categories.
     // Category matching must not allocate three temporary strings per draw.
+    // Keep indexed media in its OWN slot even when other categories are absent:
+    // [0] fanart full-paper backdrop, [1] title capture, [2] gameplay.
     constexpr std::array<std::string_view, 3> kSceneMarkers{
         "/box-scene-1-", "/box-scene-2-", "/box-scene-3-"};
-    for (const std::string_view marker : kSceneMarkers) {
-        for (const auto& image : screenshots)
-            if (image.find(marker) != std::string::npos) {
-                accept(image);
-                break;
-            }
+    for (std::size_t category = 0; category < kSceneMarkers.size(); ++category) {
+        for (const auto& image : screenshots) {
+            if (image.find(kSceneMarkers[category]) == std::string::npos ||
+                image == featured || image == cover) continue;
+            selected[category] = &image;
+            break;
+        }
     }
-    for (const auto& image : screenshots) accept(image);
+    // Existing Nlib captures can fill missing roles, but an indexed game-title
+    // screenshot must never masquerade as fanart merely because fanart failed.
+    for (const auto& image : screenshots) {
+        if (image.find("/box-scene-") != std::string::npos) continue;
+        accept(image);
+    }
     return selected;
 }
 

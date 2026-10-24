@@ -766,3 +766,24 @@ L'analyseur `analyze-fc27-stutter.py` expose aussi la part
 **F01 demeure ouvert** : aucun gain de contention FC27 après ce changement
 n'a été constaté. Cette révision demande seulement la vérification CI et
 la compilation native, pas de test utilisateur sur PS5.
+
+
+## 24 octobre — papier unifié et rôles LaunchBox du dos manquant
+
+Le dos reconstitué utilise les vrais médias distincts du catalogue embarqué :
+`Fanart - Background` (fond de la partie haute), `Screenshot - Game Title`
+(illustration de titre) et `Screenshot - Gameplay` (scène inférieure).
+Aucun n'est substitué par la jaquette avant ou par une case noire. Les
+catégories absentes laissent voir **un seul papier opaque** commun à la
+bibliothèque et à la texture 3D. Le front utilise un crop UV `cover`
+uniforme sans écrasement indépendant de sa largeur.
+
+Le dos en bibliothèque atteint le pli droit sans bande plastique rajoutée ;
+son ouverture reste à gauche. Les impressions officielles front/back restent
+prioritaires sur la reconstruction. Le catalogue LaunchBox v6 est généré lors
+du build natif et journalise séparément ses trois taux de couverture.
+La composition est vérifiée par le rendu OpenGL réel et les tests hôte du
+sélecteur, mais l'arrivée des images sur console n'est pas prouvée par la CI.
+
+**Ne pas comptabiliser ces correctifs graphiques du launcher comme une
+clôture des critères moteur F01–F06.**
