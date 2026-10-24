@@ -7,6 +7,7 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 native = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
+pinned = (root / "vendor/sources/eden/src/video_core/renderer_vulkan/vk_graphics_pipeline.cpp").read_text()
 memo_marker = "    // Sampler table mapping is stable while the paired guest cache locks are"
 assert native.count(memo_marker) == 1
 # This is the source compiled by the native PS5 Vulkan CMake target; do not
@@ -28,6 +29,15 @@ loop_end = native.index("        if constexpr (Spec::has_images) {", loop_begin)
 loop = native[loop_begin:loop_end]
 assert loop.count("views.push_back({handle.first});") == 1
 assert loop.count("samplers.push_back(resolve_sampler(handle.second));") == 1
+# The reference implementation is the exact pinned historical C++ descriptor
+# loop, not a rewritten reference approximating the former behavior.
+pinned_begin=pinned.index("        for (const auto& desc : info.texture_descriptors) {")
+pinned_end=pinned.index("        if constexpr (Spec::has_images) {",pinned_begin)
+pinned_loop=pinned[pinned_begin:pinned_end]
+assert pinned_loop.count("VideoCommon::SamplerId sampler{texture_cache.GetSamplerId(handle.second, false)};")==1
+assert pinned_loop.count("samplers.push_back(sampler);")==1
+assert pinned_loop.count("views.push_back({handle.first});")==1
+
 
 fill_guard = "    if (!views.empty()) {"
 assert native.count(fill_guard) == 1
@@ -99,14 +109,13 @@ static CaseResult configure(const std::array<Info, 2>& stages,
 static CaseResult configure_reference(const std::array<Info, 2>& stages,
                                       TexCache& texture_cache) {
     CaseResult result;
+    auto& views = result.views;
+    auto& samplers = result.samplers;
+    const auto read_handle = [](const auto& desc, u32 index) {
+        return desc.handles.at(index);
+    };
     for (const auto& info : stages) {
-        for (const auto& desc : info.texture_descriptors) {
-            for (u32 index = 0; index < desc.count; ++index) {
-                const auto [view, sampler] = desc.handles.at(index);
-                result.views.push_back({view});
-                result.samplers.push_back(texture_cache.GetSamplerId(sampler, false));
-            }
-        }
+""" + pinned_loop + r"""
     }
     return result;
 }
