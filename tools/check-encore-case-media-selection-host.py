@@ -17,7 +17,9 @@ assert 'if (painting) reconstructed_cover(c, *painting, r);' in renderer
 assert 'reconstructed_paper(c, paper);' in renderer
 assert 'scene(game.cover,' not in renderer
 assert 'glClearColor' not in renderer
-assert 'case_media::BackScenes(hero, game.cover, game.screenshots)' in renderer
+assert 'const auto shots = case_media::BackScenes(' in renderer
+assert 'if (painting) reconstructed_cover(c, *painting, r);' in renderer
+assert 'scene(game.cover,' not in renderer
 source = r"""
 #include <cassert>
 #include <string>
