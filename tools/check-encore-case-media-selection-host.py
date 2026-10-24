@@ -12,7 +12,23 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 header = root / "headless/prosperoeden/pe/ui/case_media_selection.hpp"
 renderer = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
+launcher = (root / "headless/prosperoeden/pe/ui/launcher.cpp").read_text()
+textures_header = (root / "headless/prosperoeden/pe/ui/textures.hpp").read_text()
+textures_source = (root / "headless/prosperoeden/pe/ui/textures.cpp").read_text()
 assert '#include "pe/ui/case_media_selection.hpp"' in renderer
+# A missing retail-file path must fall back to composition, not empty ink.
+assert 'if (!scan.empty() && !artwork.missing)' in renderer
+assert '(scan.empty() || artwork.missing)' in launcher
+# An existing provisional page is rendered IN PLACE, and never counted as a
+# third allocation. It stays valid if a transient FBO creation fails.
+assert 'std::uint32_t existing = 0' in textures_header
+assert 'const bool refresh = existing != 0;' in textures_source
+assert 'refresh ? existing :' in textures_source
+assert 'if (!refresh) case_pages_.push_back(ink);' in textures_source
+assert 'if (!refresh) batch_.delete_texture(ink);' in textures_source
+assert 'provisional = !inputs_ready;' in launcher
+assert 'PageInputReady(page != 0, inputs_ready, seconds)' in launcher
+assert 'paper_w, paper_h, page);' in launcher
 assert 'if (painting) reconstructed_cover(c, *painting, r);' in renderer
 assert 'reconstructed_paper(c, paper);' in renderer
 assert 'scene(game.cover,' not in renderer
@@ -32,6 +48,13 @@ source = r"""
 #include "pe/ui/case_media_selection.hpp"
 int main() {
     using namespace pe::ui::case_media;
+    // Cold async media is given four seconds; a provisional GPU page
+    // refreshes ONLY when every known texture is actually ready.
+    assert(!PageInputReady(false, false, 3.99f));
+    assert(PageInputReady(false, false, 4.0f));
+    assert(PageInputReady(false, true, 0.1f));
+    assert(!PageInputReady(true, false, 50.0f));
+    assert(PageInputReady(true, true, 4.2f));
     const std::string hero = "hero.tga";
     const std::string icon = "icon.tga";
     const std::vector<std::string> shots{
