@@ -1100,7 +1100,8 @@ start = source.index("bool BufferCache<P>::SynchronizeBuffer(")
 end = source.index("\ntemplate <class P>", start)
 method = source[start:end]
 assert "if (!memory_tracker.IsRegionCpuModified(device_addr, size))" in method
-assert method.index("IsRegionCpuModified(") < method.index("upload_copies.clear();")
+assert method.index("#ifdef PS5_NATIVE") < method.index("IsRegionCpuModified(")
+assert method.index("IsRegionCpuModified(") < method.index("#endif") < method.index("upload_copies.clear();")
 assert "memory_tracker.ForEachUploadRange(device_addr, size" in method
 assert "gpu_modified_ranges.ForEachInRange" in method
 assert "UploadMemory(buffer, total_size_bytes, largest_copy, copies_span);" in method
