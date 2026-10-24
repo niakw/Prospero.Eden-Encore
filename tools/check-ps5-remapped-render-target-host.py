@@ -12,7 +12,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 relative = "src/video_core/texture_cache/texture_cache.h"
 src = (ROOT / "vendor/encore-active/eden-backports" / relative).read_text()
-native = (ROOT / "vendor/encore-active/eden-vulkan/vulkan-cache" / relative).read_text()
+native = (ROOT / "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text()
 gen = (ROOT / "tools/prepare-vulkan-port.py").read_text()
 apply = (ROOT / "tools/apply-eden-backports.sh").read_text()
 patch = ROOT / "headless/backports/eden-ps5-texture-remap-target-invalidation.patch"
