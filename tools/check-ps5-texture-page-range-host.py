@@ -22,7 +22,9 @@ assert active.count(trait) == 2
 assert pinned.count(guard) == 0
 
 def method(text, name):
-    start = text.index("    static void " + name + "(")
+    # The dependent Func template parameter belongs to this declaration.
+    # Extract the preceding template line as well as the method body.
+    start = text.index("    template <typename Func>\n    static void " + name + "(")
     end = text.index("\n    }\n", start) + len("\n    }\n")
     return text[start:end]
 
