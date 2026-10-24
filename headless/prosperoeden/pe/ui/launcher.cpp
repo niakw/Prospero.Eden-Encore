@@ -976,6 +976,10 @@ void Launcher::draw_launch(Canvas &c)
                  use_composed ? "composed" : (scan.empty() ? "fallback" : "retail"),
                  visible_texture);
     }
+    // One fully opaque paper sheet underneath either face. A narrow genuine
+    // scan and the first frames of an async composition can never reveal
+    // transparent black or molded plastic through its upper/lower margins.
+    c.list.case_face(0, face, angle, back, Color::rgb(0x112235));
     if (use_composed) {
         // OpenGL framebuffer textures have bottom-left origin. Flip Y once,
         // then let the existing 3D case-face shader project both printed
@@ -999,8 +1003,6 @@ void Launcher::draw_launch(Canvas &c)
             paper_uv.x = back ? 1.0f - paper_uv.w : 0.0f;
         }
         c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv);
-    } else {
-        c.list.case_face(0, face, angle, back, Color::rgb(0x112235));
     }
     // Depth-bearing top/bottom plastic caps remain in painter order above
     // the scan. Their front/rear refractive outline is separately lit by

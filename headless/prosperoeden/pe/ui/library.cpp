@@ -323,6 +323,9 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
 
     const std::string& scan = rear ? game.box_back : game.box_front;
     if (!scan.empty()) {
+        // Original prints can be narrower than the molded paper sleeve.
+        // The single opaque stock layer remains visible in those margins.
+        reconstructed_paper(c, paper);
         // Both printed faces are shown in full: never crop artwork titles,
         // upper banners, age marks or the bottom publisher information.
         const Cover artwork = c.textures.cover(
@@ -342,14 +345,9 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
             c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},
                          Color::rgb(0xffffff,
                                     tween::cubic_out(artwork.age / 0.22f)));
-        } else {
-            // A path alone does not prove the scan is readable. During an
-            // asynchronous load (or after a failed decode), show the same
-            // metadata composition instead of a blank plastic rectangle.
-            // A known retail scan still decoding shows only one intact
-            // opaque paper sheet, never an invented mixed retail/fallback.
-            reconstructed_paper(c, paper);
         }
+        // When a known physical scan is still decoding, the paper already
+        // painted above remains. Do not paint a second local placeholder.
     } else {
         // Match the launcher's 440x704 compositing pass exactly. This also
         // keeps the fixed top-left logo and bottom rear print in proportion.
