@@ -12,7 +12,8 @@ rels = ["src/video_core/texture_cache/texture_cache_base.h","src/video_core/text
 shas = ["8a2318cc725ceb1b0ab3547ed4b4d99441709906","640bd38407b772d52701c22b81b3189adb17bed8"]
 patches = ["headless/backports/eden-ps5-texture-null-view-remap.patch",
            "headless/backports/eden-ps5-feedback-loop-view-key.patch",
-           "headless/backports/eden-ps5-feedback-loop-no-depth-fastpath.patch"]
+           "headless/backports/eden-ps5-feedback-loop-no-depth-fastpath.patch",
+           "headless/backports/eden-ps5-feedback-loop-serial-fastpath.patch"]
 apply = (root / "tools/apply-eden-backports.sh").read_text()
 for patch in patches:
     assert apply.count('apply_one "$root/' + patch + '"') == 1, patch
@@ -38,6 +39,11 @@ with tempfile.TemporaryDirectory(prefix="eden-r315-feedback-view-") as folder:
     end=source.index("\ntemplate <class P>", start)
     fn=source[start:end]
     assert "&& identical_bound_views" in fn
+    assert "if (same_feedback_serials && last_feedback_view_ids.size() == views.size())" in fn
+    assert fn.index("same_feedback_serials &&") < fn.index("last_feedback_view_ids[i] != views[i].id")
+    counter_anchor = "            if (last_feedback_view_ids[i] != views[i].id) {"
+    assert fn.count(counter_anchor) == 1
+    fn = fn.replace(counter_anchor, "            ++view_key_comparisons;\n" + counter_anchor)
     assert fn.index("if (views.empty())") < fn.index("if ((rt_active_mask & (1u << NUM_RT)) == 0)")
     assert fn.index("if ((rt_active_mask & (1u << NUM_RT)) == 0)") < fn.index("identical_bound_views")
     assert fn.index("last_feedback_view_ids.push_back") < fn.index("if (rt_active_mask == 0)")
@@ -48,6 +54,7 @@ with tempfile.TemporaryDirectory(prefix="eden-r315-feedback-view-") as folder:
 #include <cstdint>
 #include <span>
 #include <vector>
+inline unsigned view_key_comparisons=0;
 using u32=std::uint32_t;
 using u64=std::uint64_t;
 using ImageViewId=int;
@@ -81,6 +88,22 @@ template<class P> struct TextureCache {
 """
     epilogue=r"""
 int main() {
+#ifdef PS5_NATIVE
+    TextureCache<Dummy> generation{};
+    generation.render_targets.depth_buffer_id=30;
+    generation.slot_image_views[1].image_id=77;
+    const ImageViewInOut key_sample[]={{1}};
+    generation.CheckFeedbackLoop(key_sample);
+    assert(view_key_comparisons==0);
+    ++generation.render_targets_serial;
+    generation.CheckFeedbackLoop(key_sample);
+    assert(view_key_comparisons==0); // RT mismatch skips the old key scan
+    ++generation.texture_bindings_serial;
+    generation.CheckFeedbackLoop(key_sample);
+    assert(view_key_comparisons==0); // TSC mismatch also skips it
+    generation.CheckFeedbackLoop(key_sample);
+    assert(view_key_comparisons==1); // still verify identical views for reuse
+#endif
     TextureCache<Dummy> tc{};
     tc.render_targets.depth_buffer_id=30; // same image via a *different* view
     tc.slot_image_views[1].image_id=77;

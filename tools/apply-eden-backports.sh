@@ -1006,6 +1006,27 @@ PYNODEPTH
 }
 apply_one "$root/headless/backports/eden-ps5-feedback-loop-no-depth-fastpath.patch" "$eden/.encore-backport-ps5-feedback-loop-no-depth-fastpath.sha256" validate_ps5_no_depth_feedback_fastpath
 
+# F01: avoid scanning prior view IDs when RT/descriptor generations differ.
+# The original per-draw feedback barrier policy is unchanged.
+validate_ps5_feedback_serial_fastpath() {
+python3 - "$eden" <<'PYF01SERIAL'
+from pathlib import Path
+import sys
+src=(Path(sys.argv[1])/"src/video_core/texture_cache/texture_cache.h").read_text()
+start=src.index("void TextureCache<P>::CheckFeedbackLoop(")
+end=src.index("\ntemplate <class P>", start)
+fn=src[start:end]
+assert "const bool same_feedback_serials =" in fn
+assert "if (same_feedback_serials && last_feedback_view_ids.size() == views.size())" in fn
+assert fn.index("same_feedback_serials &&") < fn.index("last_feedback_view_ids[i] != views[i].id")
+assert "&& identical_bound_views" in fn
+assert "runtime.BarrierFeedbackLoop();" in fn
+print("F01 feedback unchanged serial vs changed serial view scan PASS")
+PYF01SERIAL
+}
+apply_one "$root/headless/backports/eden-ps5-feedback-loop-serial-fastpath.patch" "$eden/.encore-backport-ps5-feedback-loop-serial-fastpath.sha256" validate_ps5_feedback_serial_fastpath
+
+
 # R320: skip an immediate repeated valid TIC read only in a read-only pass.
 validate_ps5_adjacent_valid_texture_view_reuse() {
 python3 - "$eden" <<'PYADJACENT'
