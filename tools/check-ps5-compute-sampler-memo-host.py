@@ -85,10 +85,12 @@ int main() {
     for (size_t i = 0; i < next.size(); ++i)
         assert(next[i].value == 42000 + handles[i]);
     // Same hash bucket with distinct sampler handles cannot alias IDs.
-    const auto colliding = Run(cache, {0,16,32,48,0});
+    // A braced initializer contains commas: never place it inside assert().
+    const std::vector<u32> colliding_handles{0,16,32,48,0};
+    const auto colliding = Run(cache, colliding_handles);
     assert(cache.calls == 19);
     for (size_t i = 0; i < colliding.size(); ++i)
-        assert(colliding[i].value == 42000 + std::vector<u32>{0,16,32,48,0}[i]);
+        assert(colliding[i].value == 42000 + colliding_handles[i]);
     // A descriptor-free compute dispatch does not look up a sampler.
     const int before = cache.calls;
     assert(Run(cache, {}).empty());
