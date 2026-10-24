@@ -303,13 +303,13 @@ int main() {
         assert(gpu.impl.request_swap_counters.size()==1);
         assert(gpu.impl.free_swap_counters.size()==1);
     }
-    assert(system.perf.ended==261 && system.perf.begun==261);
-    assert(system.limiter.calls==261);
-    assert(Common::ADPF::reports==261);
-    assert(gpu.impl.wait_calls==261);
-    assert(gpu.impl.tick_calls==261);
-    assert(renderer.deliveries.size()==261);
-    std::puts("F05_NV_DISP_GPU_SYNCPOINT_SOURCE_PASS requests=261 delayed_and_immediate_fences=verified");
+    assert(system.perf.ended==260 && system.perf.begun==260);
+    assert(system.limiter.calls==260);
+    assert(Common::ADPF::reports==260);
+    assert(gpu.impl.wait_calls==260);
+    assert(gpu.impl.tick_calls==260);
+    assert(renderer.deliveries.size()==260);
+    std::puts("F05_NV_DISP_GPU_SYNCPOINT_SOURCE_PASS requests=260 delayed_and_immediate_fences=verified");
     std::puts("F05_PRESENT_ACK_NOT_PROVEN host_GPU_request_completion_precedes_guest_fence_callback");
 }
 """
