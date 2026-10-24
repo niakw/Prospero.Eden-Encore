@@ -807,3 +807,30 @@ le pilote GL PS5 ni les textures observées en jeu**.
 Ces changements traitent la présentation des jaquettes du lanceur, **pas**
 les objectifs d'émulation F01–F06, qui restent ouverts. Aucun chiffre de
 fichiers « restant à optimiser » n'est inféré de cette intervention.
+
+
+## 24 octobre — F01, chemin CPU propre du cache de buffers
+
+**Sous-chemin corrigé (F01 reste INVESTIGATION).** Dans la source Eden
+maintenue, `BufferCache<P>::SynchronizeBuffer` retourne directement un succès
+de cache lorsque `memory_tracker.IsRegionCpuModified(device_addr, size)` est
+faux. Le parcours coûteux des plages `ForEachUploadRange` et la construction
+des copies sont alors évités. Pour une plage modifiée, le chemin antérieur
+reste intact, y compris l'exclusion des octets possédés par le GPU, la
+consommation des marques CPU et l'appel éventuel à `UploadMemory`.
+
+- Source modifiée : `vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h`.
+- Rejeu natif : `headless/backports/eden-ps5-buffer-clean-upload-fastpath.patch`,
+  intégré à `tools/apply-eden-backports.sh` et inscrit dans le manifeste avec
+  la taille, l'empreinte du source actif et le hash du patch.
+- Test source-extrait : `tools/check-ps5-buffer-clean-upload-host.py`, appelé
+  par la prévalidation et le workflow de compilation native. Il vérifie les
+  chemins CPU propres/modifiés, le chevauchement GPU et la plage nulle.
+- Un harnais C++ local équivalent a compilé et exécuté ces cas en O0 et O2
+  avec UBSan. Le résultat des workflows GitHub et l'effet réel sur les
+  attentes `buffer mutex` de FC27 ne sont **pas** encore établis.
+
+**Ne pas clôturer F01** sur ce seul raccourci : les durées de contention
+relevées en jeu exigent toujours un benchmark avant/après avec le même profil,
+un rejeu concurrent des invalidations et la compilation native confirmée.
+Les critères F02–F06 ne changent pas d'état et F07 reste la qualification PS5.
