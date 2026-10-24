@@ -1822,6 +1822,13 @@ void BufferCache<P>::TouchBuffer(Buffer& buffer, BufferId buffer_id) noexcept {
 
 template <class P>
 bool BufferCache<P>::SynchronizeBuffer(Buffer& buffer, DAddr device_addr, u32 size) {
+#ifdef PS5_NATIVE
+    // F01: skip rebuilding upload ranges for CPU-clean buffers. All dirty
+    // ranges, GPU-owned overlaps and writeback ordering use the old path.
+    if (!memory_tracker.IsRegionCpuModified(device_addr, size)) {
+        return true;
+    }
+#endif
     upload_copies.clear();
     u64 total_size_bytes = 0;
     u64 largest_copy = 0;
