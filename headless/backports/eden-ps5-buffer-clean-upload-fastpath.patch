@@ -1,6 +1,7 @@
 --- a/src/video_core/buffer_cache/buffer_cache.h
 +++ b/src/video_core/buffer_cache/buffer_cache.h
-@@ -1740,6 +1740,12 @@ bool BufferCache<P>::SynchronizeBuffer(Buffer& buffer, DAddr device_addr, u32 size) {
+@@ -1740,4 +1740,10 @@
+ bool BufferCache<P>::SynchronizeBuffer(Buffer& buffer, DAddr device_addr, u32 size) {
 +    // F01: the common clean-buffer draw has no ranges to upload. Avoid the
 +    // destructive upload-range walk and list rebuild unless CPU dirty bits
 +    // are present; never skip real dirty pages or GPU-overlap filtering.
