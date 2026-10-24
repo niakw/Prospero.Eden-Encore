@@ -2,6 +2,7 @@
 """Execute selected graphics sampler memo across stages with bounded conflicts."""
 from pathlib import Path
 import shutil
+import re
 import subprocess
 import tempfile
 
@@ -285,4 +286,11 @@ with tempfile.TemporaryDirectory(prefix="encore-gfx-memo-") as temp:
                     "scope=host_mock")
         assert expected in result.stdout, (opt, result.stdout)
         print(expected, opt, flush=True)
-        print("GPU_PER_DRAW_SAMPLER_MEMO_PASS", opt)
+        budget = re.search(r"^F01_NATIVE_SOURCE_LOCK_BUDGET .*?$",
+                           result.stdout, re.MULTILINE)
+        assert budget, (opt, result.stdout[-2400:])
+        selection = "F01_NATIVE_SELECTION_SOURCE_PASS ps5_real_latency_unmeasured"
+        assert selection in result.stdout, (opt, result.stdout[-1400:])
+        print(budget.group(0), opt, flush=True)
+        print(selection, opt, flush=True)
+        print("GPU_PER_DRAW_SAMPLER_MEMO_PASS", opt, flush=True)
