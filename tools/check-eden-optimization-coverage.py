@@ -252,7 +252,16 @@ for e in entries:
 assert sum(e["disposition"]=="preexisting_generated_or_inactive_unit"
            for e in entries)==19
 status=Counter(e["disposition"] for e in entries)
-assert len(owners)==STATE["owned_code_count_at_snapshot"],("source inventory changed",len(owners),STATE["owned_code_count_at_snapshot"])
+# The baseline remains a dated historical inventory. New source owners must
+# be explicit, traceable, present in the current tree and handled in the
+# source-review ledger, rather than silently rewriting the snapshot count.
+post_snapshot=set(STATE.get("post_snapshot_owned_additions", []))
+assert len(post_snapshot)==len(STATE.get("post_snapshot_owned_additions", []))
+assert post_snapshot<=owners, ("untracked post-snapshot source", sorted(post_snapshot-owners))
+assert post_snapshot<=handled, ("post-snapshot source lacks review", sorted(post_snapshot-handled))
+assert len(owners)==STATE["owned_code_count_at_snapshot"]+len(post_snapshot), (
+    "source inventory changed", len(owners),
+    STATE["owned_code_count_at_snapshot"],len(post_snapshot))
 assert len(owners)==len(handled)+len(owners-handled)
 print("EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS",
       "owned_code="+str(len(owners)),
