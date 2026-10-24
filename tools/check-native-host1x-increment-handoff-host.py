@@ -134,7 +134,7 @@ int main(){
  std::atomic<unsigned> claimed{},cancelled{},progress{};
  // RegisterAction inserts equal thresholds at the front (LIFO).
  // Register the counted callback first, so the blocker becomes first.
- auto ready=m.RegisterGuestAction(5,1,[&]{++claimed;});
+ m.RegisterGuestAction(5,1,[&]{++claimed;});
  m.RegisterGuestAction(5,1,[&]{
     std::unique_lock lk(mutex);
     entered=true;
