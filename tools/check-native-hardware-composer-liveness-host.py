@@ -276,7 +276,7 @@ android::Status MockConsumer::QueueNative(android::BufferItem queued) {
     const s32 swap_interval=queued.swap_interval;
     const android::Fence fence=queued.fence;
     const bool record_buffer_history=false;
-    unsigned sticky_transform{};
+    [[maybe_unused]] unsigned sticky_transform{};
     const unsigned sticky_transform_=0;
     {
         std::scoped_lock lock{core->mutex};
