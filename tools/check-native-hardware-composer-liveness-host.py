@@ -246,6 +246,78 @@ int main() {
     assert(composer.ComposeLocked(&speed, display, display_gpu) == 1);
     assert(display_gpu.composed.size() == 3);
     assert(display_gpu.wait_count == 5);
+
+    // F05 sustained forward-progress: real source-extracted compositor,
+    // one 30Hz guest game producer and one independent 60Hz HUD producer.
+    // This is an ownership/cadence replay, not a PS5 timing measurement.
+    HardwareComposer paced;
+    Display paced_display;
+    Nvidia::Devices::nvdisp_disp0 paced_gpu;
+    auto paced_game_consumer = std::make_shared<MockConsumer>();
+    auto paced_hud_consumer = std::make_shared<MockConsumer>();
+    auto paced_game = std::make_shared<Layer>();
+    paced_game->consumer_id = 37;
+    paced_game->buffer_item_consumer = paced_game_consumer;
+    auto paced_hud = std::make_shared<Layer>();
+    paced_hud->consumer_id = 38;
+    paced_hud->z_index = 1;
+    paced_hud->is_overlay = true;
+    paced_hud->buffer_item_consumer = paced_hud_consumer;
+    paced_display.stack.layers = {paced_game, paced_hud};
+    constexpr int steady_ticks = 240;
+    int last_game = -1;
+    for (int tick = 0; tick < steady_ticks; ++tick) {
+        if (tick % 2 == 0) {
+            last_game = 1000 + tick;
+            paced_game_consumer->pending.push_back(frame(last_game, 2));
+        }
+        paced_hud_consumer->pending.push_back(frame(2000 + tick, 1));
+        assert(paced.ComposeLocked(&speed, paced_display, paced_gpu) == 1);
+        assert(paced_gpu.composed.size() == static_cast<std::size_t>(tick + 1));
+        assert((paced_gpu.composed.back() ==
+                std::vector<int>{last_game, 2000 + tick}));
+        assert(paced_game_consumer->acquires == static_cast<unsigned>(tick / 2 + 1));
+        assert(paced_game_consumer->releases == static_cast<unsigned>(tick / 2));
+        assert(paced_hud_consumer->acquires == static_cast<unsigned>(tick + 1));
+        assert(paced_hud_consumer->releases == static_cast<unsigned>(tick));
+        assert(paced_gpu.wait_count == tick + 1);
+        assert(paced.m_frame_number == static_cast<u64>(tick + 1));
+    }
+    assert(paced_game_consumer->pending.empty());
+    assert(paced_hud_consumer->pending.empty());
+
+    // The guest stops supplying new game images during pause/half-time.
+    // One still-owned two-vsync game frame can be reused ONCE; after
+    // release it must never reappear in an overlay-only composition.
+    constexpr int no_game_ticks = 12;
+    const int prior_game = last_game;
+    const std::size_t prior_composites = paced_gpu.composed.size();
+    for (int tick = 0; tick < no_game_ticks; ++tick) {
+        paced_hud_consumer->pending.push_back(frame(3000 + tick, 1));
+        assert(paced.ComposeLocked(&speed, paced_display, paced_gpu) == 1);
+        assert(paced_gpu.composed.size() == prior_composites + tick + 1);
+        const auto& layers = paced_gpu.composed.back();
+        assert(layers.back() == 3000 + tick);
+        for (int handle : layers)
+            assert(handle != prior_game); // released at the first paused tick
+        assert(paced_gpu.wait_count == steady_ticks + tick + 1);
+    }
+    assert(!paced.m_framebuffers[37].is_acquired);
+    assert(paced_game_consumer->releases == steady_ticks / 2);
+    assert(paced_hud_consumer->releases == steady_ticks + no_game_ticks - 1);
+
+    // Recover after the pause without resurrecting the old scan or HUD.
+    paced_game_consumer->pending.push_back(frame(9001, 2));
+    paced_hud_consumer->pending.push_back(frame(9002, 1));
+    assert(paced.ComposeLocked(&speed, paced_display, paced_gpu) == 1);
+    assert((paced_gpu.composed.back() == std::vector<int>{9001, 9002}));
+    assert(paced_game_consumer->acquires == steady_ticks / 2 + 1);
+    assert(paced_hud_consumer->releases == steady_ticks + no_game_ticks);
+    assert(paced_gpu.wait_count == steady_ticks + no_game_ticks + 1);
+    std::printf("F05_COMPOSITOR_CADENCE_REPLAY_PASS guest_game=%d hud=%d paused=%d "
+                "recovery=1 scope=source_extracted_host\\n",
+                steady_ticks / 2 + 1, steady_ticks + no_game_ticks + 1,
+                no_game_ticks);
     std::puts("HARDWARE_COMPOSER_FULL_LIVENESS_PASS");
 }
 """
