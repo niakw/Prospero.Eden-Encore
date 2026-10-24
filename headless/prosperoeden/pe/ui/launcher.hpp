@@ -264,6 +264,10 @@ class Launcher
     std::uint32_t launch_composed_back_ = 0;
     bool launch_composed_front_attempted_ = false;
     bool launch_composed_back_attempted_ = false;
+    // A fallback printed before late async media becomes available can be
+    // overwritten once, on the SAME texture, without allocating another page.
+    bool launch_composed_front_provisional_ = false;
+    bool launch_composed_back_provisional_ = false;
     // Retry only a bounded number of times after a transient GL/FBO failure.
     // A failed first allocation must not permanently suppress the missing side.
     unsigned launch_composed_front_failures_ = 0;
