@@ -26,6 +26,8 @@ assert 'const bool refresh = existing != 0;' in textures_source
 assert 'refresh ? existing :' in textures_source
 assert 'if (!refresh) case_pages_.push_back(ink);' in textures_source
 assert 'if (!refresh) batch_.delete_texture(ink);' in textures_source
+# Failed scan state must remain sticky during a scheduled async retry.
+assert '(it->second.loaded || it->second.failed_loads != 0)' in textures_source
 assert 'provisional = !inputs_ready;' in launcher
 assert 'PageInputReady(page != 0, inputs_ready, seconds)' in launcher
 assert 'paper_w, paper_h, page);' in launcher
