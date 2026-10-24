@@ -48,10 +48,10 @@ assert "flat_front_fallback(c, game, paper);" in lib
 # The old floating aspect-fit art and its helper have been removed.
 front_fallback = lib.split("void flat_front_fallback(", 1)[1].split(
     "void flat_back_fallback(", 1)[0]
-assert 'const std::string& painting = !game.hero.empty() ? game.hero :' in front_fallback
-assert 'if (!painting.empty()) {' in front_fallback
-assert 'cover_crop(c, painting, r, 0.0f, 0.0f);' in front_fallback
-assert 'c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));' in front_fallback
+assert 'const auto* painting = case_media::FrontPaper(' in front_fallback
+assert 'if (painting) reconstructed_cover(c, *painting, r);' in front_fallback
+assert 'reconstructed_paper(c, paper);' in lib
+assert 'kReconstructedPaperRGB = 0x112235' in lib
 assert 'const Rect logo{r.x, r.y, logo_w,' in front_fallback
 assert "fit_fallback_art(" not in front_fallback
 assert "case_art_contain(c, game.cover" not in front_fallback
