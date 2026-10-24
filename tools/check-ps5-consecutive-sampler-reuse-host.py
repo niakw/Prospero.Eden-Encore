@@ -212,18 +212,26 @@ int main() {
     assert(cache.lookups == 11);
     assert((refreshed.samplers == std::vector<u32>{207,209,207}));
 
-    // Lock budget before/after for the SAME seven-descriptor workload.
-    // This is an executed C++ synthetic-cost host stress, NOT measured FPS.
+    // Restore the identical cross-stage seven-descriptor workload after
+    // collision/generation correctness tests changed 'stages' above.
+    std::array<Info,2> budget_stages{};
+    budget_stages[0].texture_descriptors = {
+        {{{1,7},{2,7},{3,9},{4,7},{5,9}},5},
+    };
+    budget_stages[1].texture_descriptors = {
+        {{{6,9},{7,7}},2},
+    };
+    // Real mutex contender with a fixed synthetic GetSamplerId cost.
     std::array<std::uint64_t,5> old_hold{},current_hold{};
     std::array<std::uint64_t,5> old_wait{},current_wait{};
     for (unsigned round=0;round<5;++round) {
         const auto run_old = [&] {
-            auto m=lock_budget(configure_reference,stages);
+            auto m=lock_budget(configure_reference,budget_stages);
             assert(m.lookups==2048*7);
             old_hold[round]=m.held_ns;old_wait[round]=m.wait_ns;
         };
         const auto run_new = [&] {
-            auto m=lock_budget(configure,stages);
+            auto m=lock_budget(configure,budget_stages);
             assert(m.lookups==2048*2);
             current_hold[round]=m.held_ns;current_wait[round]=m.wait_ns;
         };
