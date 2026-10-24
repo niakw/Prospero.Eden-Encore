@@ -140,7 +140,7 @@ static LockBudget lock_budget(Config config, const std::array<Info,2>& stages) {
             std::chrono::duration_cast<std::chrono::nanoseconds>(entered-started).count());
         result.held_ns+=static_cast<std::uint64_t>(
             std::chrono::duration_cast<std::chrono::nanoseconds>(finished-entered).count());
-        assert(descriptors.samplers==std::vector<u32>{107,107,109,107,109,109,107});
+        assert((descriptors.samplers==std::vector<u32>{107,107,109,107,109,109,107}));
     }
     running.store(false,std::memory_order_relaxed);
     contender.join();
@@ -266,7 +266,7 @@ with tempfile.TemporaryDirectory(prefix="encore-gfx-memo-") as temp:
     path.write_text(program)
     for opt in ("-O0", "-O2"):
         exe = Path(temp) / ("sampler" + opt)
-        subprocess.run([compiler, "-std=c++20", opt, "-Wall", "-Wextra",
+        subprocess.run([compiler, "-std=c++20", opt, "-pthread", "-Wall", "-Wextra",
                         "-Werror", "-fsanitize=undefined", "-fno-sanitize-recover=all",
                         str(path), "-o", str(exe)], check=True, timeout=45)
         result = subprocess.run([str(exe)], check=True, timeout=20,
