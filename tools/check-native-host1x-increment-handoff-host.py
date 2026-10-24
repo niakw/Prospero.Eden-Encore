@@ -147,6 +147,9 @@ int main(){
  m.RegisterHostAction(7,1,[&]{++independent;});
  m.IncrementHost(7);
  m.WaitHost(7,1);
+ std::fprintf(stderr,"N04_DIAG independent=%u claimed=%u cancelled=%u guest5_pending=%zu host7_pending=%zu\n",
+              independent.load(),claimed.load(),cancelled.load(),
+              m.guest_action_storage[5].size(),m.host_action_storage[7].size());
  assert(independent==1 && claimed==0 && cancelled==0);
  {
     std::lock_guard lk(mutex);
