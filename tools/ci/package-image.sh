@@ -61,24 +61,24 @@ if (( prepare_only )); then
 fi
 rm -f -- "$output"
 log="$output.log"
-# MkPFS stamps PFS inodes with time.time(). Freeze that clock for release packaging instead of
-# patching the pinned third-party checkout. The epoch matches make-dist.py's fixed ZIP timestamp
-# (2026-01-01 00:00:00 UTC), making equal title folders produce byte-identical FFPFSC images.
+# MkPFS pfs.py uses time.time() for every on-disk PFS inode timestamp.
+# Fix the clock IN THE CLI INTERPRETER before importing MkPFS. Relying on
+# sitecustomize.py alone proved ineffective in native CI: two packs of the
+# same title differed by a one-second inode timestamp (offset 0x10200).
+# Do not alter the pinned third-party checkout or zero image bytes post-pack.
+# The epoch matches make-dist.py ZIP metadata (2026-01-01 00:00:00 UTC).
 release_epoch=1767225600
-time_shim=$(mktemp -d "${TMPDIR:-/tmp}/encore-mkpfs-time.XXXXXX")
-cleanup_time_shim() { rm -rf "$time_shim"; }
-trap cleanup_time_shim EXIT
-cat > "$time_shim/sitecustomize.py" <<'PYTIME'
-import os, time
-_epoch = int(os.environ['SOURCE_DATE_EPOCH'])
-time.time = lambda: float(_epoch)
-PYTIME
+mkpfs_bootstrap='import os, runpy, time
+epoch = int(os.environ["SOURCE_DATE_EPOCH"])
+time.time = lambda: float(epoch)
+assert int(time.time()) == epoch
+runpy.run_module("mkpfs", run_name="__main__")'
 # Wrapped-folder mode (MkPFS's maximum-compatibility .ffpfsc layout), verified after writing.
 # Release packaging favors byte reproducibility over parallel compression throughput. Linux
 # multiprocessing can otherwise expose hash/order differences that do not affect validity but do
 # make two packs of the same staged app hash differently. A fixed hash seed plus one compression
 # worker removes that variable; this does not alter the staged title contents.
-if ! SOURCE_DATE_EPOCH="$release_epoch" PYTHONHASHSEED=0 PYTHONPATH="$time_shim:$checkout" "$python" -m mkpfs pack folder --no-adjust-output-file-extension --version PS5 --cpu-count 1 --verify \
+if ! SOURCE_DATE_EPOCH="$release_epoch" PYTHONHASHSEED=0 PYTHONPATH="$checkout" "$python" -c "$mkpfs_bootstrap" pack folder --no-adjust-output-file-extension --version PS5 --cpu-count 1 --verify \
         "$folder" "$output" > "$log" 2>&1; then
     tail -40 "$log" >&2
     exit 1
