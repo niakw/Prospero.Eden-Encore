@@ -13,7 +13,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 p = "src/video_core/texture_cache/texture_cache.h"
 shipping = (root / "vendor/encore-active/eden-backports" / p).read_text()
-native = (root / "vendor/encore-active/eden-vulkan/vulkan-cache" / p).read_text()
+native = (root / "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text()
 installer = (root / "tools/apply-eden-backports.sh").read_text()
 generator = (root / "tools/prepare-vulkan-port.py").read_text()
 patch = root / "headless/backports/eden-ps5-texture-remapped-view-rebind.patch"
