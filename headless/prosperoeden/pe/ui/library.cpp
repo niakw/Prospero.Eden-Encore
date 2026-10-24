@@ -191,6 +191,7 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
         front ? *front : game.cover, game.cover, game.screenshots);
     const std::string* first = shots[0];
     const std::string* second = shots[1];
+    const std::string* third = shots[2];
 
     // A back has ONE printed background, optionally with a second distinct
     // scene laid directly on the ink. No rectangular black panel/matte
@@ -203,6 +204,10 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
     if (second)
         reconstructed_cover(c, *second,
                             {r.x, r.y, left_w - gap, top_h});
+    if (third)
+        reconstructed_cover(c, *third,
+                            {r.x, r.y + top_h + gap, r.w,
+                             dynamic_h - top_h - gap});
     // Scene-wide ink glaze: covers the WHOLE upper sheet, not a label box.
     if (first)
         c.list.gradient_rect({r.x, r.y, r.w, dynamic_h}, 0.0f,
@@ -302,8 +307,10 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
     // printed red spine: front touches its LEFT hinge, back its RIGHT hinge.
     // The ONLY exposed clear-plastic vertical opening is the opposite edge.
     // Front/back both use the same paper height; do not add a second frame.
-    const Rect paper{shell.x + side, shell.y + top,
-                     shell.w - 2.0f * side, shell.h - 2.0f * top};
+    // Back paper reaches the RIGHT fold: plastic opening only on the LEFT.
+    // Front paper mirrors it and meets the LEFT spine.
+    const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top,
+                     shell.w - side, shell.h - 2.0f * top};
     if (shadow > 0.0f)
         c.list.shadow({shell.x + 2.0f, shell.y + 7.0f, shell.w - 4.0f,
                        shell.h - 1.0f}, radius, 21.0f * shadow,
@@ -322,6 +329,9 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
                              Color::rgb(0x0e0a19, 0.97f));
 
     const std::string& scan = rear ? game.box_back : game.box_front;
+    // One continuous opaque sheet beneath BOTH original and reconstructed
+    // printing. The back's right edge must never reveal molded plastic.
+    reconstructed_paper(c, paper);
     if (!scan.empty()) {
         // Original prints can be narrower than the molded paper sleeve.
         // The single opaque stock layer remains visible in those margins.
@@ -450,6 +460,8 @@ bool composed_case_face_ready(Textures& textures, const Game& game,
         front ? *front : game.cover, game.cover, game.screenshots);
     if (shots[0] && !ready(*shots[0], paper_w)) return false;
     if (shots[1] && !ready(*shots[1], std::max(left_w - gap, top_h)))
+        return false;
+    if (shots[2] && !ready(*shots[2], paper_w))
         return false;
     return true; // legitimate all-ink page with no bitmap sources
 }

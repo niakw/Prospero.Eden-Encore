@@ -35,24 +35,33 @@ inline const std::string* FrontAlternate(
     return !cover.empty() && cover != featured ? &cover : nullptr;
 }
 
-// Back: only independent screenshots. Never reinsert the front scene or
-// the cover/icon as a floating panel with an opaque black matte. If no
-// independent scenic asset exists, show the full paper ink and footer.
-inline std::array<const std::string*, 2> BackScenes(
+// Rear source priorities: LaunchBox fanart, game-title screenshot, gameplay.
+// Missing categories use distinct Nlib screenshots; the cover/front is never
+// injected as a floating square. Results reference owned game metadata.
+inline std::array<const std::string*, 3> BackScenes(
     const std::string& featured, const std::string& cover,
     const std::vector<std::string>& screenshots) noexcept
 {
-    std::array<const std::string*, 2> selected{nullptr, nullptr};
+    std::array<const std::string*, 3> selected{nullptr, nullptr, nullptr};
     const auto accept = [&](const std::string& image) {
-        if (image.empty() || image == featured || image == cover ||
-            (selected[0] && *selected[0] == image)) return;
-        if (!selected[0]) selected[0] = &image;
-        else if (!selected[1]) selected[1] = &image;
+        if (image.empty() || image == featured || image == cover) return;
+        for (const auto* existing : selected)
+            if (existing && *existing == image) return;
+        for (auto& entry : selected)
+            if (!entry) { entry = &image; return; }
     };
-    for (const auto& shot : screenshots) {
-        accept(shot);
-        if (selected[1]) break;
+    // These canonical local filenames are built by EnsureRetailCase; unlike
+    // arbitrary Nlib screenshots they identify three actual media categories.
+    for (int category = 1; category <= 3; ++category) {
+        const std::string marker =
+            "/box-scene-" + std::to_string(category) + "-";
+        for (const auto& image : screenshots)
+            if (image.find(marker) != std::string::npos) {
+                accept(image);
+                break;
+            }
     }
+    for (const auto& image : screenshots) accept(image);
     return selected;
 }
 

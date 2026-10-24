@@ -142,6 +142,7 @@ assert "bool composed_case_face_ready(Textures& textures, const Game& game," in 
 assert 'const auto shots = case_media::BackScenes(' in library_src
 assert 'if (shots[0] && !ready(*shots[0], paper_w)) return false;' in library_src
 assert 'if (shots[1] && !ready(*shots[1], std::max(left_w - gap, top_h)))' in library_src
+assert 'if (shots[2] && !ready(*shots[2], paper_w))' in library_src
 assert 'prepare_case_page(false);' in draw
 assert 'prepare_case_page(true);' in draw
 assert 'Color::rgb(0x08111d, 0.45f)' in library_src
@@ -217,7 +218,7 @@ assert "c.list.image(artwork.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f}," in libr
 assert "Rect fitted = paper;" in library and "if (source > target)" in library
 assert "paper_uv.x = back ? 1.0f - paper_uv.w : 0.0f;" in draw
 assert "flat_retail_sleeve(c, game, sleeve, false, 0.24f);" in library
-assert "const Rect paper{shell.x + side, shell.y + top," in library
+assert "const Rect paper{shell.x + (rear ? side : 0.0f), shell.y + top," in library
 assert "flat_back_fallback(c, game, paper);" in library
 assert "flat_front_fallback(c, game, paper);" in library
 # No retail face: compose the real game images and description into a
@@ -245,6 +246,8 @@ assert 'case_art_contain(' not in library
 assert 'c.list.hgradient_rect(' not in back_fallback
 assert 'reconstructed_cover(c, *first, {r.x, r.y, r.w, dynamic_h});' in back_fallback
 assert 'if (second)' in back_fallback
+assert 'if (third)' in back_fallback
+assert 'const std::string* third = shots[2];' in back_fallback
 assert 'if (first)' in back_fallback
 assert 'kReconstructedPaperRGB = 0x112235' in library
 assert 'uv.w = target / source;' in library and 'uv.h = source / target;' in library
@@ -288,7 +291,7 @@ workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
 packager = (root / "tools/package-headless-native.sh").read_text()
 assert "Nintendo Switch" in indexer
 assert "def candidates(items, limit=6):" in indexer
-assert "flat spine candidates" in indexer or "two gameplay scenes" in indexer
+assert "fanart" in indexer and "title_screen" in indexer and "gameplay" in indexer
 assert "Box - Front" in indexer and "Box - Back" in indexer
 assert "gamesdb.launchbox-app.com/Metadata.zip" in indexer
 assert "if len(matching) != 1:" in indexer
