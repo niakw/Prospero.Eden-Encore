@@ -1133,3 +1133,28 @@ print("F03/F04 zero-length and overflowing texture CPU/GPU page scans PASS")
 PYTEXTUREPAGES
 }
 apply_one "$root/headless/backports/eden-ps5-texture-page-range-guards.patch" "$eden/.encore-backport-ps5-texture-page-range-guards.sha256" validate_ps5_texture_page_range_guards
+
+
+# F04: a TIC whose base-layer offset exceeds its GPU address cannot
+# resolve to a valid guest image. Do not truncate layer strides to u32
+# or dereference an absent subresource after a transient remap.
+validate_ps5_texture_tic_layer_bounds() {
+python3 - "$eden" <<'PYTEXTURETIC'
+from pathlib import Path
+import sys
+source = (Path(sys.argv[1]) / "src/video_core/texture_cache/texture_cache.h").read_text()
+start = source.index("ImageViewId TextureCache<P>::CreateImageView(")
+end = source.index("\ntemplate <class P>", start)
+method = source[start:end]
+assert method.count("static_cast<u64>(config.BaseLayer()) * info.layer_stride") == 1
+assert method.index("if (layer_offset > config.Address())") < method.index(
+    "FindOrInsertImage(info, image_gpu_addr)")
+assert method.count("const auto base = image.TryFindBase(config.Address());") == 1
+assert method.index("if (!base)") < method.index("ImageViewInfo view_info(config, base->layer)")
+assert method.count("#ifdef PS5_NATIVE") == 2
+assert method.count("#else") == method.count("#endif") == 2
+assert "const SubresourceBase base = image.TryFindBase(config.Address()).value();" in method
+print("F04 TIC layer and optional-subresource guards PASS")
+PYTEXTURETIC
+}
+apply_one "$root/headless/backports/eden-ps5-texture-tic-layer-bounds.patch" "$eden/.encore-backport-ps5-texture-tic-layer-bounds.sha256" validate_ps5_texture_tic_layer_bounds
