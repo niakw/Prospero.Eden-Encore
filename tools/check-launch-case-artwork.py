@@ -61,10 +61,10 @@ draw = launcher.split("void Launcher::draw_launch(", 1)[1].split(
 )[0]
 for fragment in (
     "const std::string& scan = back ? launch_box_back_ : launch_box_front_;",
-    "const Cover artwork = c.textures.cover(",
+    "const Cover artwork = scan.empty() ? Cover{} : c.textures.cover(scan, 760.0f);",
     "c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv);",
     "c.list.case_spine(side_strip, angle, case_depth,",
-    "launch_screenshots_.front()",
+    "composed_case_face_ready(c.textures, launch_case_game_",
     "const Rect physical{374.0f, 126.0f, 454.0f, 730.0f};",
     "c.textures.brand()",
     "motion() > 0.0f",
@@ -87,7 +87,7 @@ for fragment in (
     "composed_case_face_ready(c.textures, launch_case_game_",
 ):
     assert fragment in draw, ("native composed 3D jacket contract", fragment)
-assert draw.index("if (use_composed)") < draw.index("} else if (artwork.texture != 0)")
+assert draw.index("if (use_composed)") < draw.index("} else if (!scan.empty() && artwork.texture != 0)")
 assert "attempted = true;" in draw
 assert "launch_composed_front_attempted_ = false;" in launch_setup
 assert "launch_composed_back_attempted_ = false;" in launch_setup
@@ -139,12 +139,14 @@ assert "flat_front_fallback(c, game, paper);" in library_src
 assert "flat_back_fallback(c, game, paper);" in library_src
 assert "bool composed_case_face_ready(Textures &textures, const Game &game," in widgets_src
 assert "bool composed_case_face_ready(Textures& textures, const Game& game," in library_src
-assert 'return ready(hero, std::max(left_w - gap, top_h))' in library_src
-assert 'return ready(hero, paper_w)' in library_src
+assert 'const auto shots = case_media::BackScenes(' in library_src
+assert 'if (shots[0] && !ready(*shots[0], paper_w)) return false;' in library_src
+assert 'if (shots[1] && !ready(*shots[1], std::max(left_w - gap, top_h)))' in library_src
 assert 'prepare_case_page(false);' in draw
 assert 'prepare_case_page(true);' in draw
-assert 'Color::rgb(0x08111d, 0.44f)' in library_src
-assert '{r.x + left_w * 0.38f, r.y, r.w - left_w * 0.38f, dynamic_h}' in library_src
+assert 'Color::rgb(0x08111d, 0.45f)' in library_src
+assert 'c.list.gradient_rect({r.x, r.y, r.w, dynamic_h}, 0.0f,' in library_src
+assert 'c.list.hgradient_rect(' not in library_src.split("void flat_back_fallback(", 1)[1].split("// Static sleeve used", 1)[0]
 assert 'c.list.hgradient_rect(description' not in library_src
 assert 'Color::rgb(0x030507, 0.98f)' not in library_src
 
