@@ -1124,9 +1124,10 @@ for label in ("ForEachCPUPage", "ForEachGPUPage"):
     end = source.index("\n    }", start)
     fn = source[start:end]
     guard = "if (size == 0 || size - 1 > (std::numeric_limits<u64>::max)() - addr)"
-    assert fn.count(guard) == 1
-    assert fn.index("#ifdef PS5_NATIVE") < fn.index(guard) < fn.index("#endif")
-    assert fn.index(guard) < fn.index("const u64 page_end =")
+    trait = "std::is_same_v<std::invoke_result_t<Func, u64>, bool>"
+    assert fn.count(guard) == fn.count(trait) == 1
+    assert fn.count("#ifdef PS5_NATIVE") == 2
+    assert fn.index(trait) < fn.index(guard) < fn.index("const u64 page_end =")
     assert "if (func(page))" in fn and "func(page);" in fn
 print("F03/F04 zero-length and overflowing texture CPU/GPU page scans PASS")
 PYTEXTUREPAGES
