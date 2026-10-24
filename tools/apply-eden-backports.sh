@@ -1088,3 +1088,23 @@ apply_one "$root/headless/backports/eden-ps5-software-bilinear-source-coordinate
 
 # This core backport is now installed by tools/install-active-core-backports.py
 # in all native builds, independent of the legacy shipping patch replay.
+
+# F01: skip upload range walks only when CPU dirty bits are provably absent.
+# GPU-modified overlaps and dirty-range consumption are unchanged.
+validate_ps5_buffer_clean_upload_fastpath() {
+python3 - "$eden" <<'PYF01CLEAN'
+from pathlib import Path
+import sys
+source = (Path(sys.argv[1]) / "src/video_core/buffer_cache/buffer_cache.h").read_text()
+start = source.index("bool BufferCache<P>::SynchronizeBuffer(")
+end = source.index("\ntemplate <class P>", start)
+method = source[start:end]
+assert "if (!memory_tracker.IsRegionCpuModified(device_addr, size))" in method
+assert method.index("IsRegionCpuModified(") < method.index("upload_copies.clear();")
+assert "memory_tracker.ForEachUploadRange(device_addr, size" in method
+assert "gpu_modified_ranges.ForEachInRange" in method
+assert "UploadMemory(buffer, total_size_bytes, largest_copy, copies_span);" in method
+print("F01 clean-buffer upload bypass and GPU-overlap preservation PASS")
+PYF01CLEAN
+}
+apply_one "$root/headless/backports/eden-ps5-buffer-clean-upload-fastpath.patch" "$eden/.encore-backport-ps5-buffer-clean-upload-fastpath.sha256" validate_ps5_buffer_clean_upload_fastpath
