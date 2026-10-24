@@ -1,6 +1,9 @@
 --- a/src/video_core/texture_cache/texture_cache.h
 +++ b/src/video_core/texture_cache/texture_cache.h
-@@ -1181,23 +1181,44 @@
+@@ -1178,29 +1178,50 @@
+ }
+ 
+ template <class P>
 -ImageViewId TextureCache<P>::CreateImageView(const TICEntry& config) {
 -    const ImageInfo info(config);
 -    if (info.type == ImageType::Buffer) {
@@ -68,3 +71,6 @@
 +    return image_view_id;
 +}
 +
+ template <class P>
+ ImageId TextureCache<P>::FindOrInsertImage(const ImageInfo& info, GPUVAddr gpu_addr,
+                                            RelaxedOptions options) {
