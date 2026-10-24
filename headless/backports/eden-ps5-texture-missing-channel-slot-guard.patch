@@ -1,0 +1,55 @@
+--- a/src/video_core/texture_cache/texture_cache.h
++++ b/src/video_core/texture_cache/texture_cache.h
+@@ -658,27 +658,31 @@
+     // otherwise stays missing (e.g. streamed HUD/jersey material).
+     // Only revalidate previously NULL views: common valid views retain the
+     // original zero-overhead fast path and sparse TICs retain their semantics.
+-    const bool remapped_cached_view = is_remapped_view(it->second);
+-    if ((it->second == NULL_IMAGE_VIEW_ID || remapped_cached_view) &&
+-        IsValidEntry(*gpu_memory, descriptor)) {
+-        const auto [pair, is_new_tc] = channel_state->image_views.try_emplace(descriptor);
+-        // CreateImageView can itself return NULL after a transient missing GPU
+-        // page. An existing map entry with a NULL value must be retried too;
+-        // otherwise the image remains absent for the entire guest session.
+-        if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID ||
+-            is_remapped_view(pair->second))
+-            pair->second = CreateImageView(descriptor);
+-        PrepareImageView(pair->second, false, false);
+-        // CheckFeedbackLoop caches barrier decisions by this serial. Reviving
+-        // an image without rewriting its TIC must invalidate that decision.
+-        if (pair->second != NULL_IMAGE_VIEW_ID)
+-            ++texture_bindings_serial;
+-        channel_state->image_view_ids.insert_or_assign(map_index, pair->second);
+-        return pair->second;
+-    }
+-    if (remapped_cached_view) {
+-        // If its backing is not resident, publish NULL until it returns.
+-        ++texture_bindings_serial;
++    const bool remapped_cached_view =
++        it != channel_state->image_view_ids.end() && is_remapped_view(it->second);
++    if ((it == channel_state->image_view_ids.end() ||
++         it->second == NULL_IMAGE_VIEW_ID || remapped_cached_view) &&
++        IsValidEntry(*gpu_memory, descriptor)) {
++        const auto [pair, is_new_tc] = channel_state->image_views.try_emplace(descriptor);
++        // CreateImageView can itself return NULL after a transient missing GPU
++        // page. An existing map entry with a NULL value must be retried too;
++        // otherwise the image remains absent for the entire guest session.
++        if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID ||
++            is_remapped_view(pair->second))
++            pair->second = CreateImageView(descriptor);
++        PrepareImageView(pair->second, false, false);
++        // CheckFeedbackLoop caches barrier decisions by this serial. Reviving
++        // an image without rewriting its TIC must invalidate that decision.
++        if (pair->second != NULL_IMAGE_VIEW_ID)
++            ++texture_bindings_serial;
++        channel_state->image_view_ids.insert_or_assign(map_index, pair->second);
++        return pair->second;
++    }
++    if (it == channel_state->image_view_ids.end() || remapped_cached_view) {
++        // If its backing is not resident, publish NULL until it returns.
++        if (remapped_cached_view) {
++            ++texture_bindings_serial;
++        }
+         channel_state->image_view_ids.insert_or_assign(map_index, NULL_IMAGE_VIEW_ID);
+         return NULL_IMAGE_VIEW_ID;
+     }
