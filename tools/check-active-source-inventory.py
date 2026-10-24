@@ -61,7 +61,7 @@ assert shipping == shipping_cpp | build_recipes, (
     "Shipping backport source/build manifest coverage drift",
     sorted(shipping ^ (shipping_cpp | build_recipes)),
 )
-assert len(shipping) == 83 and len(manifest["shipping_receipts"]) == 43
+assert len(shipping) == 83 and len(manifest["shipping_receipts"]) == 44
 assert manifest["excluded_experimental"] == ["EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS"]
 # All nine selected Vulkan cost translation units have exact graph owners.
 # This is source-ownership coverage, not evidence of GPU progress.
