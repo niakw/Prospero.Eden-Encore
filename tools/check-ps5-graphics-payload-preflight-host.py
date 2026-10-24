@@ -73,13 +73,17 @@ mock = r"""
 #include <vector>
 
 inline bool cache_pair_locked = false;
+inline unsigned cache_pair_allocator_attempts = 0;
 template<typename T>
 struct GuardedAllocator {
     using value_type = T;
     GuardedAllocator() = default;
     template<typename U> GuardedAllocator(const GuardedAllocator<U>&) {}
     T* allocate(std::size_t n) {
-        if (cache_pair_locked) throw std::logic_error("ALLOC_DURING_CACHE_PAIR");
+        if (cache_pair_locked) {
+            ++cache_pair_allocator_attempts;
+            throw std::logic_error("ALLOC_DURING_CACHE_PAIR");
+        }
         return std::allocator<T>{}.allocate(n);
     }
     void deallocate(T* p, std::size_t n) {
@@ -161,6 +165,8 @@ int main() {
     assert(nested.last_descriptor_payload.capacity() >= 5);
     update_snapshot(nested, 5);
     graphics_descriptor_scratch.in_use = false;
+    const unsigned maintained_locked_allocations = cache_pair_allocator_attempts;
+    assert(maintained_locked_allocations == 0);
 
     // The old implementation didn't reserve last_descriptor_payload before
     // locking the caches. Our guarded allocator catches its first allocation.
@@ -179,6 +185,11 @@ int main() {
     }
     cache_pair_locked = false;
     assert(rejected);
+    assert(cache_pair_allocator_attempts == maintained_locked_allocations + 1);
+    std::printf("F01_PAYLOAD_ALLOCATION_FIXTURE prior_under_lock=%u "
+                "maintained_under_lock=%u scope=host_mock\n",
+                cache_pair_allocator_attempts - maintained_locked_allocations,
+                maintained_locked_allocations);
     std::puts("GPU_DESCRIPTOR_PAYLOAD_PREFLIGHT_PASS");
 }
 """
@@ -199,4 +210,8 @@ with tempfile.TemporaryDirectory(prefix="encore-gpu-payload-preflight-") as fold
         run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=15)
         assert run.returncode == 0, (run.stdout, run.stderr[-4000:])
         assert "GPU_DESCRIPTOR_PAYLOAD_PREFLIGHT_PASS" in run.stdout
+        expected = ("F01_PAYLOAD_ALLOCATION_FIXTURE prior_under_lock=1 "
+                    "maintained_under_lock=0 scope=host_mock")
+        assert expected in run.stdout, (opt, run.stdout)
+        print(expected, opt, flush=True)
         print("GPU_DESCRIPTOR_PAYLOAD_PREFLIGHT_PASS", opt, "allocation-before-pair")
