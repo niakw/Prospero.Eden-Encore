@@ -17,6 +17,7 @@ native = (root / "vendor/encore-active/eden-vulkan/vulkan-cache" / p).read_text(
 installer = (root / "tools/apply-eden-backports.sh").read_text()
 generator = (root / "tools/prepare-vulkan-port.py").read_text()
 patch = root / "headless/backports/eden-ps5-texture-remapped-view-rebind.patch"
+slot_patch = root / "headless/backports/eden-ps5-texture-missing-channel-slot-guard.patch"
 assert "validate_ps5_texture_remapped_view_rebind" in installer
 assert "is_remapped_view(pair->second)" in native
 assert "is_remapped_view(pair->second)" in shipping
@@ -44,10 +45,16 @@ with tempfile.TemporaryDirectory(prefix="encore-remap-replay-") as td:
     target = stage / p
     target.parent.mkdir(parents=True)
     target.write_text(shipping)
-    for args in (["git","apply","--reverse","--check",str(patch)],
+    # The missing-slot patch is ordered after remapped-view recovery.
+    # Reverse the last layer first, then replay the full native stack.
+    for args in (["git","apply","--reverse","--check",str(slot_patch)],
+                 ["git","apply","--reverse",str(slot_patch)],
+                 ["git","apply","--reverse","--check",str(patch)],
                  ["git","apply","--reverse",str(patch)],
                  ["git","apply","--check",str(patch)],
-                 ["git","apply",str(patch)]):
+                 ["git","apply",str(patch)],
+                 ["git","apply","--check",str(slot_patch)],
+                 ["git","apply",str(slot_patch)]):
         result = subprocess.run(args, cwd=stage, capture_output=True,
                                 text=True, timeout=18)
         assert result.returncode == 0, (args, result.stderr[-3000:])
