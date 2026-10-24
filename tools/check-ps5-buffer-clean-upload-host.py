@@ -10,11 +10,18 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-native = (root / "vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h").read_text()
+# The native CMake overlay copies eden-core, NOT the shipping replay tree.
+native = (root / "vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h").read_text()
+shipping = (root / "vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h").read_text()
 patch = (root / "headless/backports/eden-ps5-buffer-clean-upload-fastpath.patch").read_text()
+cmake = (root / "headless/CMakeLists.txt").read_text()
+assert 'vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h' in cmake
 start = native.index("bool BufferCache<P>::SynchronizeBuffer(")
 end = native.index("\ntemplate <class P>", start)
 method = native[start:end]
+shipping_start = shipping.index("bool BufferCache<P>::SynchronizeBuffer(")
+shipping_end = shipping.index("\ntemplate <class P>", shipping_start)
+assert method == shipping[shipping_start:shipping_end], "native-selected F01 source drifted from replay"
 guard = "if (!memory_tracker.IsRegionCpuModified(device_addr, size))"
 assert guard in method and guard in patch
 assert method.index("#ifdef PS5_NATIVE") < method.index(guard)
