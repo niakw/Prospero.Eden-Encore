@@ -618,6 +618,18 @@ ImageViewId TextureCache<P>::VisitImageView(u32 index, bool compute) {
     auto const map_index = index | (compute ? Common::SlotId::TAGGED_VALUE : 0);
     // Is new (on the tegra engine side)?
     auto const [descriptor, is_new] = table.Read(*gpu_memory, index);
+#ifdef PS5_NATIVE
+    // A GPU remap can retire an image without changing the TIC bytes.
+    // Only check valid cached views; never reuse a remapped backing image.
+    const auto is_remapped_view = [this](ImageViewId id) {
+        if (id == NULL_IMAGE_VIEW_ID) {
+            return false;
+        }
+        const ImageViewBase& view = slot_image_views[id];
+        return !view.IsBuffer() &&
+               True(slot_images[view.image_id].flags & ImageFlagBits::Remapped);
+    };
+#endif
     if (is_new) {
         if (IsValidEntry(*gpu_memory, descriptor)) {
             // Is new (registered view) on the texture cache side?
@@ -625,7 +637,8 @@ ImageViewId TextureCache<P>::VisitImageView(u32 index, bool compute) {
 #ifdef PS5_NATIVE
             // The descriptor may be new to this slot but share a cached NULL
             // view with another slot whose first creation failed transiently.
-            if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)
+            if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID ||
+                is_remapped_view(pair->second))
 #else
             if (is_new_tc)
 #endif
@@ -645,12 +658,15 @@ ImageViewId TextureCache<P>::VisitImageView(u32 index, bool compute) {
     // otherwise stays missing (e.g. streamed HUD/jersey material).
     // Only revalidate previously NULL views: common valid views retain the
     // original zero-overhead fast path and sparse TICs retain their semantics.
-    if (it->second == NULL_IMAGE_VIEW_ID && IsValidEntry(*gpu_memory, descriptor)) {
+    const bool remapped_cached_view = is_remapped_view(it->second);
+    if ((it->second == NULL_IMAGE_VIEW_ID || remapped_cached_view) &&
+        IsValidEntry(*gpu_memory, descriptor)) {
         const auto [pair, is_new_tc] = channel_state->image_views.try_emplace(descriptor);
         // CreateImageView can itself return NULL after a transient missing GPU
         // page. An existing map entry with a NULL value must be retried too;
         // otherwise the image remains absent for the entire guest session.
-        if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID)
+        if (is_new_tc || pair->second == NULL_IMAGE_VIEW_ID ||
+            is_remapped_view(pair->second))
             pair->second = CreateImageView(descriptor);
         PrepareImageView(pair->second, false, false);
         // CheckFeedbackLoop caches barrier decisions by this serial. Reviving
@@ -659,6 +675,12 @@ ImageViewId TextureCache<P>::VisitImageView(u32 index, bool compute) {
             ++texture_bindings_serial;
         channel_state->image_view_ids.insert_or_assign(map_index, pair->second);
         return pair->second;
+    }
+    if (remapped_cached_view) {
+        // If its backing is not resident, publish NULL until it returns.
+        ++texture_bindings_serial;
+        channel_state->image_view_ids.insert_or_assign(map_index, NULL_IMAGE_VIEW_ID);
+        return NULL_IMAGE_VIEW_ID;
     }
 #endif
     if (it->second != NULL_IMAGE_VIEW_ID)
