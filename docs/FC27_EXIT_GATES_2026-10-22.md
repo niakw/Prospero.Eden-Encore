@@ -1091,3 +1091,32 @@ cibles framebuffer sont réussies (Clang/GCC, O0/O2, les deux modes,
 UBSan). Les tests du dépôt complet et son rejeu intégral ne sont
 pas encore confirmés par CI, et aucun résultat PS5/FC27 n'est acquis.
 **F03/F04 restent ouverts.**
+
+
+## 24 octobre — F03/F04, contrôle de l'ordre complet des vues textures
+
+L'empilement de quatre patches successifs sur
+`src/video_core/texture_cache/texture_cache.h` était vérifié auparavant
+essentiellement patch par patch. Un patch isolément correct peut néanmoins
+devenir incompatible avec un patch suivant.
+
+Un contrôle de correspondance textuelle des hunks a maintenant validé,
+depuis la source shipping, **la suppression en ordre inverse des
+quatre patches et leur réapplication en ordre normal** :
+`tic-layer-bounds` → `remapped-view-rebind` →
+`remap-target-invalidation` → `missing-channel-slot-guard`.
+Le résultat obtenu reproduit le contenu final octet pour octet.
+Le préfixe retrouvé est la source maintenue avant F04,
+`117051` octets, SHA-256
+`3c129bb7ecf389d6f95c852ac9afbf1956fcc6e31d19bbeccaef757228af450a`.
+
+`tools/check-ps5-texture-ordered-backports-host.py` exécute la version
+Git de cette validation : digest/bytes de source, SHA-256 des reçus,
+ordre exact du script d'installation, `git apply --reverse --check`
+puis `git apply --check`, et retour exact au blob maintenu.
+Ce contrôle est ajouté à la prévalidation hôte et au workflow natif.
+
+**Limites :** le contrôle textuel hors CI a réussi ; l'exécution
+de ce nouveau script dans GitHub Actions, le rejeu intégral de tous
+les backports et le build PS5 complet ne sont pas encore confirmés.
+Aucun effet réel sur les textures FC27 n'est proclamé. F03/F04 ouverts.
