@@ -813,8 +813,8 @@ fichiers « restant à optimiser » n'est inféré de cette intervention.
 
 **Sous-chemin corrigé (F01 reste INVESTIGATION).** Dans la source Eden
 maintenue, `BufferCache<P>::SynchronizeBuffer` retourne directement un succès
-de cache lorsque `memory_tracker.IsRegionCpuModified(device_addr, size)` est
-faux. Le parcours coûteux des plages `ForEachUploadRange` et la construction
+de cache **sur PS5 uniquement** lorsque
+`memory_tracker.IsRegionCpuModified(device_addr, size)` est faux. Le parcours coûteux des plages `ForEachUploadRange` et la construction
 des copies sont alors évités. Pour une plage modifiée, le chemin antérieur
 reste intact, y compris l'exclusion des octets possédés par le GPU, la
 consommation des marques CPU et l'appel éventuel à `UploadMemory`.
@@ -826,9 +826,10 @@ consommation des marques CPU et l'appel éventuel à `UploadMemory`.
 - Test source-extrait : `tools/check-ps5-buffer-clean-upload-host.py`, appelé
   par la prévalidation et le workflow de compilation native. Il vérifie les
   chemins CPU propres/modifiés, le chevauchement GPU et la plage nulle.
-- Un harnais C++ local équivalent a compilé et exécuté ces cas en O0 et O2
-  avec UBSan. Le résultat des workflows GitHub et l'effet réel sur les
-  attentes `buffer mutex` de FC27 ne sont **pas** encore établis.
+- Le harnais C++ source-extrait est programmé en O0/O2 avec UBSan dans
+  les deux modes (PS5 et amont). **Son exécution et son résultat ne sont pas
+  vérifiés dans cette intervention**, tout comme le résultat des workflows
+  GitHub, le build natif et l'effet réel sur les attentes `buffer mutex` de FC27.
 
 **Ne pas clôturer F01** sur ce seul raccourci : les durées de contention
 relevées en jeu exigent toujours un benchmark avant/après avec le même profil,
