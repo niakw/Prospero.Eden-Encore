@@ -1109,3 +1109,26 @@ print("F01 clean-buffer upload bypass and GPU-overlap preservation PASS")
 PYF01CLEAN
 }
 apply_one "$root/headless/backports/eden-ps5-buffer-clean-upload-fastpath.patch" "$eden/.encore-backport-ps5-buffer-clean-upload-fastpath.sha256" validate_ps5_buffer_clean_upload_fastpath
+
+
+# F03/F04: zero-sized or wrapping CPU/GPU image page spans must never
+# underflow into effectively unbounded page-table walks. Non-PS5 behavior
+# remains unchanged; valid PS5 ranges retain the exact old page sequence.
+validate_ps5_texture_page_range_guards() {
+python3 - "$eden" <<'PYTEXTUREPAGES'
+from pathlib import Path
+import sys
+source = (Path(sys.argv[1]) / "src/video_core/texture_cache/texture_cache_base.h").read_text()
+for label in ("ForEachCPUPage", "ForEachGPUPage"):
+    start = source.index("static void " + label + "(")
+    end = source.index("\n    }", start)
+    fn = source[start:end]
+    guard = "if (size == 0 || size - 1 > (std::numeric_limits<u64>::max)() - addr)"
+    assert fn.count(guard) == 1
+    assert fn.index("#ifdef PS5_NATIVE") < fn.index(guard) < fn.index("#endif")
+    assert fn.index(guard) < fn.index("const u64 page_end =")
+    assert "if (func(page))" in fn and "func(page);" in fn
+print("F03/F04 zero-length and overflowing texture CPU/GPU page scans PASS")
+PYTEXTUREPAGES
+}
+apply_one "$root/headless/backports/eden-ps5-texture-page-range-guards.patch" "$eden/.encore-backport-ps5-texture-page-range-guards.sha256" validate_ps5_texture_page_range_guards
