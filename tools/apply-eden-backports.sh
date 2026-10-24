@@ -1158,3 +1158,31 @@ print("F04 TIC layer and optional-subresource guards PASS")
 PYTEXTURETIC
 }
 apply_one "$root/headless/backports/eden-ps5-texture-tic-layer-bounds.patch" "$eden/.encore-backport-ps5-texture-tic-layer-bounds.sha256" validate_ps5_texture_tic_layer_bounds
+
+
+# F03/F04: a remapped image cannot retain its previously valid TIC view.
+# Rebuild stale views only on a remap, preserve unchanged valid view IDs,
+# and publish a NULL mapping while guest backing is unavailable.
+validate_ps5_texture_remapped_view_rebind() {
+python3 - "$eden" <<'PYREMAPVIEW'
+from pathlib import Path
+import sys
+source = (Path(sys.argv[1]) / "src/video_core/texture_cache/texture_cache.h").read_text()
+start = source.index("ImageViewId TextureCache<P>::VisitImageView(")
+end = source.index("\ntemplate <class P>", start)
+method = source[start:end]
+assert method.count("const auto is_remapped_view = [this](ImageViewId id)") == 1
+assert method.count("ImageFlagBits::Remapped") == 1
+assert method.count("is_remapped_view(pair->second)") == 2
+assert method.count("remapped_cached_view") >= 3
+assert method.index("is_remapped_view(pair->second)") < method.index(
+    "const bool remapped_cached_view")
+assert method.index("if (remapped_cached_view) {") < method.index(
+    "channel_state->image_view_ids.insert_or_assign(map_index, NULL_IMAGE_VIEW_ID);",
+    method.index("if (remapped_cached_view) {"))
+assert "++texture_bindings_serial;" in method
+assert "PrepareImageView(it->second, false, false);" in method
+print("F03/F04 remapped TIC view rebind and NULL fallback PASS")
+PYREMAPVIEW
+}
+apply_one "$root/headless/backports/eden-ps5-texture-remapped-view-rebind.patch" "$eden/.encore-backport-ps5-texture-remapped-view-rebind.sha256" validate_ps5_texture_remapped_view_rebind
