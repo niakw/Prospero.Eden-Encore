@@ -738,3 +738,31 @@ rejeu octet à octet de `install-vendored-eden-backports.py --replay`.
 preuve attendue est la compilation/link native de ce SHA et la sélection
 des sources actualisées, pas un nouveau test de FC27 sur matériel.
 **F01–F06 demeurent ouverts (0/6)** et F07 demeure séparé.
+
+## 24 octobre 2026 — F01 : masques uniformes identiques sous verrou
+
+Le chemin natif `BufferCache::SetUniformBuffersState`, appelé par
+`GraphicsPipeline::ConfigureImpl` pendant la possession conjointe des
+mutex buffer/texture, réécrivait `enabled_uniform_buffer_masks` même
+lorsqu'il était identique à la configuration précédente.
+
+Le commit `04d7821` évite cette affectation lors des rebinding sans
+changement, **sans** supprimer la mise à jour inconditionnelle du pointeur
+`uniform_buffer_sizes` et **sans** toucher aux invalidations lors d'une
+transition effective. La reconstruction de la source native depuis le
+backport et le rejeu du code original sont vérifiés respectivement par
+`check-vendor-consolidation-debt.py` et
+`check-native-uniform-mask-rebind-host.py`.
+
+**Preuve attendue du test source-extrait :** quatre appels, deux changements
+de masques, donc quatre affectations dans la source d'origine et deux dans
+la source maintenue, en profils avec et sans cache uniforme persistant et
+sous O0/O2/UBSan. Cette réduction de deux affectations ne mesure ni le
+temps de verrou, ni les FPS, ni les freezes sur la console.
+
+L'analyseur `analyze-fc27-stutter.py` expose aussi la part
+`pipeline_configure / pair_held` *uniquement* pour des fenêtres dont les
+échantillons GPU sont appariés. Les relevés incomplets restent inconnus.
+**F01 demeure ouvert** : aucun gain de contention FC27 après ce changement
+n'a été constaté. Cette révision demande seulement la vérification CI et
+la compilation native, pas de test utilisateur sur PS5.
