@@ -1345,6 +1345,15 @@ if(PS5_NATIVE)
     list(REMOVE_ITEM video_sources engines/maxwell_dma.cpp)
     list(APPEND video_sources "${EDEN_MAINTAINED_MAXWELL_DMA}")
 endif()
+# Native N04: avoid invoking an already-ready Host1x callback under guard.
+# Select a complete maintained TU; never edit the pinned vendor checkout.
+set(EDEN_MAINTAINED_HOST1X_SYNCPOINT
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/video_core/host1x/syncpoint_manager.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_HOST1X_SYNCPOINT}")
+    message(FATAL_ERROR "Missing maintained Host1x syncpoint source")
+endif()
+list(REMOVE_ITEM video_sources host1x/syncpoint_manager.cpp)
+list(APPEND video_sources "${EDEN_MAINTAINED_HOST1X_SYNCPOINT}")
 set_property(TARGET video_core PROPERTY SOURCES "${video_sources}")
 
 if(PS5_NATIVE)
