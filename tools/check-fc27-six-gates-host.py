@@ -38,6 +38,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-native-nvnflinger-detach-wake-host.py",
         "check-native-gpu-composite-syncpoint-host.py",
         "check-native-vulkan-renderer-handoff-host.py",
+        "check-native-host1x-increment-handoff-host.py",
     ),
     "F06-input-and-pause": (
         "check-fc27-match-input-profile.py",
@@ -45,7 +46,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# Missing end-to-end evidence remains explicit even when all fourteen narrow
+# Missing end-to-end evidence remains explicit even when all fifteen narrow
 # host probes succeed. Neither a successful tool run nor a source checksum is
 # a measured frame-latency improvement or a complete technical exit proof.
 UNPROVEN_EXIT_EVIDENCE = {
@@ -158,6 +159,25 @@ def run() -> int:
                         }
                         print("F05_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F05_vulkan_renderer_handoff_host"],
+                                         sort_keys=True), flush=True)
+                if ok and script == "check-native-host1x-increment-handoff-host.py":
+                    passes = re.findall(
+                        r"N04_HOST1X_INCREMENT_HANDOFF_PASS ordered=3 nested=1 "
+                        r"claimed=1 pending_cancelled=1 independent=1 stress=256",
+                        result.stdout)
+                    negative = re.findall(
+                        r"N04_HOST1X_INCREMENT_PINNED_NEGATIVE_PASS guard_blocks_callback",
+                        result.stdout)
+                    if len(passes) != 2 or len(negative) != 1:
+                        ok, reason = False, "f05_host1x_claimed_dispatch_witness_missing"
+                    else:
+                        fixture_metrics["F05_host1x_increment_handoff_host"] = {
+                            "stress": 256, "optimization_levels": ["O0", "O2"],
+                            "scope": "native Host1x action claim, cancel and reentrance; "
+                                     "NOT PS5 device-fence progress",
+                        }
+                        print("F05_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F05_host1x_increment_handoff_host"],
                                          sort_keys=True), flush=True)
                 checks.append({"script": script, "ok": ok, "reason": reason})
                 if not ok:

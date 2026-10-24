@@ -56,6 +56,7 @@ on:
       - 'tools/check-native-gpu-fence-release-publication-host.py'
       - 'tools/check-native-gpu-composite-syncpoint-host.py'
       - 'tools/check-native-host1x-register-reentrant-host.py'
+      - 'tools/check-native-host1x-increment-handoff-host.py'
       - 'vendor/encore-active/eden-core/src/video_core/host1x/**'
       - 'tools/check-native-vulkan-renderer-handoff-host.py'
       - 'tools/check-vulkan-fence-completed-wait-host.py'
@@ -192,6 +193,7 @@ jobs:
           python3 -B tools/check-native-gpu-fence-release-publication-host.py
           python3 -B tools/check-native-gpu-composite-syncpoint-host.py
           python3 -B tools/check-native-host1x-register-reentrant-host.py
+          python3 -B tools/check-native-host1x-increment-handoff-host.py
           python3 -B tools/check-native-vulkan-renderer-handoff-host.py
           python3 -B tools/check-ps5-active-texture-descriptor-host.py
           python3 -B tools/check-native-batched-buffer-invalidation-host.py
