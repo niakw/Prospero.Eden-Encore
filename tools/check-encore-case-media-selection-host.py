@@ -18,6 +18,9 @@ assert 'reconstructed_paper(c, paper);' in renderer
 assert 'scene(game.cover,' not in renderer
 assert 'glClearColor' not in renderer
 assert 'const auto shots = case_media::BackScenes(' in renderer
+assert 'const std::string* third = shots[2];' in renderer
+assert 'if (third)' in renderer
+assert 'shell.x + (rear ? side : 0.0f)' in renderer
 assert 'if (painting) reconstructed_cover(c, *painting, r);' in renderer
 assert 'scene(game.cover,' not in renderer
 source = r"""
@@ -38,6 +41,14 @@ int main() {
     assert(pair[0] && *pair[0] == "scene-2.tga");
     assert(pair[1] && *pair[1] == "scene-3.tga");
     assert(*pair[0] != *pair[1] && *pair[0] != hero && *pair[1] != hero);
+    assert(!pair[2]);
+    const std::vector<std::string> indexed{
+        "nlib/gameplay.tga", "/cache/box-scene-3-ABCD.tga",
+        "/cache/box-scene-2-ABCD.tga", "/cache/box-scene-1-ABCD.tga"};
+    const auto categorized = BackScenes(hero, icon, indexed);
+    assert(categorized[0] && *categorized[0] == indexed[3]);
+    assert(categorized[1] && *categorized[1] == indexed[2]);
+    assert(categorized[2] && *categorized[2] == indexed[1]);
 
     // Only independent screenshot sources may appear on the back.
     // Never insert an app icon as a synthetic second picture.
