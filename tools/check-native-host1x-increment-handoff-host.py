@@ -23,6 +23,7 @@ assert COMMAND in FAST and COMMAND in FULL
 assert 'list(APPEND video_sources "' in CM and "EDEN_MAINTAINED_HOST1X_SYNCPOINT" in CM
 assert 'list(REMOVE_ITEM video_sources host1x/syncpoint_manager.cpp)' in CM
 assert ACT.count("ready_actions.splice(")==1 and ACT.count("ready.action();")==1
+assert ACT.index("ready.action();") < ACT.index("wait_cv.notify_all();", ACT.index("ready.action();"))
 assert "ready_actions" not in PIN
 def extract(source, name):
     assert source.count(name)==1,name
