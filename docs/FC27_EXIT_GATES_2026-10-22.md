@@ -874,3 +874,31 @@ La prévalidation complète, le rejeu complet de `prepare-vulkan-port.py`,
 la compilation PS5 et le gain mesuré sur FC27 ne sont **pas** encore
 confirmés. F01 demeure ouvert ; les autres objectifs F02–F06 ne sont pas
 clôturés par cette intervention.
+
+
+## 24 octobre — F01, sampler compute à portée strictement locale
+
+Le pipeline compute effectuait un `GetSamplerId(handle, true)` par
+occurrence de sampler, même lorsque plusieurs textures utilisaient
+le même index TSC dans un dispatch. Une table directe à 16 entrées,
+initialisée à chaque `ComputePipeline::Configure`, évite les lectures
+répétées. Chaque collision vérifie la clé entière, et aucun ID n'est
+conservé entre dispatchs : la synchronisation de la table de samplers,
+les changements de canal et les remappages sont donc respectés.
+
+- `vendor/encore-active/eden-vulkan/vk_compute_pipeline_cost.cpp` :
+  cache local de samplers sous verrou, limité à `PS5_NATIVE` ;
+  chemin non-PS5 inchangé.
+- `tools/prepare-vulkan-port.py` : reconstruction depuis la source
+  amont épinglée via ancres exactes, avec refus des divergences.
+- `tools/check-ps5-compute-sampler-memo-host.py` :
+  test source-extrait inscrit dans les deux workflows ; clés
+  répétées, collisions modulo 16, nouvelle époque de descripteurs
+  entre dispatchs et dispatch sans sampler.
+- Harnais C++ isolé : Clang/GCC, O0/O2, UBSan : 4/4 réussis.
+  Les dix contrôles de cohérence source/générateur passaient
+  également lors de l'intégration.
+
+**Non vérifiés :** l'intégralité du workflow GitHub, le rejeu complet
+du générateur, le build natif PS5, le profilage sur FC27 et les
+gains de latence. Aucun des critères de sortie F01–F06 n'est clos.
