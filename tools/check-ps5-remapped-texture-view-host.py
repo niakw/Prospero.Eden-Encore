@@ -58,6 +58,9 @@ prologue = r"""
 #include <cstdint>
 #include <unordered_map>
 #include <utility>
+// The source-extracted function retains the production invalid-index trace.
+#define LOG_DEBUG(...) ((void)0)
+#define HW_GPU 0
 using u32=std::uint32_t;
 using ImageViewId=u32;
 constexpr ImageViewId NULL_IMAGE_VIEW_ID=0;
