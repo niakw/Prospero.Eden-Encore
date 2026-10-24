@@ -18,6 +18,8 @@ for desc in ("texture_buffer_descriptors","image_buffer_descriptors","texture_de
 assert stage_code.index("buffer_cache.BindHostStageBuffers(stage);") < stage_code.index("if (stage_has_image_bindings[stage])")
 assert stage_code.index("const auto& info{stage_infos[stage]};") < stage_code.index("PushImageDescriptors(")
 assert "PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling," in stage_code
+assert stage_code.count("CachePhase::StageHostBuffers") == 1
+assert stage_code.count("CachePhase::StageImageDescriptors") == 1
 oracle=(root/"tools/prepare-vulkan-port.py").read_text()
 assert "Source-proven no-image stage fast path" in oracle
 assert "std::array<bool, NUM_STAGES> stage_has_image_bindings{};" in oracle
@@ -46,6 +48,14 @@ struct RenderArea { bool uses_render_area=false; std::array<float,2> words{}; };
 struct Rescaling {};
 struct TextureCache {};
 struct GuestDescriptorQueue {};
+// The shipping source uses detailed-only phase timers. The extracted stage
+// fixture tests binding order/semantics, so provide a no-op timer for it.
+namespace Eden::Performance {
+enum class CachePhase { StageHostBuffers, StageImageDescriptors };
+struct CachePhaseTimer {
+    explicit CachePhaseTimer(CachePhase) noexcept {}
+};
+}
 using SamplerId=int;
 using ViewId=int;
 inline unsigned push_calls=0;
