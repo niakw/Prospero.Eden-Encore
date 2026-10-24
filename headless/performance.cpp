@@ -1391,6 +1391,7 @@ void ReportGpuThread(unsigned frame) {
             "dynamic_states", "query_draw",
             "texture_cpu_refresh", "texture_alias_scan", "texture_alias_copy",
             "stage_texture_handles", "bind_texture_buffers", "bind_stage_descriptors",
+            "stage_host_buffers", "stage_image_descriptors",
             "refresh_render_targets", "check_feedback_loop", "commit_graphics_draw",
             "descriptor_ring_finish", "descriptor_ring_preflight",
             "guest_write_buffer_wait", "guest_write_buffer_work",

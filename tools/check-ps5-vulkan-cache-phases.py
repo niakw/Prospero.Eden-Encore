@@ -32,6 +32,7 @@ assert "GraphicsDrawDrop::ConfigureRejected" in generator
 # R362 uses 1-in-16 timers without altering the guest cache lock lifetimes.
 p = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
 for phase in ("StageTextureHandles", "BindTextureBuffers", "BindStageDescriptors",
+              "StageHostBuffers", "StageImageDescriptors",
               "RefreshRenderTargets", "CheckFeedbackLoop", "CommitGraphicsDraw"):
     assert "CachePhase::" + phase in p
     assert "CachePhase::" + phase in generator
@@ -39,7 +40,18 @@ for phase in ("StageTextureHandles", "BindTextureBuffers", "BindStageDescriptors
 assert "stage_texture_phase.Stop();" in p
 assert "bind_texture_phase.Stop();" in p
 assert "stage_descriptor_phase.Stop();" in p
+# These costs are nested inside BindStageDescriptors, so their sums must
+# never be reported as independent extra time.
+assert p.count("CachePhase::StageHostBuffers") == 1
+assert p.count("CachePhase::StageImageDescriptors") == 1
+assert p.index("CachePhase::StageHostBuffers") < p.index(
+    "buffer_cache.BindHostStageBuffers(stage);") < p.index(
+    "CachePhase::StageImageDescriptors") < p.index(
+    "PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling,")
+assert "apply_reviewed_delta(pipeline," in generator
+assert "'F01 isolate image descriptor push cost within stage binding'" in generator
 for label in ("stage_texture_handles", "bind_texture_buffers", "bind_stage_descriptors",
+              "stage_host_buffers", "stage_image_descriptors",
               "refresh_render_targets", "check_feedback_loop", "commit_graphics_draw"):
     assert '"' + label + '"' in report
 assert "return ConfigureDraw(rescaling, render_area);" in p
