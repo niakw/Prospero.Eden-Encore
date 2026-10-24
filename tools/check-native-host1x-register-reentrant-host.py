@@ -34,7 +34,9 @@ new="""    std::unique_lock lk(guard);
         return {};
     }"""
 assert PIN.count(old)==ACT.count(new)==1
-assert PIN.replace(old,new)==ACT
+increment_old="    std::scoped_lock lk(guard);\n    auto it = action_storage.begin();\n    while (it != action_storage.end()) {\n        if (it->expected_value > new_value) {\n            break;\n        }\n        it->action();\n        it = action_storage.erase(it);\n    }\n    wait_cv.notify_all();"
+increment_new="    // Claim ready callbacks atomically against deregistration without\n    // allocating or executing arbitrary callbacks under the Host1x guard.\n    std::list<RegisteredAction> ready_actions;\n    {\n        std::scoped_lock lk(guard);\n        auto it = action_storage.begin();\n        while (it != action_storage.end() && it->expected_value <= new_value) {\n            ++it;\n        }\n        ready_actions.splice(ready_actions.end(), action_storage,\n                             action_storage.begin(), it);\n        wait_cv.notify_all();\n    }\n    // Cancellation can prevent an action only before the claim above.\n    // Execute the already-claimed batch without holding the global guard.\n    for (auto& ready : ready_actions) {\n        ready.action();\n    }"
+assert PIN.replace(old,new).replace(increment_old,increment_new)==ACT
 
 def extract(text,name):
     assert text.count(name)==1,name

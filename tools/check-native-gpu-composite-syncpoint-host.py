@@ -16,7 +16,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 NV = (ROOT/"vendor/sources/eden/src/core/hle/service/nvdrv/devices/nvdisp_disp0.cpp").read_text()
 GPU = (ROOT/"vendor/sources/eden/src/video_core/gpu.cpp").read_text()
-SYNC = (ROOT/"vendor/sources/eden/src/video_core/host1x/syncpoint_manager.cpp").read_text()
+SYNC = (ROOT/"vendor/encore-active/eden-core/src/video_core/host1x/syncpoint_manager.cpp").read_text()
 FAST = (ROOT/".github/workflows/encore-core-fast-gate.yml").read_text()
 FULL = (ROOT/".github/workflows/encore-core-preflight.yml").read_text()
 NAME = "python3 -B tools/check-native-gpu-composite-syncpoint-host.py"
@@ -54,7 +54,7 @@ assert "pending_composite_fence = RequestSyncOperation(" in gpu_methods
 assert "syncpoint_manager.RegisterGuestAction(" in gpu_methods
 assert "renderer->Composite(composite_layers);" in gpu_methods
 assert "WaitForSyncOperation(fence);" in gpu_methods
-assert "action();" in sync_methods and "it->action();" in sync_methods
+assert "action();" in sync_methods and "ready.action();" in sync_methods
 
 cpp = r"""
 #include <algorithm>
