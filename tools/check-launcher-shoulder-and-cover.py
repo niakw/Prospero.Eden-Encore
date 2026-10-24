@@ -56,7 +56,9 @@ for token in ("const float aspect", "fitted.h = panel.w / aspect;",
 assert 'else if (!game.cover.empty()) {' not in front
 # Front artwork must cover the whole paper; a fixed square label sits
 # exactly on the top-left corner and is never drawn on an original scan.
-for token in ("const bool scenic", "cover_crop(c, painting, r, 0.0f, 0.0f);",
+for token in ("const std::string& painting = !game.hero.empty() ? game.hero :",
+              "if (!painting.empty()) {",
+              "cover_crop(c, painting, r, 0.0f, 0.0f);",
               "const Rect logo{r.x, r.y, logo_w,",
               "c.textures.switch_logo() != 0"):
     assert token in front, token
