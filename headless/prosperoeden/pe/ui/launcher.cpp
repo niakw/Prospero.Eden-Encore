@@ -919,7 +919,12 @@ void Launcher::draw_launch(Canvas &c)
                                   : launch_composed_front_failures_;
         float& retry_after = rear ? launch_composed_back_retry_after_
                                   : launch_composed_front_retry_after_;
-        if (!retail.empty() || (page != 0 && !provisional) ||
+        // A path in the metadata is not proof that the scan exists. Wait
+        // while it decodes, but use the composed print after a failed load;
+        // the authentic scan automatically resumes priority if retried.
+        if (!retail.empty() && !c.textures.cover(retail, 760.0f).missing)
+            return;
+        if ((page != 0 && !provisional) ||
             (page == 0 && attempted) || failures >= 3u) return;
         if (seconds < retry_after) return;
         // Keep the opaque provisional paper available after a bounded wait,
@@ -968,9 +973,10 @@ void Launcher::draw_launch(Canvas &c)
     prepare_case_page(true);
     const std::uint32_t composed_page =
         back ? launch_composed_back_ : launch_composed_front_;
-    const bool use_composed = scan.empty() && composed_page != 0;
+    const bool use_composed = (scan.empty() || artwork.missing) &&
+                              composed_page != 0;
     const std::uint32_t visible_texture =
-        use_composed ? composed_page : (scan.empty() ? 0u : artwork.texture);
+        use_composed ? composed_page : artwork.texture;
     // One event per visible paper face and state, NEVER a per-frame log.
     // Stored/decoded/uploaded assets can still fail to reach the render list;
     // this is the last observable stage before the case-face GPU draw call.
