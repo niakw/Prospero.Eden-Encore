@@ -839,3 +839,38 @@ consommation des marques CPU et l'appel éventuel à `UploadMemory`.
 relevées en jeu exigent toujours un benchmark avant/après avec le même profil,
 un rejeu concurrent des invalidations et la compilation native confirmée.
 Les critères F02–F06 ne changent pas d'état et F07 reste la qualification PS5.
+
+
+## 24 octobre — F01, capacité compute hors verrous GPU
+
+Le chemin `RasterizerVulkan::DispatchCompute` réalisait encore la création et
+l'agrandissement éventuel de deux `small_vector` de descripteurs au cours de
+`ComputePipeline::Configure`, sous les verrous conjoints du cache de buffers
+et du cache de textures. L'intervention conserve le traitement de ces
+descripteurs **sous les mêmes verrous**, mais déplace la réservation des
+capacités avant leur acquisition.
+
+- `vk_compute_pipeline_cost.cpp` : compteurs de descripteurs immuables
+  calculés lors de la construction du shader compute, stockage
+  `thread_local` réutilisé et bail RAII indépendant pour chaque appel imbriqué.
+  Une troisième imbrication utilise un stockage privé pour éviter toute
+  corruption des listes parentes.
+- `include/video_core/renderer_vulkan/vk_compute_pipeline.h` :
+  `PreflightDescriptorScratch()` et tailles ajoutées uniquement sur PS5.
+- `vulkan_rasterizer.cpp` : préallocation exécutée après les éventuelles
+  attentes du worker et la dernière sélection du pipeline, **avant**
+  `std::scoped_lock(texture_cache.mutex, buffer_cache.mutex)`.
+- `tools/prepare-vulkan-port.py` : reconstruction stricte des mêmes deltas
+  depuis la source épinglée ; aucun remplacement silencieux du générateur
+  par les sources maintenues.
+- `tools/check-ps5-compute-descriptor-scratch-host.py` : test extrait des
+  sources, intégré aux prévalidations et au build natif, couvrant
+  réentrance, conservation de capacité et isolation entre threads.
+
+Un harnais C++ isolé reproduisant la classe et les scénarios de ce test est
+passé avec Clang/GCC, O0/O2 et UBSan (quatre combinaisons). La parité
+textuelle entre blocs sélectionnés et blocs du générateur a été vérifiée.
+La prévalidation complète, le rejeu complet de `prepare-vulkan-port.py`,
+la compilation PS5 et le gain mesuré sur FC27 ne sont **pas** encore
+confirmés. F01 demeure ouvert ; les autres objectifs F02–F06 ne sont pas
+clôturés par cette intervention.
