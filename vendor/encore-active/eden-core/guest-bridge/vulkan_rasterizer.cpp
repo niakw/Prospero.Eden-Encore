@@ -896,6 +896,11 @@ void RasterizerVulkan::DispatchCompute() {
         }
     }
 #endif
+#ifdef PS5_NATIVE
+    // Descriptor storage is bounded by this shader's immutable layout.
+    // Reserve on the GPU owner thread BEFORE cache-pair acquisition.
+    pipeline->PreflightDescriptorScratch();
+#endif
     SCOPE_EXIT { SyncProbe(scheduler, "dispatch", pipeline); };
     std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};
     if (!pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache,
