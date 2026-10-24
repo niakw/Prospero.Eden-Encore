@@ -1186,3 +1186,29 @@ print("F03/F04 remapped TIC view rebind and NULL fallback PASS")
 PYREMAPVIEW
 }
 apply_one "$root/headless/backports/eden-ps5-texture-remapped-view-rebind.patch" "$eden/.encore-backport-ps5-texture-remapped-view-rebind.sha256" validate_ps5_texture_remapped_view_rebind
+
+
+# F03/F04: an image whose GPU backing is remapped may still be an active
+# framebuffer color/depth attachment. The next render-target update must
+# rebind only affected attachments, not prepare the retired view.
+validate_ps5_texture_remap_target_invalidation() {
+python3 - "$eden" <<'PYREMAPRT'
+from pathlib import Path
+import sys
+source=(Path(sys.argv[1])/"src/video_core/texture_cache/texture_cache.h").read_text()
+start=source.index("void TextureCache<P>::UnmapGPUMemory(")
+end=source.index("\ntemplate <class P>",start)
+method=source[start:end]
+for name in ("framebuffer_affected", "image.image_view_ids",
+             "dirty[Dirty::ColorBuffer0 + rt] = true;",
+             "dirty[Dirty::ZetaBuffer] = true;",
+             "dirty[Dirty::RenderTargets] = true;"):
+    assert name in method, name
+assert method.count("#ifdef PS5_NATIVE")==1
+assert method.index("image.flags |= ImageFlagBits::Remapped;") < method.index(
+    "framebuffer_affected") < method.index("dirty[Dirty::RenderTargets] = true;")
+assert "view_id == NULL_IMAGE_VIEW_ID" in method
+print("F03/F04 remapped active framebuffer invalidation PASS")
+PYREMAPRT
+}
+apply_one "$root/headless/backports/eden-ps5-texture-remap-target-invalidation.patch" "$eden/.encore-backport-ps5-texture-remap-target-invalidation.sha256" validate_ps5_texture_remap_target_invalidation
