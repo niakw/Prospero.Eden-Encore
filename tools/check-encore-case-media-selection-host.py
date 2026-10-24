@@ -18,6 +18,8 @@ assert 'reconstructed_paper(c, paper);' in renderer
 assert 'scene(game.cover,' not in renderer
 assert 'glClearColor' not in renderer
 assert 'const auto shots = case_media::BackScenes(' in renderer
+assert 'constexpr std::array<std::string_view, 3> kSceneMarkers{' in header.read_text()
+assert 'const std::string marker =' not in header.read_text()
 assert 'const std::string* third = shots[2];' in renderer
 assert 'if (third)' in renderer
 assert 'shell.x + (rear ? side : 0.0f)' in renderer

@@ -302,6 +302,7 @@ assert 'std::array<std::vector<std::string>, 6>' in native
 assert '"Screenshot - Gameplay"' in indexer
 assert '"Fanart - Background"' in indexer
 assert '"Screenshot - Game Title"' in indexer
+assert 'EDEN_CASE_INDEX_MEDIA fanart={} game_title={} gameplay={} titles={}' in indexer
 assert 'AppendCaseScenes(game.screenshots, game.title_id);' in native
 assert 'side >= 3 && ValidNlibTga(CaseFacePath(title_id, "back"))' in native
 assert 'const char* const names[]' in native
