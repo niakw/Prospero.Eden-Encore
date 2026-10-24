@@ -17,7 +17,8 @@ end = native.index("\ntemplate <class P>", start)
 method = native[start:end]
 guard = "if (!memory_tracker.IsRegionCpuModified(device_addr, size))"
 assert guard in method and guard in patch
-assert method.index(guard) < method.index("upload_copies.clear()")
+assert method.index("#ifdef PS5_NATIVE") < method.index(guard)
+assert method.index(guard) < method.index("#endif") < method.index("upload_copies.clear()")
 assert "gpu_modified_ranges.ForEachInRange" in method
 assert "memory_tracker.ForEachUploadRange" in method
 assert "UploadMemory(buffer, total_size_bytes, largest_copy, copies_span);" in method
@@ -42,7 +43,7 @@ struct Tracker {
     template<class Fn> void ForEachUploadRange(DAddr addr,u32 size,Fn fn) {
         ++upload_walks;
         const bool needs_upload=dirty;
-        dirty=false; // selected API consumes CPU-dirty bits
+        if(size) dirty=false; // a zero-size real range walk consumes nothing
         if(needs_upload && size) fn(addr,size);
     }
 };
@@ -79,20 +80,32 @@ epilogue = r"""
 int main() {
     BufferCache<Dummy> cache{};
     Buffer buffer{};
-    // Clean hot-draws must not walk, clear or allocate CPU-upload ranges.
+    // Native hot-draws skip the walk. Unmodified upstream must use the
+    // original walk without the new probe (both produce identical results).
     for(int i=0;i<1024;i++) assert(cache.SynchronizeBuffer(buffer,0x1000,256));
+#ifdef PS5_NATIVE
     assert(cache.memory_tracker.dirty_probes==1024);
     assert(cache.memory_tracker.upload_walks==0);
+#else
+    assert(cache.memory_tracker.dirty_probes==0);
+    assert(cache.memory_tracker.upload_walks==1024);
+#endif
+    const int clean_walks=cache.memory_tracker.upload_walks;
     assert(cache.uploads==0 && !cache.any_buffer_uploaded);
     // Dirty CPU data must still be uploaded and its dirty bits consumed.
     cache.memory_tracker.dirty=true;
     assert(!cache.SynchronizeBuffer(buffer,0x1000,256));
-    assert(cache.memory_tracker.upload_walks==1);
+    assert(cache.memory_tracker.upload_walks==clean_walks+1);
     assert(cache.uploads==1 && cache.bytes_uploaded==256 && cache.last_largest==256);
     assert(!cache.memory_tracker.dirty && cache.any_buffer_uploaded);
     // With the CPU range clean again, the previous vector is not reused.
     assert(cache.SynchronizeBuffer(buffer,0x1000,256));
-    assert(cache.uploads==1 && cache.memory_tracker.upload_walks==1);
+    assert(cache.uploads==1);
+#ifdef PS5_NATIVE
+    assert(cache.memory_tracker.upload_walks==clean_walks+1);
+#else
+    assert(cache.memory_tracker.upload_walks==clean_walks+2);
+#endif
     // Aliased GPU-dirty bytes are *excluded* from the CPU upload.
     cache.memory_tracker.dirty=true;
     cache.gpu_modified_ranges.ranges={{0x1040,0x1080}};
@@ -105,7 +118,12 @@ int main() {
     cache.memory_tracker.dirty=true;
     cache.gpu_modified_ranges.ranges={{0x1000,0x1100}};
     assert(cache.SynchronizeBuffer(buffer,0x1000,256));
-    assert(cache.uploads==2 && cache.memory_tracker.upload_walks==3);
+    assert(cache.uploads==2);
+#ifdef PS5_NATIVE
+    assert(cache.memory_tracker.upload_walks==clean_walks+3);
+#else
+    assert(cache.memory_tracker.upload_walks==clean_walks+4);
+#endif
     assert(!cache.memory_tracker.dirty);
     // Zero-length requests never allocate or consume a retained dirty flag.
     cache.memory_tracker.dirty=true;
@@ -121,13 +139,14 @@ with tempfile.TemporaryDirectory(prefix="encore-f01-clean-upload-") as temp:
     cpp.write_text(prologue + "\ntemplate<class P>\n" + method + "\n" + epilogue)
     for compiler in compilers:
         for opt in ("-O0", "-O2"):
-            exe = Path(temp) / (Path(compiler).name + opt)
-            built = subprocess.run(
-                [compiler, "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
-                 "-fsanitize=undefined", "-fno-sanitize-recover=all",
-                 str(cpp), "-o", str(exe)],
-                capture_output=True, text=True, timeout=50)
-            assert built.returncode == 0, (compiler, opt, built.stderr[-4000:])
-            ran = subprocess.run([str(exe)], capture_output=True, text=True, timeout=15)
-            assert ran.returncode == 0, (compiler, opt, ran.stderr[-4000:])
-            print("ENCORE_F01_CLEAN_UPLOAD_PASS", Path(compiler).name, opt)
+            for label, defines in (("ps5", ["-DPS5_NATIVE"]), ("upstream", [])):
+                exe = Path(temp) / (Path(compiler).name + opt + label)
+                built = subprocess.run(
+                    [compiler, "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+                     "-fsanitize=undefined", "-fno-sanitize-recover=all",
+                     *defines, str(cpp), "-o", str(exe)],
+                    capture_output=True, text=True, timeout=50)
+                assert built.returncode == 0, (compiler, opt, label, built.stderr[-4000:])
+                ran = subprocess.run([str(exe)], capture_output=True, text=True, timeout=15)
+                assert ran.returncode == 0, (compiler, opt, label, ran.stderr[-4000:])
+                print("ENCORE_F01_CLEAN_UPLOAD_PASS", Path(compiler).name, opt, label)
