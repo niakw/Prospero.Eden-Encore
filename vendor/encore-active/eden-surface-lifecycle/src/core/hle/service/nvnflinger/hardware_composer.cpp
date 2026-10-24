@@ -68,25 +68,26 @@ u32 HardwareComposer::ComposeLocked(f32* out_speed_scale, Display& display,
     for (auto& layer : display.stack.layers) {
         auto consumer_id = layer->consumer_id;
 
-        bool should_try_acquire = true;
-        if (!layer->is_overlay) {
-            auto fb_it = m_framebuffers.find(consumer_id);
-            if (fb_it != m_framebuffers.end() && fb_it->second.is_acquired) {
-                const u64 frames_since_last_acquire = m_frame_number - fb_it->second.last_acquire_frame;
-                const s32 expected_interval = NormalizeSwapInterval(nullptr, fb_it->second.item.swap_interval);
-
-                if (frames_since_last_acquire < static_cast<u64>(expected_interval)) {
-                    should_try_acquire = false;
-                }
-            }
+        // At 30Hz game / 60Hz HUD cadence this is a hot compositor path.
+        // The frame map is stable while ComposeLocked owns the HLE lock:
+        // a reusable buffer was just found AND confirmed still acquired.
+        const auto fb_it = m_framebuffers.find(consumer_id);
+        bool reuse_held = false;
+        if (!layer->is_overlay && fb_it != m_framebuffers.end() &&
+            fb_it->second.is_acquired) {
+            const u64 frames_since_last_acquire =
+                m_frame_number - fb_it->second.last_acquire_frame;
+            const s32 expected_interval =
+                NormalizeSwapInterval(nullptr, fb_it->second.item.swap_interval);
+            reuse_held = frames_since_last_acquire < static_cast<u64>(expected_interval);
         }
 
-        // Try to fetch the framebuffer (either new or stale).
-        const auto result = should_try_acquire
-            ? this->CacheFramebufferLocked(*layer, consumer_id)
-            : (m_framebuffers.find(consumer_id) != m_framebuffers.end() && m_framebuffers[consumer_id].is_acquired
-                ? CacheStatus::CachedBufferReused
-                : CacheStatus::NoBufferAvailable);
+        // Reuse only a buffer the consumer still owns; otherwise the real
+        // acquisition path decides whether a fresh frame is available.
+        // Avoid a duplicate find() plus operator[] on every held game frame.
+        const auto result = reuse_held
+            ? CacheStatus::CachedBufferReused
+            : this->CacheFramebufferLocked(*layer, consumer_id);
 
         // If we failed, skip this layer.
         if (result == CacheStatus::NoBufferAvailable) {

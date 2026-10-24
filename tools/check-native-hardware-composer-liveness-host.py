@@ -50,6 +50,13 @@ methods = "\n\n".join(extract(name) for name in (
     "bool HardwareComposer::TryAcquireFramebufferLocked(",
     "HardwareComposer::CacheStatus HardwareComposer::CacheFramebufferLocked(",
 ))
+# Verify the real native owner uses one lookup for the acquired-frame
+# decision and cannot accidentally insert a missing consumer in the
+# old ternary's second lookup.
+compose = extract("u32 HardwareComposer::ComposeLocked(")
+assert compose.count("m_framebuffers.find(consumer_id)") == 1
+assert "const auto result = reuse_held" in compose
+assert "m_framebuffers[consumer_id].is_acquired" not in compose
 assert "nvdisp.WaitForComposite();" in methods
 assert "nvdisp.Composite(composition_stack);" in methods
 assert "if (result == CacheStatus::NoBufferAvailable)" in methods

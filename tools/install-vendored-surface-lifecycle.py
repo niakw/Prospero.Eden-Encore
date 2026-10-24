@@ -20,7 +20,8 @@ COMPOSER_PATH = Path("src/core/hle/service/nvnflinger/hardware_composer.cpp")
 COMPOSER_ORIGINAL = ROOT / "vendor/sources/eden" / COMPOSER_PATH
 COMPOSER_ACTIVE = ROOT / "vendor/encore-active/eden-surface-lifecycle" / COMPOSER_PATH
 COMPOSER_ORIGINAL_GIT_BLOB = "5decb791e1bb1ab2420f386e3fdbdd2b8628a324"
-COMPOSER_PREVIOUS_ACTIVE_GIT_BLOB = "f5515f4f6d4cc925825d5ad4ccb2ba101188110d"
+COMPOSER_PREVIOUS_ACTIVE_GIT_BLOB = "e44e5c085907f21b3397615286eb07b637377c83"
+COMPOSER_LEGACY_ACTIVE_GIT_BLOB = "f5515f4f6d4cc925825d5ad4ccb2ba101188110d"
 
 ORIGINAL_GIT_BLOB = "a6136c111d96d2660c28b27c6881e3b671e7eed8"
 # Exact predecessor on the same maintained branch. Staged/offline build inputs
@@ -48,6 +49,49 @@ COMPOSER_RELEASED_NEW = "        }\n        // The previous buffer was already R
 COMPOSER_SPEED_OLD = "2.f * static_cast<f32>(1 - swap_interval)"
 COMPOSER_SPEED_NEW = "2.f * (1.f - static_cast<f32>(swap_interval))"
 
+# Same output on held, released and freshly acquired buffers. The
+# earlier code re-looked-up a proven still-acquired slot and invoked
+# operator[] under the compositor's per-layer HLE loop.
+COMPOSER_REUSE_OLD = """        bool should_try_acquire = true;
+        if (!layer->is_overlay) {
+            auto fb_it = m_framebuffers.find(consumer_id);
+            if (fb_it != m_framebuffers.end() && fb_it->second.is_acquired) {
+                const u64 frames_since_last_acquire = m_frame_number - fb_it->second.last_acquire_frame;
+                const s32 expected_interval = NormalizeSwapInterval(nullptr, fb_it->second.item.swap_interval);
+
+                if (frames_since_last_acquire < static_cast<u64>(expected_interval)) {
+                    should_try_acquire = false;
+                }
+            }
+        }
+
+        // Try to fetch the framebuffer (either new or stale).
+        const auto result = should_try_acquire
+            ? this->CacheFramebufferLocked(*layer, consumer_id)
+            : (m_framebuffers.find(consumer_id) != m_framebuffers.end() && m_framebuffers[consumer_id].is_acquired
+                ? CacheStatus::CachedBufferReused
+                : CacheStatus::NoBufferAvailable);"""
+COMPOSER_REUSE_NEW = """        // At 30Hz game / 60Hz HUD cadence this is a hot compositor path.
+        // The frame map is stable while ComposeLocked owns the HLE lock:
+        // a reusable buffer was just found AND confirmed still acquired.
+        const auto fb_it = m_framebuffers.find(consumer_id);
+        bool reuse_held = false;
+        if (!layer->is_overlay && fb_it != m_framebuffers.end() &&
+            fb_it->second.is_acquired) {
+            const u64 frames_since_last_acquire =
+                m_frame_number - fb_it->second.last_acquire_frame;
+            const s32 expected_interval =
+                NormalizeSwapInterval(nullptr, fb_it->second.item.swap_interval);
+            reuse_held = frames_since_last_acquire < static_cast<u64>(expected_interval);
+        }
+
+        // Reuse only a buffer the consumer still owns; otherwise the real
+        // acquisition path decides whether a fresh frame is available.
+        // Avoid a duplicate find() plus operator[] on every held game frame.
+        const auto result = reuse_held
+            ? CacheStatus::CachedBufferReused
+            : this->CacheFramebufferLocked(*layer, consumer_id);"""
+
 
 def check_composer() -> tuple[bytes, bytes]:
     before = COMPOSER_ORIGINAL.read_bytes()
@@ -60,7 +104,10 @@ def check_composer() -> tuple[bytes, bytes]:
     if before_text.count(COMPOSER_SPEED_OLD) != 1:
         raise RuntimeError("Pinned HardwareComposer swap interval arithmetic changed")
     maintained = before_text.replace(COMPOSER_RELEASED_OLD, COMPOSER_RELEASED_NEW)
+    if before_text.count(COMPOSER_REUSE_OLD) != 1:
+        raise RuntimeError("Pinned HardwareComposer acquired-frame branch changed")
     maintained = maintained.replace(COMPOSER_SPEED_OLD, COMPOSER_SPEED_NEW)
+    maintained = maintained.replace(COMPOSER_REUSE_OLD, COMPOSER_REUSE_NEW)
     if after != maintained.encode():
         raise RuntimeError("Maintained HardwareComposer differs from reviewed transformation")
     check_text = after.decode()
@@ -120,7 +167,7 @@ def install(destination: Path) -> None:
          (PREVIOUS_ACTIVE_GIT_BLOB, SURFACE_PRE_DUPLICATE_DISPLAY_GIT_BLOB),
          "SurfaceFlinger"),
         (COMPOSER_PATH, COMPOSER_ACTIVE, composer_before, composer_replacement,
-         (COMPOSER_PREVIOUS_ACTIVE_GIT_BLOB,), "HardwareComposer"),
+         (COMPOSER_PREVIOUS_ACTIVE_GIT_BLOB, COMPOSER_LEGACY_ACTIVE_GIT_BLOB), "HardwareComposer"),
     )
     for rel, source, original, maintained, previous, label in sources:
         existing = (destination / rel).read_bytes()
