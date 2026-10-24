@@ -1018,3 +1018,44 @@ a été vérifiée. **La nouvelle régression n'a pas encore de résultat
 CI confirmé**, pas plus que la compilation native du moteur ou un
 test du HUD FC27. F03 et F04 demeurent ouverts, sans déclaration de
 résolution des textures observées en jeu.
+
+
+## 24 octobre — F03/F04, remappage des cibles framebuffer
+
+**Deuxième sous-chemin corrigé de la récupération après remappage GPU.**
+La reprise d'une vue TIC ne couvre pas les vues de cibles de rendu :
+`TextureCache::UpdateRenderTargets` peut suivre son chemin rapide si
+`Dirty::RenderTargets` reste faux. Or `UnmapGPUMemory` marquait une
+ancienne image `Remapped` sans marquer les attaches du framebuffer.
+
+Le correctif PS5 inspecte, **uniquement lors du remappage**, les
+`image_view_ids` de l'image concernée. Si une vue apparaît parmi les
+attaches couleur actuellement actives, elle marque précisément
+`Dirty::ColorBuffer0 + rt`. S'il s'agit de l'attache profondeur, elle
+marque `Dirty::ZetaBuffer`. `Dirty::RenderTargets` n'est activé que
+si une de ces attaches est effectivement touchée. Il n'y a donc
+aucune reconstruction obligatoire de framebuffer pour une image
+non attachée, ni pour les vues NULL. La prochaine mise à jour normale
+doit alors retrouver le backing actuel au lieu de préparer l'ancien.
+
+- `vendor/encore-active/eden-backports/src/video_core/texture_cache/texture_cache.h`
+  et `vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h`
+  contiennent exactement la même méthode `UnmapGPUMemory`.
+- Rejeu natif :
+  `headless/backports/eden-ps5-texture-remap-target-invalidation.patch`,
+  avec vérification dans `tools/apply-eden-backports.sh`.
+- `tools/prepare-vulkan-port.py` conserve explicitement cette
+  transformation, qu'elle soit déjà présente dans la source shipping
+  ou appliquée à une source plus ancienne.
+- `tools/check-ps5-remapped-render-target-host.py` vérifie
+  le rejeu inverse puis direct du patch, et compile le corps réel de
+  `UnmapGPUMemory` sur hôte pour les cas couleur, profondeur,
+  vue absente, et image sans attache. Il est ajouté aux deux
+  workflows CI.
+- Les empreintes source et patch, ainsi que l'inventaire, sont actualisés.
+
+Contrôles statiques effectués : 13/13, notamment méthode
+shipping/Vulkan identique, patch exact et branche non-PS5 identique
+à la version précédente. **Les résultats effectifs des workflows,
+de la compilation PS5 et du rendu FC27 ne sont pas encore vérifiés.**
+F03 et F04 restent ouverts.
