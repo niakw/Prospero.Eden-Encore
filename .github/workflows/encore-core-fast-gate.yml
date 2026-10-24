@@ -102,6 +102,7 @@ on:
       - 'tools/check-ps5-dma-buffer-copy-span-host.py'
       - 'tools/check-ps5-empty-image-stage-host.py'
       - 'tools/check-ps5-consecutive-sampler-reuse-host.py'
+      - 'tools/check-fc27-six-gates-host.py'
       - 'tools/check-native-amd-logic-op-register-host.py'
       - 'tools/check-ps5-graphics-stage-view-cursors-host.py'
       - 'tools/check-ps5-graphics-pipeline-aware-preflight-host.py'
