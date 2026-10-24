@@ -1846,10 +1846,10 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-active-source-inventory.py",
       "shipping_relpath": "src/video_core/texture_cache/texture_cache.h",
-      "shipping_active_sha256": "db40f23dd5268141db9e07820fef74e28bd77233b6caa519d7ceb8da800a3767",
+      "shipping_active_sha256": "6519168f033aba8dfbc9fa7d6e9fae0c4f488761e3373aeb2d4ee71653ca5567",
       "shipping_upstream_sha256": "59f06d6839d09c96e9d7541a727a87fee680b7e7bebe763e82fec523a5caf498",
-      "shipping_bytes": 119845,
-      "evidence": "Shipping texture cache maintained for F01 generation-aware feedback decision: avoid view-key scan when RT/descriptor serial already invalidates it, preserve exact barrier logic. Versioned source SHA/size match the backport manifest and source replay is CI-gated. FC27 performance on console not yet proven. F04 guarded PS5 BaseLayer * layer_stride as u64 and rejected absent image subresource; shipping/native versioned parity, exact host replay and C++ fixture, not console-qualified. F03/F04 detects cached views bound to ImageFlagBits::Remapped images, recreates on resident backing and publishes NULL with invalidation serial when absent; source-extracted host regression and strict replay included, console behavior unmeasured. F03/F04 now selectively marks remapped color/depth framebuffer attachments dirty before the next UpdateRenderTargets, with C++ host source-extracted coverage and exact replay; native build and FC27 unverified."
+      "shipping_bytes": 120047,
+      "evidence": "Shipping texture cache maintained for F01 generation-aware feedback decision: avoid view-key scan when RT/descriptor serial already invalidates it, preserve exact barrier logic. Versioned source SHA/size match the backport manifest and source replay is CI-gated. FC27 performance on console not yet proven. F04 guarded PS5 BaseLayer * layer_stride as u64 and rejected absent image subresource; shipping/native versioned parity, exact host replay and C++ fixture, not console-qualified. F03/F04 detects cached views bound to ImageFlagBits::Remapped images, recreates on resident backing and publishes NULL with invalidation serial when absent; source-extracted host regression and strict replay included, console behavior unmeasured. F03/F04 now selectively marks remapped color/depth framebuffer attachments dirty before the next UpdateRenderTargets, with C++ host source-extracted coverage and exact replay; native build and FC27 unverified. F03/F04 removes end()-iterator dereference in PS5 shipping image_view_ids lookup; validates both native and shipping C++ methods, ordered patch replay, with no PS5-run claim."
     },
     {
       "path": "vendor/encore-active/eden-backports/src/video_core/texture_cache/util.cpp",
