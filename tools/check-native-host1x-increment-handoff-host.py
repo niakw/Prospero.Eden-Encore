@@ -52,6 +52,7 @@ CPP=r"""
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <cstdio>
@@ -142,6 +143,23 @@ int main(){
     std::unique_lock lk(mutex);
     cv.wait(lk,[&]{return entered;});
  }
+ // Preserve same-syncpoint order under concurrent IncrementGuest.
+ // A second increment must not run its callback before the blocked first.
+ std::atomic<unsigned> same_id{};
+ m.RegisterGuestAction(5,2,[&]{
+    std::lock_guard lk(mutex);
+    assert(released);
+    ++same_id;
+ });
+ std::atomic<bool> same_started{};
+ std::thread same_increment([&]{
+    same_started.store(true,std::memory_order_release);
+    m.IncrementGuest(5);
+ });
+ while(!same_started.load(std::memory_order_acquire)) std::this_thread::yield();
+ std::this_thread::sleep_for(std::chrono::milliseconds(4));
+ assert(m.syncpoints_guest[5].load(std::memory_order_acquire)==1);
+ assert(same_id==0);
  // The first two actions have been atomically claimed. The third remains
  // cancellable, and a different host syncpoint must not be blocked.
  m.DeregisterGuestAction(5,ready);
@@ -149,9 +167,6 @@ int main(){
  m.RegisterHostAction(7,1,[&]{++independent;});
  m.IncrementHost(7);
  m.WaitHost(7,1);
- std::fprintf(stderr,"N04_DIAG independent=%u claimed=%u cancelled=%u guest5_pending=%zu host7_pending=%zu\n",
-              independent.load(),claimed.load(),cancelled.load(),
-              m.guest_action_storage[5].size(),m.host_action_storage[7].size());
  assert(independent==1 && claimed==0 && cancelled==0);
  {
     std::lock_guard lk(mutex);
@@ -159,6 +174,8 @@ int main(){
  }
  cv.notify_all();
  pending.join();
+ same_increment.join();
+ assert(same_id==1);
  m.IncrementGuest(5);
  m.IncrementGuest(5);
  assert(claimed==1 && cancelled==0);
@@ -171,7 +188,7 @@ int main(){
  }
  assert(progress==256);
  std::printf("N04_HOST1X_INCREMENT_HANDOFF_PASS ordered=3 nested=1 "
-             "claimed=1 pending_cancelled=1 independent=1 stress=256\n");
+             "claimed=1 pending_cancelled=1 independent=1 same_id_serial=1 stress=256\n");
 }
 """
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
