@@ -1718,10 +1718,10 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-active-source-inventory.py",
       "shipping_relpath": "src/video_core/buffer_cache/buffer_cache.h",
-      "shipping_active_sha256": "bfbac4c35e80488dfb846feab980f4781821f7e98eda6988e467cddd24a372aa",
+      "shipping_active_sha256": "f69b21077f8eaccf6bb87b2e1e8970ea4d1a817d243a724ce661f8f9400175f8",
       "shipping_upstream_sha256": "9fc3189be03fb5b13ec1b6accc1a5620a2d42c725282ee0e1598e8a828e8b861",
-      "shipping_bytes": 86358,
-      "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract V51. No new FPS or native progress claim."
+      "shipping_bytes": 86677,
+      "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract V51. No new FPS or native progress claim. 2026-10-24 F01 clean-upload short-circuit added; source digest refreshed, no FPS or F01 completion claim."
     },
     {
       "path": "vendor/encore-active/eden-backports/src/video_core/control/channel_state_cache.h",
