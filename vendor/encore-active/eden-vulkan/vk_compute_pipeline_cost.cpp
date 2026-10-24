@@ -7,6 +7,7 @@
 #include <algorithm>
 #include "common/scope_exit.h"
 #include "performance.h"
+#include <memory>
 #include <vector>
 
 #include <boost/container/small_vector.hpp>
@@ -33,6 +34,49 @@ using Shader::ImageBufferDescriptor;
 using Shader::Backend::SPIRV::RESCALING_LAYOUT_WORDS_OFFSET;
 using Tegra::Texture::TexturePair;
 
+#ifdef PS5_NATIVE
+namespace {
+// Per-GPU-thread compute descriptor storage. The lease keeps a nested dispatch
+// from corrupting an outer dispatch's views or sampler cursors.
+struct ComputeDescriptorScratch {
+    boost::container::small_vector<VideoCommon::ImageViewInOut, 64> views;
+    boost::container::small_vector<VideoCommon::SamplerId, 64> samplers;
+    bool in_use{};
+};
+thread_local ComputeDescriptorScratch compute_descriptor_scratch;
+thread_local ComputeDescriptorScratch compute_descriptor_nested_scratch;
+
+class ComputeDescriptorScratchLease {
+public:
+    ComputeDescriptorScratchLease() {
+        if (!compute_descriptor_scratch.in_use) {
+            current = &compute_descriptor_scratch;
+            current->in_use = true;
+        } else if (!compute_descriptor_nested_scratch.in_use) {
+            current = &compute_descriptor_nested_scratch;
+            current->in_use = true;
+        } else {
+            nested = std::make_unique<ComputeDescriptorScratch>();
+            current = nested.get();
+        }
+        current->views.clear();
+        current->samplers.clear();
+    }
+    ~ComputeDescriptorScratchLease() {
+        if (!nested) current->in_use = false;
+    }
+    ComputeDescriptorScratchLease(const ComputeDescriptorScratchLease&) = delete;
+    ComputeDescriptorScratchLease& operator=(const ComputeDescriptorScratchLease&) = delete;
+    auto& Views() noexcept { return current->views; }
+    auto& Samplers() noexcept { return current->samplers; }
+
+private:
+    std::unique_ptr<ComputeDescriptorScratch> nested;
+    ComputeDescriptorScratch* current{};
+};
+} // namespace
+#endif
+
 ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk::PipelineCache& pipeline_cache_,
                                  DescriptorPool& descriptor_pool,
                                  GuestDescriptorQueue& guest_descriptor_queue_,
@@ -51,6 +95,14 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
     std::copy_n(info.constant_buffer_used_sizes.begin(), uniform_buffer_sizes.size(),
                 uniform_buffer_sizes.begin());
     num_descriptor_entries = NumDescriptorEntries(info);
+#ifdef PS5_NATIVE
+    // Fixed by the compiled compute shader; safe to read before cache locks.
+    num_image_elements = Shader::NumDescriptors(info.texture_buffer_descriptors) +
+                         Shader::NumDescriptors(info.image_buffer_descriptors) +
+                         Shader::NumDescriptors(info.texture_descriptors) +
+                         Shader::NumDescriptors(info.image_descriptors);
+    num_textures = Shader::NumDescriptors(info.texture_descriptors);
+#endif
 
     DescriptorLayoutBuilder builder{device};
     builder.Add(info, VK_SHADER_STAGE_COMPUTE_BIT);
@@ -154,6 +206,21 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
     }
 }
 
+#ifdef PS5_NATIVE
+void ComputePipeline::PreflightDescriptorScratch() {
+    // No guest texture/cache data is consulted here: counts are immutable.
+    // Skip the slot currently owned by a nested Configure invocation.
+    auto& scratch = compute_descriptor_scratch.in_use
+                        ? compute_descriptor_nested_scratch
+                        : compute_descriptor_scratch;
+    if (scratch.in_use) return;
+    if (scratch.views.capacity() < num_image_elements)
+        scratch.views.reserve(num_image_elements);
+    if (scratch.samplers.capacity() < num_textures)
+        scratch.samplers.reserve(num_textures);
+}
+#endif
+
 bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
                                 Tegra::MemoryManager& gpu_memory, Scheduler& scheduler,
                                 BufferCache& buffer_cache, TextureCache& texture_cache) {
@@ -185,8 +252,18 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
         texture_cache.SynchronizeDescriptors(true);
     }
 
+#ifdef PS5_NATIVE
+    // Preallocated by DispatchCompute before its paired cache mutexes.
+    // A nested call leases another slot rather than overwriting these IDs.
+    ComputeDescriptorScratchLease scratch;
+    auto& views = scratch.Views();
+    auto& samplers = scratch.Samplers();
+    views.reserve(num_image_elements);
+    samplers.reserve(num_textures);
+#else
     boost::container::small_vector<VideoCommon::ImageViewInOut, 64> views;
     boost::container::small_vector<VideoCommon::SamplerId, 64> samplers;
+#endif
 
     const auto& qmd{kepler_compute.launch_description};
     const auto& cbufs{qmd.const_buffer_config};
