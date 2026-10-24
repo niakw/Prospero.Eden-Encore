@@ -127,13 +127,15 @@ int main(){
  std::condition_variable cv;
  bool entered{},released{};
  std::atomic<unsigned> claimed{},cancelled{},progress{};
+ // RegisterAction inserts equal thresholds at the front (LIFO).
+ // Register the counted callback first, so the blocker becomes first.
+ auto ready=m.RegisterGuestAction(5,1,[&]{++claimed;});
  m.RegisterGuestAction(5,1,[&]{
     std::unique_lock lk(mutex);
     entered=true;
     cv.notify_all();
     cv.wait(lk,[&]{return released;});
  });
- auto ready=m.RegisterGuestAction(5,1,[&]{++claimed;});
  auto future=m.RegisterGuestAction(5,3,[&]{++cancelled;});
  std::thread pending([&]{m.IncrementGuest(5);});
  {
