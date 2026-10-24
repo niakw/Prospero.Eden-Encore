@@ -18,6 +18,16 @@ original_test = (root / "tools/check-ps5-feedback-loop-view-cache.py").read_text
 start = native.index("void TextureCache<P>::CheckFeedbackLoop(")
 end = native.index("\ntemplate <class P>", start)
 method = native[start:end]
+# The shared pinned-source fixture now checks that stable serials compare
+# image-view identities while changed serials skip them. This test extracts
+# the selected maintained function instead of its instrumented pinned replay,
+# so install the SAME counter at the actual view comparison before compiling.
+key_compare = "            if (last_feedback_view_ids[i] != views[i].id) {"
+assert method.count(key_compare) == 1
+assert "inline unsigned view_key_comparisons=0;" in (
+    (root / "tools/check-ps5-feedback-loop-view-cache.py").read_text())
+method = method.replace(
+    key_compare, "            ++view_key_comparisons;\n" + key_compare)
 
 guard = """    // No sampled view can participate in a framebuffer feedback loop.
     // Avoid even the view-key comparison and snapshot for untextured draws.
