@@ -1212,3 +1212,25 @@ print("F03/F04 remapped active framebuffer invalidation PASS")
 PYREMAPRT
 }
 apply_one "$root/headless/backports/eden-ps5-texture-remap-target-invalidation.patch" "$eden/.encore-backport-ps5-texture-remap-target-invalidation.sha256" validate_ps5_texture_remap_target_invalidation
+
+
+# F03/F04: the descriptor can remain cached after a channel's per-slot
+# image-view map is cleared. Never dereference end() in the shipping
+# texture cache; rebuild if valid or publish a NULL placeholder.
+validate_ps5_texture_missing_channel_slot_guard() {
+python3 - "$eden" <<'PYMISSINGTIC'
+from pathlib import Path
+import sys
+source=(Path(sys.argv[1])/"src/video_core/texture_cache/texture_cache.h").read_text()
+a=source.index("ImageViewId TextureCache<P>::VisitImageView(")
+b=source.index("\ntemplate <class P>",a)
+m=source[a:b]
+assert m.count("const bool remapped_cached_view =") == 1
+assert "it != channel_state->image_view_ids.end() && is_remapped_view(it->second)" in m
+assert "it == channel_state->image_view_ids.end() ||" in m
+assert "if (it == channel_state->image_view_ids.end() || remapped_cached_view)" in m
+assert "channel_state->image_view_ids.insert_or_assign(map_index, NULL_IMAGE_VIEW_ID)" in m
+print("F03/F04 absent texture channel view slot guard PASS")
+PYMISSINGTIC
+}
+apply_one "$root/headless/backports/eden-ps5-texture-missing-channel-slot-guard.patch" "$eden/.encore-backport-ps5-texture-missing-channel-slot-guard.sha256" validate_ps5_texture_missing_channel_slot_guard
