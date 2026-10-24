@@ -3527,7 +3527,7 @@
       "path": "vendor/encore-active/eden-vulkan/vk_compute_pipeline_cost.cpp",
       "disposition": "new_source_issue_corrected",
       "proof_ref": "tools/check-vulkan-pipeline-ready-publication-host.py",
-      "evidence": "Compute pipeline ready path was relaxed with builder release; now acquires ready publication before pipeline handle usage. Source-extracted host witness tests racing and completed pipelines; PS5/native not measured."
+      "evidence": "Compute pipeline ready path was relaxed with builder release; now acquires ready publication before pipeline handle usage. Source-extracted host witness tests racing and completed pipelines; PS5/native not measured. F01 now also preflights immutable compute texture/sampler counts into bounded per-thread reentrant scratch before paired GPU locks; checks in tools/check-ps5-compute-descriptor-scratch-host.py. No measured FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vk_descriptor_buffer_cost.cpp",
@@ -3637,8 +3637,9 @@
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp",
-      "disposition": "reviewed_without_new_code_edit",
-      "evidence": "Source-level P0 optimization triage; docs/EDEN_OPTIMIZATION_REVIEW_MESA_VULKAN_2026-10-20.md"
+      "disposition": "new_source_issue_corrected",
+      "evidence": "F01 ComputePipeline::PreflightDescriptorScratch invoked before DispatchCompute paired guest-cache mutexes, on the shader selected after GPU worker preflight; source-aware CI regression. No console FPS claim.",
+      "proof_ref": "tools/check-ps5-compute-descriptor-scratch-host.py"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vulkan_renderer.cpp",
