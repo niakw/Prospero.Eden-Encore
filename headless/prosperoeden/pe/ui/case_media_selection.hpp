@@ -75,4 +75,13 @@ inline std::array<const std::string*, 3> BackScenes(
     return selected;
 }
 
+// One-shot fallback after a short media warm-up is allowed only for a NEW
+// page. Never rebake an existing provisional page with still-missing artwork;
+// doing so would both waste GPU work and permanently hide the late image.
+inline bool PageInputReady(bool existing_page, bool inputs_ready,
+                           float launch_seconds) noexcept
+{
+    return inputs_ready || (!existing_page && launch_seconds >= 4.0f);
+}
+
 } // namespace pe::ui::case_media
