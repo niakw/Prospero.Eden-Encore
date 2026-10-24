@@ -1059,3 +1059,35 @@ shipping/Vulkan identique, patch exact et branche non-PS5 identique
 à la version précédente. **Les résultats effectifs des workflows,
 de la compilation PS5 et du rendu FC27 ne sont pas encore vérifiés.**
 F03 et F04 restent ouverts.
+
+
+## 24 octobre — F03/F04, association TIC absente du cache de canal
+
+Le nouveau test de récupération des vues a mis en évidence une divergence
+résiduelle entre les deux propriétaires des textures. Dans la source
+shipping, `VisitImageView` pouvait appeler `is_remapped_view(it->second)`
+alors que `it == channel_state->image_view_ids.end()`, si une association
+de canal avait été supprimée sans changer le descripteur TIC.
+Le backend Vulkan comportait déjà un garde-fou supplémentaire.
+
+Le code PS5 shipping vérifie désormais la présence de l'entrée avant
+tout accès et suit la même politique que Vulkan : reconstitution de
+l'association si elle est valide, ou création d'un emplacement NULL.
+Une entrée absente n'invalide pas fictivement un cache de feedback
+contenant déjà une vue NULL. Le chemin non-PS5 reste inchangé.
+
+- `headless/backports/eden-ps5-texture-missing-channel-slot-guard.patch`
+  est appliqué **après** la réparation des vues remappées et des
+  cibles framebuffer ; la chaîne shipping enregistre son empreinte.
+- `tools/prepare-vulkan-port.py` transforme désormais la source shipping
+  actualisée en la méthode native préexistante, sans dérive d'octets.
+- `tools/check-ps5-remapped-texture-view-host.py` compile **les deux**
+  méthodes, shipping et Vulkan, en O0/O2 et PS5/non-PS5 ; il retire
+  les deux patches de vues dans l'ordre inverse avant de les rejouer.
+- Vérification de cohérence shipping → Vulkan : 9/9 points satisfaits.
+
+Les reproductions hôte isolées de la méthode native et du remappage des
+cibles framebuffer sont réussies (Clang/GCC, O0/O2, les deux modes,
+UBSan). Les tests du dépôt complet et son rejeu intégral ne sont
+pas encore confirmés par CI, et aucun résultat PS5/FC27 n'est acquis.
+**F03/F04 restent ouverts.**
