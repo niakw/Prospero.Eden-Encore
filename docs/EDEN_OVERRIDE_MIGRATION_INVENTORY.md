@@ -739,16 +739,17 @@ et de limiter CMake à la sélection.
 | P39 | `eden-ps5-feedback-loop-view-key.patch` | `apply-eden-backports.sh` | 965 | Replay avec validation |
 | P40 | `eden-ps5-texture-shared-null-new-slot.patch` | `apply-eden-backports.sh` | 986 | Replay avec validation |
 | P41 | `eden-ps5-feedback-loop-no-depth-fastpath.patch` | `apply-eden-backports.sh` | 1007 | Replay avec validation |
-| P42 | `eden-ps5-adjacent-valid-view-reuse.patch` | `apply-eden-backports.sh` | 1027 | Replay avec validation |
-| P43 | `eden-ps5-alias-current-tick-fastpath.patch` | `apply-eden-backports.sh` | 1049 | Replay avec validation |
-| P44 | `eden-ps5-software-bilinear-source-coordinates.patch` | `apply-eden-backports.sh` | 1066 | Replay avec validation |
-| P45 | `eden-dynarmic-icache-coherence.patch` | `install-active-core-backports.py` | — | Installation cœur active |
-| P46 | `eden-sm-host-wait.patch` | `install-active-core-backports.py` | — | Installation cœur active |
+| P42 | `eden-ps5-feedback-loop-serial-fastpath.patch` | `apply-eden-backports.sh` | 1027 | Replay avec validation |
+| P43 | `eden-ps5-adjacent-valid-view-reuse.patch` | `apply-eden-backports.sh` | 1051 | Replay avec validation |
+| P44 | `eden-ps5-alias-current-tick-fastpath.patch` | `apply-eden-backports.sh` | 1073 | Replay avec validation |
+| P45 | `eden-ps5-software-bilinear-source-coordinates.patch` | `apply-eden-backports.sh` | 1090 | Replay avec validation |
+| P46 | `eden-dynarmic-icache-coherence.patch` | `install-active-core-backports.py` | — | Installation cœur active |
+| P47 | `eden-sm-host-wait.patch` | `install-active-core-backports.py` | — | Installation cœur active |
 <!-- SOURCE_PATCH_REPLAYS_END -->
 
 ## Couverture des cibles de patches
 
-Les **46 fichiers de patches** touchent **90 chemins distincts**.
+Les **47 fichiers de patches** touchent **90 chemins distincts**.
 Les backports livrés sous `vendor/encore-active/eden-backports/` sont désormais
 reconnus comme propriétaires. Les deux recettes CMake sont suivies via le
 manifeste versionné ; les quatre sources hors snapshot par `H49`

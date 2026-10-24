@@ -1730,7 +1730,7 @@ legacy_calls = re.findall(
     legacy_replay_source, re.M)
 active_core_installer = (root / "tools/install-active-core-backports.py").read_text()
 patch_names = {p.name for p in (root / "headless/backports").glob("*.patch")}
-assert len(legacy_calls) == len(set(legacy_calls)) == 44
+assert len(legacy_calls) == len(set(legacy_calls)) == 45
 active_core_patches = sorted(patch_names.difference(legacy_calls))
 assert active_core_patches == [
     "eden-dynarmic-icache-coherence.patch",
@@ -1742,12 +1742,12 @@ assert "if len(names) != 5:" in active_core_installer
 assert "git apply --check" not in legacy_replay_source or "git apply" in legacy_replay_source
 assert 'git apply "$patch"' in legacy_replay_source
 assert "EDEN_EXPERIMENTAL_DUMMY_THREAD_WAITS:-OFF" in legacy_replay_source
-assert len(patch_names) == len(registered_patches) == 46
+assert len(patch_names) == len(registered_patches) == 47
 assert registered_patches == legacy_calls + active_core_patches
 assert set(registered_patches) == patch_names
-print("VENDOR_SOURCE_PATCH_REPLAY_INVENTORY_PASS: 44 replay calls, 2 active-core patches, 46 files")
+print("VENDOR_SOURCE_PATCH_REPLAY_INVENTORY_PASS: 45 replay calls, 2 active-core patches, 47 files")
 
-# Independent source-target audit: 46 registered patches may touch more
+# Independent source-target audit: 47 registered patches may touch more
 # physical translation units than the high-priority function graph names.
 # This reports EXACT path gaps; it does not assert all unlisted functions
 # have never been checked, nor that the pinned file is selected at runtime.
@@ -1781,7 +1781,7 @@ unmatched_patch_targets = sorted(path for path in all_patch_targets
                                  if path not in shipping_build_recipes
                                  and not has_exact_audit_path(path))
 assert not unmatched_patch_targets, ("unowned source patch targets", unmatched_patch_targets)
-assert len(patch_target_map) == 46
+assert len(patch_target_map) == 47
 print("VENDOR_PATCH_TARGET_FOOTPRINT_PASS "
       f"patches={len(patch_target_map)} "
       f"touched_paths={len(all_patch_targets)} "
