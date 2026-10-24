@@ -743,13 +743,19 @@ et de limiter CMake à la sélection.
 | P43 | `eden-ps5-adjacent-valid-view-reuse.patch` | `apply-eden-backports.sh` | 1051 | Replay avec validation |
 | P44 | `eden-ps5-alias-current-tick-fastpath.patch` | `apply-eden-backports.sh` | 1073 | Replay avec validation |
 | P45 | `eden-ps5-software-bilinear-source-coordinates.patch` | `apply-eden-backports.sh` | 1090 | Replay avec validation |
-| P46 | `eden-dynarmic-icache-coherence.patch` | `install-active-core-backports.py` | — | Installation cœur active |
-| P47 | `eden-sm-host-wait.patch` | `install-active-core-backports.py` | — | Installation cœur active |
+| P46 | `eden-ps5-buffer-clean-upload-fastpath.patch` | `apply-eden-backports.sh` | 1111 | Replay avec validation |
+| P47 | `eden-ps5-texture-page-range-guards.patch` | `apply-eden-backports.sh` | 1135 | Replay avec validation |
+| P48 | `eden-ps5-texture-tic-layer-bounds.patch` | `apply-eden-backports.sh` | 1160 | Replay avec validation |
+| P49 | `eden-ps5-texture-remapped-view-rebind.patch` | `apply-eden-backports.sh` | 1188 | Replay avec validation |
+| P50 | `eden-ps5-texture-remap-target-invalidation.patch` | `apply-eden-backports.sh` | 1214 | Replay avec validation |
+| P51 | `eden-ps5-texture-missing-channel-slot-guard.patch` | `apply-eden-backports.sh` | 1236 | Replay avec validation |
+| P52 | `eden-dynarmic-icache-coherence.patch` | `install-active-core-backports.py` | — | Installation cœur active |
+| P53 | `eden-sm-host-wait.patch` | `install-active-core-backports.py` | — | Installation cœur active |
 <!-- SOURCE_PATCH_REPLAYS_END -->
 
 ## Couverture des cibles de patches
 
-Les **47 fichiers de patches** touchent **90 chemins distincts**.
+Les **53 fichiers de patches** (51 rejoués, 2 installés dans le cœur actif) sont suivis dans ce registre. Le nombre de chemins touchés est recalculé directement depuis les entêtes de patches par le contrôle CI.
 Les backports livrés sous `vendor/encore-active/eden-backports/` sont désormais
 reconnus comme propriétaires. Les deux recettes CMake sont suivies via le
 manifeste versionné ; les quatre sources hors snapshot par `H49`
