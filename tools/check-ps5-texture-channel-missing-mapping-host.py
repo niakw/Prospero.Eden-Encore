@@ -17,11 +17,14 @@ assert sampler.count("if (it == channel_state->sampler_ids.end())")==1
 assert image.count("it == channel_state->image_view_ids.end()")==2
 assert image.count("channel_state->image_view_ids.insert_or_assign(map_index, NULL_IMAGE_VIEW_ID);")==2
 assert image.count("IsValidEntry(*gpu_memory, descriptor)")>=2
-assert image.count("++texture_bindings_serial;")==1
+assert image.count("++texture_bindings_serial;")==2
+assert "const bool remapped_cached_view =" in image
+assert "it != channel_state->image_view_ids.end() && is_remapped_view(it->second)" in image
 cmake=(root/"headless/vulkan.cmake").read_text()
 assert 'file(COPY "${EDEN_ACTIVE_VULKAN}/" DESTINATION "${PORT_BUILD_DIR}")' in cmake
 assert 'target_include_directories(video_core BEFORE PUBLIC "${PORT_BUILD_DIR}/vulkan-cache")' in cmake
 fixture=r"""
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -34,6 +37,16 @@ constexpr ImageViewId NULL_IMAGE_VIEW_ID=0;
 constexpr SamplerId NULL_SAMPLER_ID=0;
 #define LOG_DEBUG(...) ((void)0)
 namespace Common { struct SlotId { static constexpr u32 TAGGED_VALUE=0x80000000u; }; }
+enum class ImageFlagBits : u32 { Remapped=1 };
+struct ImageFlags {bool remapped{};};
+bool operator&(const ImageFlags& flags,ImageFlagBits) {return flags.remapped;}
+bool True(bool yes) {return yes;}
+struct ImageBase {ImageFlags flags{};};
+struct ImageViewBase {
+    u32 image_id{};
+    bool buffer{};
+    bool IsBuffer() const {return buffer;}
+};
 struct GpuMemory {};
 bool IsValidEntry(GpuMemory&,int descriptor) { return descriptor>0; }
 struct DescTable {
@@ -55,6 +68,8 @@ template<class P> struct TextureCache {
     Channel channel;
     Channel* channel_state=&channel;
     u32 texture_bindings_serial=0, prepared=0, views_created=0, samplers_found=0;
+    std::array<ImageViewBase,512> slot_image_views{};
+    std::array<ImageBase,512> slot_images{};
     bool fail_first_view_creation=false;
     SamplerId GetSamplerId(u32,bool);
     ImageViewId VisitImageView(u32,bool);
@@ -65,7 +80,10 @@ template<class P> struct TextureCache {
             fail_first_view_creation=false;
             return NULL_IMAGE_VIEW_ID;
         }
-        return descriptor+100;
+        const ImageViewId view = static_cast<ImageViewId>(descriptor+100);
+        assert(view<slot_image_views.size());
+        slot_image_views[view]={.image_id=view,.buffer=false};
+        return view;
     }
     void PrepareImageView(ImageViewId id,bool,bool) { if (id) ++prepared; }
 };
