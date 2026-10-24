@@ -164,10 +164,18 @@ int main(){
  std::this_thread::sleep_for(std::chrono::milliseconds(4));
  assert(m.syncpoints_guest[5].load(std::memory_order_acquire)==1);
  assert(same_id==0);
- // The first two actions have been atomically claimed. The third remains
- // cancellable, and a different host syncpoint must not be blocked.
- m.DeregisterGuestAction(5,ready);
- m.DeregisterGuestAction(5,future);
+ // The callback dispatch holds only THIS syncpoint's rendezvous
+ // mutex, not the global action-list mutex. A cancellation of a pending
+ // entry must wait for the in-flight callback before returning.
+ std::atomic<bool> cancel_started{},cancel_finished{};
+ std::thread canceller([&]{
+    cancel_started.store(true,std::memory_order_release);
+    m.DeregisterGuestAction(5,future);
+    cancel_finished.store(true,std::memory_order_release);
+ });
+ while(!cancel_started.load(std::memory_order_acquire))std::this_thread::yield();
+ std::this_thread::sleep_for(std::chrono::milliseconds(3));
+ assert(!cancel_finished.load(std::memory_order_acquire));
  m.RegisterHostAction(7,1,[&]{++independent;});
  m.IncrementHost(7);
  m.WaitHost(7,1);
@@ -179,6 +187,8 @@ int main(){
  cv.notify_all();
  pending.join();
  same_increment.join();
+ canceller.join();
+ assert(cancel_finished.load(std::memory_order_acquire));
  assert(same_id==1);
  m.IncrementGuest(5);
  m.IncrementGuest(5);
