@@ -232,7 +232,12 @@ Cover Textures::cover(const std::string &path, float size)
         it->second.age = 0.0f;
         queue_.push_back(key);
     }
-    return {it->second.texture, it->second.age, it->second.loaded && it->second.texture == 0,
+    // Preserve a previously confirmed missing state while its next decode
+    // is queued. Otherwise a failed official scan briefly hides its composed
+    // sleeve on every retry, before the eventual successful upload.
+    const bool missing = it->second.texture == 0 &&
+                         (it->second.loaded || it->second.failed_loads != 0);
+    return {it->second.texture, it->second.age, missing,
             it->second.aspect};
 }
 
