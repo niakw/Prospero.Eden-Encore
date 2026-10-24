@@ -401,8 +401,8 @@
       "upstream": "fdd427fad337594874e3d6187d0769e531e61212234e80bd7cb97c85ebbf3f1e"
     },
     "src/video_core/texture_cache/texture_cache.h": {
-      "active": "3c129bb7ecf389d6f95c852ac9afbf1956fcc6e31d19bbeccaef757228af450a",
-      "bytes": 117051,
+      "active": "0f9522293c24405b15a083631f66023a7e5f22980ae7535aaa76e1cd760a2f86",
+      "bytes": 117860,
       "upstream": "59f06d6839d09c96e9d7541a727a87fee680b7e7bebe763e82fec523a5caf498"
     },
     "src/video_core/texture_cache/texture_cache_base.h": {
@@ -421,6 +421,7 @@
   ],
   "pinned_eden_commit": "5f142c7926d0c7fcbbd0ce30794d72f638a43b2a",
   "shipping_receipts": {
+    ".encore-backport-ps5-texture-tic-layer-bounds.sha256": "e1aa759d46a4e4dd23d8759f62ca12ca7692a36712fe30d25787240d964296bf",
     ".encore-backport-4436.sha256": "696c5e81d5c61a35ab624cdc1d5ee9b88a03ab1b448d42b49c166a360078a5ff",
     ".encore-backport-fc27-hle.sha256": "c7fafb5450a910f9aad2957cb271ee33f505c5b8d67f3d4f7463e69209d36c9c",
     ".encore-backport-fw23.sha256": "9a08f35a439cbc8a94262fd439824771bf989d5af6ff72767b6c13fdb75e842e",
