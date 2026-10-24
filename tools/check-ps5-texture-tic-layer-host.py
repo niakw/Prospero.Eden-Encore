@@ -31,16 +31,36 @@ assert selected.index("if (layer_offset > config.Address())") < selected.index(
 assert selected.index("if (!base)") < selected.index("FindOrEmplaceImageView(image_id, view_info)")
 assert selected.count("const SubresourceBase base = image.TryFindBase(config.Address()).value();") == 1
 
+# The TIC patch is intentionally relative to the maintained shipping
+# source, not the pristine upstream archive: earlier reviewed backports
+# changed surrounding function context. Remove this ordered F04 stack,
+# then apply the TIC patch against its actual pre-F04 source.
+patch_stack = (
+    patch,
+    root / "headless/backports/eden-ps5-texture-remapped-view-rebind.patch",
+    root / "headless/backports/eden-ps5-texture-remap-target-invalidation.patch",
+    root / "headless/backports/eden-ps5-texture-missing-channel-slot-guard.patch",
+)
 with tempfile.TemporaryDirectory(prefix="encore-tic-patch-") as tmp:
     stage = Path(tmp)
     target = stage / "src/video_core/texture_cache/texture_cache.h"
     target.parent.mkdir(parents=True)
-    target.write_text(pinned)
-    for command in (["git", "apply", "--check", str(patch)], ["git", "apply", str(patch)]):
-        run = subprocess.run(command, cwd=stage, text=True, capture_output=True, timeout=20)
+    target.write_text(shipping)
+    for later in reversed(patch_stack):
+        for args in (["--reverse", "--check", str(later)],
+                     ["--reverse", str(later)]):
+            command = ["git", "apply", *args]
+            run = subprocess.run(command, cwd=stage, text=True,
+                                 capture_output=True, timeout=20)
+            assert run.returncode == 0, (command, run.stderr[-3000:])
+    assert method(target.read_text()) == method(pinned), "pre-F04 TIC logic drift"
+    for args in (["--check", str(patch)], [str(patch)]):
+        command = ["git", "apply", *args]
+        run = subprocess.run(command, cwd=stage, text=True,
+                             capture_output=True, timeout=20)
         assert run.returncode == 0, (command, run.stderr[-3000:])
     assert method(target.read_text()) == selected
-print("ENCORE_F04_TIC_PINNED_PATCH_REPLAY_PASS")
+print("ENCORE_F04_TIC_ORDERED_PATCH_REPLAY_PASS")
 
 fixture = r"""
 #include <array>
