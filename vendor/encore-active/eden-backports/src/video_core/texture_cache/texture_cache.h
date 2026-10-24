@@ -658,8 +658,10 @@ ImageViewId TextureCache<P>::VisitImageView(u32 index, bool compute) {
     // otherwise stays missing (e.g. streamed HUD/jersey material).
     // Only revalidate previously NULL views: common valid views retain the
     // original zero-overhead fast path and sparse TICs retain their semantics.
-    const bool remapped_cached_view = is_remapped_view(it->second);
-    if ((it->second == NULL_IMAGE_VIEW_ID || remapped_cached_view) &&
+    const bool remapped_cached_view =
+        it != channel_state->image_view_ids.end() && is_remapped_view(it->second);
+    if ((it == channel_state->image_view_ids.end() ||
+         it->second == NULL_IMAGE_VIEW_ID || remapped_cached_view) &&
         IsValidEntry(*gpu_memory, descriptor)) {
         const auto [pair, is_new_tc] = channel_state->image_views.try_emplace(descriptor);
         // CreateImageView can itself return NULL after a transient missing GPU
@@ -676,9 +678,11 @@ ImageViewId TextureCache<P>::VisitImageView(u32 index, bool compute) {
         channel_state->image_view_ids.insert_or_assign(map_index, pair->second);
         return pair->second;
     }
-    if (remapped_cached_view) {
+    if (it == channel_state->image_view_ids.end() || remapped_cached_view) {
         // If its backing is not resident, publish NULL until it returns.
-        ++texture_bindings_serial;
+        if (remapped_cached_view) {
+            ++texture_bindings_serial;
+        }
         channel_state->image_view_ids.insert_or_assign(map_index, NULL_IMAGE_VIEW_ID);
         return NULL_IMAGE_VIEW_ID;
     }
