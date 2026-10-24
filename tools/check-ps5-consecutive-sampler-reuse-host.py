@@ -34,6 +34,7 @@ program = r"""
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <cstdio>
 #include <utility>
 #include <vector>
 using u32 = std::uint32_t;
@@ -71,6 +72,22 @@ static CaseResult configure(const std::array<Info, 2>& stages,
     }
     return result;
 }
+// Comparable direct-reference path: one sampler lookup per descriptor.
+// This is an isolated fixture, not a replay of historical guest timing.
+static CaseResult configure_reference(const std::array<Info, 2>& stages,
+                                      TexCache& texture_cache) {
+    CaseResult result;
+    for (const auto& info : stages) {
+        for (const auto& desc : info.texture_descriptors) {
+            for (u32 index = 0; index < desc.count; ++index) {
+                const auto [view, sampler] = desc.handles.at(index);
+                result.views.push_back({view});
+                result.samplers.push_back(texture_cache.GetSamplerId(sampler, false));
+            }
+        }
+    }
+    return result;
+}
 int main() {
     TexCache cache{};
     std::array<Info, 2> stages{};
@@ -88,6 +105,22 @@ int main() {
     assert(a.views.size() == 7 && a.samplers.size() == 7);
     assert(a.views.front().index == 1 && a.views.back().index == 7);
     assert((a.samplers == std::vector<u32>{107,107,109,107,109,109,107}));
+
+    // Quantify work eliminated on the SAME descriptor fixture. Direct lookup
+    // has seven cache calls; the maintained per-draw memo has two. Equality
+    // of views and IDs guards correctness instead of assuming less work is
+    // always safe. No timing or FC27 frame gain is inferred from this mock.
+    TexCache reference_cache{};
+    const auto reference = configure_reference(stages, reference_cache);
+    assert(reference.views.size() == a.views.size());
+    for (std::size_t index = 0; index < a.views.size(); ++index)
+        assert(reference.views[index].index == a.views[index].index);
+    assert(reference.samplers == a.samplers);
+    assert(reference_cache.lookups == 7 && cache.lookups == 2);
+    std::printf("F01_SAMPLER_LOOKUP_FIXTURE descriptors=7 reference_calls=%u "
+                "maintained_calls=%u avoided_calls=%u scope=host_mock\\n",
+                reference_cache.lookups, cache.lookups,
+                reference_cache.lookups - cache.lookups);
 
     auto b = configure(stages, cache);
     assert(cache.lookups == 4); // No sampler ID outlives a draw.
@@ -125,5 +158,11 @@ with tempfile.TemporaryDirectory(prefix="encore-gfx-memo-") as temp:
         subprocess.run([compiler, "-std=c++20", opt, "-Wall", "-Wextra",
                         "-Werror", "-fsanitize=undefined", "-fno-sanitize-recover=all",
                         str(path), "-o", str(exe)], check=True, timeout=45)
-        subprocess.run([str(exe)], check=True, timeout=20)
+        result = subprocess.run([str(exe)], check=True, timeout=20,
+                                capture_output=True, text=True)
+        expected = ("F01_SAMPLER_LOOKUP_FIXTURE descriptors=7 "
+                    "reference_calls=7 maintained_calls=2 avoided_calls=5 "
+                    "scope=host_mock")
+        assert expected in result.stdout, (opt, result.stdout)
+        print(expected, opt, flush=True)
         print("GPU_PER_DRAW_SAMPLER_MEMO_PASS", opt)
