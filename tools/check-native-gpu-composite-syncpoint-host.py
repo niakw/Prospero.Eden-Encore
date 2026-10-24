@@ -44,6 +44,10 @@ gpu_methods = "\n".join(extract(GPU, marker) for marker in (
     "    void RequestComposite(",
     "    void WaitForComposite(",
 ))
+hs=SYNC.index("namespace {\n// Each domain")
+he=SYNC.index("\nSyncpointManager::ActionHandle",hs)
+sync_helpers=SYNC[hs:he].replace("std::array<std::recursive_mutex, 192>& HostDispatchLocks()", "[[maybe_unused]] std::array<std::recursive_mutex, 192>& HostDispatchLocks()")
+
 sync_methods = "\n".join(extract(SYNC, marker) for marker in (
     "SyncpointManager::ActionHandle SyncpointManager::RegisterAction(",
     "void SyncpointManager::IncrementGuest(",
@@ -315,7 +319,7 @@ int main() {
 """
 cpp=cpp.replace("__NV_METHODS__",nv_methods)
 cpp=cpp.replace("__GPU_METHODS__",gpu_methods)
-cpp=cpp.replace("__SYNC_METHODS__",sync_methods)
+cpp=cpp.replace("__SYNC_METHODS__",sync_helpers+"\n"+sync_methods)
 assert "__GPU_METHODS__" not in cpp and "__NV_METHODS__" not in cpp
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler, "C++20 compiler required"
