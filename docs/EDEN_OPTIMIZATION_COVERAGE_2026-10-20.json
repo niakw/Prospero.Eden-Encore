@@ -3680,7 +3680,7 @@
     {
       "path": "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h",
       "disposition": "new_source_issue_corrected",
-      "evidence": "F04 selected native Vulkan cache: rejected wrapped TIC layer offsets and absent remapped image subresources in CreateImageView; exact pinned generator/parity and CI-invoked native-source C++ host test. No FPS or native console validation claim.",
+      "evidence": "F04 selected native Vulkan cache: rejected wrapped TIC layer offsets and absent remapped image subresources in CreateImageView; exact pinned generator/parity and CI-invoked native-source C++ host test. No FPS or native console validation claim. F03/F04 additional fix: remapped image-view IDs are never reused after GPU unmap; recovers null views when backing is resident, guarded by test/check-ps5-remapped-texture-view-host.py and generator parity, PS5 behavior not yet measured.",
       "proof_ref": "tools/check-ps5-texture-tic-layer-host.py"
     },
     {
