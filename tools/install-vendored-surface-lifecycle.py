@@ -20,7 +20,8 @@ COMPOSER_PATH = Path("src/core/hle/service/nvnflinger/hardware_composer.cpp")
 COMPOSER_ORIGINAL = ROOT / "vendor/sources/eden" / COMPOSER_PATH
 COMPOSER_ACTIVE = ROOT / "vendor/encore-active/eden-surface-lifecycle" / COMPOSER_PATH
 COMPOSER_ORIGINAL_GIT_BLOB = "5decb791e1bb1ab2420f386e3fdbdd2b8628a324"
-COMPOSER_PREVIOUS_ACTIVE_GIT_BLOB = "e44e5c085907f21b3397615286eb07b637377c83"
+COMPOSER_PREVIOUS_ACTIVE_GIT_BLOB = "73374722816afae6c320e65e628d7112f1b832db"
+COMPOSER_PRE_REUSE_GIT_BLOB = "e44e5c085907f21b3397615286eb07b637377c83"
 COMPOSER_LEGACY_ACTIVE_GIT_BLOB = "f5515f4f6d4cc925825d5ad4ccb2ba101188110d"
 
 ORIGINAL_GIT_BLOB = "a6136c111d96d2660c28b27c6881e3b671e7eed8"
@@ -72,17 +73,18 @@ COMPOSER_REUSE_OLD = """        bool should_try_acquire = true;
                 ? CacheStatus::CachedBufferReused
                 : CacheStatus::NoBufferAvailable);"""
 COMPOSER_REUSE_NEW = """        // At 30Hz game / 60Hz HUD cadence this is a hot compositor path.
-        // The frame map is stable while ComposeLocked owns the HLE lock:
-        // a reusable buffer was just found AND confirmed still acquired.
-        const auto fb_it = m_framebuffers.find(consumer_id);
+        // Avoid rechecking an acquired game slot; overlays always try their
+        // own fresh-buffer path without a redundant preliminary lookup.
         bool reuse_held = false;
-        if (!layer->is_overlay && fb_it != m_framebuffers.end() &&
-            fb_it->second.is_acquired) {
-            const u64 frames_since_last_acquire =
-                m_frame_number - fb_it->second.last_acquire_frame;
-            const s32 expected_interval =
-                NormalizeSwapInterval(nullptr, fb_it->second.item.swap_interval);
-            reuse_held = frames_since_last_acquire < static_cast<u64>(expected_interval);
+        if (!layer->is_overlay) {
+            const auto fb_it = m_framebuffers.find(consumer_id);
+            if (fb_it != m_framebuffers.end() && fb_it->second.is_acquired) {
+                const u64 frames_since_last_acquire =
+                    m_frame_number - fb_it->second.last_acquire_frame;
+                const s32 expected_interval =
+                    NormalizeSwapInterval(nullptr, fb_it->second.item.swap_interval);
+                reuse_held = frames_since_last_acquire < static_cast<u64>(expected_interval);
+            }
         }
 
         // Reuse only a buffer the consumer still owns; otherwise the real
@@ -167,7 +169,7 @@ def install(destination: Path) -> None:
          (PREVIOUS_ACTIVE_GIT_BLOB, SURFACE_PRE_DUPLICATE_DISPLAY_GIT_BLOB),
          "SurfaceFlinger"),
         (COMPOSER_PATH, COMPOSER_ACTIVE, composer_before, composer_replacement,
-         (COMPOSER_PREVIOUS_ACTIVE_GIT_BLOB, COMPOSER_LEGACY_ACTIVE_GIT_BLOB), "HardwareComposer"),
+         (COMPOSER_PREVIOUS_ACTIVE_GIT_BLOB, COMPOSER_PRE_REUSE_GIT_BLOB, COMPOSER_LEGACY_ACTIVE_GIT_BLOB), "HardwareComposer"),
     )
     for rel, source, original, maintained, previous, label in sources:
         existing = (destination / rel).read_bytes()
