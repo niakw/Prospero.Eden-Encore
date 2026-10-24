@@ -72,6 +72,25 @@ def run() -> int:
                 )
                 ok = result.returncode == 0
                 reason = "" if ok else f"exit={result.returncode}"
+                if ok and script == "check-ps5-graphics-payload-preflight-host.py":
+                    records = re.findall(
+                        r"F01_PAYLOAD_ALLOCATION_FIXTURE prior_under_lock=(\d+) "
+                        r"maintained_under_lock=(\d+) scope=host_mock", result.stdout)
+                    if len(records) != 2 or records[0] != records[1]:
+                        ok, reason = False, "payload_allocation_metric_missing_or_inconsistent"
+                    else:
+                        prior, maintained = map(int, records[0])
+                        if prior != 1 or maintained != 0:
+                            ok, reason = False, "payload_allocation_metric_invalid"
+                        else:
+                            fixture_metrics["F01_payload_allocation_host_mock"] = {
+                                "prior_locked_allocator_attempts": prior,
+                                "maintained_locked_allocator_attempts": maintained,
+                                "scope": "guarded allocator first-use mock; NOT elapsed lock wait time",
+                            }
+                            print("F01_MEASURED_HOST_SUBPATH=" +
+                                  json.dumps(fixture_metrics["F01_payload_allocation_host_mock"],
+                                             sort_keys=True), flush=True)
                 if ok and script == "check-ps5-consecutive-sampler-reuse-host.py":
                     # Parse numbers emitted by executed source-extracted C++
                     # at O0/O2: never report hardcoded optimization percentages.
@@ -124,6 +143,13 @@ def run() -> int:
               "", "#### Critical unproven exit evidence"]
     for gate, missing in UNPROVEN_EXIT_EVIDENCE.items():
         table.append(f"- {gate}: {missing}")
+    if "F01_payload_allocation_host_mock" in fixture_metrics:
+        m = fixture_metrics["F01_payload_allocation_host_mock"]
+        table += ["", f"F01 guarded first-use allocator fixture: "
+                       f"{m['prior_locked_allocator_attempts']} attempted allocation "
+                       f"under the cache pair without preflight vs "
+                       f"{m['maintained_locked_allocator_attempts']} with preflight; "
+                       "NOT elapsed mutex contention time."]
     if "F01_sampler_lookup_host_mock" in fixture_metrics:
         m = fixture_metrics["F01_sampler_lookup_host_mock"]
         table += ["", f"Measured narrow F01 fixture: {m['reference_calls']} direct "
