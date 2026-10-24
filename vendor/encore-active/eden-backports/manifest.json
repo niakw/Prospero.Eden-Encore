@@ -346,8 +346,8 @@
       "upstream": "ce0d89d407df136c8b9807af34fec71e48a612c0798cbf5e272ce9ceb8bf0073"
     },
     "src/video_core/buffer_cache/buffer_cache.h": {
-      "active": "f69b21077f8eaccf6bb87b2e1e8970ea4d1a817d243a724ce661f8f9400175f8",
-      "bytes": 86677,
+      "active": "bcdd02829670620acc2338416726a23347c48fc95073b310d873808ba402e9fa",
+      "bytes": 86702,
       "upstream": "9fc3189be03fb5b13ec1b6accc1a5620a2d42c725282ee0e1598e8a828e8b861"
     },
     "src/video_core/buffer_cache/buffer_cache_base.h": {
@@ -431,7 +431,7 @@
     ".encore-backport-nvnflinger-wakeup.sha256": "48d94856c1271bcd99920897ea1abb20f020daeaa7607d71c1379555c6b87f92",
     ".encore-backport-ps5-adjacent-valid-view-reuse.sha256": "5ae29e270ed50d33ec1be65eb3b41c82e5f81c46e88963b9679a3170003dae8a",
     ".encore-backport-ps5-alias-current-tick-fastpath.sha256": "e11849187ad84f9d3411ae79a5ee124b6b9170df215052bafde54681f17167ae",
-    ".encore-backport-ps5-buffer-clean-upload-fastpath.sha256": "a50455adc6a0af273de4c5065ff3f99379ec63234c416f46a8d12ae42dacc9c8",
+    ".encore-backport-ps5-buffer-clean-upload-fastpath.sha256": "806f998fbf2ae0f73d664e6b4ad5e37877aa9454bcc75abd41dbba35f8641be4",
     ".encore-backport-ps5-bounded-logging.sha256": "b51127c02910670199bb45586978e06a1677daa8d4dfb63cb822d1b325f54772",
     ".encore-backport-ps5-crash-only-logging.sha256": "616dc7641e876fc4bbcd36bdedacad1460b4ba021fe785cebef39670332a704f",
     ".encore-backport-ps5-feedback-loop-no-depth-fastpath.sha256": "4a1d091039857192835253a58b511d26ef626bea72853cf5650cb73ddcd85abf",
