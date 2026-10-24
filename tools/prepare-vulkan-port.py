@@ -2692,6 +2692,13 @@ apply_reviewed_delta(pipeline,
     }''',
     'F01 release shader notification exactly once after QueueWork')
 
+# F01 source-selected substage attribution. Nested under BindStageDescriptors,
+# 1-in-16 Detailed Logging ONLY; no reordered host bindings/descriptors.
+apply_reviewed_delta(pipeline, "        buffer_cache.BindHostStageBuffers(stage);\n        const auto& info{stage_infos[stage]};", "        // Detailed-only 1/16 sampling: separate host buffer synchronization\n        // from image descriptor push work inside the existing paired locks.\n        {\n            ::Eden::Performance::CachePhaseTimer phase{\n                ::Eden::Performance::CachePhase::StageHostBuffers};\n            buffer_cache.BindHostStageBuffers(stage);\n        }\n        const auto& info{stage_infos[stage]};",
+    'F01 split host-stage buffer binding cost from descriptor image push')
+apply_reviewed_delta(pipeline, "        if (stage_has_image_bindings[stage]) {\n            PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling,\n                                 samplers_it, views_it);\n        }", "        if (stage_has_image_bindings[stage]) {\n            ::Eden::Performance::CachePhaseTimer phase{\n                ::Eden::Performance::CachePhase::StageImageDescriptors};\n            PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling,\n                                 samplers_it, views_it);\n        }",
+    'F01 isolate image descriptor push cost within stage binding')
+
 texture = 'vulkan-cache/video_core/texture_cache/texture_cache.h'
 apply_reviewed_delta(texture,
     '''#ifdef PS5_NATIVE

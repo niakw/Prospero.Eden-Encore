@@ -203,6 +203,7 @@ enum class CachePhase : unsigned {
     DynamicStates, QueryAndDraw,
     TextureCpuRefresh, TextureAliasScan, TextureAliasCopy,
     StageTextureHandles, BindTextureBuffers, BindStageDescriptors,
+    StageHostBuffers, StageImageDescriptors,
     RefreshRenderTargets, CheckFeedbackLoop, CommitGraphicsDraw, DescriptorRingFinish, DescriptorRingPreflight,
     GuestWriteBufferWait, GuestWriteBufferWork, GuestWriteTextureWait,
     GuestWriteTextureWork, GuestWriteShaderInvalidate, Count

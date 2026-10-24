@@ -729,12 +729,20 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
     const VideoCommon::SamplerId* samplers_it{samplers.data()};
     const VideoCommon::ImageViewInOut* views_it{views.data()};
     const auto prepare_stage{[&](size_t stage) LAMBDA_FORCEINLINE {
-        buffer_cache.BindHostStageBuffers(stage);
+        // Detailed-only 1/16 sampling: separate host buffer synchronization
+        // from image descriptor push work inside the existing paired locks.
+        {
+            ::Eden::Performance::CachePhaseTimer phase{
+                ::Eden::Performance::CachePhase::StageHostBuffers};
+            buffer_cache.BindHostStageBuffers(stage);
+        }
         const auto& info{stage_infos[stage]};
         // No image or texture-buffer descriptors: PushImageDescriptors
         // cannot change view cursors, descriptor queue or rescale constants.
         // Uniform/storage buffer bindings above must still execute.
         if (stage_has_image_bindings[stage]) {
+            ::Eden::Performance::CachePhaseTimer phase{
+                ::Eden::Performance::CachePhase::StageImageDescriptors};
             PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling,
                                  samplers_it, views_it);
         }
