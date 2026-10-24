@@ -1738,6 +1738,12 @@ void BufferCache<P>::TouchBuffer(Buffer& buffer, BufferId buffer_id) noexcept {
 
 template <class P>
 bool BufferCache<P>::SynchronizeBuffer(Buffer& buffer, DAddr device_addr, u32 size) {
+    // F01: the common clean-buffer draw has no ranges to upload. Avoid the
+    // destructive upload-range walk and list rebuild unless CPU dirty bits
+    // are present; never skip real dirty pages or GPU-overlap filtering.
+    if (!memory_tracker.IsRegionCpuModified(device_addr, size)) {
+        return true;
+    }
     upload_copies.clear();
     u64 total_size_bytes = 0;
     u64 largest_copy = 0;
