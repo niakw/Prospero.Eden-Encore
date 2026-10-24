@@ -2896,3 +2896,51 @@ apply_reviewed_delta(
     if (!pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache,
                              texture_cache)) {''',
     'F01 compute scratch reservation precedes both guest cache mutexes')
+
+
+# F01: an immutable compute TSC table can repeat sampler IDs within one
+# dispatch. Lookup memo is bounded and lives ONLY inside Configure: never
+# reuse it after a compute descriptor remap or a new channel.
+apply_reviewed_delta(
+    'vk_compute_pipeline_cost.cpp',
+    '#include <algorithm>\n#include "common/scope_exit.h"',
+    '#include <algorithm>\n#include <array>\n#include "common/scope_exit.h"',
+    'F01 compute sampler memo explicit array include')
+apply_reviewed_delta(
+    'vk_compute_pipeline_cost.cpp',
+    '''    const bool via_header_index{qmd.linked_tsc != 0};
+    const auto read_handle{[&](const auto& desc, u32 index) {''',
+    '''    const bool via_header_index{qmd.linked_tsc != 0};
+#ifdef PS5_NATIVE
+    // Descriptor synchronization above fixes the TSC table for this dispatch.
+    // This bounded draw-local memo avoids duplicate sampler-table probes but
+    // NEVER carries sampler IDs across dispatches, remaps or channel switches.
+    struct ComputeSamplerMemo {
+        u32 handle{};
+        VideoCommon::SamplerId id{};
+        bool valid{};
+    };
+    std::array<ComputeSamplerMemo, 16> sampler_memo{};
+    const auto resolve_sampler{[&](u32 handle) -> VideoCommon::SamplerId {
+        auto& entry = sampler_memo[handle & 15U];
+        if (!entry.valid || entry.handle != handle) {
+            entry.id = texture_cache.GetSamplerId(handle, true);
+            entry.handle = handle;
+            entry.valid = true;
+        }
+        return entry.id;
+    }};
+#endif
+    const auto read_handle{[&](const auto& desc, u32 index) {''',
+    'F01 16-slot compute sampler memo limited to each Configure call')
+apply_reviewed_delta(
+    'vk_compute_pipeline_cost.cpp',
+    '''            VideoCommon::SamplerId sampler = texture_cache.GetSamplerId(handle.second, true);
+            samplers.push_back(sampler);''',
+    '''#ifdef PS5_NATIVE
+            samplers.push_back(resolve_sampler(handle.second));
+#else
+            VideoCommon::SamplerId sampler = texture_cache.GetSamplerId(handle.second, true);
+            samplers.push_back(sampler);
+#endif''',
+    'F01 PS5 compute sampler reuse with unchanged upstream path')
