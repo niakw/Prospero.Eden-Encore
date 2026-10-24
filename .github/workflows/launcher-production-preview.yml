@@ -210,20 +210,21 @@ jobs:
                       assert frame.size == (1920, 1080)
                       assert sum(ImageStat.Stat(frame.convert("RGB").crop((480, 270, 565, 620))).stddev) > 17, (kind, name)
               if kind == "front-only":
-                  # A missing rear scan MUST show the real game artwork on
-                  # its upper paper. An earlier FBO baked the untextured
-                  # dark gradient even though EDEN_CASE_COMPOSE said ready.
-                  # This ROI is inside the projected LEFT upper back, away
-                  # from the description, the background and plastic rims.
+                  # With ONLY the front Hero and no independent screenshot,
+                  # the reconstructed back must be PLAIN OPAQUE PAPER, not
+                  # the front recycled inside an isolated black rectangle.
+                  # Verify the real projected upper left of the 3D face,
+                  # away from caption and clear-plastic lip.
                   with Image.open(path / "02-launch-case-back.png") as rear:
                       printed = ImageStat.Stat(rear.convert("RGB").crop(
                           (410, 200, 470, 420)))
-                      assert sum(printed.stddev) > 75, (
-                          "reconstructed 3D back baked before artwork decoded",
+                      assert max(printed.stddev) < 12, (
+                          "empty rear has an unexpected pasted image/patch",
                           printed.mean, printed.stddev)
-                      assert sum(printed.mean) > 130, (
-                          "reconstructed 3D back is still dark/empty",
-                          printed.mean)
+                      assert all(abs(channel - stock) < 12 for channel, stock
+                                 in zip(printed.mean, (17, 34, 53))), (
+                          "reconstructed 3D rear lacks the complete ink stock",
+                          printed.mean, printed.stddev)
               print(f"INDEPENDENT_CASE_FACE_{kind.upper()}: PASS")
           PY
 
