@@ -6,6 +6,7 @@
 
 #include <array>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace pe::ui::case_media {
@@ -52,9 +53,10 @@ inline std::array<const std::string*, 3> BackScenes(
     };
     // These canonical local filenames are built by EnsureRetailCase; unlike
     // arbitrary Nlib screenshots they identify three actual media categories.
-    for (int category = 1; category <= 3; ++category) {
-        const std::string marker =
-            "/box-scene-" + std::to_string(category) + "-";
+    // Category matching must not allocate three temporary strings per draw.
+    constexpr std::array<std::string_view, 3> kSceneMarkers{
+        "/box-scene-1-", "/box-scene-2-", "/box-scene-3-"};
+    for (const std::string_view marker : kSceneMarkers) {
         for (const auto& image : screenshots)
             if (image.find(marker) != std::string::npos) {
                 accept(image);

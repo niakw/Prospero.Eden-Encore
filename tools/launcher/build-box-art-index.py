@@ -241,6 +241,14 @@ def main():
     if args.download:
         download(archive)
     result = build(archive)
+    # The packaged index reports each actual LaunchBox media category, not
+    # just the total number of matching Switch title names.
+    rows = [row.split("\t") for row in result.splitlines()
+            if row and not row.startswith("#")]
+    coverage = tuple(sum(len(row) == 7 and row[col] != "-"
+                         for row in rows) for col in (4, 5, 6))
+    print("EDEN_CASE_INDEX_MEDIA fanart={} game_title={} gameplay={} titles={}".format(
+        *coverage, len(rows)), flush=True)
     if result.count("\n") < 20:
         raise ValueError("No usable game data; index not installed")
     args.output.parent.mkdir(parents=True, exist_ok=True)
