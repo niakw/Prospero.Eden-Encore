@@ -3880,6 +3880,14 @@
       "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
       "proof_ref": "tools/check-encore-ncz-sources.py",
       "evidence": "New format-loader code path inspected and pinned: Pinned NSP reader with exact .ncz member detection; CMake selected. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/host1x/syncpoint_manager.cpp",
+      "disposition": "new_source_issue_corrected",
+      "contract_id": "N04",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-native-host1x-register-reentrant-host.py",
+      "evidence": "Native CMake selects a maintained whole Host1x SyncpointManager TU. Its late-ready RegisterAction branch unlocks before a reentrant callback; pinned baseline fails the compiled host race test. Increment callback lock/cancellation remains unqualified."
     }
   ],
   "inventoried_including_pinned": 538,
@@ -3904,5 +3912,8 @@
   "active_emulation_priority_excludes_launcher_prefix": "headless/prosperoeden/",
   "launcher_global_runtime_exceptions": [
     "headless/prosperoeden/runtime_shims.cpp"
+  ],
+  "post_snapshot_owned_additions": [
+    "vendor/encore-active/eden-core/src/video_core/host1x/syncpoint_manager.cpp"
   ]
 }
