@@ -2944,3 +2944,78 @@ apply_reviewed_delta(
             samplers.push_back(sampler);
 #endif''',
     'F01 PS5 compute sampler reuse with unchanged upstream path')
+
+
+# F04 TIC image view validation: the pinned generator may run against either
+# pristine sources or the ordered, already-shipping texture backport.
+# In both cases its final selected C++ must be byte-identical to Encore.
+apply_reviewed_delta(
+    'vulkan-cache/video_core/texture_cache/texture_cache.h',
+    '''ImageViewId TextureCache<P>::CreateImageView(const TICEntry& config) {
+    const ImageInfo info(config);
+    if (info.type == ImageType::Buffer) {
+        const ImageViewInfo view_info(config, 0);
+        return slot_image_views.insert(runtime, info, view_info, config.Address());
+    }
+    const u32 layer_offset = config.BaseLayer() * info.layer_stride;
+    const GPUVAddr image_gpu_addr = config.Address() - layer_offset;
+    const ImageId image_id = FindOrInsertImage(info, image_gpu_addr);
+    if (!image_id) {
+        return NULL_IMAGE_VIEW_ID;
+    }
+    ImageBase& image = slot_images[image_id];
+    const SubresourceBase base = image.TryFindBase(config.Address()).value();
+    ASSERT(base.level == 0);
+    const ImageViewInfo view_info(config, base.layer);
+    const ImageViewId image_view_id = FindOrEmplaceImageView(image_id, view_info);
+    ImageViewBase& image_view = slot_image_views[image_view_id];
+    image_view.flags |= ImageViewFlagBits::Strong;
+    image.flags |= ImageFlagBits::Strong;
+    return image_view_id;
+}
+''',
+    '''ImageViewId TextureCache<P>::CreateImageView(const TICEntry& config) {
+    const ImageInfo info(config);
+    if (info.type == ImageType::Buffer) {
+        const ImageViewInfo view_info(config, 0);
+        return slot_image_views.insert(runtime, info, view_info, config.Address());
+    }
+#ifdef PS5_NATIVE
+    // TIC base-layer offsets are byte addresses, not 32-bit arithmetic.
+    // Reject invalid addresses before a wrapped image mapping is created.
+    const u64 layer_offset = static_cast<u64>(config.BaseLayer()) * info.layer_stride;
+    if (layer_offset > config.Address()) {
+        return NULL_IMAGE_VIEW_ID;
+    }
+#else
+    const u32 layer_offset = config.BaseLayer() * info.layer_stride;
+#endif
+    const GPUVAddr image_gpu_addr = config.Address() - layer_offset;
+    const ImageId image_id = FindOrInsertImage(info, image_gpu_addr);
+    if (!image_id) {
+        return NULL_IMAGE_VIEW_ID;
+    }
+    ImageBase& image = slot_images[image_id];
+#ifdef PS5_NATIVE
+    // A remapped or incomplete texture may not contain the requested layer.
+    // Defer this view instead of dereferencing an empty optional on the GPU
+    // worker; the existing NULL-view retry path can rebuild it later.
+    const auto base = image.TryFindBase(config.Address());
+    if (!base) {
+        return NULL_IMAGE_VIEW_ID;
+    }
+    ASSERT(base->level == 0);
+    const ImageViewInfo view_info(config, base->layer);
+#else
+    const SubresourceBase base = image.TryFindBase(config.Address()).value();
+    ASSERT(base.level == 0);
+    const ImageViewInfo view_info(config, base.layer);
+#endif
+    const ImageViewId image_view_id = FindOrEmplaceImageView(image_id, view_info);
+    ImageViewBase& image_view = slot_image_views[image_view_id];
+    image_view.flags |= ImageViewFlagBits::Strong;
+    image.flags |= ImageFlagBits::Strong;
+    return image_view_id;
+}
+''',
+    'F04 native TIC layer view safety', allow_preapplied=True)
