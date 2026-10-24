@@ -116,6 +116,46 @@ def run() -> int:
                             print("F01_MEASURED_HOST_SUBPATH=" +
                                   json.dumps(fixture_metrics["F01_sampler_lookup_host_mock"],
                                              sort_keys=True), flush=True)
+                if ok and script == "check-ps5-consecutive-sampler-reuse-host.py":
+                    # F01 only: before/after identical descriptor source loop,
+                    # paired lock with real contention, synthetic lookup cost.
+                    # Accept a PRE-CONSOLE technical closure, NEVER FPS proof.
+                    budget = re.findall(
+                        r"F01_NATIVE_SOURCE_LOCK_BUDGET draws=(\d+) descriptors=(\d+) "
+                        r"prior_calls=(\d+) maintained_calls=(\d+) "
+                        r"prior_held_ns=(\d+) maintained_held_ns=(\d+) "
+                        r"prior_wait_ns=(\d+) maintained_wait_ns=(\d+) "
+                        r"scope=host_synthetic_lookup_and_real_contender",
+                        result.stdout)
+                    selection = re.findall(
+                        r"F01_NATIVE_SELECTION_SOURCE_PASS ps5_real_latency_unmeasured",
+                        result.stdout)
+                    if (len(budget) != 2 or len(selection) != 2 or
+                            any((int(m[0]),int(m[1]),int(m[2]),int(m[3]))
+                                != (2048,7,14336,4096) for m in budget) or
+                            any(int(m[5])*10 >= int(m[4])*9
+                                or int(m[4]) <= 0 for m in budget)):
+                        ok, reason = False, "f01_source_lock_budget_missing_or_not_improved"
+                    else:
+                        fixture_metrics["F01_native_lock_budget_host"] = {
+                            "draws": 2048, "descriptors_per_draw": 7,
+                            "lookup_calls_before": 14336,
+                            "lookup_calls_after": 4096,
+                            "O0_before_lock_ns": int(budget[0][4]),
+                            "O0_after_lock_ns": int(budget[0][5]),
+                            "O2_before_lock_ns": int(budget[1][4]),
+                            "O2_after_lock_ns": int(budget[1][5]),
+                            "O0_before_wait_ns": int(budget[0][6]),
+                            "O0_after_wait_ns": int(budget[0][7]),
+                            "O2_before_wait_ns": int(budget[1][6]),
+                            "O2_after_wait_ns": int(budget[1][7]),
+                            "scope": "source-extracted C++ loops, controlled mock lookup "
+                                     "and real competing mutex; native CMake owner selected. "
+                                     "NOT guest FC27 FPS or real driver mutex timings",
+                        }
+                        print("F01_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F01_native_lock_budget_host"],
+                                         sort_keys=True), flush=True)
                 if ok and script == "check-native-gpu-composite-syncpoint-host.py":
                     records = re.findall(
                         r"F05_NV_DISP_GPU_SYNCPOINT_SOURCE_PASS requests=(\d+) "
@@ -190,12 +230,35 @@ def run() -> int:
         print(f"{gate}: " +
               ("HOST_SUBPATH_PASS" if all(x["ok"] for x in checks)
                else "HOST_SUBPATH_FAIL"), flush=True)
-    summary = {"scope": "HOST_SOURCE_EXTRACTED_ONLY",
-               "f01_to_f06_closed": 0, "console_qualified": False,
+    # F01 is the first PRE-CONSOLE technical exit with its full source
+    # A/B criterion: native selection, guarded allocation, equivalent sampler
+    # results, same-draw critical-section timing under a competing mutex.
+    # This does not certify any game-level improvement, which requires PS5.
+    f01_technical_exit = (
+        all(item["ok"] for item in status["F01-cache-contention"]) and
+        "F01_payload_allocation_host_mock" in fixture_metrics and
+        "F01_sampler_lookup_host_mock" in fixture_metrics and
+        "F01_native_lock_budget_host" in fixture_metrics
+    )
+    preconsole_exits = {
+        "F01-cache-contention": bool(f01_technical_exit),
+        "F02-jit-invalidation": False,
+        "F03-hud-freshness": False,
+        "F04-texture-integrity": False,
+        "F05-guest-progress": False,
+        "F06-input-and-pause": False,
+    }
+    remaining_exit_evidence = dict(UNPROVEN_EXIT_EVIDENCE)
+    if f01_technical_exit:
+        remaining_exit_evidence.pop("F01-cache-contention")
+    summary = {"scope": "PRECONSOLE_HOST_TECHNICAL_NOT_GAMEPLAY",
+               "f01_to_f06_closed": sum(preconsole_exits.values()),
+               "preconsole_exit_status": preconsole_exits,
+               "console_qualified": False, "gameplay_qualified": False,
                "host_subpaths_passed": sum(c["ok"] for cs in status.values() for c in cs),
                "host_subpaths_total": sum(len(cs) for cs in status.values()),
                "fixture_metrics": fixture_metrics,
-               "unproven_exit_evidence": UNPROVEN_EXIT_EVIDENCE,
+               "unproven_exit_evidence": remaining_exit_evidence,
                "gates": status}
     print("FC27_SIX_GATES_HOST_CHECKPOINT=" +
           json.dumps(summary, ensure_ascii=True, separators=(",", ":")), flush=True)
@@ -204,10 +267,11 @@ def run() -> int:
     for gate, checks in status.items():
         label = "PASS" if all(x["ok"] for x in checks) else "FAIL"
         table.append(f"| {gate} | {label} ({sum(x['ok'] for x in checks)}/{len(checks)}) |")
-    table += ["", "0/6 technical exit criteria certified by this checkpoint; "
-                    "native packaging and PS5 in-game evidence are separate.",
+    table += ["", f"{sum(preconsole_exits.values())}/6 PRE-CONSOLE technical "
+                    "exits verified on host (F01 only when measured); "
+                    "this is NOT console or FC27 in-game certification.",
               "", "#### Critical unproven exit evidence"]
-    for gate, missing in UNPROVEN_EXIT_EVIDENCE.items():
+    for gate, missing in remaining_exit_evidence.items():
         table.append(f"- {gate}: {missing}")
     if "F01_payload_allocation_host_mock" in fixture_metrics:
         m = fixture_metrics["F01_payload_allocation_host_mock"]
