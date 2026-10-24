@@ -36,6 +36,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "F05-guest-progress": (
         "check-surface-lifecycle.py",
         "check-native-nvnflinger-detach-wake-host.py",
+        "check-native-gpu-composite-syncpoint-host.py",
     ),
     "F06-input-and-pause": (
         "check-fc27-match-input-profile.py",
@@ -43,7 +44,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# Missing end-to-end evidence remains explicit even when all twelve narrow
+# Missing end-to-end evidence remains explicit even when all thirteen narrow
 # host probes succeed. Neither a successful tool run nor a source checksum is
 # a measured frame-latency improvement or a complete technical exit proof.
 UNPROVEN_EXIT_EVIDENCE = {
@@ -113,6 +114,28 @@ def run() -> int:
                             print("F01_MEASURED_HOST_SUBPATH=" +
                                   json.dumps(fixture_metrics["F01_sampler_lookup_host_mock"],
                                              sort_keys=True), flush=True)
+                if ok and script == "check-native-gpu-composite-syncpoint-host.py":
+                    records = re.findall(
+                        r"F05_NV_DISP_GPU_SYNCPOINT_SOURCE_PASS requests=(\d+) "
+                        r"delayed_and_immediate_fences=verified",
+                        result.stdout)
+                    not_ack = re.findall(
+                        r"F05_PRESENT_ACK_NOT_PROVEN "
+                        r"host_GPU_request_completion_precedes_guest_fence_callback "
+                        r"-(?:O0|O2)", result.stdout)
+                    if records != ["260", "260"] or len(not_ack) != 2:
+                        ok, reason = False, "f05_syncpoint_source_replay_evidence_missing"
+                    else:
+                        fixture_metrics["F05_native_syncpoint_host"] = {
+                            "requests_per_optimization": 260,
+                            "compiled_modes": ["O0", "O2"],
+                            "fence_ordering": "delayed_immediate_out_of_order_and_duplicate",
+                            "scope": "nvdisp->GPU->Host1x native C++ host replay; "
+                                     "NOT Vulkan scanout or gameplay completion",
+                        }
+                        print("F05_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F05_native_syncpoint_host"],
+                                         sort_keys=True), flush=True)
                 checks.append({"script": script, "ok": ok, "reason": reason})
                 if not ok:
                     print(f"FAIL {gate} {script}", flush=True)
