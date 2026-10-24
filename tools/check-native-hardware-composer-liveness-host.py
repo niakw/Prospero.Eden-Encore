@@ -70,6 +70,23 @@ assert current_cache_method in methods
 assert "return CacheStatus::CachedBufferReused;" in pinned_cache_method
 # F05: real pinned BufferQueueConsumer Acquire/Release + maintained compositor
 # compiled in ONE C++ fixture, not merely inspected independently.
+# The enqueue/slot/fence publication and listener callback are copied
+# verbatim out of the maintained QueueBuffer C++ (no Python model of either).
+producer_text = (root / "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp").read_text()
+producer_start = producer_text.index("Status BufferQueueProducer::QueueBuffer(")
+producer_stop = producer_text.index("\nvoid BufferQueueProducer::CancelBuffer(", producer_start)
+producer_method = producer_text[producer_start:producer_stop]
+publish_start = producer_method.index("        ++core->frame_counter;")
+publish_stop = producer_method.index("        output->Inflate(", publish_start)
+producer_publish = producer_method[publish_start:publish_stop]
+listener_start = producer_method.index("    // Notify consumers with the actual queued item:", publish_stop)
+producer_callback = producer_method[listener_start:]
+assert producer_callback.endswith("return Status::NoError;\n}\n")
+for marker in ("slots[slot].fence = fence;", "item.fence = fence;",
+               "core->SignalDequeueCondition();", "listener_available->OnFrameAvailable(item)",
+               "listener_replaced->OnFrameReplaced(item)"):
+    assert marker in producer_publish + producer_callback, ("QueueBuffer source drift", marker)
+
 queue_source = (root / "vendor/sources/eden/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp").read_text()
 consumer_methods = "\n\n".join(extract_from(queue_source, marker) for marker in (
     "Status BufferQueueConsumer::AcquireBuffer(",
@@ -105,9 +122,16 @@ fixture = r"""
 #define LOG_ERROR(...) ((void)0)
 using u32 = std::uint32_t;
 using u64 = std::uint64_t;
+using s64 = std::int64_t;
 using s32 = std::int32_t;
 using f32 = float;
 using ConsumerId = s32;
+enum NativeWindowTransform : int { None=0, InverseDisplay=1 };
+namespace Common {
+struct Clock { unsigned calls{}; struct Time { s64 count() const { return 0; } };
+               Time GetTimeNS() { ++calls; return {}; } };
+inline Clock g_wall_clock{};
+}
 namespace android {
 enum class Status { NoError, NoBufferAvailable, PresentLater, InvalidOperation, BadValue, StaleBufferSlot };
 enum class BufferTransformFlags : int { Identity = 0 };
@@ -129,7 +153,9 @@ struct BufferItem {
     s32 slot{-1};
     u64 frame_number{};
     std::int64_t timestamp{};
-    bool is_auto_timestamp{}, acquire_called{};
+    bool is_auto_timestamp{}, acquire_called{}, is_droppable{};
+    bool transform_to_display_inverse{};
+    u32 scaling_mode{};
 };
 }
 namespace android {
@@ -140,10 +166,29 @@ struct BufferSlot {
     BufferState buffer_state{BufferState::Free};
     u64 frame_number{};
     bool acquire_called{},needs_cleanup_on_release{};
+    s64 queue_time{},presentation_time{};
+    Fence fence{};
 };
 struct IProducerListener {
     unsigned releases{};
     void OnBufferReleased() { ++releases; }
+};
+struct IConsumerListener {
+    unsigned available{}, replaced{};
+    std::vector<u64> observed_frames;
+    std::vector<int> observed_fences;
+    void OnFrameAvailable(const BufferItem& item) {
+        ++available;
+        assert(item.graphic_buffer);
+        observed_frames.push_back(item.frame_number);
+        observed_fences.push_back(item.fence.sequence);
+    }
+    void OnFrameReplaced(const BufferItem& item) {
+        ++replaced;
+        assert(item.graphic_buffer);
+        observed_frames.push_back(item.frame_number);
+        observed_fences.push_back(item.fence.sequence);
+    }
 };
 struct BufferQueueCore {
     std::mutex mutex;
@@ -152,6 +197,11 @@ struct BufferQueueCore {
     s32 max_acquired_buffer_count{};
     u64 frame_counter{};
     unsigned notifications{};
+    bool dequeue_buffer_cannot_block{},buffer_has_been_queued{};
+    std::shared_ptr<IConsumerListener> consumer_listener{
+        std::make_shared<IConsumerListener>()};
+    void PushHistory(u64,s64,s64,BufferState) {}
+    void UpdateHistory(u64,BufferState) {}
     std::shared_ptr<IProducerListener> connected_producer_listener{
         std::make_shared<IProducerListener>()};
     bool StillTracking(const BufferItem& item) const {
@@ -176,6 +226,7 @@ struct MockConsumer {
         std::make_shared<android::BufferQueueCore>()};
     android::BufferQueueConsumer native{queue};
     unsigned acquires{},releases{},successful_acquires{};
+    android::Status QueueNative(android::BufferItem queued);
     android::Status AcquireBuffer(android::BufferItem* item,
                                   std::chrono::nanoseconds expected,bool wait_for_fence) {
         assert(!wait_for_fence);
@@ -183,25 +234,9 @@ struct MockConsumer {
         // A deterministic guest producer is mocked; native consumer
         // supplies slot acquisition and release, including generation wake.
         if(!pending.empty()){
-            std::scoped_lock lock{queue->mutex};
-            s32 slot=-1;
-            for(s32 i=0;i<android::BufferQueueDefs::NUM_BUFFER_SLOTS;++i){
-                if(queue->slots[i].buffer_state==android::BufferState::Free){
-                    slot=i;break;
-                }
-            }
-            assert(slot>=0);
             auto pushed=std::move(pending.front());
             pending.pop_front();
-            pushed.slot=slot;
-            pushed.frame_number=++queue->frame_counter;
-            pushed.acquire_called=queue->slots[slot].acquire_called;
-            auto& state=queue->slots[slot];
-            state.graphic_buffer=pushed.graphic_buffer;
-            state.frame_number=pushed.frame_number;
-            state.buffer_state=android::BufferState::Queued;
-            queue->queue.push_back(std::move(pushed));
-            queue->SignalDequeueCondition();
+            assert(QueueNative(std::move(pushed)) == android::Status::NoError);
         }
         const auto status=native.AcquireBuffer(item,expected);
         if(status==android::Status::NoError){
@@ -221,6 +256,39 @@ struct MockConsumer {
         return status;
     }
 };
+// This function runs actual source-extracted QueueBuffer slot/queue and
+// callback statements. Only the incoming Binder call and guest frame
+// allocation are fixture inputs.
+android::Status MockConsumer::QueueNative(android::BufferItem queued) {
+    using android::Status;
+    using android::BufferState;
+    auto core=queue;
+    auto& slots=core->slots;
+    s32 slot=-1;
+    android::BufferItem item{};
+    std::shared_ptr<android::IConsumerListener> listener_available,listener_replaced;
+    const s64 timestamp=queued.timestamp;
+    const bool is_auto_timestamp=queued.is_auto_timestamp;
+    const int crop=queued.crop;
+    const int transform=queued.transform;
+    const int scaling_mode=0;
+    const bool async=false;
+    const s32 swap_interval=queued.swap_interval;
+    const android::Fence fence=queued.fence;
+    const bool record_buffer_history=false;
+    unsigned sticky_transform{};
+    const unsigned sticky_transform_=0;
+    {
+        std::scoped_lock lock{core->mutex};
+        for(s32 i=0;i<android::BufferQueueDefs::NUM_BUFFER_SLOTS;++i){
+            if(slots[i].buffer_state==BufferState::Free){slot=i;break;}
+        }
+        assert(slot>=0 && queued.graphic_buffer);
+        slots[slot].graphic_buffer=queued.graphic_buffer;
+__PRODUCER_PUBLISH__
+    }
+__PRODUCER_CALLBACK__
+
 struct Layer {
     ConsumerId consumer_id{};
     bool is_overlay{}, visible{true};
@@ -249,11 +317,17 @@ namespace Nvidia::Devices {
 struct nvdisp_disp0 {
     int wait_count{};
     std::vector<std::vector<int>> composed;
+    std::vector<std::vector<int>> fences;
     void WaitForComposite() { ++wait_count; }
     template<class T> void Composite(const T& stack) {
         std::vector<int> ids;
-        for (const auto& item : stack) ids.push_back(item.buffer_handle);
+        std::vector<int> frame_fences;
+        for (const auto& item : stack) {
+            ids.push_back(item.buffer_handle);
+            frame_fences.push_back(item.acquire_fence.sequence);
+        }
         composed.push_back(std::move(ids));
+        fences.push_back(std::move(frame_fences));
     }
 };
 }
@@ -282,6 +356,7 @@ static android::BufferItem frame(int id, int interval) {
     item.graphic_buffer = std::make_shared<android::GraphicBuffer>(
         android::GraphicBuffer{id});
     item.swap_interval = interval;
+    item.fence.sequence = id;
     return item;
 }
 int main() {
@@ -315,6 +390,7 @@ int main() {
     f32 speed=0;
     assert(composer.ComposeLocked(&speed, display, display_gpu) == 1);
     assert((display_gpu.composed == std::vector<std::vector<int>>{{10,20}}));
+    assert((display_gpu.fences == std::vector<std::vector<int>>{{10,20}}));
     assert(speed == 1.0f);
     assert(composer.m_framebuffers[7].is_acquired);
     assert(composer.m_framebuffers[8].is_acquired);
@@ -377,6 +453,7 @@ int main() {
         assert(paced_gpu.composed.size() == static_cast<std::size_t>(tick + 1));
         assert((paced_gpu.composed.back() ==
                 std::vector<int>{last_game, 2000 + tick}));
+        assert(paced_gpu.fences.back() == paced_gpu.composed.back());
         assert(paced_game_consumer->acquires == static_cast<unsigned>(tick / 2 + 1));
         assert(paced_game_consumer->releases == static_cast<unsigned>(tick / 2));
         assert(paced_hud_consumer->acquires == static_cast<unsigned>(tick + 1));
@@ -386,6 +463,16 @@ int main() {
     }
     assert(paced_game_consumer->pending.empty());
     assert(paced_hud_consumer->pending.empty());
+    assert(paced_game_consumer->queue->consumer_listener->available ==
+           steady_ticks / 2);
+    assert(paced_hud_consumer->queue->consumer_listener->available ==
+           steady_ticks);
+    assert(paced_game_consumer->queue->consumer_listener->replaced == 0);
+    assert(paced_hud_consumer->queue->consumer_listener->replaced == 0);
+    assert(paced_game_consumer->queue->consumer_listener->observed_fences.front() == 1000);
+    assert(paced_hud_consumer->queue->consumer_listener->observed_fences.back() ==
+           2000 + steady_ticks - 1);
+    assert(Common::g_wall_clock.calls == 0);
 
     // The guest stops supplying new game images during pause/half-time.
     // One still-owned two-vsync game frame can be reused ONCE; after
@@ -427,6 +514,9 @@ int main() {
 }
 """
 fixture = fixture.replace("__CONSUMER_METHODS__", consumer_methods)
+fixture = fixture.replace("__PRODUCER_PUBLISH__", producer_publish)
+fixture = fixture.replace("__PRODUCER_CALLBACK__", producer_callback)
+assert "__PRODUCER_PUBLISH__" not in fixture and "__PRODUCER_CALLBACK__" not in fixture
 assert "__CONSUMER_METHODS__" not in fixture
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
 assert compiler, "C++20 compiler required"
@@ -446,6 +536,8 @@ with tempfile.TemporaryDirectory(prefix="encore-composer-full-") as td:
         assert result.returncode == 0, (opt, result.stderr[-3500:])
         print("NATIVE_FULL_COMPOSITOR_LIVENESS_HOST_PASS", opt)
         print("F05_NATIVE_BUFFERQUEUE_CONSUMER_COMPOSITOR_PASS", opt, "scope=source_extracted_host_no_guest_ipc_no_real_gpu")
+        print("F05_NATIVE_PRODUCER_CONSUMER_FENCE_REPLAY_PASS", opt,
+              "scope=source_extracted_producer_queue_consumer_compositor_mock_gpu")
 
         historical = fixture.replace(current_cache_method, pinned_cache_method)
         assert historical != fixture and historical.count(pinned_cache_method) == 1
