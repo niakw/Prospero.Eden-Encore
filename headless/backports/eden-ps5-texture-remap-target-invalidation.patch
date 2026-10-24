@@ -1,0 +1,33 @@
+--- a/src/video_core/texture_cache/texture_cache.h
++++ b/src/video_core/texture_cache/texture_cache.h
+@@ -817,5 +817,30 @@
+             continue;
+         }
+         image.flags |= ImageFlagBits::Remapped;
++#ifdef PS5_NATIVE
++        // A sampled view is checked on its next TIC lookup, but render
++        // targets can bypass that lookup. Force only attached remapped views
++        // through the normal framebuffer rebinding path on the next draw.
++        bool framebuffer_affected = false;
++        auto& dirty = maxwell3d->dirty.flags;
++        for (const ImageViewId view_id : image.image_view_ids) {
++            if (view_id == NULL_IMAGE_VIEW_ID) {
++                continue;
++            }
++            if (view_id == render_targets.depth_buffer_id) {
++                dirty[Dirty::ZetaBuffer] = true;
++                framebuffer_affected = true;
++            }
++            for (size_t rt = 0; rt < NUM_RT; ++rt) {
++                if (view_id == render_targets.color_buffer_ids[rt]) {
++                    dirty[Dirty::ColorBuffer0 + rt] = true;
++                    framebuffer_affected = true;
++                }
++            }
++        }
++        if (framebuffer_affected) {
++            dirty[Dirty::RenderTargets] = true;
++        }
++#endif
+     }
+ }
