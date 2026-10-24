@@ -54,6 +54,8 @@ public:
                                  BufferCache& buffer_cache, TextureCache& texture_cache);
 
 #ifdef PS5_NATIVE
+    // Called on the GPU owner before the paired buffer/texture cache locks.
+    void PreflightDescriptorScratch();
     [[nodiscard]] bool HasDescriptorEntries() const noexcept {
         return num_descriptor_entries != 0;
     }
@@ -80,6 +82,10 @@ private:
     Shader::Info info;
     u64 shader_hash{};
     u32 num_descriptor_entries{};
+#ifdef PS5_NATIVE
+    size_t num_image_elements{};
+    size_t num_textures{};
+#endif
 
     VideoCommon::ComputeUniformBufferSizes uniform_buffer_sizes{};
 
