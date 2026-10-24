@@ -2735,3 +2735,164 @@ apply_reviewed_delta(
     'vulkan_rasterizer.cpp', scissor_original_method,
     "VkRect2D GetScissorState(const Maxwell& regs, size_t index, u32 up_scale = 1, u32 down_shift = 0) {\n    const auto& src = regs.scissor_test[index];\n    VkRect2D scissor{};\n    // Handle guest scissor extremes without wrapping signed coordinate\n    // differences. Preserve the existing 32-bit results on ordinary draws.\n    const auto bounded_s32 = [](s64 value) -> s32 {\n        return static_cast<s32>((std::clamp)(\n            value, static_cast<s64>(std::numeric_limits<s32>::min()),\n            static_cast<s64>(std::numeric_limits<s32>::max())));\n    };\n    const auto scale_up = [&](s32 value) -> s32 {\n        if (value == 0) {\n            return 0;\n        }\n        const s64 scaled = static_cast<s64>(value) * static_cast<s64>(up_scale);\n        if (scaled >= std::numeric_limits<s32>::min() &&\n            scaled <= std::numeric_limits<s32>::max() && down_shift < 32) {\n            // Preserve pinned behavior: up_scale is unsigned, so the old\n            // value * up_scale and right shift operated on unsigned bits,\n            // even for negative guest coordinates. Sign-shifting would change\n            // otherwise valid clipping rectangles.\n            const u32 bits = static_cast<u32>(value) * up_scale;\n            const s32 as_i32 = static_cast<s32>(bits);\n            const s64 adjustment = (up_scale >> down_shift) == 0 ? as_i32 % 2 : 0;\n            const s64 shifted = static_cast<s32>(bits >> down_shift);\n            return bounded_s32(value < 0 ? (std::min)(shifted - adjustment, s64{-1})\n                                         : (std::max)(shifted + adjustment, s64{1}));\n        }\n        // Wide fallback for overflow-prone guest data or an oversized shift.\n        const u32 shift = (std::min)(down_shift, 63U);\n        const s64 adjustment = (down_shift >= 32 || (up_scale >> down_shift) == 0)\n                                   ? scaled % 2 : 0;\n        const s64 shifted = scaled >> shift;\n        return bounded_s32(value < 0 ? (std::min)(shifted - adjustment, s64{-1})\n                                     : (std::max)(shifted + adjustment, s64{1}));\n    };\n\n    const bool lower_left = regs.window_origin.mode != Maxwell::WindowOrigin::Mode::UpperLeft;\n    const s32 clip_height = regs.surface_clip.height;\n\n    // Flip coordinates without signed overflow before clamping to the render area.\n    s32 min_y = lower_left\n                    ? bounded_s32(static_cast<s64>(clip_height) - src.max_y)\n                    : src.min_y.Value();\n    s32 max_y = lower_left\n                    ? bounded_s32(static_cast<s64>(clip_height) - src.min_y)\n                    : src.max_y.Value();\n\n    // Bound to render area\n    min_y = (std::max)(min_y, 0);\n    max_y = (std::max)(max_y, 0);\n\n    if (src.enable) {\n        scissor.offset.x = scale_up(src.min_x);\n        scissor.offset.y = scale_up(min_y);\n        scissor.extent.width =\n            scale_up(bounded_s32(static_cast<s64>(src.max_x) - src.min_x));\n        scissor.extent.height =\n            scale_up(bounded_s32(static_cast<s64>(max_y) - min_y));\n    } else {\n        scissor.offset.x = 0;\n        scissor.offset.y = 0;\n        scissor.extent.width = (std::numeric_limits<s32>::max)();\n        scissor.extent.height = (std::numeric_limits<s32>::max)();\n    }\n    return scissor;\n}\n",
     'F04 overflow-safe scissor coordinates with pinned ordinary behavior')
+
+
+# F01: keep the PS5 compute preflight in the source GENERATOR, not just
+# in the tracked native output. Only immutable shader descriptor counts
+# are read before guest buffer/texture locks; actual guest handles remain
+# resolved within ComputePipeline::Configure.
+compute = 'vk_compute_pipeline_cost.cpp'
+apply_reviewed_delta(
+    compute, '#include "performance.h"\n#include <vector>',
+    '#include "performance.h"\n#include <memory>\n#include <vector>',
+    'F01 compute RAII scratch explicit memory include')
+apply_reviewed_delta(
+    compute,
+    '''using Tegra::Texture::TexturePair;
+
+ComputePipeline::ComputePipeline(''',
+    '''using Tegra::Texture::TexturePair;
+
+#ifdef PS5_NATIVE
+namespace {
+// Per-GPU-thread compute descriptor storage. The lease keeps a nested dispatch
+// from corrupting an outer dispatch's views or sampler cursors.
+struct ComputeDescriptorScratch {
+    boost::container::small_vector<VideoCommon::ImageViewInOut, 64> views;
+    boost::container::small_vector<VideoCommon::SamplerId, 64> samplers;
+    bool in_use{};
+};
+thread_local ComputeDescriptorScratch compute_descriptor_scratch;
+thread_local ComputeDescriptorScratch compute_descriptor_nested_scratch;
+
+class ComputeDescriptorScratchLease {
+public:
+    ComputeDescriptorScratchLease() {
+        if (!compute_descriptor_scratch.in_use) {
+            current = &compute_descriptor_scratch;
+            current->in_use = true;
+        } else if (!compute_descriptor_nested_scratch.in_use) {
+            current = &compute_descriptor_nested_scratch;
+            current->in_use = true;
+        } else {
+            nested = std::make_unique<ComputeDescriptorScratch>();
+            current = nested.get();
+        }
+        current->views.clear();
+        current->samplers.clear();
+    }
+    ~ComputeDescriptorScratchLease() {
+        if (!nested) current->in_use = false;
+    }
+    ComputeDescriptorScratchLease(const ComputeDescriptorScratchLease&) = delete;
+    ComputeDescriptorScratchLease& operator=(const ComputeDescriptorScratchLease&) = delete;
+    auto& Views() noexcept { return current->views; }
+    auto& Samplers() noexcept { return current->samplers; }
+
+private:
+    std::unique_ptr<ComputeDescriptorScratch> nested;
+    ComputeDescriptorScratch* current{};
+};
+} // namespace
+#endif
+
+ComputePipeline::ComputePipeline(''',
+    'F01 PS5 per-thread reentrant compute descriptor storage')
+apply_reviewed_delta(
+    compute,
+    '''    num_descriptor_entries = NumDescriptorEntries(info);
+
+    DescriptorLayoutBuilder builder{device};''',
+    '''    num_descriptor_entries = NumDescriptorEntries(info);
+#ifdef PS5_NATIVE
+    // Fixed by the compiled compute shader; safe to read before cache locks.
+    num_image_elements = Shader::NumDescriptors(info.texture_buffer_descriptors) +
+                         Shader::NumDescriptors(info.image_buffer_descriptors) +
+                         Shader::NumDescriptors(info.texture_descriptors) +
+                         Shader::NumDescriptors(info.image_descriptors);
+    num_textures = Shader::NumDescriptors(info.texture_descriptors);
+#endif
+
+    DescriptorLayoutBuilder builder{device};''',
+    'F01 compute precompute shader descriptor sizes outside cache locks')
+apply_reviewed_delta(
+    compute,
+    '''bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,''',
+    '''#ifdef PS5_NATIVE
+void ComputePipeline::PreflightDescriptorScratch() {
+    // No guest texture/cache data is consulted here: counts are immutable.
+    // Skip the slot currently owned by a nested Configure invocation.
+    auto& scratch = compute_descriptor_scratch.in_use
+                        ? compute_descriptor_nested_scratch
+                        : compute_descriptor_scratch;
+    if (scratch.in_use) return;
+    if (scratch.views.capacity() < num_image_elements)
+        scratch.views.reserve(num_image_elements);
+    if (scratch.samplers.capacity() < num_textures)
+        scratch.samplers.reserve(num_textures);
+}
+#endif
+
+bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,''',
+    'F01 reserve compute scratch before the paired GPU cache locks')
+apply_reviewed_delta(
+    compute,
+    '''    boost::container::small_vector<VideoCommon::ImageViewInOut, 64> views;
+    boost::container::small_vector<VideoCommon::SamplerId, 64> samplers;
+
+    const auto& qmd{kepler_compute.launch_description};''',
+    '''#ifdef PS5_NATIVE
+    // Preallocated by DispatchCompute before its paired cache mutexes.
+    // A nested call leases another slot rather than overwriting these IDs.
+    ComputeDescriptorScratchLease scratch;
+    auto& views = scratch.Views();
+    auto& samplers = scratch.Samplers();
+    views.reserve(num_image_elements);
+    samplers.reserve(num_textures);
+#else
+    boost::container::small_vector<VideoCommon::ImageViewInOut, 64> views;
+    boost::container::small_vector<VideoCommon::SamplerId, 64> samplers;
+#endif
+
+    const auto& qmd{kepler_compute.launch_description};''',
+    'F01 compute draws retain scratch capacity without stale view IDs')
+apply_reviewed_delta(
+    'include/video_core/renderer_vulkan/vk_compute_pipeline.h',
+    '''#ifdef PS5_NATIVE
+    [[nodiscard]] bool HasDescriptorEntries() const noexcept {''',
+    '''#ifdef PS5_NATIVE
+    // Called on the GPU owner before the paired buffer/texture cache locks.
+    void PreflightDescriptorScratch();
+    [[nodiscard]] bool HasDescriptorEntries() const noexcept {''',
+    'F01 compute preflight method exposed only to PS5 builds')
+apply_reviewed_delta(
+    'include/video_core/renderer_vulkan/vk_compute_pipeline.h',
+    '''    u32 num_descriptor_entries{};
+
+    VideoCommon::ComputeUniformBufferSizes uniform_buffer_sizes{};''',
+    '''    u32 num_descriptor_entries{};
+#ifdef PS5_NATIVE
+    size_t num_image_elements{};
+    size_t num_textures{};
+#endif
+
+    VideoCommon::ComputeUniformBufferSizes uniform_buffer_sizes{};''',
+    'F01 immutable compute descriptor counts')
+apply_reviewed_delta(
+    'vulkan_rasterizer.cpp',
+    '''#endif
+    SCOPE_EXIT { SyncProbe(scheduler, "dispatch", pipeline); };
+    std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};
+    if (!pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache,
+                             texture_cache)) {''',
+    '''#endif
+#ifdef PS5_NATIVE
+    // Descriptor storage is bounded by this shader's immutable layout.
+    // Reserve on the GPU owner thread BEFORE cache-pair acquisition.
+    pipeline->PreflightDescriptorScratch();
+#endif
+    SCOPE_EXIT { SyncProbe(scheduler, "dispatch", pipeline); };
+    std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};
+    if (!pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache,
+                             texture_cache)) {''',
+    'F01 compute scratch reservation precedes both guest cache mutexes')
