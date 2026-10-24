@@ -401,8 +401,8 @@
       "upstream": "fdd427fad337594874e3d6187d0769e531e61212234e80bd7cb97c85ebbf3f1e"
     },
     "src/video_core/texture_cache/texture_cache.h": {
-      "active": "db40f23dd5268141db9e07820fef74e28bd77233b6caa519d7ceb8da800a3767",
-      "bytes": 119845,
+      "active": "6519168f033aba8dfbc9fa7d6e9fae0c4f488761e3373aeb2d4ee71653ca5567",
+      "bytes": 120047,
       "upstream": "59f06d6839d09c96e9d7541a727a87fee680b7e7bebe763e82fec523a5caf498"
     },
     "src/video_core/texture_cache/texture_cache_base.h": {
@@ -421,6 +421,7 @@
   ],
   "pinned_eden_commit": "5f142c7926d0c7fcbbd0ce30794d72f638a43b2a",
   "shipping_receipts": {
+    ".encore-backport-ps5-texture-missing-channel-slot-guard.sha256": "c0625a15e88dc22a2add16fe0821ec7cb393b60362a5ad2dc667e08c0c4dade2",
     ".encore-backport-ps5-texture-remap-target-invalidation.sha256": "e0948ef24fbc079d6d46789ed186ba31cc42540b6e0987f260672cc4a9744ee4",
     ".encore-backport-ps5-texture-remapped-view-rebind.sha256": "f820c0091efc202ce9b92c9064dfd2483c62ac131a21f7f1cdd4dea639e68841",
     ".encore-backport-ps5-texture-tic-layer-bounds.sha256": "e1aa759d46a4e4dd23d8759f62ca12ca7692a36712fe30d25787240d964296bf",
