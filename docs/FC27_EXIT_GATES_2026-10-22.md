@@ -902,3 +902,43 @@ les changements de canal et les remappages sont donc respectés.
 **Non vérifiés :** l'intégralité du workflow GitHub, le rejeu complet
 du générateur, le build natif PS5, le profilage sur FC27 et les
 gains de latence. Aucun des critères de sortie F01–F06 n'est clos.
+
+
+## 24 octobre — parcours des pages textures CPU/GPU bornés
+
+**Correctif réel, sous-chemin F01/F03/F04 (critères encore ouverts).**
+Le cache de textures Eden itérait les pages d'une région en calculant
+`(addr + size - 1) >> YUZU_PAGEBITS`. Avec `addr=0, size=0`,
+le calcul sous-débordait et pouvait entraîner un parcours démesuré.
+Les régions dont la dernière adresse dépasse `UINT64_MAX` étaient également
+susceptibles de revenir artificiellement au début de l'espace mémoire.
+
+Un deuxième défaut se trouvait dans le même bloc : la branche destinée
+aux callbacks `bool` utilisait `std::invoke_result<Func, u64>`
+(type du *trait*), et non `std::invoke_result_t<Func, u64>`
+(type de retour). La sortie anticipée sur première correspondance
+était donc désactivée et le parcours continuait inutilement.
+
+**Modifications PS5 seulement :**
+
+- `vendor/encore-active/eden-backports/src/video_core/texture_cache/texture_cache_base.h` :
+  les parcours CPU et GPU rejettent les régions de taille nulle ou
+  dont la dernière adresse déborde, et honorent à nouveau la sortie
+  anticipée des callbacks booléens.
+- `headless/backports/eden-ps5-texture-page-range-guards.patch` :
+  reproduction du correctif sur le snapshot Eden épinglé,
+  avec validateur dans `tools/apply-eden-backports.sh`.
+- `tools/check-ps5-texture-page-range-host.py` :
+  compilation des deux méthodes natives extraites, test des régions
+  valides, des traversées entre pages, de l'arrêt anticipé et des
+  plages nulles/débordantes ; vérification du patch Git sur la source
+  épinglée. Appelé par la prévalidation et le workflow de build.
+- Manifeste shipping et inventaire : empreintes et tailles mises à jour,
+  sans modifier les sources upstream immuables.
+
+Une reproduction locale de ces deux méthodes a réussi pour
+**8 configurations** Clang/GCC x O0/O2 x PS5/non-PS5 avec UBSan.
+La CI complète, le rejeu de tous les backports et le build
+PS5 restent à confirmer. Il n'existe pas de trace attestant que
+FC27 déclenche précisément la région nulle ou le bool-break path :
+**ne pas clôturer F01/F03/F04 sans les validations du moteur et du jeu.**
