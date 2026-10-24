@@ -332,14 +332,12 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
     // One continuous opaque sheet beneath BOTH original and reconstructed
     // printing. The back's right edge must never reveal molded plastic.
     reconstructed_paper(c, paper);
-    if (!scan.empty()) {
-        // Original prints can be narrower than the molded paper sleeve.
-        // The single opaque stock layer remains visible in those margins.
-        reconstructed_paper(c, paper);
-        // Both printed faces are shown in full: never crop artwork titles,
-        // upper banners, age marks or the bottom publisher information.
-        const Cover artwork = c.textures.cover(
-            scan, std::max(paper.w, paper.h) * texture_scale);
+    const Cover artwork = scan.empty() ? Cover{} : c.textures.cover(
+        scan, std::max(paper.w, paper.h) * texture_scale);
+    if (!scan.empty() && !artwork.missing) {
+        // A real scan always wins once it decodes. While it is pending,
+        // the paper underneath remains opaque, with no fake dark panel.
+        // Both printed faces are shown in full: never crop titles or logos.
         if (artwork.texture != 0) {
             const float source = std::max(0.01f, artwork.aspect);
             const float target = paper.w / paper.h;
@@ -356,11 +354,12 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
                          Color::rgb(0xffffff,
                                     tween::cubic_out(artwork.age / 0.22f)));
         }
-        // When a known physical scan is still decoding, the paper already
-        // painted above remains. Do not paint a second local placeholder.
+        // A pending scan is not assumed missing; it can replace the paper
+        // without any change of dimensions when its async decode finishes.
     } else {
-        // Match the launcher's 440x704 compositing pass exactly. This also
-        // keeps the fixed top-left logo and bottom rear print in proportion.
+        // Empty OR confirmed-unreadable retail media: preserve the shared
+        // 440x704 composition rather than leaving a permanently blank sleeve.
+        // It automatically yields to the real scan if its retry later works.
         flat_composed_ink(c, game, paper, rear);
     }
 
