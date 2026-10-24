@@ -64,7 +64,7 @@ for fragment in (
     "const Cover artwork = scan.empty() ? Cover{} : c.textures.cover(scan, 760.0f);",
     "c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv);",
     "c.list.case_spine(side_strip, angle, case_depth,",
-    "composed_case_face_ready(c.textures, launch_case_game_",
+    "const bool inputs_ready = composed_case_face_ready(",
     "const Rect physical{374.0f, 126.0f, 454.0f, 730.0f};",
     "c.textures.brand()",
     "motion() > 0.0f",
@@ -79,15 +79,27 @@ assert "progress%" not in draw
 for fragment in (
     "draw_composed_case_face(ink, launch_case_game_",
     "c.textures.render_case_page(",
-    "if (!retail.empty() || page != 0 || attempted) return;",
-    "const bool use_composed = scan.empty() && composed_page != 0;",
+    "if (!retail.empty() && !c.textures.cover(retail, 760.0f).missing)",
+    "const bool use_composed = (scan.empty() || artwork.missing) &&",
     "c.list.case_face(composed_page, face, angle, back, kWhite,",
     "{0.0f, 1.0f, 1.0f, -1.0f}",
-    "EDEN_CASE_COMPOSE title=%016llX side=%s status=ready",
-    "composed_case_face_ready(c.textures, launch_case_game_",
+    "EDEN_CASE_COMPOSE title=%016llX side=%s status=%s page=%u",
+    "const bool inputs_ready = composed_case_face_ready(",
 ):
     assert fragment in draw, ("native composed 3D jacket contract", fragment)
 assert draw.index("if (use_composed)") < draw.index("} else if (!scan.empty() && artwork.texture != 0)")
+# A valid authentic scan always supersedes provisional reconstruction;
+# a failed scan may fall back, and partially decoded game images refresh
+# the same FBO instead of allocating new textures every 60Hz tick.
+assert "if ((page != 0 && !provisional) ||" in draw
+assert "(page == 0 && attempted) || failures >= 3u" in draw
+assert "if (!case_media::PageInputReady(page != 0, inputs_ready, seconds))" in draw
+assert "provisional = !inputs_ready;" in draw
+assert "print, c.fonts.font, c.fonts.texture, paper_w, paper_h, page);" in draw
+assert "bool launch_composed_front_provisional_ = false;" in header
+assert "bool launch_composed_back_provisional_ = false;" in header
+assert "launch_composed_front_provisional_ = false;" in launch_setup
+assert "launch_composed_back_provisional_ = false;" in launch_setup
 assert "attempted = true;" in draw
 assert "launch_composed_front_attempted_ = false;" in launch_setup
 assert "launch_composed_back_attempted_ = false;" in launch_setup
@@ -101,7 +113,7 @@ for name in ("front", "back"):
     assert f"float launch_composed_{name}_retry_after_ = 0.0f;" in header
 for marker in (
     "if (seconds < retry_after) return;",
-    "if (page == 0) {",
+    "if (rendered == 0) {",
     "++failures;",
     "if (failures < 3u)",
     "attempted = false;",
@@ -154,8 +166,8 @@ assert 'Color::rgb(0x030507, 0.98f)' not in library_src
 
 # A cached original face is authoritative even while its texture is pending.
 # Independent reconstruction occurs ONLY for the specific missing face.
-assert "if (!retail.empty() || page != 0 || attempted) return;" in draw
-assert "const bool use_composed = scan.empty() && composed_page != 0;" in draw
+assert "if (!retail.empty() && !c.textures.cover(retail, 760.0f).missing)" in draw
+assert "const bool use_composed = (scan.empty() || artwork.missing) &&" in draw
 assert "if (scan.empty() || artwork.texture == 0)" not in draw
 assert "if (rear)\n                flat_back_fallback(c, game, paper);" not in library_src
 assert 'if (std::getenv("PE_PREVIEW_NO_BOX_FRONT") == nullptr)' in (
