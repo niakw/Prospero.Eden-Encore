@@ -3679,8 +3679,9 @@
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h",
-      "disposition": "reviewed_without_new_code_edit",
-      "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
+      "disposition": "new_source_issue_corrected",
+      "evidence": "F04 selected native Vulkan cache: rejected wrapped TIC layer offsets and absent remapped image subresources in CreateImageView; exact pinned generator/parity and CI-invoked native-source C++ host test. No FPS or native console validation claim.",
+      "proof_ref": "tools/check-ps5-texture-tic-layer-host.py"
     },
     {
       "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/meta/radv_meta_clear.c",
