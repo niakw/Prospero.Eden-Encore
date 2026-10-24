@@ -2,8 +2,8 @@
 """Host replay of native HardwareComposer full acquire/release/compose loop.
 
 Uses the exact four C++ method bodies and swap-interval helper from the active,
-pinned-source-reproduced translation unit. Only external display, producer,
-GPU surface and graphic buffer classes are mocked. Never claims a PS5 FPS win.
+pinned-source-reproduced translation unit. Executes the real BufferQueueConsumer Acquire/Release along with the maintained
+compositor. Guest enqueue, GPU completion and display remain mocked. Never claims a PS5 FPS win.
 """
 from pathlib import Path
 import subprocess
@@ -68,11 +68,25 @@ pinned_cache_method = extract_from(pinned.decode(), cache_marker)
 assert current_cache_method != pinned_cache_method
 assert current_cache_method in methods
 assert "return CacheStatus::CachedBufferReused;" in pinned_cache_method
+# F05: real pinned BufferQueueConsumer Acquire/Release + maintained compositor
+# compiled in ONE C++ fixture, not merely inspected independently.
+queue_source = (root / "vendor/sources/eden/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp").read_text()
+consumer_methods = "\n\n".join(extract_from(queue_source, marker) for marker in (
+    "Status BufferQueueConsumer::AcquireBuffer(",
+    "Status BufferQueueConsumer::ReleaseBuffer(",
+))
+for marker in ("core->StillTracking(*front)", "core->SignalDequeueCondition();",
+               "slots[slot].buffer_state = BufferState::Acquired;",
+               "slots[slot].buffer_state = BufferState::Free;",
+               "listener->OnBufferReleased();"):
+    assert marker in consumer_methods, ("BufferQueue source drift", marker)
+
 # Produce a negative control by replacing ONLY the corrected method with the
 # byte-exact historical one. The rest of the full composition is identical.
 
 fixture = r"""
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <limits>
@@ -82,18 +96,22 @@ fixture = r"""
 #include <deque>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <vector>
 #include <boost/container/small_vector.hpp>
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#define LOG_DEBUG(...) ((void)0)
+#define LOG_ERROR(...) ((void)0)
 using u32 = std::uint32_t;
 using u64 = std::uint64_t;
 using s32 = std::int32_t;
 using f32 = float;
 using ConsumerId = s32;
 namespace android {
-enum class Status { NoError, NoBufferAvailable };
+enum class Status { NoError, NoBufferAvailable, PresentLater, InvalidOperation, BadValue, StaleBufferSlot };
 enum class BufferTransformFlags : int { Identity = 0 };
-struct Fence { static Fence NoFence() { return {}; } };
+struct Fence { int sequence{-1}; static Fence NoFence() { return {}; } };
 struct GraphicBuffer {
     int id;
     int BufferId() const { return id; }
@@ -106,26 +124,101 @@ struct GraphicBuffer {
 struct BufferItem {
     std::shared_ptr<GraphicBuffer> graphic_buffer;
     int swap_interval{1};
-    int transform{};
-    int crop{};
+    int transform{}, crop{};
     Fence fence{};
+    s32 slot{-1};
+    u64 frame_number{};
+    std::int64_t timestamp{};
+    bool is_auto_timestamp{}, acquire_called{};
 };
 }
+namespace android {
+enum class BufferState { Free, Queued, Dequeued, Acquired };
+struct BufferQueueDefs { static constexpr s32 NUM_BUFFER_SLOTS=8; };
+struct BufferSlot {
+    std::shared_ptr<GraphicBuffer> graphic_buffer{};
+    BufferState buffer_state{BufferState::Free};
+    u64 frame_number{};
+    bool acquire_called{},needs_cleanup_on_release{};
+};
+struct IProducerListener {
+    unsigned releases{};
+    void OnBufferReleased() { ++releases; }
+};
+struct BufferQueueCore {
+    std::mutex mutex;
+    std::array<BufferSlot,BufferQueueDefs::NUM_BUFFER_SLOTS> slots{};
+    std::deque<BufferItem> queue;
+    s32 max_acquired_buffer_count{};
+    u64 frame_counter{};
+    unsigned notifications{};
+    std::shared_ptr<IProducerListener> connected_producer_listener{
+        std::make_shared<IProducerListener>()};
+    bool StillTracking(const BufferItem& item) const {
+        return item.slot>=0 && item.slot<BufferQueueDefs::NUM_BUFFER_SLOTS &&
+            item.graphic_buffer && slots[item.slot].graphic_buffer==item.graphic_buffer;
+    }
+    void SignalDequeueCondition(){++notifications;}
+};
+struct BufferQueueConsumer {
+    std::shared_ptr<BufferQueueCore> core;
+    std::array<BufferSlot,BufferQueueDefs::NUM_BUFFER_SLOTS>& slots;
+    explicit BufferQueueConsumer(std::shared_ptr<BufferQueueCore> c)
+        : core(std::move(c)),slots(core->slots){}
+    Status AcquireBuffer(BufferItem*,std::chrono::nanoseconds);
+    Status ReleaseBuffer(s32,u64,const Fence&);
+};
+__CONSUMER_METHODS__
+} // namespace android
 struct MockConsumer {
     std::deque<android::BufferItem> pending;
-    unsigned acquires{}, releases{};
+    std::shared_ptr<android::BufferQueueCore> queue{
+        std::make_shared<android::BufferQueueCore>()};
+    android::BufferQueueConsumer native{queue};
+    unsigned acquires{},releases{},successful_acquires{};
     android::Status AcquireBuffer(android::BufferItem* item,
-                                  std::chrono::nanoseconds, bool) {
+                                  std::chrono::nanoseconds expected,bool wait_for_fence) {
+        assert(!wait_for_fence);
         ++acquires;
-        if (pending.empty()) return android::Status::NoBufferAvailable;
-        *item = std::move(pending.front());
-        pending.pop_front();
-        return android::Status::NoError;
+        // A deterministic guest producer is mocked; native consumer
+        // supplies slot acquisition and release, including generation wake.
+        if(!pending.empty()){
+            std::scoped_lock lock{queue->mutex};
+            s32 slot=-1;
+            for(s32 i=0;i<android::BufferQueueDefs::NUM_BUFFER_SLOTS;++i){
+                if(queue->slots[i].buffer_state==android::BufferState::Free){
+                    slot=i;break;
+                }
+            }
+            assert(slot>=0);
+            auto pushed=std::move(pending.front());
+            pending.pop_front();
+            pushed.slot=slot;
+            pushed.frame_number=++queue->frame_counter;
+            pushed.acquire_called=queue->slots[slot].acquire_called;
+            auto& state=queue->slots[slot];
+            state.graphic_buffer=pushed.graphic_buffer;
+            state.frame_number=pushed.frame_number;
+            state.buffer_state=android::BufferState::Queued;
+            queue->queue.push_back(std::move(pushed));
+            queue->SignalDequeueCondition();
+        }
+        const auto status=native.AcquireBuffer(item,expected);
+        if(status==android::Status::NoError){
+            // Real BufferItemConsumer restores its previously mapped backing.
+            assert(item->slot>=0);
+            item->graphic_buffer=queue->slots[item->slot].graphic_buffer;
+            assert(item->graphic_buffer);
+            ++successful_acquires;
+        }
+        return status;
     }
-    android::Status ReleaseBuffer(const android::BufferItem& item, android::Fence) {
-        assert(item.graphic_buffer);
+    android::Status ReleaseBuffer(const android::BufferItem& item,android::Fence fence){
+        assert(item.graphic_buffer && item.frame_number>0);
+        const auto status=native.ReleaseBuffer(item.slot,item.frame_number,fence);
+        assert(status==android::Status::NoError);
         ++releases;
-        return android::Status::NoError;
+        return status;
     }
 };
 struct Layer {
@@ -333,6 +426,8 @@ int main() {
     std::puts("HARDWARE_COMPOSER_FULL_LIVENESS_PASS");
 }
 """
+fixture = fixture.replace("__CONSUMER_METHODS__", consumer_methods)
+assert "__CONSUMER_METHODS__" not in fixture
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
 assert compiler, "C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="encore-composer-full-") as td:
@@ -350,6 +445,7 @@ with tempfile.TemporaryDirectory(prefix="encore-composer-full-") as td:
                                 timeout=15)
         assert result.returncode == 0, (opt, result.stderr[-3500:])
         print("NATIVE_FULL_COMPOSITOR_LIVENESS_HOST_PASS", opt)
+        print("F05_NATIVE_BUFFERQUEUE_CONSUMER_COMPOSITOR_PASS", opt, "scope=source_extracted_host_no_guest_ipc_no_real_gpu")
 
         historical = fixture.replace(current_cache_method, pinned_cache_method)
         assert historical != fixture and historical.count(pinned_cache_method) == 1
