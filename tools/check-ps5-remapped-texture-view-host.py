@@ -35,6 +35,8 @@ for content in (shipping_method, native_method):
         "PrepareImageView(pair->second, false, false);")
     assert "channel_state->image_view_ids.insert_or_assign(map_index, NULL_IMAGE_VIEW_ID);" in content
 assert "image_view_ids.end() && is_remapped_view(it->second)" in native_method
+assert "image_view_ids.end() && is_remapped_view(it->second)" in shipping_method
+assert "validate_ps5_texture_missing_channel_slot_guard" in installer
 assert "F04 native TIC layer view safety" in generator
 
 with tempfile.TemporaryDirectory(prefix="encore-remap-replay-") as td:
@@ -180,17 +182,20 @@ compilers=list(dict.fromkeys(filter(None,(
 assert compilers, "C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="encore-view-remap-host-") as td:
     cpp=Path(td)/"view.cpp"
-    cpp.write_text(prologue + "\ntemplate<class P>\n" + native_method + epilogue)
-    for compiler in compilers:
-        for opt in ("-O0","-O2"):
-            for label, flags in (("ps5",["-DPS5_NATIVE"]),("upstream",[])):
-                exe=Path(td)/(Path(compiler).name+opt+label)
-                built=subprocess.run(
-                    [compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
-                     "-fsanitize=undefined","-fno-sanitize-recover=all",
-                     *flags,str(cpp),"-o",str(exe)],
-                    text=True,capture_output=True,timeout=60)
-                assert built.returncode==0,(compiler,opt,label,built.stderr[-5000:])
-                ran=subprocess.run([str(exe)],text=True,capture_output=True,timeout=20)
-                assert ran.returncode==0,(compiler,opt,label,ran.stderr[-5000:])
-                print("ENCORE_REMAP_TIC_VIEW_PASS",Path(compiler).name,opt,label)
+    # The shipping implementation also runs on PS5 and must tolerate
+    # missing per-channel slots, not only the native Vulkan overlay.
+    for owner, selected_method in (("shipping",shipping_method),("native",native_method)):
+        cpp.write_text(prologue + "\ntemplate<class P>\n" + selected_method + epilogue)
+        for compiler in compilers:
+            for opt in ("-O0","-O2"):
+                for label, flags in (("ps5",["-DPS5_NATIVE"]),("upstream",[])):
+                    exe=Path(td)/(Path(compiler).name+opt+label+owner)
+                    built=subprocess.run(
+                        [compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                         "-fsanitize=undefined","-fno-sanitize-recover=all",
+                         *flags,str(cpp),"-o",str(exe)],
+                        text=True,capture_output=True,timeout=60)
+                    assert built.returncode==0,(compiler,opt,label,owner,built.stderr[-5000:])
+                    ran=subprocess.run([str(exe)],text=True,capture_output=True,timeout=20)
+                    assert ran.returncode==0,(compiler,opt,label,owner,ran.stderr[-5000:])
+                    print("ENCORE_REMAP_TIC_VIEW_PASS",owner,Path(compiler).name,opt,label)
