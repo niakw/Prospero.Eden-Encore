@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
+#include <array>
 #include "common/scope_exit.h"
 #include "performance.h"
 #include <memory>
@@ -268,6 +269,26 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
     const auto& qmd{kepler_compute.launch_description};
     const auto& cbufs{qmd.const_buffer_config};
     const bool via_header_index{qmd.linked_tsc != 0};
+#ifdef PS5_NATIVE
+    // Descriptor synchronization above fixes the TSC table for this dispatch.
+    // This bounded draw-local memo avoids duplicate sampler-table probes but
+    // NEVER carries sampler IDs across dispatches, remaps or channel switches.
+    struct ComputeSamplerMemo {
+        u32 handle{};
+        VideoCommon::SamplerId id{};
+        bool valid{};
+    };
+    std::array<ComputeSamplerMemo, 16> sampler_memo{};
+    const auto resolve_sampler{[&](u32 handle) -> VideoCommon::SamplerId {
+        auto& entry = sampler_memo[handle & 15U];
+        if (!entry.valid || entry.handle != handle) {
+            entry.id = texture_cache.GetSamplerId(handle, true);
+            entry.handle = handle;
+            entry.valid = true;
+        }
+        return entry.id;
+    }};
+#endif
     const auto read_handle{[&](const auto& desc, u32 index) {
         ASSERT(((qmd.const_buffer_enable_mask >> desc.cbuf_index) & 1) != 0);
         const u32 index_offset{index << desc.size_shift};
@@ -308,8 +329,12 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
             const auto handle{read_handle(desc, index)};
             views.push_back({handle.first});
 
+#ifdef PS5_NATIVE
+            samplers.push_back(resolve_sampler(handle.second));
+#else
             VideoCommon::SamplerId sampler = texture_cache.GetSamplerId(handle.second, true);
             samplers.push_back(sampler);
+#endif
         }
     }
     for (const auto& desc : info.image_descriptors) {
