@@ -38,7 +38,7 @@ struct Buffer {DAddr cpu_addr_cached=0x1000;};
 struct Tracker {
     bool dirty=false;
     int dirty_probes=0, upload_walks=0;
-    bool IsRegionCpuModified(DAddr, u32) {++dirty_probes;return dirty;}
+    bool IsRegionCpuModified(DAddr, u32 size) {++dirty_probes;return dirty && size != 0;}
     template<class Fn> void ForEachUploadRange(DAddr addr,u32 size,Fn fn) {
         ++upload_walks;
         const bool needs_upload=dirty;
