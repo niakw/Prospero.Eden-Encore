@@ -133,7 +133,9 @@ assert 'const Rect detail{72.0f, 620.0f, 1776.0f, 276.0f};' in library
 assert 'constexpr float kCaseInkHeight = 704.0f;' in library
 assert 'constexpr float kCaseInkWidth = 440.0f;' in library
 assert 'flat_composed_ink(c, game, paper, rear);' in library
-assert 'cover_crop(c, painting, r, 0.0f, 0.0f);' in library
+assert 'if (painting) reconstructed_cover(c, *painting, r);' in library
+assert 'reconstructed_paper(c, paper);' in library
+assert 'uv.w = target / source;' in library and 'uv.h = source / target;' in library
 assert 'const float opening_x = rear ? shell.x : shell.x + shell.w - side;' in library
 assert 'c.list.gradient_rect({shell.x, shell.y, shell.w, top}' in library
 assert 'c.list.gradient_rect({shell.x, shell.y + shell.h - top,' in library
