@@ -55,6 +55,7 @@ methods = "\n\n".join(extract(name) for name in (
 # old ternary's second lookup.
 compose = extract("u32 HardwareComposer::ComposeLocked(")
 assert compose.count("m_framebuffers.find(consumer_id)") == 1
+assert compose.index("if (!layer->is_overlay) {") < compose.index("m_framebuffers.find(consumer_id)")
 assert "const auto result = reuse_held" in compose
 assert "m_framebuffers[consumer_id].is_acquired" not in compose
 assert "nvdisp.WaitForComposite();" in methods

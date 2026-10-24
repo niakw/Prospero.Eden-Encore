@@ -69,17 +69,18 @@ u32 HardwareComposer::ComposeLocked(f32* out_speed_scale, Display& display,
         auto consumer_id = layer->consumer_id;
 
         // At 30Hz game / 60Hz HUD cadence this is a hot compositor path.
-        // The frame map is stable while ComposeLocked owns the HLE lock:
-        // a reusable buffer was just found AND confirmed still acquired.
-        const auto fb_it = m_framebuffers.find(consumer_id);
+        // Avoid rechecking an acquired game slot; overlays always try their
+        // own fresh-buffer path without a redundant preliminary lookup.
         bool reuse_held = false;
-        if (!layer->is_overlay && fb_it != m_framebuffers.end() &&
-            fb_it->second.is_acquired) {
-            const u64 frames_since_last_acquire =
-                m_frame_number - fb_it->second.last_acquire_frame;
-            const s32 expected_interval =
-                NormalizeSwapInterval(nullptr, fb_it->second.item.swap_interval);
-            reuse_held = frames_since_last_acquire < static_cast<u64>(expected_interval);
+        if (!layer->is_overlay) {
+            const auto fb_it = m_framebuffers.find(consumer_id);
+            if (fb_it != m_framebuffers.end() && fb_it->second.is_acquired) {
+                const u64 frames_since_last_acquire =
+                    m_frame_number - fb_it->second.last_acquire_frame;
+                const s32 expected_interval =
+                    NormalizeSwapInterval(nullptr, fb_it->second.item.swap_interval);
+                reuse_held = frames_since_last_acquire < static_cast<u64>(expected_interval);
+            }
         }
 
         // Reuse only a buffer the consumer still owns; otherwise the real
