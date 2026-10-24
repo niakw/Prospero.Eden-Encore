@@ -942,3 +942,40 @@ La CI complète, le rejeu de tous les backports et le build
 PS5 restent à confirmer. Il n'existe pas de trace attestant que
 FC27 déclenche précisément la région nulle ou le bool-break path :
 **ne pas clôturer F01/F03/F04 sans les validations du moteur et du jeu.**
+
+
+## 24 octobre — F04, vues TIC et décalages de couche
+
+Le chemin `TextureCache<P>::CreateImageView` reconstruisait le début
+d'une texture à partir de `BaseLayer * layer_stride`, calculé en `u32`.
+La multiplication pouvait donc tronquer un décalage de couche supérieur
+à 4 Gio et la soustraction pouvait produire une adresse GPU sous-débordée.
+Un `TryFindBase(...).value()` sans présence garantie pouvait également
+interrompre la création d'une texture incomplètement mappée.
+
+Sur **PS5 uniquement**, le décalage est désormais calculé en `u64`
+et une adresse GPU inférieure au décalage est rejetée avant recherche
+ou insertion d'image. Lorsque le sous-ensemble demandé n'existe pas,
+`CreateImageView` retourne `NULL_IMAGE_VIEW_ID` : le chemin existant
+de reprise des vues NULL peut retenter la création après remappage.
+La création normale des vues et le comportement non-PS5 restent inchangés.
+
+- Sources maintenues : `eden-backports/src/video_core/texture_cache/texture_cache.h`
+  et `eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h`.
+- `headless/backports/eden-ps5-texture-tic-layer-bounds.patch` :
+  rejeu explicite contre la source Eden épinglée et validateur
+  `validate_ps5_texture_tic_layer_bounds`.
+- `tools/prepare-vulkan-port.py` :
+  reconstitution stricte de la même méthode pour l'overlay Vulkan natif.
+- `tools/check-ps5-texture-tic-layer-host.py` :
+  test de la méthode source-extrait pour couches valides, décalage 4 Gio,
+  adresse incorrecte et sous-ensemble manquant, avec patch `git apply --check`
+  puis comparaison des versions shipping/native.
+- Manifeste et inventaire : empreintes source/patch, bytes et preuve du
+  chemin réellement modifié mis à jour.
+
+Une reproduction C++ locale de la méthode et de ses cas a réussi sous
+Clang/GCC en O0/O2, avec et sans `PS5_NATIVE`, UBSan activé
+(8 combinaisons). Ce test **ne prouve pas** la compilation complète du
+moteur, ni le retour du HUD en jeu. La CI globale, le rejeu intégral,
+le build PS5 et la qualification FC27 restent requis. F04 reste ouvert.
