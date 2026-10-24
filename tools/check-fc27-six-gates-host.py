@@ -37,6 +37,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-surface-lifecycle.py",
         "check-native-nvnflinger-detach-wake-host.py",
         "check-native-gpu-composite-syncpoint-host.py",
+        "check-native-vulkan-renderer-handoff-host.py",
     ),
     "F06-input-and-pause": (
         "check-fc27-match-input-profile.py",
@@ -44,7 +45,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# Missing end-to-end evidence remains explicit even when all thirteen narrow
+# Missing end-to-end evidence remains explicit even when all fourteen narrow
 # host probes succeed. Neither a successful tool run nor a source checksum is
 # a measured frame-latency improvement or a complete technical exit proof.
 UNPROVEN_EXIT_EVIDENCE = {
@@ -135,6 +136,28 @@ def run() -> int:
                         }
                         print("F05_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F05_native_syncpoint_host"],
+                                         sort_keys=True), flush=True)
+                if ok and script == "check-native-vulkan-renderer-handoff-host.py":
+                    records = re.findall(
+                        r"F05_VULKAN_RENDER_PRESENT_HOST_PASS frames=(\d+) callbacks=(\d+) "
+                        r"game_hz=30 hud_hz=60 pause_ticks=12 pool=7",
+                        result.stdout)
+                    bounds = re.findall(
+                        r"F05_VULKAN_WSI_NOT_PROVEN real_gpu_and_scanout_unmeasured",
+                        result.stdout)
+                    if records != [("241", "243"), ("241", "243")] or len(bounds) != 2:
+                        ok, reason = False, "f05_vulkan_present_handoff_evidence_missing"
+                    else:
+                        fixture_metrics["F05_vulkan_renderer_handoff_host"] = {
+                            "delivered_mock_copy_frames": 241,
+                            "renderer_callbacks": 243,
+                            "guest_pause_ticks": 12,
+                            "compiled_modes": ["O0", "O2"],
+                            "scope": "real renderer and async presenter methods, mock WSI; "
+                                     "NOT guest progress, native GPU or real display",
+                        }
+                        print("F05_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F05_vulkan_renderer_handoff_host"],
                                          sort_keys=True), flush=True)
                 checks.append({"script": script, "ok": ok, "reason": reason})
                 if not ok:

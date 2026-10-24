@@ -55,6 +55,7 @@ on:
       - 'tools/check-vulkan-multirange-overflow-host.py'
       - 'tools/check-native-gpu-fence-release-publication-host.py'
       - 'tools/check-native-gpu-composite-syncpoint-host.py'
+      - 'tools/check-native-vulkan-renderer-handoff-host.py'
       - 'tools/check-vulkan-fence-completed-wait-host.py'
       - 'tools/check-vulkan-pipeline-ready-publication-host.py'
       - 'tools/check-vulkan-buffer-frame-tick-snapshot-host.py'
@@ -188,6 +189,7 @@ jobs:
           python3 -B tools/check-vulkan-renderpass-clear-bounds-host.py
           python3 -B tools/check-native-gpu-fence-release-publication-host.py
           python3 -B tools/check-native-gpu-composite-syncpoint-host.py
+          python3 -B tools/check-native-vulkan-renderer-handoff-host.py
           python3 -B tools/check-ps5-active-texture-descriptor-host.py
           python3 -B tools/check-native-batched-buffer-invalidation-host.py
           python3 -B tools/check-native-single-range-buffer-invalidation-host.py
