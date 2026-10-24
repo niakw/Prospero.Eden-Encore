@@ -74,13 +74,15 @@ class Textures
     // Called only when Nlib atomically replaces an image with the same path.
     void invalidate(const std::string &path);
     // Compose one offline artwork sleeve with the REAL C++/OpenGL UI painter.
-    // Only called once per missing case face after cached input images load.
-    // Returns 0 if this GL context cannot render to a texture; caller draws
-    // the same opaque paper base, never a raw front screenshot on the back.
+    // At most one page per face. A provisional page can be refreshed IN PLACE
+    // after its cached input images finish decoding, without a third GPU page.
+    // existing must be a live case page owned by this Textures instance (or 0
+    // to allocate); 0 on failure leaves an existing page usable and unchanged.
     std::uint32_t render_case_page(const gfx::DrawList& drawing,
                                    const gfx::Font* font,
                                    std::uint32_t font_texture,
-                                   int width, int height);
+                                   int width, int height,
+                                   std::uint32_t existing = 0);
     void clear_case_pages();
     // Output pixels per virtual pixel: picks how much detail a cover needs.
     void set_output_scale(float scale)
