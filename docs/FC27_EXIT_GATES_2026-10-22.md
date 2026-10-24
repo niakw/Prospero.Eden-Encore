@@ -819,7 +819,10 @@ des copies sont alors évités. Pour une plage modifiée, le chemin antérieur
 reste intact, y compris l'exclusion des octets possédés par le GPU, la
 consommation des marques CPU et l'appel éventuel à `UploadMemory`.
 
-- Source modifiée : `vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h`.
+- Source livrée à la compilation PS5 : `vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h`, copie CMake de la source maintenue.
+- Source du rejeu : `vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h`.
+  Les deux méthodes `SynchronizeBuffer` sont identiques ; l'ancienne version
+  complète de chacune est retrouvée en retirant seulement la même garde F01.
 - Rejeu natif : `headless/backports/eden-ps5-buffer-clean-upload-fastpath.patch`,
   intégré à `tools/apply-eden-backports.sh` et inscrit dans le manifeste avec
   la taille, l'empreinte du source actif et le hash du patch.
@@ -827,8 +830,9 @@ consommation des marques CPU et l'appel éventuel à `UploadMemory`.
   par la prévalidation et le workflow de compilation native. Il vérifie les
   chemins CPU propres/modifiés, le chevauchement GPU et la plage nulle.
 - Le harnais C++ source-extrait est programmé en O0/O2 avec UBSan dans
-  les deux modes (PS5 et amont). **Son exécution et son résultat ne sont pas
-  vérifiés dans cette intervention**, tout comme le résultat des workflows
+  les deux modes (PS5 et amont), et extrait maintenant la méthode de la
+  **source réellement sélectionnée par CMake**. **Son exécution et son résultat
+  ne sont pas vérifiés dans cette intervention**, tout comme le résultat des workflows
   GitHub, le build natif et l'effet réel sur les attentes `buffer mutex` de FC27.
 
 **Ne pas clôturer F01** sur ce seul raccourci : les durées de contention
