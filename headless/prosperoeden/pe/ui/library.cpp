@@ -130,7 +130,6 @@ void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
     // artwork. This is not plastic: only the case shell draws that material.
     c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));
     c.list.gradient_rect(r, 0.0f, Color::rgb(0x20384c), Color::rgb(0x101e32));
-    const bool scenic = !game.hero.empty() || !game.screenshots.empty();
     const std::string& painting = !game.hero.empty() ? game.hero :
                                   !game.screenshots.empty() ? game.screenshots.front() :
                                   game.cover;
