@@ -91,13 +91,15 @@ void SyncpointManager::Increment(std::atomic<u32>& syncpoint, std::condition_var
         }
         ready_actions.splice(ready_actions.end(), action_storage,
                              action_storage.begin(), it);
-        wait_cv.notify_all();
     }
     // Cancellation can prevent an action only before the claim above.
     // Execute the already-claimed batch without holding the global guard.
     for (auto& ready : ready_actions) {
         ready.action();
     }
+    // Preserve the original contract: guest/host waiters are notified
+    // only after all due callbacks have completed, never before dispatch.
+    wait_cv.notify_all();
 }
 
 void SyncpointManager::Wait(std::atomic<u32>& syncpoint, std::condition_variable& wait_cv,
