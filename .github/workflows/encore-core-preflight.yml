@@ -147,6 +147,7 @@ jobs:
           python3 -B tools/check-image-repro-diagnostic-host.py
           python3 -B tools/check-native-graphics-buffer-slot-bounds-host.py
           python3 -B tools/check-native-wide-vertex-buffer-range-host.py
+          python3 -B tools/check-native-uniform-mask-rebind-host.py
           python3 -B tools/check-native-unmapped-uniform-buffer-host.py
           python3 -B tools/check-native-zero-write-tick-fence-host.py
           python3 -B tools/check-buffer-write-ahead-host.py

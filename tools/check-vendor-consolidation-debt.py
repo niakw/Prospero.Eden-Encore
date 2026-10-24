@@ -1631,6 +1631,11 @@ compute_cbuf_disabled_before = "    if (((launch_desc.const_buffer_enable_mask >
 compute_cbuf_disabled_after = "    if (((launch_desc.const_buffer_enable_mask >> cbuf_index) & 1) == 0) {\n        // Preserve the logical descriptor position, but never reuse a buffer\n        // left from an earlier dispatch when this launch disables its CBUF.\n        channel_state->compute_storage_buffers[ssbo_index] = NULL_BINDING;\n        channel_state->written_compute_storage_buffers &= ~(1U << ssbo_index);\n        LOG_WARNING(HW_GPU, \"Skipped binding SSBO: cbuf index {} is not enabled\", cbuf_index);\n        return;\n    }"
 assert r437_expected.count(compute_cbuf_disabled_before) == 1
 r437_expected = r437_expected.replace(compute_cbuf_disabled_before, compute_cbuf_disabled_after)
+# F01: pinned buffer-cache transform also retains mask-write elision.
+mask_write_before = "    if (channel_state->enabled_uniform_buffer_masks != mask) {\n        channel_state->fast_bound_uniform_buffers.fill(0);\n        if constexpr (HAS_PERSISTENT_UNIFORM_BUFFER_BINDINGS) {\n            channel_state->dirty_uniform_buffers.fill(~u32{0});\n            channel_state->uniform_buffer_binding_sizes.fill({});\n        }\n    }\n    channel_state->enabled_uniform_buffer_masks = mask;\n    channel_state->uniform_buffer_sizes = sizes;"
+mask_write_after = "    if (channel_state->enabled_uniform_buffer_masks != mask) {\n        channel_state->fast_bound_uniform_buffers.fill(0);\n        if constexpr (HAS_PERSISTENT_UNIFORM_BUFFER_BINDINGS) {\n            channel_state->dirty_uniform_buffers.fill(~u32{0});\n            channel_state->uniform_buffer_binding_sizes.fill({});\n        }\n        // A repeat pipeline already has the mask: avoid rewriting all stage\n        // entries on every draw while the buffer/texture cache locks are held.\n        channel_state->enabled_uniform_buffer_masks = mask;\n    }\n    // Equal enabled masks do not imply equal uniform sizes across pipelines.\n    channel_state->uniform_buffer_sizes = sizes;"
+assert r437_expected.count(mask_write_before) == 1
+r437_expected = r437_expected.replace(mask_write_before, mask_write_after)
 assert (active / r437_rel).read_text() == r437_expected, (
     "R437 maintained buffer cache differs from source reconstruction; "
     "check BufferPages registration, DMA copy bounds and DMA clear bounds"
