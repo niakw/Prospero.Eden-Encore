@@ -163,7 +163,7 @@ def run() -> int:
                 if ok and script == "check-native-host1x-increment-handoff-host.py":
                     passes = re.findall(
                         r"N04_HOST1X_INCREMENT_HANDOFF_PASS ordered=3 nested=1 "
-                        r"claimed=1 pending_cancelled=1 independent=1 stress=256",
+                        r"claimed=1 pending_cancelled=1 independent=1 same_id_serial=1 stress=256",
                         result.stdout)
                     negative = re.findall(
                         r"N04_HOST1X_INCREMENT_PINNED_NEGATIVE_PASS guard_blocks_callback",

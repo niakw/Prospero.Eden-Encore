@@ -61,10 +61,16 @@ void SyncpointManager::DeregisterHostAction(u32 syncpoint_id, const ActionHandle
 }
 
 void SyncpointManager::IncrementGuest(u32 syncpoint_id) {
+    // The old global guard serialized callbacks for this id. Keep their
+    // submission order without blocking independent guest syncpoints.
+    static std::array<std::recursive_mutex, 192> dispatch_mutexes{};
+    std::scoped_lock dispatch_lock{dispatch_mutexes[syncpoint_id]};
     Increment(syncpoints_guest[syncpoint_id], wait_guest_cv, guest_action_storage[syncpoint_id]);
 }
 
 void SyncpointManager::IncrementHost(u32 syncpoint_id) {
+    static std::array<std::recursive_mutex, 192> dispatch_mutexes{};
+    std::scoped_lock dispatch_lock{dispatch_mutexes[syncpoint_id]};
     Increment(syncpoints_host[syncpoint_id], wait_host_cv, host_action_storage[syncpoint_id]);
 }
 
