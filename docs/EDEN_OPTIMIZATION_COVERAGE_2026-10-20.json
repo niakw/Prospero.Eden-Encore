@@ -3527,7 +3527,7 @@
       "path": "vendor/encore-active/eden-vulkan/vk_compute_pipeline_cost.cpp",
       "disposition": "new_source_issue_corrected",
       "proof_ref": "tools/check-vulkan-pipeline-ready-publication-host.py",
-      "evidence": "Compute pipeline ready path was relaxed with builder release; now acquires ready publication before pipeline handle usage. Source-extracted host witness tests racing and completed pipelines; PS5/native not measured. F01 now also preflights immutable compute texture/sampler counts into bounded per-thread reentrant scratch before paired GPU locks; checks in tools/check-ps5-compute-descriptor-scratch-host.py. No measured FPS claim."
+      "evidence": "Compute pipeline ready path was relaxed with builder release; now acquires ready publication before pipeline handle usage. Source-extracted host witness tests racing and completed pipelines; PS5/native not measured. F01 now also preflights immutable compute texture/sampler counts into bounded per-thread reentrant scratch before paired GPU locks; checks in tools/check-ps5-compute-descriptor-scratch-host.py. No measured FPS claim. F01 2026-10-24: single-dispatch 16-slot sampler memo skips repeated compute TSC lookups, invalidated on every Configure. Selected source and exact generator parity, CI test tools/check-ps5-compute-sampler-memo-host.py; host isolated Clang/GCC UBSan O0/O2. No native FC27 FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vk_descriptor_buffer_cost.cpp",
