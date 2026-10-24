@@ -65,6 +65,7 @@ jobs:
           python3 -B tools/check-deferred-native-access-coverage.py
           python3 -B tools/ci/check-repo-hygiene.py
           python3 -B tools/ci/check-native-boilerplate-setup.py
+          python3 -B tools/check-vendored-eden-cache-rebase-host.py
           python3 -B tools/check-eden-audit-register.py
           python3 -B tools/check-eden-audit-verification-matrix.py
           python3 -B tools/audit-eden-progress-state.py

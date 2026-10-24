@@ -35,7 +35,7 @@ fi
 printf '%s\n' '5f142c7926d0c7fcbbd0ce30794d72f638a43b2a' > "$eden/GIT-COMMIT"
 printf '%s\n' 'ps5-headless' > "$eden/GIT-REFSPEC"
 step "Versioned Encore Eden fork (43 audited shipping patches, 83 full sources)"
-python3 -B tools/install-vendored-eden-backports.py "$eden"
+python3 -B tools/install-vendored-eden-backports.py --repair-owned-cache "$eden"
 # Native build recipe is a fully versioned translation unit, not a string
 # replacement performed during CMake configure. Original Eden is immutable.
 python3 -B tools/install-vendored-eden-build-flags.py "$eden"
