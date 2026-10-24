@@ -40,37 +40,25 @@ assert 'const std::string& scan = rear ? game.box_back : game.box_front;' in ren
 assert render.index("if (!scan.empty())") < render.index("flat_composed_ink(c, game, paper, rear)")
 front = method(library, "void flat_front_fallback(", "void flat_back_fallback(")
 back = method(library, "void flat_back_fallback(", "// Static sleeve used")
-for attr in ("game.hero","game.cover","game.screenshots","game.name","cover_crop"):
+for attr in ("game.hero","game.cover","game.screenshots","game.name","reconstructed_cover"):
     assert attr in front, attr
-for attr in ("game.hero","case_media::BackScenes(hero, game.cover, game.screenshots)",
+for attr in ("game.hero","case_media::BackScenes(",
              "game.description", "text_block(c, desc,", "const Rect footer"):
     assert attr in back, attr
 assert '"SWITCH"' in front
-# A square app icon cannot be stretched across an entire tall retail sleeve.
-contain = method(library, "void case_art_contain(", "void flat_front_fallback(")
-for token in ("const float aspect", "fitted.h = panel.w / aspect;",
-              "fitted.w = panel.h * aspect;", "c.list.image(art.texture, fitted"):
-    assert token in contain, token
-# An original square icon is cropped to full-bleed only when no scenic
-# artwork exists; never place a floating card within a tall retail face.
-assert 'else if (!game.cover.empty()) {' not in front
-# Front artwork must cover the whole paper; a fixed square label sits
-# exactly on the top-left corner and is never drawn on an original scan.
-for token in ("const std::string& painting = !game.hero.empty() ? game.hero :",
-              "if (!painting.empty()) {",
-              "cover_crop(c, painting, r, 0.0f, 0.0f);",
-              "const Rect logo{r.x, r.y, logo_w,",
-              "c.textures.switch_logo() != 0"):
-    assert token in front, token
-# Distinct back scenes come from the cached game, while the reference
-# bottom section is immutable and cannot be overwritten by dynamic media.
-for token in ("const std::string* first = shots[0];",
-              "const std::string* second = shots[1];",
-              "const Rect left{", "const Rect top_right{", "const Rect panorama{",
-              "constexpr float kFixedFooter = 0.41f;",
-              "c.textures.switch_rear_footer() != 0",
-              "if (path == game.cover) case_art_contain(c, path, area);"):
-    assert token in back, token
+# Front uses a full-width cover UV crop, never stretched independently in X/Y.
+front_cover = method(library, "void reconstructed_cover(", "// Reconstructed paper inserts")
+for token in ("uv.w = target / source;", "uv.h = source / target;",
+              "c.list.image(art.texture, paper, uv,"):
+    assert token in front_cover, token
+assert 'if (painting) reconstructed_cover(c, *painting, r);' in front
+assert "case_media::FrontPaper(" in front
+assert "case_media::FrontPaper(" in back
+assert 'scene(game.cover,' not in back
+assert 'case_art_contain(' not in library
+assert 'reconstructed_paper(c, paper);' in library
+assert "constexpr float kFixedFooter = 0.41f;" in back
+assert 'c.textures.switch_rear_footer() != 0' in back
 assert "ENCORE / GAME INFORMATION" in back
 assert "const std::string& credit = !game.publisher.empty()" in back
 # A real face remains untouched while asynchronous texture decoding runs;
@@ -89,7 +77,7 @@ assert "flat_composed_ink(c, game, paper, rear);" in render
 assert "selected ? 1.025f : 1.0f" not in library
 assert "if (!scan.empty()) {" in render
 assert "if (artwork.texture != 0)" in render
-assert "c.list.gradient_rect(paper, 0.0f," in render
+assert "reconstructed_paper(c, paper);" in render
 assert "if (rear)\\n                flat_back_fallback(c, game, paper);" not in render
 # No invented regulatory content in the procedural fallback. The user-
 # supplied reference footer is drawn as a static asset only, separately.

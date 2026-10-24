@@ -13,7 +13,10 @@ root = Path(__file__).resolve().parents[1]
 header = root / "headless/prosperoeden/pe/ui/case_media_selection.hpp"
 renderer = (root / "headless/prosperoeden/pe/ui/library.cpp").read_text()
 assert '#include "pe/ui/case_media_selection.hpp"' in renderer
-assert 'cover_crop(c, painting, r, 0.0f, 0.0f);' in renderer
+assert 'if (painting) reconstructed_cover(c, *painting, r);' in renderer
+assert 'reconstructed_paper(c, paper);' in renderer
+assert 'scene(game.cover,' not in renderer
+assert 'glClearColor' not in renderer
 assert 'case_media::BackScenes(hero, game.cover, game.screenshots)' in renderer
 source = r"""
 #include <cassert>
@@ -34,12 +37,12 @@ int main() {
     assert(pair[1] && *pair[1] == "scene-3.tga");
     assert(*pair[0] != *pair[1] && *pair[0] != hero && *pair[1] != hero);
 
-    // If only one independent screenshot exists, use the cached icon as
-    // second (printed with containment), not a copy of the first scene.
+    // Only independent screenshot sources may appear on the back.
+    // Never insert an app icon as a synthetic second picture.
     const std::vector<std::string> only_hero{"hero.tga", "extra.tga"};
     const auto one = BackScenes(hero, icon, only_hero);
     assert(one[0] && *one[0] == "extra.tga");
-    assert(one[1] && *one[1] == icon);
+    assert(!one[1]);
     assert(FrontAlternate(hero, icon, {"hero.tga", "hero.tga"}) == &icon);
 
     // A missing icon does not get a fabricated second screenshot.
@@ -50,9 +53,16 @@ int main() {
     assert(!no_media[0] && !no_media[1]);
     assert(FrontAlternate(hero, empty, {"hero.tga"}) == nullptr);
 
-    // Alternate poster is returned only if genuinely independent.
+    // When a game only has a front icon/poster, the back stays plain ink.
     const auto only_icon = BackScenes(hero, icon, {});
-    assert(only_icon[0] && *only_icon[0] == icon && !only_icon[1]);
+    assert(!only_icon[0] && !only_icon[1]);
+    assert(*FrontPaper(hero, icon, shots) == hero);
+    assert(*FrontPaper(empty, icon, shots) == "hero.tga");
+    assert(*FrontPaper(empty, icon, {}) == icon);
+    assert(FrontPaper(empty, empty, {}) == nullptr);
+    const auto excluded_cover = BackScenes(hero, icon, {"icon.tga", "scene.tga"});
+    assert(excluded_cover[0] && *excluded_cover[0] == "scene.tga");
+    assert(!excluded_cover[1]);
 
     // All results point into existing metadata, no allocations or copies.
     assert(front == &shots[2]);

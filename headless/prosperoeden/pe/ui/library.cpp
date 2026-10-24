@@ -92,30 +92,34 @@ std::string library_format(const std::string& format)
     return format.front() == '.' ? format : "." + format;
 }
 
-// Native 2D jacket fallback only where no authentic retail scan exists.
-// The title/known art are displayed, never an invented rear scan or a 3D
-// prefabricated case. Supports both the shelf and the enlarged back view.
-// Native procedural retail-style inserts: composed every frame from the
-// actual game art and metadata; never create a counterfeit front/back scan.
-// Physical plastic and 3D rotation are drawn by the existing case renderer.
-// Aspect-preserving insert for square icons and tall poster fragments.
-// Never fill a portrait retail sleeve by stretching a small app icon.
-void case_art_contain(Canvas& c, const std::string& path, const Rect& panel)
+// One opaque printed-paper substrate per missing face, BELOW artwork and
+// typography and ABOVE the independently rendered molded case plastic.
+// Never add a local dark panel under a game icon or editorial caption.
+constexpr unsigned kReconstructedPaperRGB = 0x112235;
+void reconstructed_paper(Canvas& c, const Rect& r)
 {
-    c.list.gradient_rect(panel, 0.0f, Color::rgb(0x252a36), Color::rgb(0x0a101d));
+    c.list.rounded_rect(r, 0.0f, Color::rgb(kReconstructedPaperRGB));
+}
+
+// CSS background-size: cover. Crop the SOURCE UVs, not the rendered paper
+// dimensions: identical X/Y scale, no stretched square icon, full-width ink.
+// An absent/decoding bitmap simply reveals the continuous paper underneath.
+void reconstructed_cover(Canvas& c, const std::string& path, const Rect& paper)
+{
     if (path.empty()) return;
-    const Cover art = c.textures.cover(path, std::max(panel.w, panel.h));
+    const Cover art = c.textures.cover(path, std::max(paper.w, paper.h));
     if (art.texture == 0) return;
-    const float aspect = std::max(0.01f, art.aspect);
-    Rect fitted = panel;
-    if (aspect > panel.w / panel.h) {
-        fitted.h = panel.w / aspect;
-        fitted.y += (panel.h - fitted.h) * 0.5f;
-    } else {
-        fitted.w = panel.h * aspect;
-        fitted.x += (panel.w - fitted.w) * 0.5f;
+    const float source = std::max(0.01f, art.aspect);
+    const float target = paper.w / std::max(1.0f, paper.h);
+    Rect uv{0.0f, 0.0f, 1.0f, 1.0f};
+    if (source > target) {
+        uv.w = target / source;
+        uv.x = (1.0f - uv.w) * 0.5f;
+    } else if (source < target) {
+        uv.h = source / target;
+        uv.y = (1.0f - uv.h) * 0.5f;
     }
-    c.list.image(art.texture, fitted, {0.0f, 0.0f, 1.0f, 1.0f},
+    c.list.image(art.texture, paper, uv,
                  Color::rgb(0xffffff, tween::cubic_out(art.age / 0.22f)));
 }
 
@@ -126,26 +130,17 @@ void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
 {
     // Artwork occupies the WHOLE paper face; the corner logo is printed on
     // top of it, not placed beside it or clipped by the physical case lip.
-    // Solid printed paper under every face, including missing/undecoded
-    // artwork. This is not plastic: only the case shell draws that material.
-    c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));
-    c.list.gradient_rect(r, 0.0f, Color::rgb(0x20384c), Color::rgb(0x101e32));
-    const std::string& painting = !game.hero.empty() ? game.hero :
-                                  !game.screenshots.empty() ? game.screenshots.front() :
-                                  game.cover;
-    if (!painting.empty()) {
-        // The front is always a full-bleed printed face, in both Library
-        // and 3D launch. A square app icon is a last-resort *cropped*
-        // visual, not a small framed placeholder pasted onto blue paper.
-        cover_crop(c, painting, r, 0.0f, 0.0f);
-    }
-    // Keep a game title visible when no genuine logo/title-bearing retail
-    // cover exists. This is a small transparent caption, not a poster band
-    // which takes away a quarter of the artwork.
+    // The shared opaque paper has already been painted for BOTH Library
+    // and 3D. Hero, screenshot or last-resort icon covers its full width
+    // with preserved source proportions (UV crop only).
+    const auto* painting = case_media::FrontPaper(
+        game.hero, game.cover, game.screenshots);
+    if (painting) reconstructed_cover(c, *painting, r);
+    // A very light FULL-PAPER print tint, not a boxed title background.
+    if (painting)
+        c.list.gradient_rect(r, 0.0f, Color::rgb(0x09101c, 0.04f),
+                            Color::rgb(0x09101c, 0.36f));
     const float title_h = r.h * 0.145f;
-    c.list.gradient_rect({r.x, r.y + r.h - title_h, r.w, title_h}, 0.0f,
-                         Color::rgb(0x09101c, 0.08f),
-                         Color::rgb(0x080b12, 0.89f));
     const float font = std::clamp(r.w * 0.083f, 12.0f, 34.0f);
     text_shrink(c, game.name, r.x + r.w * 0.5f,
                 baseline(r.y + r.h - title_h * 0.82f, title_h * 0.68f, font),
@@ -187,75 +182,32 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
     const float footer_h = r.h * kFixedFooter;
     const float dynamic_h = r.h - footer_h;
     const float gap = std::max(2.0f, r.w * 0.007f);
-    // Consistent ink stock for BOTH front and back; images may load later.
-    c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));
-    c.list.gradient_rect({r.x, r.y, r.w, dynamic_h}, 0.0f,
-                         Color::rgb(0x20384c), Color::rgb(0x101e32));
-
-    const bool has_scenic_media = !game.hero.empty() ||
-                                  !game.screenshots.empty();
-    const std::string& hero = !game.hero.empty() ? game.hero :
-                              !game.screenshots.empty() ? game.screenshots.front() :
-                              game.cover;
-    const auto shots = case_media::BackScenes(hero, game.cover, game.screenshots);
+    // A SINGLE opaque paper sheet is drawn by draw_composed_case_face().
+    // Scenes are independent of the front's full-bleed hero/icon. Never
+    // paste game.cover on the back as a square or panel.
+    const auto* front = case_media::FrontPaper(
+        game.hero, game.cover, game.screenshots);
+    const auto shots = case_media::BackScenes(
+        front ? *front : game.cover, game.cover, game.screenshots);
     const std::string* first = shots[0];
     const std::string* second = shots[1];
 
-    // Upper-left vertical scene, top-right scenic banner and caption,
-    // lower panoramic scene. All empty panels inherit a single matching
-    // paper colour, never transparent case plastic.
+    // A back has ONE printed background, optionally with a second distinct
+    // scene laid directly on the ink. No rectangular black panel/matte
+    // belongs beneath artwork or description.
     const float left_w = r.w * 0.39f;
     const float top_h = dynamic_h * 0.47f;
-    const Rect left{r.x, r.y, left_w - gap, top_h};
-    const Rect top_right{r.x + left_w, r.y, r.w - left_w,
-                         top_h * 0.39f};
-    const Rect description{r.x + left_w, top_right.y + top_right.h + gap,
-                           r.w - left_w, top_h - top_right.h - gap};
-    const Rect panorama{r.x, r.y + top_h + gap,
-                        r.w, dynamic_h - top_h - gap};
-
-    const auto scene = [&](const std::string& path, const Rect& area) {
-        if (path.empty()) return;
-        if (path == game.cover) case_art_contain(c, path, area);
-        else cover_crop(c, path, area, 0.0f, 0.0f);
-    };
-    const bool has_first = first && *first != hero && *first != game.cover;
-    const bool has_second = second && *second != hero &&
-                            *second != game.cover && (!first || *second != *first);
-    if (has_scenic_media && has_first && has_second) {
-        // Three ACTUAL independent media, zero repeated frames.
-        scene(hero, left);
-        scene(*first, top_right);
-        scene(*second, panorama);
-    } else if (has_scenic_media) {
-        // Only one/two photos: show hero ONCE as the contiguous background.
-        // Never fill the other two slots with copies of the same banner.
-        scene(hero, {r.x, r.y, r.w, dynamic_h});
-        if (has_first) scene(*first, left);
-        else if (has_second) scene(*second, left);
-        else if (!game.cover.empty() && game.cover != hero) {
-            // BackScenes can deliberately return an independent app icon
-            // when there is no second scene. Render it as a contained inset,
-            // never as a repeated hero or a stretched panorama.
-            scene(game.cover, left);
-        }
-    } else if (!game.cover.empty()) {
-        // No scenic artwork at all: place the icon as a small, contained
-        // illustration on the uniform paper colour, not full-bleed squares.
-        scene(game.cover, {left.x + gap, left.y + gap,
-                           left.w - gap * 2.0f, left.h - gap * 2.0f});
-    }
-    // With zero cached images, keep the completely painted blue paper and
-    // description panel. A source failing to decode has the same safe result.
-
-    // No rectangle/panel behind printed editorial copy: instead shade the
-    // entire right-hand upper artwork with a progressive, edge-free fade.
-    // It starts well left of the caption and extends to the footer fold,
-    // so there is no abrupt boxed patch on the physical back jacket.
-    c.list.hgradient_rect(
-        {r.x + left_w * 0.38f, r.y, r.w - left_w * 0.38f, dynamic_h},
-        0.0f, Color::rgb(0x08111d, 0.0f),
-        Color::rgb(0x08111d, 0.44f));
+    const Rect description{r.x + left_w, r.y + top_h * 0.39f + gap,
+                           r.w - left_w, top_h * 0.61f - gap};
+    if (first) reconstructed_cover(c, *first, {r.x, r.y, r.w, dynamic_h});
+    if (second)
+        reconstructed_cover(c, *second,
+                            {r.x, r.y, left_w - gap, top_h});
+    // Scene-wide ink glaze: covers the WHOLE upper sheet, not a label box.
+    if (first)
+        c.list.gradient_rect({r.x, r.y, r.w, dynamic_h}, 0.0f,
+                             Color::rgb(0x08111d, 0.07f),
+                             Color::rgb(0x08111d, 0.45f));
     const std::string& desc = !game.description.empty() ? game.description :
                               !game.intro.empty() ? game.intro : game.name;
     const float copy_font = std::clamp(r.w * 0.042f, 8.0f, 18.0f);
@@ -394,11 +346,9 @@ void flat_retail_sleeve(Canvas& c, const Game& game, const Rect& shell,
             // A path alone does not prove the scan is readable. During an
             // asynchronous load (or after a failed decode), show the same
             // metadata composition instead of a blank plastic rectangle.
-            // An original scan is already known. Its asynchronous loading
-            // must never produce an artificial logo/footer for even one frame.
-            // The plain paper backing remains visible until the scan decodes.
-            c.list.gradient_rect(paper, 0.0f,
-                                 Color::rgb(0x171c26), Color::rgb(0x0c1018));
+            // A known retail scan still decoding shows only one intact
+            // opaque paper sheet, never an invented mixed retail/fallback.
+            reconstructed_paper(c, paper);
         }
     } else {
         // Match the launcher's 440x704 compositing pass exactly. This also
@@ -469,8 +419,9 @@ std::string controller_profile_name(int layout, const ButtonMapping& mapping)
 
 void draw_composed_case_face(Canvas &c, const Game &game, const Rect &paper, bool rear)
 {
-    // The 2D shelf and rotating 3D case share the same ink. Physical plastic
-    // is drawn separately by the existing case shell, never baked into art.
+    // The 2D shelf and rotating 3D case share one continuous paper layer.
+    // Plastic/caps remain separate; no per-element background is permitted.
+    reconstructed_paper(c, paper);
     if (rear)
         flat_back_fallback(c, game, paper);
     else
@@ -479,54 +430,29 @@ void draw_composed_case_face(Canvas &c, const Game &game, const Rect &paper, boo
 bool composed_case_face_ready(Textures& textures, const Game& game,
                               bool rear, bool allow_missing)
 {
-    // These are the dimensions actually passed to cover_crop() /
-    // case_art_contain() by flat_front_fallback and flat_back_fallback at
-    // 440x704. The texture cache groups them into distinct power-of-two
-    // resolutions; waiting only for a 760px prefetch bakes empty back art.
+    // Use the exact media drawn by the shared procedural composition.
+    // A front icon is NEVER a dependency for the reconstructed rear.
     const auto ready = [&](const std::string& path, float extent) {
         if (path.empty()) return true;
         const Cover item = textures.cover(path, extent);
         return (item.texture != 0 && item.age >= 0.22f) ||
                (allow_missing && item.missing);
     };
-    if (!rear) {
-        const std::string& painting = !game.hero.empty() ? game.hero :
-                                     !game.screenshots.empty() ? game.screenshots.front() :
-                                     game.cover;
-        return ready(painting, 704.0f);
-    }
+    const auto* front = case_media::FrontPaper(
+        game.hero, game.cover, game.screenshots);
+    if (!rear)
+        return !front || ready(*front, 704.0f);
 
     constexpr float paper_w = 440.0f;
     constexpr float dynamic_h = 704.0f * (1.0f - 0.41f);
     constexpr float top_h = dynamic_h * 0.47f;
     constexpr float left_w = paper_w * 0.39f;
     const float gap = std::max(2.0f, paper_w * 0.007f);
-    const bool scenic = !game.hero.empty() || !game.screenshots.empty();
-    const std::string& hero = !game.hero.empty() ? game.hero :
-                              !game.screenshots.empty() ? game.screenshots.front() :
-                              game.cover;
-    const auto shots = case_media::BackScenes(hero, game.cover, game.screenshots);
-    const std::string* first = shots[0];
-    const std::string* second = shots[1];
-    const bool has_first = first && *first != hero && *first != game.cover;
-    const bool has_second = second && *second != hero &&
-                            *second != game.cover && (!first || *second != *first);
-    if (scenic && has_first && has_second)
-        return ready(hero, std::max(left_w - gap, top_h)) &&
-               ready(*first, std::max(paper_w - left_w, top_h * 0.39f)) &&
-               ready(*second, paper_w);
-    if (scenic) {
-        const std::string* inset = has_first ? first : has_second ? second : nullptr;
-        // Match the drawn icon fallback exactly. The offscreen composer
-        // must never bake a blank inset while this independent icon decodes.
-        if (!inset && !game.cover.empty() && game.cover != hero)
-            inset = &game.cover;
-        return ready(hero, paper_w) &&
-               (!inset || ready(*inset, std::max(left_w - gap, top_h)));
-    }
-    if (!game.cover.empty())
-        return ready(game.cover, std::max(left_w - gap * 3.0f,
-                                         top_h - gap * 2.0f));
+    const auto shots = case_media::BackScenes(
+        front ? *front : game.cover, game.cover, game.screenshots);
+    if (shots[0] && !ready(*shots[0], paper_w)) return false;
+    if (shots[1] && !ready(*shots[1], std::max(left_w - gap, top_h)))
+        return false;
     return true; // legitimate all-ink page with no bitmap sources
 }
 

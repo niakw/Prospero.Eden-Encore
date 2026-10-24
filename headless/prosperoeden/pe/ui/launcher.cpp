@@ -896,16 +896,10 @@ void Launcher::draw_launch(Canvas &c)
     // found, existing Nlib game art supplies the relevant face. No title-
     // specific look, filenames or artwork are hardcoded in production.
     const std::string& scan = back ? launch_box_back_ : launch_box_front_;
-    std::string fallback;
-    if (scan.empty()) {
-        if (back && !launch_screenshots_.empty())
-            fallback = launch_screenshots_.front();
-        else if (back && !launch_hero_.empty())
-            fallback = launch_hero_;
-        else
-            fallback = launch_cover_;
-    }
-    const Cover artwork = c.textures.cover(scan.empty() ? fallback : scan, 760.0f);
+    // A missing retail face must NEVER expose a raw front/hero image with
+    // source-ratio UV gaps during the transition. Only the composed opaque
+    // paper face or its plain opaque paper substrate may be displayed.
+    const Cover artwork = scan.empty() ? Cover{} : c.textures.cover(scan, 760.0f);
     // Warm BOTH missing faces during the initial front hold. Previous code
     // first requested the rear's small scene textures only AFTER turning,
     // then permanently baked a black collage because its 760px prefetch
@@ -964,7 +958,7 @@ void Launcher::draw_launch(Canvas &c)
         back ? launch_composed_back_ : launch_composed_front_;
     const bool use_composed = scan.empty() && composed_page != 0;
     const std::uint32_t visible_texture =
-        use_composed ? composed_page : artwork.texture;
+        use_composed ? composed_page : (scan.empty() ? 0u : artwork.texture);
     // One event per visible paper face and state, NEVER a per-frame log.
     // Stored/decoded/uploaded assets can still fail to reach the render list;
     // this is the last observable stage before the case-face GPU draw call.
@@ -988,7 +982,7 @@ void Launcher::draw_launch(Canvas &c)
         // faces onto the same physical shell as original retailer scans.
         c.list.case_face(composed_page, face, angle, back, kWhite,
                          {0.0f, 1.0f, 1.0f, -1.0f});
-    } else if (artwork.texture != 0) {
+    } else if (!scan.empty() && artwork.texture != 0) {
         // Keep the WHOLE printed back visible: never stretch a scan or crop
         // its French description. Letterbox only for unmatched source ratios.
         // Transparent excess UV is discarded by the case-face fragment shader.
@@ -1006,7 +1000,7 @@ void Launcher::draw_launch(Canvas &c)
         }
         c.list.case_face(artwork.texture, face, angle, back, kWhite, paper_uv);
     } else {
-        c.list.case_face(0, face, angle, back, Color::rgb(0x251a43));
+        c.list.case_face(0, face, angle, back, Color::rgb(0x112235));
     }
     // Depth-bearing top/bottom plastic caps remain in painter order above
     // the scan. Their front/rear refractive outline is separately lit by

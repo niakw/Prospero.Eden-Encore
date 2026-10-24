@@ -10,6 +10,18 @@
 
 namespace pe::ui::case_media {
 
+// The front uses an edge-to-edge source: hero, first usable screenshot,
+// finally the icon. All cases preserve the source's aspect via cover UVs.
+inline const std::string* FrontPaper(
+    const std::string& featured, const std::string& cover,
+    const std::vector<std::string>& screenshots) noexcept
+{
+    if (!featured.empty()) return &featured;
+    for (const auto& shot : screenshots)
+        if (!shot.empty()) return &shot;
+    return cover.empty() ? nullptr : &cover;
+}
+
 // Front: choose the first genuine alternate scene, not a duplicate of
 // the feature image. Fall back to an independent cached app icon/poster.
 inline const std::string* FrontAlternate(
@@ -23,17 +35,16 @@ inline const std::string* FrontAlternate(
     return !cover.empty() && cover != featured ? &cover : nullptr;
 }
 
-// Back: a hero often comes from screenshots[0]. Iterate ALL available
-// screenshots so screenshots[2+] can still populate two *different*
-// panels. Never portray one scene twice as two distinct game captures.
-// A real icon/poster may occupy one otherwise-empty slot, with aspect-fit.
+// Back: only independent screenshots. Never reinsert the front scene or
+// the cover/icon as a floating panel with an opaque black matte. If no
+// independent scenic asset exists, show the full paper ink and footer.
 inline std::array<const std::string*, 2> BackScenes(
     const std::string& featured, const std::string& cover,
     const std::vector<std::string>& screenshots) noexcept
 {
     std::array<const std::string*, 2> selected{nullptr, nullptr};
     const auto accept = [&](const std::string& image) {
-        if (image.empty() || image == featured ||
+        if (image.empty() || image == featured || image == cover ||
             (selected[0] && *selected[0] == image)) return;
         if (!selected[0]) selected[0] = &image;
         else if (!selected[1]) selected[1] = &image;
@@ -42,7 +53,6 @@ inline std::array<const std::string*, 2> BackScenes(
         accept(shot);
         if (selected[1]) break;
     }
-    if (!selected[1]) accept(cover);
     return selected;
 }
 
