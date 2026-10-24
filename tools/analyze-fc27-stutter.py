@@ -109,6 +109,60 @@ def f01_paired_lock_phases(rows: list[dict]) -> dict:
                      "NOT guest-thread wait or FC27 before-after speedup"}
 
 
+def f01_stage_binding_breakdown(rows: list[dict]) -> dict:
+    """Separate the two sequential subpaths of sampled stage binding.
+
+    StageHostBuffers and StageImageDescriptors are sibling nested phases
+    inside BindStageDescriptors. Their timer *call counts* differ from the
+    enclosing per-draw count because one draw can visit many shader stages.
+    Compare only per-window elapsed sums with complete monotonic counters.
+    Do not treat missing subphase logs as zero or infer guest mutex waits.
+    """
+    complete = []
+    discarded = 0
+    for row in rows:
+        phases = ("bind_stage_descriptors", "stage_host_buffers",
+                  "stage_image_descriptors")
+        costs = [row.get("phase_ms:" + name) for name in phases]
+        samples = [row.get("phase_samples:" + name) for name in phases]
+        if (any(value is None for value in costs + samples) or
+                any(value < 0 for value in costs + samples) or
+                samples[0] <= 0 or samples[1] < samples[0] or
+                costs[0] <= 0):
+            continue
+        if costs[1] + costs[2] > costs[0] * 1.03:
+            # Nested measurements must not exceed parent time except clock
+            # overhead. Report corrupt/unpaired windows, do not fabricate
+            # an 'unattributed' negative duration.
+            discarded += 1
+            continue
+        complete.append((costs, samples))
+    if not complete:
+        return {"status": "NOT_MEASURED", "matched_windows": 0,
+                "rejected_inconsistent_windows": discarded,
+                "reason": "No complete compatible stage host/image phase deltas"}
+    totals = [sum(entry[0][index] for entry in complete) for index in range(3)]
+    calls = [sum(entry[1][index] for entry in complete) for index in range(3)]
+    parent, host, image = totals
+    return {
+        "status": "SAMPLED_STAGE_BREAKDOWN",
+        "matched_windows": len(complete),
+        "rejected_inconsistent_windows": discarded,
+        "sampled_draws": calls[0],
+        "host_buffer_stage_calls": calls[1],
+        "image_descriptor_stage_calls": calls[2],
+        "bind_stage_total_ms": round(parent, 4),
+        "host_buffer_ms": round(host, 4),
+        "image_descriptor_ms": round(image, 4),
+        "other_stage_ms": round(max(0.0, parent - host - image), 4),
+        "host_buffer_share": round(host / parent, 4),
+        "image_descriptor_share": round(image / parent, 4),
+        "scope": "paired 5-second 1-in-16 GPU-owner sample windows; "
+                 "child stages are sequential, not extra frame time; "
+                 "NOT FC27 A/B speedup",
+    }
+
+
 def jit_cache_deltas(log: str) -> dict[int, dict]:
     """Separate scope-tagged, cumulative JIT-cache snapshots per guest core.
 
@@ -464,6 +518,7 @@ def analyze(log: str) -> dict:
                         "jit_ms", "delta_dispatch_calls")
         },
         "f01_paired_lock_phases": f01_paired_lock_phases(rows),
+        "f01_stage_binding_breakdown": f01_stage_binding_breakdown(rows),
         "cache_phases": {
             phase: phase_summary(rows, phase)
             for phase in sorted(phases)
@@ -525,6 +580,9 @@ def self_test() -> None:
         "EDEN_GPU_CACHE_PHASE frame=150 phase=pair_wait samples=10 total_ns=1000000",
         "EDEN_GPU_CACHE_PHASE frame=150 phase=pair_held samples=10 total_ns=5000000",
         "EDEN_GPU_CACHE_PHASE frame=150 phase=pipeline_configure samples=10 total_ns=4300000",
+        "EDEN_GPU_CACHE_PHASE frame=150 phase=bind_stage_descriptors samples=10 total_ns=1000000",
+        "EDEN_GPU_CACHE_PHASE frame=150 phase=stage_host_buffers samples=30 total_ns=600000",
+        "EDEN_GPU_CACHE_PHASE frame=150 phase=stage_image_descriptors samples=9 total_ns=200000",
         "EDEN_GPU_CACHE_PHASE frame=150 phase=guest_write_buffer_wait samples=3 total_ns=200000 max_ns=150000",
         "EDEN_VULKAN_FRAME total=300 frames=150 seconds=5 fps=30 worst_ms=35 late50=0",
         "EDEN_FRAME_PRESSURE frame=300 gpu_full_ms=0 gpu_idle_ms=3800 gpu_dispatch_ms=1050 jit_ms=7",
@@ -539,6 +597,9 @@ def self_test() -> None:
         "EDEN_GPU_CACHE_PHASE frame=300 phase=pair_wait samples=14 total_ns=1400000",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=pair_held samples=14 total_ns=7000000",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=pipeline_configure samples=14 total_ns=6200000",
+        "EDEN_GPU_CACHE_PHASE frame=300 phase=bind_stage_descriptors samples=14 total_ns=1800000",
+        "EDEN_GPU_CACHE_PHASE frame=300 phase=stage_host_buffers samples=42 total_ns=1100000",
+        "EDEN_GPU_CACHE_PHASE frame=300 phase=stage_image_descriptors samples=12 total_ns=380000",
         "EDEN_GPU_CACHE_PHASE frame=300 phase=guest_write_buffer_wait samples=7 total_ns=600000 max_ns=270000",
         "EDEN_GUEST_CACHE_DOMAIN frame=150 domain=buffer contended=8 blocked=5 wait_ns=10000000 window_contended=8 window_blocked=5 window_wait_ns=10000000",
         "EDEN_GUEST_CACHE_DOMAIN frame=150 domain=texture contended=4 blocked=4 wait_ns=2000000 window_contended=4 window_blocked=4 window_wait_ns=2000000",
@@ -659,6 +720,27 @@ def self_test() -> None:
     assert f01["pair_held_mean_us"] == 500.0
     assert f01["pipeline_configure_mean_us"] == 475.0
     assert f01["configure_share_of_sampled_lock_time"] == .95
+    detail = result["f01_stage_binding_breakdown"]
+    assert detail["status"] == "SAMPLED_STAGE_BREAKDOWN"
+    assert detail["matched_windows"] == 1
+    assert detail["sampled_draws"] == 4
+    assert detail["host_buffer_stage_calls"] == 12
+    assert detail["image_descriptor_stage_calls"] == 3
+    assert detail["bind_stage_total_ms"] == .8
+    assert detail["host_buffer_ms"] == .5
+    assert detail["image_descriptor_ms"] == .18
+    assert detail["other_stage_ms"] == .12
+    assert detail["host_buffer_share"] == .625
+    assert detail["image_descriptor_share"] == .225
+    absent = analyze(sample.replace("phase=stage_image_descriptors", "phase=not_logged"))
+    assert absent["f01_stage_binding_breakdown"]["status"] == "NOT_MEASURED"
+    inconsistent = analyze(sample.replace("stage_host_buffers samples=42 total_ns=1100000",
+                                          "stage_host_buffers samples=42 total_ns=1700000"))
+    assert inconsistent["f01_stage_binding_breakdown"]["status"] == "NOT_MEASURED"
+    assert inconsistent["f01_stage_binding_breakdown"]["rejected_inconsistent_windows"] == 1
+    bad_sample = analyze(sample.replace("stage_host_buffers samples=42",
+                                        "stage_host_buffers samples=31"))
+    assert bad_sample["f01_stage_binding_breakdown"]["status"] == "NOT_MEASURED"
     # Missing, mismatched and impossible nested phase samples never become
     # fabricated evidence of lock-time improvement or FPS changes.
     missing = analyze(sample.replace("phase=pipeline_configure", "phase=missing"))
@@ -770,6 +852,7 @@ def main() -> None:
     else:
         print("GUEST_CPU_WRITE_GROUPS unavailable (no two successive paired guest samples)")
     print("F01_MATCHED_LOCK_CONFIGURE", report["f01_paired_lock_phases"])
+    print("F01_STAGE_BINDING_BREAKDOWN", report["f01_stage_binding_breakdown"])
     for name, value in sorted(report["cache_phases"].items(),
                               key=lambda item: (item[1]["sampling"], item[0])):
         print("CACHE_PHASE", name, value)
