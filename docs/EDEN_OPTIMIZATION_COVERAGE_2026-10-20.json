@@ -1834,10 +1834,10 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-active-source-inventory.py",
       "shipping_relpath": "src/video_core/texture_cache/texture_cache_base.h",
-      "shipping_active_sha256": "a773d449cf040600e55fc630d182e3d109b9f23317ebbc235b8a617b1fde4b70",
+      "shipping_active_sha256": "db1a3c64c4ff6f7efec01fdd68d63ada1099c383dc8ece9d4a15827b209e57f4",
       "shipping_upstream_sha256": "36a3fd563bd620d51bfbfb0ae2d5381d77eb19c9c18d16cbe0c169c37eaecc5b",
-      "shipping_bytes": 20656,
-      "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract V54. No new FPS or native progress claim."
+      "shipping_bytes": 21314,
+      "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract V54. No new FPS or native progress claim. 2026-10-24 native-only page-range guards for zero/overflow CPU/GPU image scans, with exact patched-source replay and host test; not a closed F03/F04 gate."
     },
     {
       "path": "vendor/encore-active/eden-backports/src/video_core/texture_cache/texture_cache.h",
