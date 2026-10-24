@@ -27,7 +27,7 @@ acquire = configure[initial:end]
 assert acquire.count("AcquireKnownEmpty(uses_descriptor_buffer)") == 1
 assert acquire.count("guest_descriptor_queue.Acquire(scheduler, num_descriptor_entries, uses_descriptor_buffer)") == 1
 sync_start = compute.index("    // No TIC/TSC state is consumed")
-sync_end = compute.index("\n\n    boost::container::small_vector<", sync_start)
+sync_end = compute.index("\n\n#ifdef PS5_NATIVE\n    // Preallocated by DispatchCompute", sync_start)
 sync = compute[sync_start:sync_end]
 assert sync.count("texture_cache.SynchronizeDescriptors(true);") == 1
 for name in ("texture_buffer_descriptors", "image_buffer_descriptors",
