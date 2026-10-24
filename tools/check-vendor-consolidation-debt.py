@@ -1480,7 +1480,14 @@ active_core_installer = (root / "tools/install-active-core-backports.py").read_t
 assert 'ACTIVE = ROOT / "vendor/encore-active/eden-core"' in active_core_installer
 assert "shutil.copyfile(maintained, tmp)" in active_core_installer
 assert "maintained.read_bytes() != new" in active_core_installer
-assert 'python3 -B tools/install-vendored-eden-backports.py "$eden"' in staging
+assert 'python3 -B tools/install-vendored-eden-backports.py --repair-owned-cache "$eden"' in staging
+cache_installer = (root / "tools/install-vendored-eden-backports.py").read_text()
+assert 'def is_owned_cached_source(destination:Path)->bool:' in cache_installer
+assert 'if current!=contract[\'upstream\'] and (' in cache_installer
+assert 'saved_stale.get(rel)!=current' in cache_installer
+assert 'EDEN_STALE_SOURCE_PRESERVED' in cache_installer
+assert 'python3 -B tools/check-vendored-eden-cache-rebase-host.py' in (
+    root / ".github/workflows/encore-core-preflight.yml").read_text()
 assert 'python3 -B tools/install-vendored-eden-build-flags.py "$eden"' in staging
 assert 'python3 -B tools/install-vendored-surface-lifecycle.py "$eden"' in staging
 assert 'tools/prepare-vulkan-port.py' not in vulkan

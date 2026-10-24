@@ -137,12 +137,18 @@ def install(destination:Path, *, repair_owned_cache:bool=False)->None:
                     staged.replace(backup)
                 finally:staged.unlink(missing_ok=True)
             print(f'EDEN_STALE_SOURCE_PRESERVED path={rel} prior_sha256={digest}',flush=True)
+    # Only the exact unknown hashes that were just preserved in our owned
+    # scratch cache are authorized to be replaced. An unknown file in any
+    # other destination still fails closed. Re-hash before each replacement
+    # so a concurrent cache modification cannot slip in after the backup.
+    saved_stale=dict(stale)
     changed_count=0
     for rel,contract in spec['entries'].items():
         target=destination/rel
         current=sha(target.read_bytes()) if target.is_file() else None
         if current==contract['active']:continue
-        if current!=contract['upstream']:
+        if current!=contract['upstream'] and (
+            not repair_owned_cache or saved_stale.get(rel)!=current):
             raise RuntimeError(f'Unknown previous source modifications at {rel}: {current}')
         target.parent.mkdir(parents=True,exist_ok=True)
         temp=target.with_name(target.name+f'.active-{os.getpid()}')

@@ -101,5 +101,18 @@ with tempfile.TemporaryDirectory(prefix="eden-owned-cache-replay-") as tmp:
         raise AssertionError("Foreign source version accepted")
     # Check the original has not been changed by the rebase.
     assert (src/rel).read_bytes()==old
+    # A stale backup with different bytes may NEVER authorize replacement.
+    (native/"GIT-COMMIT").write_text(app.PIN+"\n")
+    bad_backup = cache/".eden-stale-overlay-backup"/(rel+"."+app.sha(obsolete)[:16])
+    bad_backup.write_bytes(b"corrupted saved copy")
+    (native/rel).write_bytes(obsolete)
+    try:
+        app.install(native,repair_owned_cache=True)
+    except RuntimeError as exc:
+        assert "Stale backup hash mismatch" in str(exc)
+    else:
+        raise AssertionError("Corrupted backup accepted as replay authorization")
+    assert (native/rel).read_bytes()==obsolete
+    bad_backup.write_bytes(obsolete)
 print("EDEN_VENDORED_CACHE_REBASE_HOST_PASS pinned=1 owned_only=1 backup=1"
       " idempotent=1 symlink_rejected=1 wrong_pin_rejected=1")
