@@ -118,7 +118,7 @@ int main() {
     assert(reference.samplers == a.samplers);
     assert(reference_cache.lookups == 7 && cache.lookups == 2);
     std::printf("F01_SAMPLER_LOOKUP_FIXTURE descriptors=7 reference_calls=%u "
-                "maintained_calls=%u avoided_calls=%u scope=host_mock\\n",
+                "maintained_calls=%u avoided_calls=%u scope=host_mock\n",
                 reference_cache.lookups, cache.lookups,
                 reference_cache.lookups - cache.lookups);
 
