@@ -16,7 +16,9 @@ patch = root / "headless/backports/eden-ps5-texture-page-range-guards.patch"
 shipping = (root / "tools/apply-eden-backports.sh").read_text()
 assert 'apply_one "$root/headless/backports/eden-ps5-texture-page-range-guards.patch"' in shipping
 guard = "if (size == 0 || size - 1 > (std::numeric_limits<u64>::max)() - addr)"
+trait = "std::is_same_v<std::invoke_result_t<Func, u64>, bool>"
 assert active.count(guard) == 2
+assert active.count(trait) == 2
 assert pinned.count(guard) == 0
 
 def method(text, name):
@@ -28,14 +30,33 @@ names = ("ForEachCPUPage", "ForEachGPUPage")
 for name in names:
     original = method(pinned, name)
     selected = method(active, name)
-    assert selected.count("#ifdef PS5_NATIVE") == 1
+    assert selected.count("#ifdef PS5_NATIVE") == 2
     assert selected.count(guard) == 1
-    assert selected.index("#ifdef PS5_NATIVE") < selected.index(guard) < selected.index("#endif")
-    assert selected.index("#endif") < selected.index("const u64 page_end =")
-    # Removing the reviewed PS5 guard must exactly restore the pinned logic.
-    start = selected.index("#ifdef PS5_NATIVE")
-    end = selected.index("#endif", start) + len("#endif\n")
-    assert selected[:start] + selected[end:] == original
+    assert selected.count(trait) == 1
+    assert selected.index(trait) < selected.index(guard) < selected.index("const u64 page_end =")
+    # Both the native-only type-trait repair and the range guard must be
+    # reversible into the exact pinned, non-PS5 iterator.
+    trait_block = ("""#ifdef PS5_NATIVE
+        // invoke_result is the trait struct, not the callback return type.
+        // Respect early-stop bool callbacks after the first matching image.
+        static constexpr bool RETURNS_BOOL = std::is_same_v<std::invoke_result_t<Func, u64>, bool>;
+#else
+        static constexpr bool RETURNS_BOOL = std::is_same_v<std::invoke_result<Func, u64>, bool>;
+#endif
+""")
+    guard_block = ("""#ifdef PS5_NATIVE
+        // A zero byte region has no pages. An overflowing exclusive end
+        // cannot refer to a valid guest mapping: do not wrap into a huge
+        // page scan (notably addr=0, size=0).
+        if (size == 0 || size - 1 > (std::numeric_limits<u64>::max)() - addr) {
+            return;
+        }
+#endif
+""")
+    assert selected.count(trait_block) == 1
+    assert selected.count(guard_block) == 1
+    old_trait = "        static constexpr bool RETURNS_BOOL = std::is_same_v<std::invoke_result<Func, u64>, bool>;\n"
+    assert selected.replace(trait_block, old_trait).replace(guard_block, "") == original
 
 # Apply the *real* git patch to the pinned header and verify both selected
 # method bodies. The full file may have other reviewed shipping backports.
@@ -88,7 +109,13 @@ static void valid_cases(Walk&& walk) {
     assert(pages[0]==(std::numeric_limits<u64>::max)()>>12);
     pages.clear();
     walk(4095,8193,[&](u64 page)->bool {pages.push_back(page);return true;});
+#ifdef PS5_NATIVE
     assert((pages == std::vector<u64>{0}));
+#else
+    // Pinned source had an inactive BOOL_BREAK trait; the native-only fix
+    // intentionally leaves the upstream traversal byte-for-byte unchanged.
+    assert((pages == std::vector<u64>{0,1,2}));
+#endif
 }
 int main() {
     valid_cases([](auto addr,auto size,auto fn) {
