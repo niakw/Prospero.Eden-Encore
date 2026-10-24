@@ -75,8 +75,8 @@ class Textures
     void invalidate(const std::string &path);
     // Compose one offline artwork sleeve with the REAL C++/OpenGL UI painter.
     // Only called once per missing case face after cached input images load.
-    // Returns 0 if this GL context cannot render to a texture; caller uses
-    // the previous single-artwork fallback without failing the launch.
+    // Returns 0 if this GL context cannot render to a texture; caller draws
+    // the same opaque paper base, never a raw front screenshot on the back.
     std::uint32_t render_case_page(const gfx::DrawList& drawing,
                                    const gfx::Font* font,
                                    std::uint32_t font_texture,

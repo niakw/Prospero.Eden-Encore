@@ -224,48 +224,32 @@ front = library.split("void flat_front_fallback(", 1)[1].split(
     "void flat_back_fallback(", 1)[0]
 back_fallback = library.split("void flat_back_fallback(", 1)[1].split(
     "// Static sleeve used", 1)[0]
-for token in ("game.hero", "game.cover", "game.screenshots", "cover_crop(",
+for token in ("game.hero", "game.cover", "game.screenshots", "reconstructed_cover(",
               "game.name", 'Color::rgb(0xe31930)', '"SWITCH"'):
     assert token in front, ("Front fallback dropped", token)
-for token in ("game.screenshots.front()",
-              "case_media::BackScenes(hero, game.cover, game.screenshots)",
+for token in ("case_media::FrontPaper(", "case_media::BackScenes(",
               "game.description", "text_block(c, desc,", "const Rect footer",
               "ENCORE / GAME INFORMATION"):
     assert token in back_fallback, ("Back fallback dropped", token)
 assert 'c.textures.switch_logo() != 0' in front
 assert 'const Rect logo{r.x, r.y, logo_w,' in front
-assert 'cover_crop(c, painting, r, 0.0f, 0.0f);' in front
-assert 'constexpr float kFixedFooter = 0.41f;' in back_fallback
-assert 'c.textures.switch_rear_footer() != 0' in back_fallback
-assert 'if (has_scenic_media && has_first && has_second) {' in back_fallback
-assert 'scene(hero, {r.x, r.y, r.w, dynamic_h});' in back_fallback
-assert 'scene(*first, top_right);' in back_fallback
-assert 'scene(*second, panorama);' in back_fallback
-# With only a scenic hero and a separate app icon, the icon is a contained
-# inset. That same texture must be decoded before the rotating case page is
-# baked, or the 3D launcher would permanently capture an empty panel.
-assert 'else if (!game.cover.empty() && game.cover != hero) {' in back_fallback
-assert 'scene(game.cover, left);' in back_fallback
-ready_src = library.split("bool composed_case_face_ready(", 1)[1].split(
-    "\n\nvoid Launcher::start_scan()", 1
-)[0]
-assert 'if (!inset && !game.cover.empty() && game.cover != hero)' in ready_src
-assert 'inset = &game.cover;' in ready_src
-assert '(!inset || ready(*inset, std::max(left_w - gap, top_h)))' in ready_src
-# A native case's paper insert MUST be opaque even when NONE of its images
-# exist or have finished decoding. The real molded case is separate.
-for token in ('c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));',
-              'c.list.gradient_rect({r.x, r.y, r.w, dynamic_h}, 0.0f,',
-              'else if (!game.cover.empty()) {',
-              'if (has_scenic_media && has_first && has_second)',
-              'scene(hero, {r.x, r.y, r.w, dynamic_h});'):
-    assert token in back_fallback, token
-assert 'scene(hero, top_right)' not in back_fallback
-assert 'scene(hero, panorama)' not in back_fallback
-assert 'c.list.rounded_rect(r, 0.0f, Color::rgb(0x112235));' in front
-assert 'if (!painting.empty()) {' in front
-assert 'cover_crop(c, painting, r, 0.0f, 0.0f);' in front
-assert 'if (path == game.cover) case_art_contain(c, path, area);' in back_fallback
+assert 'if (painting) reconstructed_cover(c, *painting, r);' in front
+assert 'reconstructed_paper(c, paper);' in library
+assert 'case_media::BackScenes(' in back_fallback
+assert 'case_media::BackScenes(' in library.split("bool composed_case_face_ready(",1)[1]
+assert 'scene(game.cover,' not in back_fallback
+assert 'case_art_contain(' not in back_fallback
+assert 'case_art_contain(' not in library
+assert 'c.list.hgradient_rect(' not in back_fallback
+assert 'reconstructed_cover(c, *first, {r.x, r.y, r.w, dynamic_h});' in back_fallback
+assert 'if (second)' in back_fallback
+assert 'if (first)' in back_fallback
+assert 'kReconstructedPaperRGB = 0x112235' in library
+assert 'uv.w = target / source;' in library and 'uv.h = source / target;' in library
+assert 'glClearColor(17.0f / 255.0f, 34.0f / 255.0f,' in textures_cpp
+assert '53.0f / 255.0f, 1.0f);' in textures_cpp
+assert 'const Cover artwork = scan.empty() ? Cover{} : c.textures.cover(scan, 760.0f);' in draw
+assert 'std::string fallback;' not in draw
 assert "if (!scan.empty()) {" in library
 assert library.index("if (!scan.empty()) {") < library.index("flat_composed_ink(c, game, paper, rear);")
 # The non-official fallback footer must never invent regulatory labels,
@@ -621,7 +605,7 @@ assert "UNIVERSAL_CASE_NO_RETAIL_ART: PASS" in preview_workflow
 assert "const float return_start = back_start + theme::kCaseBackHold;" in draw
 assert "angle = kBackYaw;" in draw
 assert "const Cover ink = c.textures.cover(launch_box_spine_, 760.0f);" in draw
-assert "std::string fallback;" in draw
+assert "std::string fallback;" not in draw
 assert "constexpr float kPaperSideInset = 7.0f;" in draw
 assert "constexpr float kPaperTopInset = 13.0f;" in draw
 assert "const Rect face{physical.x + kPaperSideInset," in draw

@@ -79,7 +79,12 @@ std::uint32_t Textures::render_case_page(const gfx::DrawList& drawing,
         // shared 3D transparent shell, rounded plastic and red physical spine.
         glDisable(GL_SCISSOR_TEST);
         glViewport(0, 0, width, height);
-        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        // Printed jacket paper is ONE fully opaque sheet, even at the
+        // outermost top/bottom texels and under missing async media.
+        // Clearing to transparent allowed the shell/background to show
+        // through GL's interpolated edges during the 3D rotation.
+        glClearColor(17.0f / 255.0f, 34.0f / 255.0f,
+                     53.0f / 255.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         if (font && font_texture)
             batch_.sync_font_texture(font_texture, *font);
