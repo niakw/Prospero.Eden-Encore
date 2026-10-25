@@ -142,7 +142,7 @@ Status BufferQueueProducer::SetBufferCount(s32 buffer_count) {
 
     std::shared_ptr<IConsumerListener> listener;
     {
-        std::scoped_lock lock{core->mutex};
+        std::unique_lock lock{core->mutex};
         core->WaitWhileAllocatingLocked();
 
         if (core->is_abandoned) {
@@ -167,7 +167,9 @@ Status BufferQueueProducer::SetBufferCount(s32 buffer_count) {
         if (buffer_count == 0) {
             core->override_max_buffer_count = 0;
             core->SignalDequeueCondition();
-            // The guest may be sleeping on the Binder native wait handle.
+            // Publish only after releasing the queue mutex: kernel event
+            // signaling acquires the scheduler lock.
+            lock.unlock();
             buffer_wait_event->Signal(service_context.kernel);
             return Status::NoError;
         }
@@ -187,9 +189,9 @@ Status BufferQueueProducer::SetBufferCount(s32 buffer_count) {
 
         core->override_max_buffer_count = buffer_count;
         core->SignalDequeueCondition();
-        buffer_wait_event->Signal(service_context.kernel);
         listener = core->consumer_listener;
     }
+    buffer_wait_event->Signal(service_context.kernel);
 
     // Call back without lock held
     if (listener != nullptr) {
@@ -418,7 +420,7 @@ Status BufferQueueProducer::DequeueBuffer(s32* out_slot, Fence* out_fence, bool 
 Status BufferQueueProducer::DetachBuffer(s32 slot) {
     LOG_DEBUG(Service_Nvnflinger, "slot {}", slot);
 
-    std::scoped_lock lock{core->mutex};
+    std::unique_lock lock{core->mutex};
 
     if (core->is_abandoned) {
         LOG_ERROR(Service_Nvnflinger, "BufferQueue has been abandoned");
@@ -440,7 +442,9 @@ Status BufferQueueProducer::DetachBuffer(s32 slot) {
 
     core->FreeBufferLocked(slot);
     core->SignalDequeueCondition();
-    // Match CancelBuffer: expose this freed slot to guest waiters, too.
+    // Host waiter publication stays under the queue lock; guest event
+    // publication must be outside it to avoid scheduler lock inversion.
+    lock.unlock();
     buffer_wait_event->Signal(service_context.kernel);
 
     return Status::NoError;
@@ -456,7 +460,7 @@ Status BufferQueueProducer::DetachNextBuffer(std::shared_ptr<GraphicBuffer>* out
         return Status::BadValue;
     }
 
-    std::scoped_lock lock{core->mutex};
+    std::unique_lock lock{core->mutex};
     core->WaitWhileAllocatingLocked();
 
     if (core->is_abandoned) {
@@ -485,10 +489,10 @@ Status BufferQueueProducer::DetachNextBuffer(std::shared_ptr<GraphicBuffer>* out
     *out_fence = slots[found].fence;
 
     core->FreeBufferLocked(found);
-    // DetachBuffer and CancelBuffer wake waiting producers. The oldest-free
-    // detach path must publish the same state transition to all dequeuers.
-    // Notify under core->mutex so waiters cannot miss the transition.
+    // Publish host dequeue-generation transition under the queue lock,
+    // then signal the Binder guest event only after dropping that lock.
     core->SignalDequeueCondition();
+    lock.unlock();
     buffer_wait_event->Signal(service_context.kernel);
 
     return Status::NoError;
@@ -666,7 +670,7 @@ Status BufferQueueProducer::QueueBuffer(s32 slot, const QueueBufferInput& input,
 void BufferQueueProducer::CancelBuffer(s32 slot, const Fence& fence) {
     LOG_DEBUG(Service_Nvnflinger, "slot {}", slot);
 
-    std::scoped_lock lock{core->mutex};
+    std::unique_lock lock{core->mutex};
 
     if (core->is_abandoned) {
         LOG_ERROR(Service_Nvnflinger, "BufferQueue has been abandoned");
@@ -688,6 +692,7 @@ void BufferQueueProducer::CancelBuffer(s32 slot, const Fence& fence) {
     slots[slot].fence = fence;
 
     core->SignalDequeueCondition();
+    lock.unlock();
     buffer_wait_event->Signal(service_context.kernel);
 }
 
@@ -809,6 +814,7 @@ Status BufferQueueProducer::Disconnect(NativeWindowApi api) {
 
     std::shared_ptr<IConsumerListener> listener;
     Status status = Status::NoError;
+    bool released_queue = false;
 
     {
         std::scoped_lock lock{core->mutex};
@@ -834,7 +840,7 @@ Status BufferQueueProducer::Disconnect(NativeWindowApi api) {
                 core->connected_producer_listener = nullptr;
                 core->connected_api = NativeWindowApi::NoConnectedApi;
                 core->SignalDequeueCondition();
-                buffer_wait_event->Signal(service_context.kernel);
+                released_queue = true;
                 listener = core->consumer_listener;
             } else {
                 LOG_ERROR(Service_Nvnflinger,
@@ -850,6 +856,9 @@ Status BufferQueueProducer::Disconnect(NativeWindowApi api) {
         }
     }
 
+    if (released_queue) {
+        buffer_wait_event->Signal(service_context.kernel);
+    }
     if (listener) {
         listener->OnBuffersReleased();
     }
@@ -865,7 +874,7 @@ Status BufferQueueProducer::SetPreallocatedBuffer(s32 slot,
         return Status::BadValue;
     }
 
-    std::scoped_lock lock{core->mutex};
+    std::unique_lock lock{core->mutex};
 
     slots[slot] = {};
     slots[slot].fence = Fence::NoFence();
@@ -884,6 +893,7 @@ Status BufferQueueProducer::SetPreallocatedBuffer(s32 slot,
     }
 
     core->SignalDequeueCondition();
+    lock.unlock();
     buffer_wait_event->Signal(service_context.kernel);
 
     return Status::NoError;
