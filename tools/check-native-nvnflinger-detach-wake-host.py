@@ -169,9 +169,18 @@ struct MockEvent {
         assert(queue_mutex);
         std::atomic<bool> acquired{};
         std::thread probe([&] {
-            if (queue_mutex->try_lock()) {
-                queue_mutex->unlock();
-                acquired.store(true, std::memory_order_release);
+            // A host dequeuer may legitimately race the guest-event probe
+            // after the producer drops the queue lock. Allow it to finish
+            // instead of recording a spurious failure on a single try_lock.
+            const auto deadline = std::chrono::steady_clock::now() +
+                                  std::chrono::seconds(1);
+            while (std::chrono::steady_clock::now() < deadline) {
+                if (queue_mutex->try_lock()) {
+                    queue_mutex->unlock();
+                    acquired.store(true, std::memory_order_release);
+                    return;
+                }
+                std::this_thread::yield();
             }
         });
         probe.join();
