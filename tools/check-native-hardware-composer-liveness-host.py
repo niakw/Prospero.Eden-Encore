@@ -79,11 +79,13 @@ producer_method = producer_text[producer_start:producer_stop]
 publish_start = producer_method.index("        ++core->frame_counter;")
 publish_stop = producer_method.index("        output->Inflate(", publish_start)
 producer_publish = producer_method[publish_start:publish_stop]
-listener_start = producer_method.index("    // Notify consumers with the actual queued item:", publish_stop)
+listener_start = producer_method.index("    if (recycled_queued_slot) {", publish_stop)
 producer_callback = producer_method[listener_start:]
 assert producer_callback.endswith("return Status::NoError;\n}\n")
 assert "recycled_queued_slot = true;" in producer_publish
-assert "buffer_wait_event->Signal(service_context.kernel);" in producer_publish
+assert "buffer_wait_event->Signal(service_context.kernel);" not in producer_publish
+assert "buffer_wait_event->Signal(service_context.kernel);" in producer_callback
+assert producer_callback.index("buffer_wait_event->Signal(service_context.kernel);") < producer_callback.index("// Notify consumers")
 for marker in ("slots[slot].fence = fence;", "item.fence = fence;",
                "core->SignalDequeueCondition();", "listener_available->OnFrameAvailable(item)",
                "listener_replaced->OnFrameReplaced(item)"):
