@@ -3888,6 +3888,12 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-native-host1x-register-reentrant-host.py",
       "evidence": "Native CMake selects a maintained whole Host1x SyncpointManager TU. Its late-ready RegisterAction branch unlocks before a reentrant callback; pinned baseline fails the compiled host race test. Increment callback lock/cancellation remains unqualified."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp",
+      "disposition": "new_source_issue_corrected",
+      "proof_ref": "tools/check-fc27-f05-native-consumer-disconnect-host.py",
+      "evidence": "F05 native source selected by CMake; consumer abandonment now wakes the host dequeue condition and the producer Binder guest event via a callback outside core->mutex. Source-extracted O0/O2 tests cover two blocked host waiters, exactly one mocked guest signal, no signal on invalid disconnect and safe callback teardown. Real guest HIPC and FC27 liveness NOT proven."
     }
   ],
   "inventoried_including_pinned": 538,
@@ -3914,6 +3920,7 @@
     "headless/prosperoeden/runtime_shims.cpp"
   ],
   "post_snapshot_owned_additions": [
-    "vendor/encore-active/eden-core/src/video_core/host1x/syncpoint_manager.cpp"
+    "vendor/encore-active/eden-core/src/video_core/host1x/syncpoint_manager.cpp",
+    "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp"
   ]
 }
