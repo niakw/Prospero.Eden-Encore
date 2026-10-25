@@ -54,6 +54,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-fc27-f05-native-kernel-wait-publication-host.py",
         "check-fc27-f05-native-kthread-endwait-host.py",
         "check-fc27-f05-native-binder-handle-ipc-host.py",
+        "check-native-nvnflinger-dequeue-profile-host.py",
         "check-native-host1x-increment-handoff-host.py",
     ),
     "F06-input-and-pause": (
@@ -335,6 +336,53 @@ def run() -> int:
                         print("F04_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F04_native_remap_dma_upload_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-native-nvnflinger-dequeue-profile-host.py":
+                    native_waits = re.findall(
+                        r"^profile=([01]) (-O[02]) "
+                        r"F05_NATIVE_DEQUEUE_CONDITION_INFLIGHT_PASS waiters=(\d+) "
+                        r"active_gauge_correct=(\d+) restored=(\d+) disabled_quiet=(\d+) "
+                        r"scope=source_extracted_native_condvar$",
+                        result.stdout, re.MULTILINE,
+                    )
+                    scopes = re.findall(
+                        r"^(-O[02]) F05_ACTIVE_DEQUEUE_BLOCKERS_PASS blocked=(\d+) "
+                        r"cleared=(\d+) disabled_quiet=(\d+) scope=source_extracted$",
+                        result.stdout, re.MULTILINE,
+                    )
+                    prior_probe = re.findall(
+                        r"^NATIVE_NVN_DEQUEUE_PROFILE_PASS (dev|release) (-O[02])$",
+                        result.stdout, re.MULTILINE,
+                    )
+                    excludes = "F05_CONDITION_WAITER_HOST_ONLY_NOT_GUEST_IPC_OR_FC27_PROGRESS" in result.stdout
+                    expected_modes = [
+                        ("0", "-O0", "8", "1", "1", "1"),
+                        ("0", "-O2", "8", "1", "1", "1"),
+                        ("1", "-O0", "8", "1", "1", "1"),
+                        ("1", "-O2", "8", "1", "1", "1"),
+                    ]
+                    if (native_waits != expected_modes or scopes != [
+                        ("-O0","8","1","1"), ("-O2","8","1","1"),
+                    ] or prior_probe != [
+                        ("release","-O0"), ("release","-O2"),
+                        ("dev","-O0"), ("dev","-O2"),
+                    ] or not excludes):
+                        ok, reason = False, "f05_native_dequeue_inflight_profile_witness_missing"
+                    else:
+                        fixture_metrics["F05_native_dequeue_inflight_host"] = {
+                            "concurrent_native_waiters": 8,
+                            "profile_enabled": True,
+                            "release_path_no_counter": True,
+                            "profile_off_no_counter": True,
+                            "scope_clears_on_release": True,
+                            "compile_modes": ["O0","O2"],
+                            "scope": "source-extracted maintained BufferQueueCore condvar and "
+                                     "selected producer blocking scope, mock host waiters; "
+                                     "no guest thread PC or FC27 liveness proof",
+                        }
+                        print("F05_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F05_native_dequeue_inflight_host"],
+                                         sort_keys=True), flush=True)
+
                 if ok and script == "check-fc27-f05-native-binder-handle-ipc-host.py":
                     binder_handle = re.findall(
                         r"F05_NATIVE_BINDER_HANDLE_IPC_PASS cycles=(\d+) "
