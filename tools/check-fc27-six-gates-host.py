@@ -63,6 +63,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-fc27-f06-native-pad-transition-host.py",
         "check-fc27-f06-native-npad-handoff-host.py",
         "check-fc27-f06-native-npad-lifo-host.py",
+        "check-fc27-f06-native-pad-to-lifo-boundary-host.py",
     ),
 }
 
@@ -734,6 +735,43 @@ def run() -> int:
                         print("F05_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F05_host1x_increment_handoff_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f06-native-pad-to-lifo-boundary-host.py":
+                    linked = re.findall(
+                        r"F06_NATIVE_PAD_NPAD_LIFO_BOUNDARY_PASS phases=(\\d+) "
+                        r"samples=(\\d+) linked=(\\d+) mapping_locked=(\\d+) "
+                        r"plus_release=(\\d+) "
+                        r"scope=source_extracted_host_mock_virtual_bridge_no_real_guest_hipc",
+                        result.stdout,
+                    )
+                    scoped = (
+                        result.stdout.count(
+                            "F06_REAL_GAME_ACTION_MAPPING_HIPC_AND_FC27_PHASES_NOT_PROVEN"
+                        ) == 1
+                    )
+                    if (len(linked) != 2 or linked[0] != linked[1]
+                            or linked[0][0] != "5"
+                            or int(linked[0][1]) < 60
+                            or linked[0][2:] != ("1", "1", "1")
+                            or not scoped):
+                        ok, reason = False, "f06_linked_pad_lifo_boundary_missing"
+                    else:
+                        fixture_metrics["F06_pad_to_npad_lifo_boundary_host"] = {
+                            "mock_match_phases": 5,
+                            "guest_lifo_samples": int(linked[0][1]),
+                            "compiled_modes": ["O0", "O2"],
+                            "source_selected_methods": ["Pad::Consume",
+                                "PadEngine::SetButtonState",
+                                "EmulatedController::GetNpadButtons",
+                                "NPad::RequestPadStateUpdate",
+                                "NPad::OnUpdate"],
+                            "scope": "linked C++ native methods with synthetic "
+                                "InputCommon->EmulatedController button adapter; "
+                                "real game HIPC/action profile and gameplay NOT proven",
+                        }
+                        print("F06_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(
+                                  fixture_metrics["F06_pad_to_npad_lifo_boundary_host"],
+                                  sort_keys=True), flush=True)
                 if ok and script == "check-fc27-f06-native-npad-lifo-host.py":
                     published = re.findall(
                         r"F06_NATIVE_NPAD_LIFO_HOST_PASS writes=(\d+) "
@@ -879,13 +917,23 @@ def run() -> int:
         "F05_native_release_to_present_boundary_host" in fixture_metrics and
         "F05_linked_nvdisp_host1x_vulkan_present_host" in fixture_metrics
     )
+    # F06 completes only the pre-console source-host linkage. Its phases are
+    # synthetic: guest action settings, HIPC and a real FC27 match remain F07.
+    f06_technical_exit = (
+        f05_technical_exit and
+        all(item["ok"] for item in status["F06-input-and-pause"]) and
+        "F06_native_pad_transitions_host" in fixture_metrics and
+        "F06_native_npad_handoff_host" in fixture_metrics and
+        "F06_guest_lifo_publication_host" in fixture_metrics and
+        "F06_pad_to_npad_lifo_boundary_host" in fixture_metrics
+    )
     preconsole_exits = {
         "F01-cache-contention": bool(f01_technical_exit),
         "F02-jit-invalidation": bool(f02_technical_exit),
         "F03-hud-freshness": bool(f03_technical_exit),
         "F04-texture-integrity": bool(f04_technical_exit),
         "F05-guest-progress": bool(f05_technical_exit),
-        "F06-input-and-pause": False,
+        "F06-input-and-pause": bool(f06_technical_exit),
     }
     remaining_exit_evidence = dict(UNPROVEN_EXIT_EVIDENCE)
     if f01_technical_exit:
@@ -898,6 +946,8 @@ def run() -> int:
         remaining_exit_evidence.pop("F04-texture-integrity")
     if f05_technical_exit:
         remaining_exit_evidence.pop("F05-guest-progress")
+    if f06_technical_exit:
+        remaining_exit_evidence.pop("F06-input-and-pause")
     summary = {"scope": "PRECONSOLE_HOST_TECHNICAL_NOT_GAMEPLAY",
                "f01_to_f06_closed": sum(preconsole_exits.values()),
                "preconsole_exit_status": preconsole_exits,
