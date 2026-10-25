@@ -240,21 +240,11 @@ compositor=resolve_template(assignments[0])
 # the native body: it must still call Signal() on recycled tracked frames.
 assert "    bool recycled_queued_slot = false;" in queued
 assert "buffer_wait_event->Signal(service_context.kernel);" in producer_publish
-compositor=once(
-    compositor,
-    "    const bool record_buffer_history=false;\n",
-    """    const bool record_buffer_history=false;
-    bool recycled_queued_slot = false;
-    struct GuestKernel {};
-    struct GuestServiceContext { GuestKernel kernel{}; } service_context;
-    struct GuestWaitEvent {
-        unsigned calls{};
-        void Signal(GuestKernel&) { ++calls; }
-    } guest_event;
-    auto* buffer_wait_event = &guest_event;
-""",
-    "QueueBuffer local Binder event and recycled-slot state",
-)
+# The underlying HardwareComposer fixture now declares native F05 QueueBuffer
+# event dependencies itself; this linked bridge must not duplicate them.
+assert compositor.count("bool recycled_queued_slot = false;") == 1
+assert compositor.count("auto* buffer_wait_event = &guest_event;") == 1
+
 for key,value in (
     ("__CONSUMER_METHODS__",consumer_methods),
     ("__PRODUCER_PUBLISH__",producer_publish),
