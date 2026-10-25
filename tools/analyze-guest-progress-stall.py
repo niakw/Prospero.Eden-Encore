@@ -153,6 +153,24 @@ def analyze(log: str, minimum_still_seconds: float = 300.0) -> dict:
     candidate = (len(pairs) == 2 and
                  overlap_seconds >= minimum_still_seconds and
                  tail_gpu_active and tail_guest_active)
+    # F05: DequeueBuffer completed-call counters cannot identify an
+    # outstanding condition wait. The opt-in active gauge is sampled with
+    # EDEN_DEV_GUEST; absence of that field on older/quiet builds is UNKNOWN,
+    # never zero. A nonzero host waiter does not prove a guest-thread deadlock.
+    dequeue_tail = w[-10:]
+    dequeue_samples = [
+        (row.duration, int(row.guest["dequeue_blocked"]))
+        for row in dequeue_tail if "dequeue_blocked" in row.guest
+    ]
+    consecutive_blocked_seconds = 0.0
+    for row in reversed(dequeue_tail):
+        if "dequeue_blocked" not in row.guest or row.guest["dequeue_blocked"] <= 0:
+            break
+        consecutive_blocked_seconds += row.duration
+    latest_dequeue = (
+        int(w[-1].guest["dequeue_blocked"])
+        if "dequeue_blocked" in w[-1].guest else None
+    )
     # The 2 media services are function-specific, and a title may normally
     # stop them in silent menus. This is a diagnostic CANDIDATE, not a root cause.
     return {
@@ -168,6 +186,17 @@ def analyze(log: str, minimum_still_seconds: float = 300.0) -> dict:
         "both_media_flat_seconds": round(overlap_seconds, 1) if len(pairs) == 2 else 0,
         "gpu_progress_in_last_plateau": tail_gpu_active if len(pairs) == 2 else False,
         "guest_progress_in_last_plateau": tail_guest_active if len(pairs) == 2 else False,
+        "dequeue_blocked_latest": latest_dequeue,
+        "dequeue_blocked_tail_samples": len(dequeue_samples),
+        "dequeue_blocked_tail_peak": (
+            max(value for _, value in dequeue_samples) if dequeue_samples else None
+        ),
+        "dequeue_blocked_consecutive_tail_seconds": round(consecutive_blocked_seconds, 1),
+        "dequeue_blocked_interpretation": (
+            "not_measured" if latest_dequeue is None else
+            "host_slot_wait_active_not_guest_deadlock_proof" if latest_dequeue > 0 else
+            "no_active_host_slot_wait_at_last_snapshot"
+        ),
         "media_last_change": {
             key: {
                 "first_flat_frame": w[item[0]].total,
@@ -197,6 +226,41 @@ def self_test() -> None:
     assert evidence["stable_callback_windows"] == 95
     assert evidence["source_sha"] == "1234abcd"
     assert evidence["media_last_change"]["IStorage/0"]["approx_flat_seconds"] >= 400
+    # Older builds have no active-dequeue gauge. Missing != zero.
+    assert evidence["dequeue_blocked_latest"] is None
+    assert evidence["dequeue_blocked_tail_samples"] == 0
+    assert evidence["dequeue_blocked_tail_peak"] is None
+    assert evidence["dequeue_blocked_interpretation"] == "not_measured"
+    # Recent builds report a gauge only with detailed profiling.
+    # Mixed samples must not hide missing intervals or claim deadlock.
+    active = log.replace(
+        "EDEN_DEV_GUEST cpu_write_calls=",
+        "EDEN_DEV_GUEST dequeue_blocked=2 cpu_write_calls=",
+    )
+    live = analyze(active)
+    assert live["dequeue_blocked_latest"] == 2
+    assert live["dequeue_blocked_tail_samples"] == 10
+    assert live["dequeue_blocked_tail_peak"] == 2
+    assert live["dequeue_blocked_consecutive_tail_seconds"] == 50
+    assert live["dequeue_blocked_interpretation"] == (
+        "host_slot_wait_active_not_guest_deadlock_proof"
+    )
+    # An unmeasured last sample invalidates any continuous tail attribution.
+    without_last = active.rsplit("EDEN_DEV_GUEST dequeue_blocked=2 ", 1)
+    incomplete = analyze(without_last[0] + "EDEN_DEV_GUEST " + without_last[1])
+    assert incomplete["dequeue_blocked_latest"] is None
+    assert incomplete["dequeue_blocked_tail_samples"] == 9
+    assert incomplete["dequeue_blocked_consecutive_tail_seconds"] == 0
+    # A gauge that clears must be treated as no active host slot wait, not
+    # evidence of game progression (the other counter tests remain separate).
+    clear_last = active.rsplit("dequeue_blocked=2 ", 1)
+    recovered = analyze(clear_last[0] + "dequeue_blocked=0 " + clear_last[1])
+    assert recovered["dequeue_blocked_latest"] == 0
+    assert recovered["dequeue_blocked_tail_peak"] == 2
+    assert recovered["dequeue_blocked_consecutive_tail_seconds"] == 0
+    assert recovered["dequeue_blocked_interpretation"] == (
+        "no_active_host_slot_wait_at_last_snapshot"
+    )
     healthy = "\n".join(record(i, i, i, 1000+150*i) for i in range(95))
     assert not analyze(healthy)["candidate_still_media_while_compositor_active"]
     # Regress false positives: both media counters become flat AFTER the GPU
