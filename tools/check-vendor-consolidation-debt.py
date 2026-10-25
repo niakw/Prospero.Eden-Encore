@@ -447,17 +447,13 @@ strip_f05_once(
     "                if (record_buffer_history) {",
 )
 strip_f05_once(
-    "        core->buffer_has_been_queued = true;\n"
-    "        core->SignalDequeueCondition();\n\n"
-    "        output->Inflate(",
-    "        core->buffer_has_been_queued = true;\n"
-    "        core->SignalDequeueCondition();\n"
-    "        if (recycled_queued_slot) {\n"
-    "            // Frame replacement freed a queued slot. Wake an emulated\n"
-    "            // producer waiting on the Binder KReadableEvent as well.\n"
-    "            buffer_wait_event->Signal(service_context.kernel);\n"
-    "        }\n\n"
-    "        output->Inflate(",
+    "",
+    "    if (recycled_queued_slot) {\n"
+    "        // KEvent::Signal takes the guest scheduler lock. Never acquire it\n"
+    "        // while holding the BufferQueue mutex: an unblocked guest may\n"
+    "        // reenter Binder/BufferQueue and reverse that lock order.\n"
+    "        buffer_wait_event->Signal(service_context.kernel);\n"
+    "    }\n\n",
 )
 assert dequeue_legacy_projection == dequeue_expected, (
     "Maintained queue-dequeue provenance or the F05 release wake delta diverged"
