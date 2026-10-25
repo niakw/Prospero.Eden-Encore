@@ -159,3 +159,134 @@ with tempfile.TemporaryDirectory(prefix="encore-f05-live-dequeue-") as tmp:
         assert "F05_ACTIVE_DEQUEUE_BLOCKERS_PASS blocked=8 cleared=1 disabled_quiet=1" in run.stdout
         print(opt, run.stdout.strip(), flush=True)
 print("F05_LIVE_DEQUEUE_DIAGNOSTIC_NOT_GUEST_PC_OR_FC27_LIVENESS_PROOF")
+
+
+# F05 integration: the *actual selected* blocking branch and the maintained
+# BufferQueueCore epoch/condition methods must agree with the active counter.
+# Merely testing an isolated RAII object cannot prove this runtime boundary.
+core_source = (
+    ROOT / "vendor/encore-active/eden-backports/src/core/hle/service/nvnflinger/buffer_queue_core.cpp"
+).read_text()
+core_begin = "void BufferQueueCore::SignalDequeueCondition() {"
+core_end = "\ns32 BufferQueueCore::GetMinUndequeuedBufferCountLocked("
+assert core_source.count(core_begin) == 1 and core_source.count(core_end) == 1
+core_methods = core_source[
+    core_source.index(core_begin):core_source.index(core_end, core_source.index(core_begin))
+]
+assert "dequeue_condition.notify_all();" in core_methods
+assert "dequeue_condition.wait(lk," in core_methods
+block_begin = "#ifdef EDEN_NVNF_DEQUEUE_PROFILE\n            // F05: a producer stuck inside this wait"
+block_end = (
+    "            if (!core->WaitForDequeueCondition(lk)) {\n"
+    "                // We are no longer running\n"
+    "                return Status::NoError;\n"
+    "            }\n"
+)
+assert src.count(block_begin) == 1 and src.count(block_end) == 1
+block_at = src.index(block_begin)
+block_end_at = src.index(block_end, block_at) + len(block_end)
+block_path = src[block_at:block_end_at]
+assert block_path.count("GuestDequeueBlockedScope blocking_scope;") == 1
+assert block_path.count("WaitForDequeueCondition(lk)") == 1
+
+condition_fixture = r"""
+#include <atomic>
+#include <cassert>
+#include <condition_variable>
+#include <cstdio>
+#include <mutex>
+#include <thread>
+#include <vector>
+namespace Eden::Performance {
+inline std::atomic<bool> detailed_gpu_profile{true};
+inline std::atomic<unsigned> guest_dequeue_blocked{};
+__SCOPE__
+}
+enum class Status { NoError };
+struct BufferQueueCore {
+    std::mutex mutex{};
+    std::atomic<unsigned> dequeue_epoch{};
+    std::condition_variable dequeue_condition{};
+    void SignalDequeueCondition();
+    bool WaitForDequeueCondition(std::unique_lock<std::mutex>&);
+};
+__CORE_METHODS__
+struct Producer {
+    BufferQueueCore* core;
+    Status BlockOnce(std::atomic<int>& entered) {
+        std::unique_lock lock{core->mutex};
+        entered.fetch_add(1, std::memory_order_release);
+__BLOCK_PATH__
+        return Status::NoError;
+    }
+};
+int main() {
+    using namespace Eden::Performance;
+    BufferQueueCore core{};
+    Producer producer{&core};
+    std::atomic<int> entered{};
+    std::vector<std::thread> waiters;
+    for (int i = 0; i < 8; ++i) {
+        waiters.emplace_back([&] { assert(producer.BlockOnce(entered) == Status::NoError); });
+    }
+    while (entered.load(std::memory_order_acquire) != 8)
+        std::this_thread::yield();
+    {
+        // Owning this mutex proves that every prior waiter entered the
+        // native condvar wait (and released the mutex) before broadcasting.
+        std::scoped_lock lock{core.mutex};
+#ifdef EDEN_NVNF_DEQUEUE_PROFILE
+        assert(guest_dequeue_blocked.load(std::memory_order_acquire) == 8);
+#else
+        assert(guest_dequeue_blocked.load(std::memory_order_acquire) == 0);
+#endif
+        core.SignalDequeueCondition();
+    }
+    for (auto& waiter : waiters) waiter.join();
+    assert(guest_dequeue_blocked.load(std::memory_order_acquire) == 0);
+    assert(core.dequeue_epoch.load(std::memory_order_relaxed) == 1);
+#ifdef EDEN_NVNF_DEQUEUE_PROFILE
+    detailed_gpu_profile.store(false);
+    entered.store(0);
+    std::thread quiet([&] { assert(producer.BlockOnce(entered) == Status::NoError); });
+    while (entered.load(std::memory_order_acquire) != 1)
+        std::this_thread::yield();
+    {
+        std::scoped_lock lock{core.mutex};
+        assert(guest_dequeue_blocked.load(std::memory_order_acquire) == 0);
+        core.SignalDequeueCondition();
+    }
+    quiet.join();
+    assert(guest_dequeue_blocked.load() == 0);
+#endif
+    std::puts("F05_NATIVE_DEQUEUE_CONDITION_INFLIGHT_PASS waiters=8 "
+              "active_gauge_correct=1 restored=1 disabled_quiet=1 "
+              "scope=source_extracted_native_condvar");
+}
+""".replace("__SCOPE__", scope).replace(
+    "__CORE_METHODS__", core_methods).replace("__BLOCK_PATH__", block_path)
+
+with tempfile.TemporaryDirectory(prefix="encore-f05-condvar-live-") as tmp:
+    source = Path(tmp) / "native-condvar.cpp"
+    source.write_text(condition_fixture)
+    for profile_on in (False, True):
+        for mode in ("-O0", "-O2"):
+            binary = Path(tmp) / f"condition-{int(profile_on)}-{mode}"
+            command = [
+                compiler, "-std=c++20", mode, "-Wall", "-Wextra", "-Werror",
+                "-pthread", "-fsanitize=undefined", "-fno-sanitize-recover=all",
+            ]
+            if profile_on:
+                command.append("-DEDEN_NVNF_DEQUEUE_PROFILE=1")
+            result = subprocess.run(
+                [*command, str(source), "-o", str(binary)],
+                capture_output=True, text=True, timeout=90,
+            )
+            assert result.returncode == 0, (mode, profile_on, result.stderr[-7000:])
+            run = subprocess.run(
+                [str(binary)], capture_output=True, text=True, timeout=25,
+            )
+            assert run.returncode == 0, (mode, profile_on, run.stderr[-7000:])
+            assert run.stdout.count("F05_NATIVE_DEQUEUE_CONDITION_INFLIGHT_PASS") == 1
+            print("profile=" + str(int(profile_on)), mode, run.stdout.strip(), flush=True)
+print("F05_CONDITION_WAITER_HOST_ONLY_NOT_GUEST_IPC_OR_FC27_PROGRESS")
