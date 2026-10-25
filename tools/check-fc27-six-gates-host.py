@@ -163,26 +163,26 @@ def run() -> int:
                         r"F02_JIT_NATIVE_COLD_REPLAY_PASS arch=(A32|A64) "
                         r"impl=(pinned|maintained) cold=(\d+) repeated_hits=(\d+) "
                         r"recompile=(\d+) full_clear_compile=(\d+) "
-                        r"total_emissions=(\d+) cold_total_ns=(\d+) "
+                        r"total_emissions=(\d+) isolated_cores=(\d+) cold_total_ns=(\d+) "
                         r"hot_total_ns=(\d+) "
                         r"scope=source_extracted_synthetic_translator", result.stdout)
                     counts = {}
-                    for arch, kind, cold, hits, recompile, cleared, emissions, cold_ns, hot_ns in found:
+                    for arch, kind, cold, hits, recompile, cleared, emissions, isolated, cold_ns, hot_ns in found:
                         counts.setdefault((arch, kind), []).append(
                             (int(cold), int(hits), int(recompile), int(cleared),
-                             int(emissions), int(cold_ns), int(hot_ns)))
+                             int(emissions), int(isolated), int(cold_ns), int(hot_ns)))
                     desired = {(arch, kind) for arch in ("A32","A64")
                                for kind in ("pinned","maintained")}
                     if (set(counts) != desired or
                             any(len(series) != 2 for series in counts.values()) or
-                            any(values[:5] != (32, 512, 8, 32, 72) or
-                                min(values[5:]) <= 0
+                            any(values[:6] != (32, 512, 8, 32, 72, 2) or
+                                min(values[6:]) <= 0
                                 for series in counts.values() for values in series)):
                         ok, reason = False, "f02_cold_repeat_invalidations_evidence_missing"
                     else:
                         fixture_metrics["F02_cold_repeat_source_host"] = {
                             arch: {kind: [
-                                {"cold_ns": x[5], "hot_ns": x[6]} for x in counts[(arch,kind)]]
+                                {"cold_ns": x[6], "hot_ns": x[7]} for x in counts[(arch,kind)]]
                                 for kind in ("pinned","maintained")}
                             for arch in ("A32","A64")
                         }
@@ -314,9 +314,18 @@ def run() -> int:
         "F01_sampler_lookup_host_mock" in fixture_metrics and
         "F01_native_lock_budget_host" in fixture_metrics
     )
+    # F02: source-extracted pinned/current A32+A64 code must independently
+    # prove cold/hot/partial/full cache behavior, cross-core isolation, and
+    # before/after lock ownership. These are HOST technical proofs only:
+    # guest translation cost and real PS5 performance remain unmeasured.
+    f02_technical_exit = (
+        all(item["ok"] for item in status["F02-jit-invalidation"]) and
+        "F02_native_invalidation_lock_host" in fixture_metrics and
+        "F02_cold_repeat_source_host" in fixture_metrics
+    )
     preconsole_exits = {
         "F01-cache-contention": bool(f01_technical_exit),
-        "F02-jit-invalidation": False,
+        "F02-jit-invalidation": bool(f02_technical_exit),
         "F03-hud-freshness": False,
         "F04-texture-integrity": False,
         "F05-guest-progress": False,
@@ -325,6 +334,8 @@ def run() -> int:
     remaining_exit_evidence = dict(UNPROVEN_EXIT_EVIDENCE)
     if f01_technical_exit:
         remaining_exit_evidence.pop("F01-cache-contention")
+    if f02_technical_exit:
+        remaining_exit_evidence.pop("F02-jit-invalidation")
     summary = {"scope": "PRECONSOLE_HOST_TECHNICAL_NOT_GAMEPLAY",
                "f01_to_f06_closed": sum(preconsole_exits.values()),
                "preconsole_exit_status": preconsole_exits,
