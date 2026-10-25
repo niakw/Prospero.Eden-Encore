@@ -31,6 +31,15 @@ single_begin = "Status BufferQueueProducer::DetachBuffer("
 single_end = "Status BufferQueueProducer::DetachNextBuffer("
 assert active.count(single_begin) == 1 and active.count(single_end) == 1
 selected_single = active[active.index(single_begin):active.index(single_end)].rstrip()
+count_begin = "Status BufferQueueProducer::SetBufferCount("
+count_end = "Status BufferQueueProducer::WaitForFreeSlotThenRelock("
+assert active.count(count_begin) == 1 and active.count(count_end) == 1
+selected_count = active[active.index(count_begin):active.index(count_end)].rstrip()
+assert selected_count.count("buffer_wait_event->Signal(service_context.kernel);") == 2
+assert "core->override_max_buffer_count = 0;" in selected_count
+assert selected_count.index("core->override_max_buffer_count = 0;") < selected_count.index(
+    "buffer_wait_event->Signal(service_context.kernel);")
+
 assert selected_single.count("core->SignalDequeueCondition();") == 1
 assert selected_single.count("buffer_wait_event->Signal(service_context.kernel);") == 1
 assert selected_single.index("core->FreeBufferLocked(slot);") < selected_single.index(
@@ -63,21 +72,33 @@ struct GraphicBuffer { int payload{}; };
 struct BufferQueueDefs { static constexpr s32 NUM_BUFFER_SLOTS = 4; };
 #define LOG_ERROR(...) (void)0
 #define LOG_DEBUG(...) (void)0
+struct IConsumerListener {
+    int calls{};
+    void OnBuffersReleased() { ++calls; }
+};
 struct BufferSlot {
     BufferState buffer_state{BufferState::Free};
     std::shared_ptr<GraphicBuffer> graphic_buffer{};
     u32 frame_number{};
     Fence fence{};
     bool request_buffer_called{};
+    bool is_preallocated{};
 };
 struct BufferQueueCore {
     static constexpr s32 INVALID_BUFFER_SLOT = -1;
     std::mutex mutex{};
     std::array<BufferSlot, BufferQueueDefs::NUM_BUFFER_SLOTS> slots{};
     bool is_abandoned{};
+    s32 override_max_buffer_count{};
+    std::shared_ptr<IConsumerListener> consumer_listener{};
     std::condition_variable dequeue_condition{};
     std::atomic<std::uint64_t> dequeue_epoch{};
     void WaitWhileAllocatingLocked() const {}
+    s32 GetMinMaxBufferCountLocked(bool) const { return 1; }
+    s32 GetPreallocatedBufferCountLocked() const { return 0; }
+    void FreeAllBuffersLocked() {
+        for (s32 i = 0; i < BufferQueueDefs::NUM_BUFFER_SLOTS; ++i) FreeBufferLocked(i);
+    }
     void FreeBufferLocked(s32 index) {
         auto& slot = slots[index];
         slot.graphic_buffer.reset();
@@ -102,8 +123,9 @@ struct BufferQueueProducer {
     explicit BufferQueueProducer(BufferQueueCore& c) : core(&c), slots(c.slots) {}
     Status DetachNextBuffer(std::shared_ptr<GraphicBuffer>* out_buffer, Fence* out_fence);
     Status DetachBuffer(s32 slot);
+    Status SetBufferCount(s32 count);
 };
-""" + "\n" + core_methods + "\n" + selected_single + "\n" + selected + r"""
+""" + "\n" + core_methods + "\n" + selected_single + "\n" + selected_count + "\n" + selected + r"""
 int main() {
     BufferQueueCore core{};
     BufferQueueProducer p(core);
@@ -157,6 +179,28 @@ int main() {
     assert(owned.event.signals.load() == 1);
     assert(owned.DetachBuffer(0) == Status::BadValue);
     assert(owned.event.signals.load() == 1);
+
+    // The zero-count reset formerly signalled only host waiters, not the
+    // Binder native event. Both zero and positive changes now wake the guest.
+    BufferQueueCore sized{};
+    BufferQueueProducer count_producer(sized);
+    sized.consumer_listener = std::make_shared<IConsumerListener>();
+    assert(count_producer.SetBufferCount(BufferQueueDefs::NUM_BUFFER_SLOTS+1) == Status::BadValue);
+    assert(count_producer.event.signals.load() == 0);
+    sized.slots[0].buffer_state = BufferState::Dequeued;
+    assert(count_producer.SetBufferCount(0) == Status::BadValue);
+    assert(count_producer.event.signals.load() == 0);
+    sized.slots[0].buffer_state = BufferState::Free;
+    assert(count_producer.SetBufferCount(0) == Status::NoError);
+    assert(sized.override_max_buffer_count == 0);
+    assert(count_producer.event.signals.load() == 1);
+    assert(sized.dequeue_epoch.load() == 1);
+    assert(sized.consumer_listener->calls == 0);
+    assert(count_producer.SetBufferCount(2) == Status::NoError);
+    assert(sized.override_max_buffer_count == 2);
+    assert(count_producer.event.signals.load() == 2);
+    assert(sized.dequeue_epoch.load() == 2);
+    assert(sized.consumer_listener->calls == 1);
 
     // Deterministically place TWO producers inside the actual core condition
     // wait: each must release the mutex for the next one to enter.
