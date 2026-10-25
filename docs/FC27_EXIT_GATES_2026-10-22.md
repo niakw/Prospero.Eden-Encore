@@ -14,7 +14,7 @@ le compteur d'un ancien tableau, des seuls commits ou du succès général d'un 
 | **F03** HUD/fraîcheur | **VALIDÉ techniquement** | Préflight [40149972349](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40149972349) vert : `FC27_SIX_GATES_HOST_CHECKPOINT` déclare `F03-hud-freshness=true`, 241 révisions HUD, 2 remaps, 1 perte/récupération, 12 ticks pause, O0/O2 | Non mesuré ; F07 |
 | **F04** textures/contenu GPU | **VALIDÉ techniquement** | [prévalidation #40152839640](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40152839640), SHA `c757d02` : `F04-texture-integrity=true`, 6/6 sous-tests F04. Rejeu compilé `-O0`/`-O2` : 3 copies DMA, 2 alias, 1 unmap/remap simulé, 3 révisions d’upload et 3 barrières ; tests des barrières Vulkan et de la parité des sources également verts. | GPU réel/pixels FC27 non mesurés ; F07 |
 | **F05** progression HLE | **EN QUALIFICATION — Binder, buffers/fences vérifiés** | [fast gate #40155675552](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40155675552) vert : 260 transactions `IHOSBinderDriver`, 260 acquisitions jeu + HUD, compositions et copies Vulkan dans une chaîne C++ liée à quatre unités, `-O0`/`-O2`. Le marshaling HIPC réel et la progression CPU du jeu restent non démontrés. | HID/IPC invités et jeu réel non mesurés ; F07 |
-| **F06** commandes/gel | **EN QUALIFICATION — transitions DualSense et handoff Npad source vérifiés** | Rejeu C++ `Pad::Consume` + `PadEngine::SetButtonState` (`a7738bd`) ; nouveau rejeu source-extrait `EmulatedController::GetNpadButtons` + `NPad::RequestPadStateUpdate` (`ec24e9e`) : Plus, relâchement, filtrage, déconnexion/reconnexion, Joy-Con droit sous `-O0`/`-O2`. La mémoire partagée LIFO réelle, le mapping interne FC27 et la progression du match restent non prouvés. | Jeu réel non mesuré ; F07 |
+| **F06** commandes/gel | **EN QUALIFICATION — transitions DualSense et handoff Npad source vérifiés** | Rejeu C++ `Pad::Consume` + `PadEngine::SetButtonState` (`a7738bd`) ; nouveau rejeu source-extrait `EmulatedController::GetNpadButtons` + `NPad::RequestPadStateUpdate` (`ec24e9e`) : Plus, relâchement, filtrage, déconnexion/reconnexion, Joy-Con droit sous `-O0`/`-O2`. Le nouveau témoin OnUpdate→LIFO hôte (`0385a6b`) ajoute la publication Fullkey/system_ext. La lecture HIPC réelle, le mapping interne FC27 et la progression du match restent non prouvés. | Jeu réel non mesuré ; F07 |
 
 **Jalon certifié le 25 octobre : 4/6 pré-console (F01, F02, F03, F04).**
 [Prévalidation entière verte #40152839640](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40152839640)
@@ -39,6 +39,22 @@ fast gate, la prévalidation et le tableau des six critères au commit
 [`a7738bd`](https://github.com/niakw/Prospero.Eden-Encore/commit/a7738bdfc67bddf064539de79b6b33e89fde8e92).
 La CI complète et la clôture F06 sont distinctes : **4/6 reste inchangé**,
 aucun nouveau test sur PS5 demandé.
+
+**F06, 25 octobre — publication du contrôleur vers le LIFO invité simulé :**
+Le test `tools/check-fc27-f06-native-npad-lifo-host.py` exécute dans un
+même programme C++ les trois méthodes natives maintenues
+`EmulatedController::GetNpadButtons`, `NPad::RequestPadStateUpdate` et
+`NPad::OnUpdate`. Il teste les publications `fullkey_lifo` et
+`system_ext_lifo`, la numérotation croissante des échantillons, le passage
+Options→Plus, le relâchement à zéro, les gates input/style/activation,
+la reconnexion et le masque du Joy-Con droit. Rejeu local de référence
+compilé sous UBSan en `-O0`/`-O2`; le script source-extrait est ajouté
+au fast gate, à la prévalidation et au checkpoint F01–F06 au commit
+[5b930dc](https://github.com/niakw/Prospero.Eden-Encore/commit/5b930dc13494324685aabe3e2bc673bf12382241).
+La validation CI complète de ce témoin reste indépendante.
+**La mémoire partagée et le noyau hôte sont simulés : ce résultat ne prouve
+ni la lecture HIPC réelle par le jeu ni les actions FC27 en match. F06 reste
+ouvert ; total 4/6.**
 
 **F06, 25 octobre — transfert natif contrôleur vers Npad (nouveau témoin) :**
 `tools/check-fc27-f06-native-npad-handoff-host.py` compile les fonctions
