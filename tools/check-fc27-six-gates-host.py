@@ -296,7 +296,7 @@ def run() -> int:
                         result.stdout,
                     )
                     modes = re.findall(
-                        r"F04_NATIVE_REMAP_DMA_UPLOAD_CHAIN_PASS[^\n]*"
+                        r"F04_NATIVE_TEXTURE_UPLOAD_REVISION_PASS[^\n]*"
                         r"\s-(O0|O2)", result.stdout)
                     excluded = (
                         "F04_REAL_VULKAN_PIXELS_AND_GPU_ADDRESS_REBIND_UNVERIFIED"
