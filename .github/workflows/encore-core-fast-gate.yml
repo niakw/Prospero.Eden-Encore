@@ -62,6 +62,7 @@ on:
       - 'tools/check-fc27-f05-native-nvdisp-vulkan-present-chain-host.py'
       - 'tools/check-fc27-f05-producer-release-wake-host.py'
       - 'tools/check-fc27-f05-native-consumer-disconnect-host.py'
+      - 'tools/check-fc27-f05-native-acquire-drop-wake-host.py'
       - 'tools/check-fc27-f06-native-pad-transition-host.py'
       - 'tools/check-fc27-f06-native-npad-handoff-host.py'
       - 'tools/check-fc27-f06-native-npad-lifo-host.py'
@@ -213,6 +214,7 @@ jobs:
           python3 -B tools/check-fc27-f05-native-nvdisp-vulkan-present-chain-host.py
           python3 -B tools/check-fc27-f05-producer-release-wake-host.py
           python3 -B tools/check-fc27-f05-native-consumer-disconnect-host.py
+          python3 -B tools/check-fc27-f05-native-acquire-drop-wake-host.py
           python3 -B tools/check-fc27-f06-native-pad-transition-host.py
           python3 -B tools/check-fc27-f06-native-npad-handoff-host.py
           python3 -B tools/check-fc27-f06-native-npad-lifo-host.py
