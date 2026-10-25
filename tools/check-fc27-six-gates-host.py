@@ -48,6 +48,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-native-vulkan-renderer-handoff-host.py",
         "check-fc27-f05-native-nvdisp-vulkan-present-chain-host.py",
         "check-fc27-f05-producer-release-wake-host.py",
+        "check-fc27-f05-native-consumer-disconnect-host.py",
         "check-native-host1x-increment-handoff-host.py",
     ),
     "F06-input-and-pause": (
@@ -329,6 +330,31 @@ def run() -> int:
                         print("F04_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F04_native_remap_dma_upload_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f05-native-consumer-disconnect-host.py":
+                    terminals = re.findall(
+                        r"F05_NATIVE_CONSUMER_DISCONNECT_WAKE_PASS host_waiters=(\d+) "
+                        r"guest_event=(\d+) callback_unlocked=(\d+) quiet_error=(\d+) "
+                        r"safe_stop=(\d+) scope=mock_kernel",
+                        result.stdout,
+                    )
+                    excludes = "F05_REAL_GUEST_HIPC_FC27_LIVENESS_NOT_PROVEN" in result.stdout
+                    if terminals != [("2", "1", "1", "1", "1")]*2 or not excludes:
+                        ok, reason = False, "f05_consumer_terminal_wake_source_proof_missing"
+                    else:
+                        fixture_metrics["F05_consumer_terminal_guest_wake_host"] = {
+                            "host_waiters": 2,
+                            "guest_event_count": 1,
+                            "callback_outside_lock": True,
+                            "quiet_error": True,
+                            "safe_stop": True,
+                            "compile_modes": ["O0", "O2"],
+                            "scope": "source-extracted consumer disconnect + producer listener; "
+                                     "mock kernel event, guest HIPC unproven",
+                        }
+                        print("F05_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F05_consumer_terminal_guest_wake_host"],
+                                         sort_keys=True), flush=True)
+
                 if ok and script == "check-fc27-f05-producer-release-wake-host.py":
                     proofs = re.findall(
                         r"F05_PRODUCER_RELEASE_WAKE_HOST_PASS initial=(\d+) "
