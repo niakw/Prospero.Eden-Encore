@@ -28,11 +28,16 @@ start = "        if (core->queue.empty()) {"
 end = "        output->Inflate("
 assert active.count(start) == 1 and active.count(end) == 1
 segment = active[active.index(start):active.index(end)]
+wake_start = active.index("    if (recycled_queued_slot) {", active.index(end))
+wake_end = active.index("    // Notify consumers with the actual queued item:", wake_start)
+wake = active[wake_start:wake_end]
 assert "recycled_queued_slot = true;" in segment
-assert "buffer_wait_event->Signal(service_context.kernel);" in segment
+assert "buffer_wait_event->Signal(service_context.kernel);" not in segment
+assert "buffer_wait_event->Signal(service_context.kernel);" in wake
 assert "recycled_queued_slot = true;" not in pinned
 assert segment.count("core->SignalDequeueCondition();") == 1
-assert segment.count("buffer_wait_event->Signal(service_context.kernel);") == 1
+assert wake.count("buffer_wait_event->Signal(service_context.kernel);") == 1
+assert active.index("        output->Inflate(") < wake_start
 
 cpp=r"""
 #include <array>
@@ -41,6 +46,7 @@ cpp=r"""
 #include <cstdint>
 #include <cstdio>
 #include <memory>
+#include <mutex>
 #include <vector>
 using u64=std::uint64_t;
 enum class BufferState {Free,Queued,Acquired};
@@ -59,6 +65,7 @@ struct Slot{
 };
 struct IConsumerListener{};
 struct Core {
+    std::mutex mutex{};
     std::array<Slot,4> slots{};
     std::vector<BufferItem> queue{};
     std::shared_ptr<IConsumerListener> consumer_listener{};
@@ -76,8 +83,15 @@ struct Core {
 };
 struct Kernel{};
 struct Event{
+    Core* core{};
     std::atomic<int> guest_wakes{};
-    void Signal(Kernel&){guest_wakes.fetch_add(1);}
+    void Signal(Kernel&){
+        // This is the critical lock-order regression witness. Guest kernel
+        // wake must never be published while BufferQueue mutex is held.
+        assert(core->mutex.try_lock());
+        core->mutex.unlock();
+        guest_wakes.fetch_add(1);
+    }
 };
 struct ServiceContext{Kernel kernel{};};
 struct Harness{
@@ -85,13 +99,17 @@ struct Harness{
     Core* core{&core_data};
     std::array<Slot,4>& slots{core_data.slots};
     ServiceContext service_context{};
-    Event event{};
+    Event event{&core_data};
     Event* buffer_wait_event{&event};
     void Publish(BufferItem item, int slot, bool record_buffer_history=false){
         std::shared_ptr<IConsumerListener> listener_available;
         std::shared_ptr<IConsumerListener> listener_replaced;
         bool recycled_queued_slot=false;
+        {
+            std::scoped_lock lock{core->mutex};
 __PUBLISH__
+        }
+__WAKE__
         (void)listener_available;(void)listener_replaced;
     }
 };
@@ -132,9 +150,9 @@ int main(){
     assert(h.core->host_wakes.load()==264);
     std::puts("F05_NATIVE_QUEUE_REPLACEMENT_GUEST_WAKE_PASS replacements=260 "
               "tracked_release_signal=1 untracked_quiet=1 regular_enqueue_quiet=1 "
-              "scope=source_extracted_mock_guest_event");
+              "callback_unlocked=1 scope=source_extracted_mock_guest_event");
 }
-""".replace("__PUBLISH__",segment)
+""".replace("__PUBLISH__",segment).replace("__WAKE__",wake)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler,"host C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="encore-f05-queue-replace-") as tmp:
