@@ -295,6 +295,12 @@ Status BufferQueueProducer::WaitForFreeSlotThenRelock(bool async, s32* found, St
                 return Status::WouldBlock;
             }
 
+#ifdef EDEN_NVNF_DEQUEUE_PROFILE
+            // F05: a producer stuck inside this wait never contributes to
+            // completed DequeueBuffer timings. Publish in-flight waiters only
+            // in the opt-in profile, without changing the blocking predicate.
+            ::Eden::Performance::GuestDequeueBlockedScope blocking_scope;
+#endif
             if (!core->WaitForDequeueCondition(lk)) {
                 // We are no longer running
                 return Status::NoError;
