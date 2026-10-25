@@ -31,6 +31,12 @@ single_begin = "Status BufferQueueProducer::DetachBuffer("
 single_end = "Status BufferQueueProducer::DetachNextBuffer("
 assert active.count(single_begin) == 1 and active.count(single_end) == 1
 selected_single = active[active.index(single_begin):active.index(single_end)].rstrip()
+cancel_begin = "void BufferQueueProducer::CancelBuffer("
+cancel_end = "Status BufferQueueProducer::Query("
+assert active.count(cancel_begin) == 1 and active.count(cancel_end) == 1
+selected_cancel = active[active.index(cancel_begin):active.index(cancel_end)].rstrip()
+assert selected_cancel.count("buffer_wait_event->Signal(service_context.kernel);") == 1
+assert "core->SignalDequeueCondition();\n    lock.unlock();\n" in selected_cancel
 count_begin = "Status BufferQueueProducer::SetBufferCount("
 count_end = "Status BufferQueueProducer::WaitForFreeSlotThenRelock("
 assert active.count(count_begin) == 1 and active.count(count_end) == 1
@@ -186,8 +192,9 @@ struct BufferQueueProducer {
     Status DetachNextBuffer(std::shared_ptr<GraphicBuffer>* out_buffer, Fence* out_fence);
     Status DetachBuffer(s32 slot);
     Status SetBufferCount(s32 count);
+    void CancelBuffer(s32 slot, const Fence& fence);
 };
-""" + "\n" + core_methods + "\n" + selected_single + "\n" + selected_count + "\n" + selected + r"""
+""" + "\n" + core_methods + "\n" + selected_single + "\n" + selected_count + "\n" + selected + "\n" + selected_cancel + r"""
 int main() {
     BufferQueueCore core{};
     BufferQueueProducer p(core);
@@ -263,6 +270,26 @@ int main() {
     assert(count_producer.event.signals.load() == 2);
     assert(sized.dequeue_epoch.load() == 2);
     assert(sized.consumer_listener->calls == 1);
+
+    // F05: CancelBuffer is another producer release that must notify the
+    // mock guest kernel only after releasing core->mutex. MockEvent::Signal
+    // executes a synchronous cross-thread try_lock witness for this.
+    BufferQueueCore cancelled{};
+    BufferQueueProducer canceller(cancelled);
+    cancelled.slots[0].buffer_state = BufferState::Dequeued;
+    canceller.CancelBuffer(-1, Fence{13});
+    assert(canceller.event.signals.load() == 0);
+    canceller.CancelBuffer(0, Fence{13});
+    assert(cancelled.slots[0].buffer_state == BufferState::Free);
+    assert(cancelled.slots[0].fence.sequence == 13);
+    assert(cancelled.dequeue_epoch.load() == 1);
+    assert(canceller.event.signals.load() == 1);
+    canceller.CancelBuffer(0, Fence{15});
+    assert(canceller.event.signals.load() == 1);
+    cancelled.is_abandoned = true;
+    cancelled.slots[0].buffer_state = BufferState::Dequeued;
+    canceller.CancelBuffer(0, Fence{15});
+    assert(canceller.event.signals.load() == 1);
 
     // Deterministically place TWO producers inside the actual core condition
     // wait: each must release the mutex for the next one to enter.
