@@ -1098,7 +1098,8 @@ void ReportInputThreadGpuLiveness() {
         "EDEN_GPU_REPORT_STALLED age_ms=%llu frame=%u gpu_ticks=%llu "
         "draws=%llu guest_writes=%llu guest_reads=%llu "
         "guest_dequeues=%llu guest_ipc=%llu cache_collisions=%llu "
-        "dma_active_ms=%llu puller_active_ms=%llu epoch_ms=%lld mono_ns=%lld\n",
+        "dequeue_blocked=%u dma_active_ms=%llu puller_active_ms=%llu "
+        "epoch_ms=%lld mono_ns=%lld\n",
         age_ms,
         latest_gpu_report_frame.load(std::memory_order_relaxed),
         gpu_command_tick.calls.load(std::memory_order_relaxed),
@@ -1108,6 +1109,7 @@ void ReportInputThreadGpuLiveness() {
         guest_dequeue_wait.calls.load(std::memory_order_relaxed),
         guest_ipc_wait.calls.load(std::memory_order_relaxed),
         cache_lock_contended.load(std::memory_order_relaxed),
+        guest_dequeue_blocked.load(std::memory_order_acquire),
         ActiveDiagnosticWaitNs(gpu_dma_sync_active_since_ns) / 1'000'000ULL,
         ActiveDiagnosticWaitNs(gpu_puller_semaphore_active_since_ns) / 1'000'000ULL,
         epoch_ms, mono_ns);
@@ -1282,6 +1284,7 @@ void ReportGpuThread(unsigned frame) {
                 load(guest_cpu_read, true), load(guest_cpu_read, false),
                 load(guest_sync_wait, true), load(guest_sync_wait, false),
                 load(guest_dequeue_wait, true), load(guest_dequeue_wait, false));
+    std::printf(" dequeue_blocked=%u", guest_dequeue_blocked.load(std::memory_order_acquire));
     std::printf(" ipc_calls=%llu ipc_ns=%llu", load(guest_ipc_wait, true), load(guest_ipc_wait, false));
     std::printf(" cache_lock_contended=%llu cache_lock_blocked=%llu cache_lock_wait_ns=%llu",
                 cache_lock_contended.load(std::memory_order_relaxed),
