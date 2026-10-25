@@ -22,10 +22,68 @@
 #include "core/hle/service/nvnflinger/buffer_queue_producer.h"
 #include "core/hle/service/nvnflinger/consumer_listener.h"
 #include "core/hle/service/nvnflinger/parcel.h"
+#include "core/hle/service/nvnflinger/producer_listener.h"
+#include <unordered_map>
 #include "core/hle/service/nvnflinger/ui/graphic_buffer.h"
 #include "core/hle/service/nvnflinger/window.h"
 
 namespace Service::android {
+
+// A guest waiting on BufferQueueProducer::GetNativeHandle must also wake
+// when the consumer releases an acquired slot. The host dequeue condition
+// variable alone cannot wake that guest kernel event.
+//
+// The listener is held independently of the producer because ReleaseBuffer
+// copies the listener out of the queue mutex before invoking its callback.
+// Stop() synchronizes with in-flight notifications before CloseEvent(), so
+// even a delayed release cannot signal a destroyed kernel event.
+class ProducerReleaseWake final : public IProducerListener {
+public:
+    ProducerReleaseWake(Kernel::KEvent* event_, Kernel::KernelCore& kernel_)
+        : event{event_}, kernel{kernel_} {}
+
+    void SetDelegate(const std::shared_ptr<IProducerListener>& listener) {
+        std::scoped_lock lock{mutex};
+        delegate = listener.get() == this ? nullptr : listener;
+    }
+
+    void Stop() {
+        std::scoped_lock lock{mutex};
+        event = nullptr;
+        delegate.reset();
+    }
+
+    void OnBufferReleased() override {
+        std::shared_ptr<IProducerListener> forward;
+        {
+            std::scoped_lock lock{mutex};
+            if (!event) return;
+            event->Signal(kernel);
+            forward = delegate;
+        }
+        if (forward) forward->OnBufferReleased();
+    }
+
+private:
+    std::mutex mutex;
+    Kernel::KEvent* event;
+    Kernel::KernelCore& kernel;
+    std::shared_ptr<IProducerListener> delegate;
+};
+
+// Keep the pinned BufferQueueProducer declaration unchanged. Registrations
+// exist only for active producers and are removed on destruction; the queue
+// may retain a callback copy past that point, safely deactivated by Stop().
+namespace {
+std::mutex release_wakes_mutex;
+std::unordered_map<const BufferQueueProducer*, std::shared_ptr<ProducerReleaseWake>> release_wakes;
+
+std::shared_ptr<ProducerReleaseWake> GetReleaseWake(const BufferQueueProducer* producer) {
+    std::scoped_lock lock{release_wakes_mutex};
+    const auto it = release_wakes.find(producer);
+    return it == release_wakes.end() ? nullptr : it->second;
+}
+} // namespace
 
 BufferQueueProducer::BufferQueueProducer(Service::KernelHelpers::ServiceContext& service_context_,
                                          std::shared_ptr<BufferQueueCore> buffer_queue_core_,
@@ -35,9 +93,22 @@ BufferQueueProducer::BufferQueueProducer(Service::KernelHelpers::ServiceContext&
     , nvmap(nvmap_)
 {
     buffer_wait_event = service_context.CreateEvent("BufferQueue:WaitEvent");
+    auto wake = std::make_shared<ProducerReleaseWake>(buffer_wait_event, service_context.kernel);
+    std::scoped_lock lock{release_wakes_mutex};
+    release_wakes.emplace(this, std::move(wake));
 }
 
 BufferQueueProducer::~BufferQueueProducer() {
+    std::shared_ptr<ProducerReleaseWake> wake;
+    {
+        std::scoped_lock lock{release_wakes_mutex};
+        const auto it = release_wakes.find(this);
+        if (it != release_wakes.end()) {
+            wake = std::move(it->second);
+            release_wakes.erase(it);
+        }
+    }
+    if (wake) wake->Stop();
     service_context.CloseEvent(buffer_wait_event);
 }
 
@@ -689,7 +760,15 @@ Status BufferQueueProducer::Connect(const std::shared_ptr<IProducerListener>& li
         core->connected_api = api;
         output->Inflate(core->default_width, core->default_height, core->transform_hint,
                         static_cast<u32>(core->queue.size()));
-        core->connected_producer_listener = listener;
+        // HOS IPC connects with no guest listener. Always keep a local wake
+        // callback so the kernel wait handle is signalled on consumer release.
+        // Preserve an explicit listener by forwarding its notification.
+        if (const auto wake = GetReleaseWake(this)) {
+            wake->SetDelegate(listener);
+            core->connected_producer_listener = wake;
+        } else {
+            core->connected_producer_listener = listener;
+        }
         break;
     default:
         LOG_ERROR(Service_Nvnflinger, "unknown api = {}", api);
