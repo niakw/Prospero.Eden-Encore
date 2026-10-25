@@ -53,6 +53,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-fc27-f05-native-queue-replace-wake-host.py",
         "check-fc27-f05-native-kernel-wait-publication-host.py",
         "check-fc27-f05-native-kthread-endwait-host.py",
+        "check-fc27-f05-native-binder-handle-ipc-host.py",
         "check-native-host1x-increment-handoff-host.py",
     ),
     "F06-input-and-pause": (
@@ -334,6 +335,34 @@ def run() -> int:
                         print("F04_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F04_native_remap_dma_upload_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f05-native-binder-handle-ipc-host.py":
+                    binder_handle = re.findall(
+                        r"F05_NATIVE_BINDER_HANDLE_IPC_PASS cycles=(\d+) "
+                        r"copied_handle_identity=(\d+) unknown_binder_rejected=(\d+) "
+                        r"level_coalescing=(\d+) reset_rearm=(\d+) "
+                        r"same_event_across_copies=(\d+) stopped_callback_quiet=(\d+) "
+                        r"scope=shipping_binder_ipc_and_producer_methods_mock_handle_table",
+                        result.stdout,
+                    )
+                    excluded = ("F05_REAL_HIPC_DISPATCH_GUEST_WAIT_AND_FC27_PROGRESS_NOT_PROVEN"
+                                in result.stdout)
+                    if binder_handle != [("260","1","1","1","260","1","1")]*2 or not excluded:
+                        ok, reason = False, "f05_binder_handle_ipc_event_identity_missing"
+                    else:
+                        fixture_metrics["F05_binder_native_handle_ipc_host"] = {
+                            "event_cycles": 260,
+                            "same_copy_handle": True,
+                            "unknown_binder_rejected": True,
+                            "level_coalescing": True,
+                            "reset_rearm": 260,
+                            "compile_modes": ["O0", "O2"],
+                            "scope": "source-extracted IHOSBinderDriver and BufferQueueProducer "
+                                     "GetNativeHandle; mocked handle table, no real HIPC dispatch",
+                        }
+                        print("F05_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F05_binder_native_handle_ipc_host"],
+                                         sort_keys=True), flush=True)
+
                 if ok and script == "check-fc27-f05-native-kthread-endwait-host.py":
                     guest_endwait = re.findall(
                         r"F05_NATIVE_KTHREAD_ENDWAIT_PASS cycles=(\d+) resumed_game=(\d+) "
