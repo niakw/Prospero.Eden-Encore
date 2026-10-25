@@ -407,6 +407,39 @@ strip_f05_once(
     "    return Status::NoError;",
 )
 
+# QueueBuffer replacement also frees an old tracked slot; publish a guest
+# Binder wake just as CancelBuffer, Detach and consumer ReleaseBuffer do.
+strip_f05_once(
+    "    BufferItem item;\n"
+    "    std::shared_ptr<IConsumerListener> listener_available;\n"
+    "    std::shared_ptr<IConsumerListener> listener_replaced;",
+    "    BufferItem item;\n"
+    "    std::shared_ptr<IConsumerListener> listener_available;\n"
+    "    std::shared_ptr<IConsumerListener> listener_replaced;\n"
+    "    bool recycled_queued_slot = false;",
+)
+strip_f05_once(
+    "            if (front->is_droppable && core->StillTracking(*front)) {\n"
+    "                slots[front->slot].buffer_state = BufferState::Free;\n"
+    "                if (record_buffer_history) {",
+    "            if (front->is_droppable && core->StillTracking(*front)) {\n"
+    "                slots[front->slot].buffer_state = BufferState::Free;\n"
+    "                recycled_queued_slot = true;\n"
+    "                if (record_buffer_history) {",
+)
+strip_f05_once(
+    "        core->buffer_has_been_queued = true;\n"
+    "        core->SignalDequeueCondition();\n\n"
+    "        output->Inflate(",
+    "        core->buffer_has_been_queued = true;\n"
+    "        core->SignalDequeueCondition();\n"
+    "        if (recycled_queued_slot) {\n"
+    "            // Frame replacement freed a queued slot. Wake an emulated\n"
+    "            // producer waiting on the Binder KReadableEvent as well.\n"
+    "            buffer_wait_event->Signal(service_context.kernel);\n"
+    "        }\n\n"
+    "        output->Inflate(",
+)
 assert dequeue_legacy_projection == dequeue_expected, (
     "Maintained queue-dequeue provenance or the F05 release wake delta diverged"
 )
