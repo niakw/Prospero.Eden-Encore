@@ -55,6 +55,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-native-hid-cadence-host.py",
         "check-fc27-f06-native-pad-transition-host.py",
         "check-fc27-f06-native-npad-handoff-host.py",
+        "check-fc27-f06-native-npad-lifo-host.py",
     ),
 }
 
@@ -474,6 +475,32 @@ def run() -> int:
                         print("F05_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F05_host1x_increment_handoff_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f06-native-npad-lifo-host.py":
+                    published = re.findall(
+                        r"F06_NATIVE_NPAD_LIFO_HOST_PASS writes=(\d+) "
+                        r"fullkey_order=(\d+) system_ext=(\d+) plus_release=(\d+) "
+                        r"gated=(\d+) reconnect=(\d+) joycon_style=(\d+) "
+                        r"scope=source_extracted_guest_lifo_mock_shared_memory",
+                        result.stdout,
+                    )
+                    unproven = "F06_REAL_HIPC_AND_FC27_MATCH_TRANSITIONS_NOT_PROVEN" in result.stdout
+                    if published != [("4","1","1","1","1","1","1")]*2 or not unproven:
+                        ok, reason = False, "f06_guest_lifo_source_replay_missing"
+                    else:
+                        fixture_metrics["F06_guest_lifo_publication_host"] = {
+                            "fullkey_writes": 4,
+                            "monotonic_sample_numbers": True,
+                            "guest_system_ext_copy": True,
+                            "release_and_gates": True,
+                            "reconnection": True,
+                            "compile_modes": ["O0","O2"],
+                            "scope": "native OnUpdate source writing mock guest LIFO; "
+                                     "real HIPC game reads and transitions unproven",
+                        }
+                        print("F06_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F06_guest_lifo_publication_host"],
+                                         sort_keys=True), flush=True)
+
                 if ok and script == "check-fc27-f06-native-npad-handoff-host.py":
                     handoff = re.findall(
                         r"F06_NATIVE_NPAD_HANDOFF_PASS plus=(\d+) releases=(\d+) masks=(\d+) "
