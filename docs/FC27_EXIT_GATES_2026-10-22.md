@@ -13,7 +13,7 @@ le compteur d'un ancien tableau, des seuls commits ou du succès général d'un 
 | **F02** JIT A32/A64 | **VALIDÉ techniquement** | `2579482`, `c03a47c` : méthodes natives épinglées/maintenues, 96 invalidations, compilation froide/chaude, recompilation et isolation des caches par cœur ; fast gate vert sur `c03a47c` | Non mesuré ; F07 |
 | **F03** HUD/fraîcheur | **VALIDÉ techniquement** | Préflight [40149972349](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40149972349) vert : `FC27_SIX_GATES_HOST_CHECKPOINT` déclare `F03-hud-freshness=true`, 241 révisions HUD, 2 remaps, 1 perte/récupération, 12 ticks pause, O0/O2 | Non mesuré ; F07 |
 | **F04** textures/contenu GPU | **VALIDÉ techniquement** | [prévalidation #40152839640](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40152839640), SHA `c757d02` : `F04-texture-integrity=true`, 6/6 sous-tests F04. Rejeu compilé `-O0`/`-O2` : 3 copies DMA, 2 alias, 1 unmap/remap simulé, 3 révisions d’upload et 3 barrières ; tests des barrières Vulkan et de la parité des sources également verts. | GPU réel/pixels FC27 non mesurés ; F07 |
-| **F05** progression HLE | **OUVERT** | Chaîne HID/HLE/IPC → buffer queue → fence → present à prouver | Non mesuré ; F07 |
+| **F05** progression HLE | **EN QUALIFICATION — buffers/fences vérifiés** | [fast gate #40155140352](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40155140352) vert : 260 buffers acquis pour jeu + HUD, 260 compositions et 260 copies Vulkan dans une chaîne C++ 3 TU, `-O0`/`-O2`. Un quatrième TU source-extrait `IHOSBinderDriver::TransactParcelAuto` / `TransactParcel` est en qualification, et la progression du guest reste non démontrée. | HID/IPC invités et jeu réel non mesurés ; F07 |
 | **F06** commandes/gel | **OUVERT** | Mapping personnalisé et transitions pause/mi-temps/fin à prouver | Non mesuré ; F07 |
 
 **Jalon certifié le 25 octobre : 4/6 pré-console (F01, F02, F03, F04).**
@@ -25,6 +25,18 @@ au commit `c757d02` : `FC27_SIX_GATES_HOST_CHECKPOINT` a émis
 F04 est **clôturé techniquement pré-console**, comme F01–F03.
 Le mock d'adressage et de GPU ne permet **ni d'affirmer les pixels
 réels ni les FPS du jeu** ; cela reste F07.
+
+**F05, 25 octobre — BufferQueue jusqu'à Vulkan, sous GPU simulé :**
+[Fast gate #40155140352 vert](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40155140352)
+sur `bfee35e`. Les deux compilations `-O0`/`-O2` exécutent
+les méthodes natives de `BufferQueueProducer`/`BufferQueueConsumer`,
+`HardwareComposer`, `nvdisp`, GPU/Host1x, `RendererVulkan`
+et `PresentManager` en trois unités C++ liées. Les traces affichent
+`queued=260 acquired_game=260 acquired_hud=260 composite=260
+callback_frames=260` et `requests=260 copies=260`. Le module
+`IHOSBinderDriver` est en cours d'intégration au témoin ; il ne
+reproduit ni le vrai marshaling HIPC ni le thread invité.
+**F05 n'est pas clôturé** ; aucun test console demandé.
 
 **F05 en cours :** le nouvel essai natif relié dans
 `tools/check-fc27-f05-native-nvdisp-vulkan-present-chain-host.py`
