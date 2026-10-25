@@ -1,5 +1,39 @@
 # Eden Encore — reste à faire pour FC27 (critères de sortie)
 
+## F05 — dernier témoin d'intégration (25 octobre 2026)
+
+**Base technique confirmée :** `3347144` a réussi le fast gate
+[#40222417431](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40222417431),
+la prévalidation
+[#40222417439](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40222417439),
+le build PS5
+[#40222417453](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40222417453)
+et CodeQL
+[#40222417560](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40222417560).
+
+**Lot ajouté, CI en cours :** les révisions `8a7bbec`, `2023ce3`
+et `451d4c8` étendent `check-fc27-f05-native-kthread-endwait-host.py`
+avec une exécution C++ continue de
+`BufferQueueConsumer::ReleaseBuffer` →
+`ProducerReleaseWake::OnBufferReleased` →
+`KEvent::Signal` → `KReadableEvent::Signal` →
+`KThread::NotifyAvailable` → `KThreadQueue::EndWait`.
+Le scénario rejoue 260 libérations réelles dans un noyau **mocké**,
+rejette les frames périmées et les libérations répétées sans réveil
+supplémentaire, vérifie 520 reprises simulées, 260 signaux de la condition
+hôte et le retour des deux attentes à l'état exécutable.
+Le checkpoint F01–F06 exige explicitement les sorties
+`F05_NATIVE_RELEASE_TO_KTHREAD_PASS` sous `-O0` et `-O2` ;
+cette preuve est **non acquise tant que la nouvelle CI n'est pas verte**.
+
+**Limite :** un rejeu natif source-extrait avec noyau simulé ne prouve
+ni le véritable décodage HIPC invité, ni la progression des threads PS5,
+ni la disparition du gel de FC27. Le compteur **reste à 4/6**,
+F05 ouvert, F06 préservé selon les essais console déjà communiqués.
+
+---
+
+
 ## F05 — verrouillage producteur / noyau invité (25 octobre, nouveau lot)
 
 **Correctif moteur à qualifier par la CI du HEAD :** tous les huit sites
