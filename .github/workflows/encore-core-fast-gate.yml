@@ -51,6 +51,9 @@ on:
       - 'tools/check-vendor-archive-pin-contract-host.py'
       - 'tools/deps.json'
       - 'docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json'
+      - 'docs/EDEN_CORE_AUDIT_DEPENDENCIES.md'
+      - 'docs/EDEN_ACTIVE_SOURCE_CATALOG.md'
+      - 'tools/check-active-source-inventory.py'
       - 'tools/verify/hle/**'
       - 'tools/check-vulkan-multirange-overflow-host.py'
       - 'tools/check-native-gpu-fence-release-publication-host.py'
@@ -206,6 +209,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 -B tools/check-vendored-vulkan-fork.py
+      # A CMake-selected native override must have exactly one graph owner
+      # and one catalogue row before the longer GPU and JIT host replays.
+      - name: Active native source ownership and graph parity
+        run: |
+          set -euo pipefail
+          python3 -B tools/check-active-source-inventory.py
       - name: Vulkan arithmetic and frame worker guards
         run: |
           set -euo pipefail
