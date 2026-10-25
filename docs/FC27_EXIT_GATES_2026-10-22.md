@@ -11,7 +11,7 @@ le compteur d'un ancien tableau, des seuls commits ou du succès général d'un 
 | --- | --- | --- | --- |
 | **F01** contention/cache GPU-CPU | **VALIDÉ techniquement** | `3fb2986`, `d5cb865`, `a43af9c` : mesure avant/après des appels samplers, section critique avec concurrent et source native sélectionnée ; fast gate vert sur `c03a47c` | Non mesuré ; F07 |
 | **F02** JIT A32/A64 | **VALIDÉ techniquement** | `2579482`, `c03a47c` : méthodes natives épinglées/maintenues, 96 invalidations, compilation froide/chaude, recompilation et isolation des caches par cœur ; fast gate vert sur `c03a47c` | Non mesuré ; F07 |
-| **F03** HUD/fraîcheur | **EN QUALIFICATION** | `7976a38`, `77b5ee2` : TIC/TSC → descripteurs/barrières → rendu/pré-sentation, 240 frames + 1 après perte/remap ; CI de cette dernière révision à confirmer | Non mesuré ; F07 |
+| **F03** HUD/fraîcheur | **VALIDÉ techniquement** | Préflight [40149972349](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40149972349) vert : `FC27_SIX_GATES_HOST_CHECKPOINT` déclare `F03-hud-freshness=true`, 241 révisions HUD, 2 remaps, 1 perte/récupération, 12 ticks pause, O0/O2 | Non mesuré ; F07 |
 | **F04** textures/contenu GPU | **EN QUALIFICATION** | `3231d51`, `ba30854`, `f96f3cb` : fragments natifs sélectionnés DMA → alias → invalidation CPU, avec parité d'octets `-O0`/`-O2` validée ; restent upload Vulkan/format et cas de remap | Non mesuré ; F07 |
 | **F05** progression HLE | **OUVERT** | Chaîne HID/HLE/IPC → buffer queue → fence → present à prouver | Non mesuré ; F07 |
 | **F06** commandes/gel | **OUVERT** | Mapping personnalisé et transitions pause/mi-temps/fin à prouver | Non mesuré ; F07 |
@@ -29,12 +29,9 @@ de upload/décodage complet** : F04 reste EN QUALIFICATION, et le compteur
 des critères fermés reste 2/6. L'incident précédent sur le type
 `GPUVAddr` du fixture a été corrigé avant ce fast gate vert.
 
-**Dernier jalon techniquement établi : 2/6 (F01 + F02).** Pour F03, le
-rejeu nouveau ajoute une récupération de ressource après disparition : tant que
-le test et la CI alignés sur le même commit ne sont pas verts, ne pas
-l'ajouter au compteur. Un changement purement F03 ne remet pas F01/F02
-à zéro ; seuls des échecs de leurs preuves, modifications des sources
-concernées ou une régression de sélection native justifient leur réouverture.
+**Dernier jalon établi : 3/6 (F01 + F02 + F03).** La prévalidation [40149972349](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40149972349), SHA `ba308547`, a terminé avec succès et émis `FC27_SIX_GATES_HOST_CHECKPOINT` : `f01_to_f06_closed=3`, `host_subpaths_passed=20/20`, F01/F02/F03 `true`, F04/F05/F06 `false`. Une correction limitée à F04 ne remet pas les trois sorties techniques à zéro : seule une régression constatée de leurs preuves ou des sources correspondantes le justifie. C'est une **clôture pré-console avec GPU simulé**, pas une mesure des pixels ou des FPS de FC27.
+
+Le test supplémentaire `tools/check-fc27-f04-native-upload-revision-host.py` (commit `422ff11`) est branché sur fast gate et prévalidation. Il extrait `TextureCache::RefreshContents` et `UploadImageContents`, vérifie que les révisions CPU atteignent le stockage d'image simulé avant la barrière, y compris conversion, accélération, décodage asynchrone et MSAA non pris en charge. **Sa CI est à confirmer, et F04 reste ouvert** : pas de vrai GPU Vulkan ni de décodeur de formats testé.
 
 **F07 est distinct et reste ouvert :** ni ces validations techniques hôte
 ni des builds natifs verts ne démontrent les FPS, l'image ou les commandes
