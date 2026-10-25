@@ -146,6 +146,11 @@ void Launcher::open(Screen screen, bool forward)
     leaving_ = screen_;
     screen_ = screen;
     top_nav_focus_ = -1;
+    // Home, Library and Settings are physical tabs. The Recent tab uses
+    // Home's screen but its own active position until another tab is opened.
+    if (screen == Screen::home) active_main_tab_ = 0;
+    else if (screen == Screen::library) active_main_tab_ = 1;
+    else if (screen == Screen::settings) active_main_tab_ = 3;
     forward_ = forward;
     transition_.start(theme::kScreenSeconds);
     message_.clear();
@@ -311,6 +316,14 @@ void Launcher::launch(const std::string &file, const std::string &title, const s
     launch_case_game_.hero = launch_hero_;
     launch_case_game_.screenshots = launch_screenshots_;
     launch_case_game_.description = launch_description_;
+    // Front case ink is visible immediately on launch. Put its exact 704px
+    // compositor bucket FIRST in the asynchronous decode queue, instead of
+    // waiting behind the cover, every screenshot and the 1920px hero. This
+    // only prioritizes existing local art; no synchronous decode or GPU work.
+    if (const auto* front = case_media::FrontPaper(
+            launch_case_game_.hero, launch_case_game_.cover,
+            launch_case_game_.screenshots))
+        (void)textures_.cover(*front, 704.0f);
     if (!launch_case_game_.cover.empty())
         (void)textures_.cover(launch_case_game_.cover, 760.0f);
     for (const auto& shot : launch_case_game_.screenshots)
@@ -383,6 +396,16 @@ void Launcher::press(Key key)
         return press_mapping(key);
     if (modal_ != Modal::none)
         return press_dialog(key);
+    // L1/R1 are global main-tab shortcuts, including when focus is on a
+    // Library cover. Dialogs and the 3D game handoff above remain exclusive.
+    // Cross enters the existing tab handler; never duplicate screen setup.
+    if ((key == Key::l1 || key == Key::r1) &&
+        (screen_ == Screen::home || screen_ == Screen::library ||
+         screen_ == Screen::settings)) {
+        top_nav_focus_ = (active_main_tab_ + (key == Key::r1 ? 1 : 3)) % 4;
+        (void)press_top_nav(Key::cross);
+        return;
+    }
     if (top_nav_focus_ >= 0 && screen_ != Screen::home)
     {
         if (press_top_nav(key))
@@ -591,6 +614,7 @@ bool Launcher::press_top_nav(Key key)
         else if (target == 2)
         {
             open(Screen::home, false);
+            active_main_tab_ = 2;
             if (!home_.recents.empty())
             {
                 home_recent_ = 0;
