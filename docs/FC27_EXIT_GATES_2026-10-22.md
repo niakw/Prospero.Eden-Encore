@@ -40,6 +40,30 @@ fast gate, la prévalidation et le tableau des six critères au commit
 La CI complète et la clôture F06 sont distinctes : **4/6 reste inchangé**,
 aucun nouveau test sur PS5 demandé.
 
+**Réorientation du 25 octobre — retour fonctionnel utilisateur sur F06 :**
+L'utilisateur jugeait les commandes F06 déjà satisfaisantes dans ses essais.
+Ne pas ouvrir de nouvelle refonte du pad ou de ses raccourcis en l'absence
+d'une régression reproduite. Conserver les tests existants et les protections
+de non-régression. F06 reste administrativement en attente de clôture
+technique de bout en bout, mais **n'est plus le chantier prioritaire**.
+Priorité F05 : attente HLE/IPC, synchronisation des slots et progression invitée.
+
+
+**F05, 25 octobre — notifications manquantes du handle Binder :**
+Le code maintenu réveillait la condition du producteur, mais ne signalait
+pas l'événement noyau consommé par l'invité dans trois transitions :
+`SetBufferCount(0)`, `DetachBuffer`, `DetachNextBuffer`. Le commit
+[cb94cd1](https://github.com/niakw/Prospero.Eden-Encore/commit/cb94cd16325c8edf494a1a1219509809af5e44a1)
+ajoute les trois notifications, sans intervenir dans `QueueBuffer` ni dans
+le routage F06. `tools/check-vendor-consolidation-debt.py` conserve la parité
+avec la source historique en projetant explicitement ces trois deltas.
+`tools/check-native-nvnflinger-detach-wake-host.py` extrait et exécute
+maintenant les deux méthodes `DetachBuffer` et `DetachNextBuffer`, ainsi
+que `SetBufferCount`, et vérifie signaux hôtes/événements invités
+sur succès et absence de réveils sur erreur avec compilation UBSan O0/O2.
+La réussite complète de la CI et la progression réelle FC27 restent
+à établir. **Ces réveils ne clôturent pas F05 à eux seuls.**
+
 **F06, 25 octobre — publication du contrôleur vers le LIFO invité simulé :**
 Le test `tools/check-fc27-f06-native-npad-lifo-host.py` exécute dans un
 même programme C++ les trois méthodes natives maintenues
