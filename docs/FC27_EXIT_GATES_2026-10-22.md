@@ -1,5 +1,46 @@
 # Eden Encore — reste à faire pour FC27 (critères de sortie)
 
+
+## État officiel — F05 clôturé techniquement, 5/6 (25 octobre 2026)
+
+**Révision de référence du code : [771afa2](https://github.com/niakw/Prospero.Eden-Encore/commit/771afa2fa535bed0e436f333cafba3c092735fac)**,
+branche unique **dev/ps5-sparse-jit**. Les quatre workflows du SHA sont réussis :
+
+- [Fast gate #40229853881](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40229853881) : **SUCCESS**.
+- [Prévalidation #40229853920](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40229853920) : **SUCCESS**, checkpoint : **f01_to_f06_closed=5**, **host_subpaths_passed=35/35** et **F05-guest-progress=true**.
+- [Build/package natif PS5 #40229853892](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40229853892) : **SUCCESS**.
+- [CodeQL #40229853921](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40229853921) : **SUCCESS**.
+
+**F05 clos pour le contrat technique pré-console, pas pour la progression du jeu réel.**
+Le nouveau test intégré construit et lie cinq unités de translation C++.
+Avant chaque transfert Binder → BufferQueue → HardwareComposer → NvDisp →
+Host1x → PresentManager, il impose une libération de buffer valide suivie
+de la chaîne native sélectionnée ProducerReleaseWake → KEvent →
+KThread::NotifyAvailable → KThreadQueue::EndWait. Une libération périmée
+ou répétée ne doit pas réveiller un thread supplémentaire.
+
+Le témoin **F05_NATIVE_RELEASE_KTHREAD_TO_PRESENT_BOUNDARY_PASS**
+a validé **260 libérations**, **520 reprises simulées** et **260 images
+transmises dans l'ordre** sous **-O0** et **-O2**. Les **14 sous-chemins
+hôte F05** et les **35 sous-tests globaux** sont tous réussis.
+
+**Limites :** l'ordonnanceur invité, les paquets HIPC du jeu, la CPU invitée,
+le GPU/Vulkan réel et l'affichage PS5 sont simulés ou exclus du scénario.
+Ce résultat ne démontre ni un gain de FPS, ni l'absence de freeze sur FC27.
+Les mesures PS5 appartiennent au critère de qualification matérielle **F07**.
+
+**Compteur : F01 validé · F02 validé · F03 validé · F04 validé · F05 validé ·
+F06 ouvert = 5/6.** F06 reste intact (commandes non modifiées), suivant
+les retours de la console ; les preuves de son critère technique complet
+restent distinctes. Aucun nouveau test console n'est demandé à cette étape.
+
+**Historique :** les sections suivantes sont les journaux des anciens
+jalons et de l'ancien compteur **4/6**. Le checkpoint du SHA **771afa2**
+fait foi pour le statut actuel.
+
+---
+
+
 ## F05 — dernier témoin d'intégration (25 octobre 2026)
 
 **Base technique confirmée :** `3347144` a réussi le fast gate
