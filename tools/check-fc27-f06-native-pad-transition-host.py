@@ -20,6 +20,8 @@ assert "void Consume(std::size_t player, std::span<const ps5::pad::Data> samples
 assert "void SetButtonState(std::size_t player, int button, bool value);" in HEADER
 assert "const auto& active_mapping = ActiveMapping();" in PAD
 assert "if (pad == pad_touchpad) continue;" in PAD
+assert "constexpr unsigned kSelectTapPolls = 25;" in PAD
+assert "constexpr unsigned kSelectHoldPolls = 60;" in PAD
 
 def extract(signature: str) -> str:
     assert PAD.count(signature) == 1, ("native source drift", signature)
@@ -61,6 +63,8 @@ using u32 = std::uint32_t;
 using u64 = std::uint64_t;
 constexpr int kRightSL = 20;
 constexpr int kRightSR = 21;
+constexpr unsigned kSelectTapPolls = 25;
+constexpr unsigned kSelectHoldPolls = 60;
 namespace NativeLogs { inline bool Detailed() { return false; } }
 namespace InputCommon {
 struct VirtualGamepad {
@@ -223,7 +227,7 @@ with tempfile.TemporaryDirectory(prefix="encore-f06-native-pad-") as temp:
     for opt in ("-O0","-O2"):
         target=root/("pad"+opt)
         build=subprocess.run([compiler,"-std=c++20",opt,"-Wall","-Wextra",
-            "-Werror","-fsanitize=undefined","-fno-sanitize-recover=all",
+            "-Werror","-Wno-unused-parameter","-fsanitize=undefined","-fno-sanitize-recover=all",
             "-I",str(ROOT/"headless"),"-I",str(ROOT/"third_party"),
             str(source),"-o",str(target)],capture_output=True,text=True,timeout=90)
         assert build.returncode==0,(opt,build.stderr[-6000:])
