@@ -36,6 +36,50 @@ count_end = "Status BufferQueueProducer::WaitForFreeSlotThenRelock("
 assert active.count(count_begin) == 1 and active.count(count_end) == 1
 selected_count = active[active.index(count_begin):active.index(count_end)].rstrip()
 assert selected_count.count("buffer_wait_event->Signal(service_context.kernel);") == 2
+# F05: the guest event enters the kernel scheduler. Every native producer
+# wake must occur after its queue mutex has been released. Keep host
+# SignalDequeueCondition() under the lock for the dequeue epoch contract.
+assert "std::unique_lock lock{core->mutex};" in selected_count
+assert "lock.unlock();\n            buffer_wait_event->Signal(service_context.kernel);" in selected_count
+assert "    }\n    buffer_wait_event->Signal(service_context.kernel);\n" in selected_count
+assert "std::unique_lock lock{core->mutex};" in selected_single
+assert "lock.unlock();\n    buffer_wait_event->Signal(service_context.kernel);" in selected_single
+assert "std::unique_lock lock{core->mutex};" in selected
+assert "lock.unlock();\n    buffer_wait_event->Signal(service_context.kernel);" in selected
+
+def check_producer_unlocked_method(begin, end, before_signal):
+    body=active[active.index(begin):active.index(end,active.index(begin))]
+    assert body.count("buffer_wait_event->Signal(service_context.kernel);") == 1
+    assert before_signal in body, ("guest event still under core mutex", begin)
+    return body
+
+cancel=check_producer_unlocked_method(
+    "void BufferQueueProducer::CancelBuffer(",
+    "Status BufferQueueProducer::Query(",
+    "core->SignalDequeueCondition();\n    lock.unlock();\n"
+)
+assert "std::unique_lock lock{core->mutex};" in cancel
+disconnect=check_producer_unlocked_method(
+    "Status BufferQueueProducer::Disconnect(",
+    "Status BufferQueueProducer::SetPreallocatedBuffer(",
+    "    }\n\n    if (released_queue) {\n"
+)
+assert disconnect.index("    if (released_queue) {") < disconnect.index(
+    "buffer_wait_event->Signal(service_context.kernel);")
+preallocate=check_producer_unlocked_method(
+    "Status BufferQueueProducer::SetPreallocatedBuffer(",
+    "Kernel::KReadableEvent* BufferQueueProducer::GetNativeHandle(",
+    "core->SignalDequeueCondition();\n    lock.unlock();\n"
+)
+assert "std::unique_lock lock{core->mutex};" in preallocate
+queued=check_producer_unlocked_method(
+    "Status BufferQueueProducer::QueueBuffer(",
+    "void BufferQueueProducer::CancelBuffer(",
+    "        output->Inflate("
+)
+assert queued.index("        output->Inflate(") < queued.index(
+    "buffer_wait_event->Signal(service_context.kernel);")
+assert "    }\n\n    if (recycled_queued_slot) {" in queued
 assert "core->override_max_buffer_count = 0;" in selected_count
 assert selected_count.index("core->override_max_buffer_count = 0;") < selected_count.index(
     "buffer_wait_event->Signal(service_context.kernel);")
