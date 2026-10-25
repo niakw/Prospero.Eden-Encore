@@ -24,7 +24,8 @@ BufferQueueConsumer::~BufferQueueConsumer() = default;
 
 Status BufferQueueConsumer::AcquireBuffer(BufferItem* out_buffer,
                                           std::chrono::nanoseconds expected_present) {
-    std::scoped_lock lock{core->mutex};
+    std::unique_lock lock{core->mutex};
+    bool dropped_queued_frames = false;
 
     // Check that the consumer doesn't currently have the maximum number of buffers acquired.
     const s32 num_acquired_buffers{
@@ -73,6 +74,7 @@ Status BufferQueueConsumer::AcquireBuffer(BufferItem* out_buffer,
             }
 
             core->queue.erase(front);
+            dropped_queued_frames = true;
             front = core->queue.begin();
         }
 
@@ -82,6 +84,15 @@ Status BufferQueueConsumer::AcquireBuffer(BufferItem* out_buffer,
             desired_present < expected_present.count() + MAX_REASONABLE_NSEC) {
             LOG_DEBUG(Service_Nvnflinger, "defer desire={} expect={}", desired_present,
                       expected_present.count());
+            if (dropped_queued_frames) {
+                // Even without an acquired frame, discarded entries can make
+                // producer progress. Wake both host dequeuers and guest Binder
+                // waiters. Never invoke a callback while core->mutex is held.
+                core->SignalDequeueCondition();
+                const auto listener = core->connected_producer_listener;
+                lock.unlock();
+                if (listener) listener->OnBufferReleased();
+            }
             return Status::PresentLater;
         }
 
@@ -109,9 +120,16 @@ Status BufferQueueConsumer::AcquireBuffer(BufferItem* out_buffer,
 
     core->queue.erase(front);
 
-    // We might have freed a slot while dropping old buffers, or the producer  may be blocked
-    // waiting for the number of buffers in the queue to decrease.
+    // We might have freed a slot while dropping old buffers, or the producer
+    // may be blocked waiting for the number of queued buffers to decrease.
     core->SignalDequeueCondition();
+    if (dropped_queued_frames) {
+        // A dropped queued buffer is another producer-availability transition.
+        // The host condition is insufficient for the guest's Binder wait handle.
+        const auto listener = core->connected_producer_listener;
+        lock.unlock();
+        if (listener) listener->OnBufferReleased();
+    }
 
     return Status::NoError;
 }
