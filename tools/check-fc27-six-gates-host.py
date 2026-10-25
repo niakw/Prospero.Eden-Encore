@@ -52,6 +52,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-fc27-f05-native-acquire-drop-wake-host.py",
         "check-fc27-f05-native-queue-replace-wake-host.py",
         "check-fc27-f05-native-kernel-wait-publication-host.py",
+        "check-fc27-f05-native-kthread-endwait-host.py",
         "check-native-host1x-increment-handoff-host.py",
     ),
     "F06-input-and-pause": (
@@ -333,6 +334,33 @@ def run() -> int:
                         print("F04_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F04_native_remap_dma_upload_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f05-native-kthread-endwait-host.py":
+                    guest_endwait = re.findall(
+                        r"F05_NATIVE_KTHREAD_ENDWAIT_PASS cycles=(\d+) resumed_game=(\d+) "
+                        r"resumed_hud=(\d+) wait_nodes_unlinked=(\d+) runnable_state=(\d+) "
+                        r"timer_cancelled=(\d+) level_coalescing=(\d+) safe_stop=(\d+) "
+                        r"scope=source_extracted_kthread_queue_mock_scheduler",
+                        result.stdout,
+                    )
+                    excludes = "F05_REAL_GUEST_SCHEDULER_AND_FC27_LIVENESS_NOT_PROVEN" in result.stdout
+                    if guest_endwait != [("260","260","260","1","1","520","1","1")]*2 or not excludes:
+                        ok, reason = False, "f05_native_guest_kthread_endwait_witness_missing"
+                    else:
+                        fixture_metrics["F05_native_kthread_endwait_host"] = {
+                            "wait_cycles": 260,
+                            "guest_style_threads": 2,
+                            "native_guest_resume_transitions": 520,
+                            "wait_nodes_unlinked": True,
+                            "timer_tasks_cancelled": 520,
+                            "compile_modes": ["O0", "O2"],
+                            "scope": "source-extracted native KThread::NotifyAvailable, "
+                                     "KThreadQueue::EndWait and native kernel event chain; "
+                                     "mock scheduler, no real guest execution or FC27 evidence",
+                        }
+                        print("F05_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F05_native_kthread_endwait_host"],
+                                         sort_keys=True), flush=True)
+
                 if ok and script == "check-fc27-f05-native-kernel-wait-publication-host.py":
                     kernel_waits = re.findall(
                         r"F05_NATIVE_KERNEL_GUEST_WAIT_WAKE_PASS cycles=(\d+) "
