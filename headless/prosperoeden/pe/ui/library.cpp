@@ -153,8 +153,12 @@ void flat_front_fallback(Canvas& c, const Game& game, const Rect& r)
     const float logo_w = r.w * 0.222f;
     const Rect logo{r.x, r.y, logo_w, logo_w * (190.0f / 193.0f)};
     if (c.textures.switch_logo() != 0) {
+        // This fixed top-left raster insert shares the footer's TGA upload
+        // orientation, not the dynamically generated paper texture.
+        // Flip the insert ONCE here; the 3D case's final FBO UV flip is
+        // separate and must remain unchanged.
         c.list.image(c.textures.switch_logo(), logo,
-                     {0.0f, 0.0f, 1.0f, 1.0f}, Color::rgb(0xffffff));
+                     {0.0f, 1.0f, 1.0f, -1.0f}, Color::rgb(0xffffff));
     } else {
         c.list.rounded_rect(logo, 0.0f, Color::rgb(0xe31930));
         const float mark = logo.w * 0.43f;
