@@ -234,6 +234,27 @@ def resolve_template(expression):
         return resolve_template(expression.left)+resolve_template(expression.right)
     raise AssertionError("unrecognized native compositor fixture expression")
 compositor=resolve_template(assignments[0])
+# The linked integration fixture starts the native QueueBuffer extraction
+# AFTER local declarations. Preserve the newly added F05 recycled-slot
+# flag and kernel-event interface in the mock. Do not strip or rewrite
+# the native body: it must still call Signal() on recycled tracked frames.
+assert "    bool recycled_queued_slot = false;" in queued
+assert "buffer_wait_event->Signal(service_context.kernel);" in producer_publish
+compositor=once(
+    compositor,
+    "    const bool record_buffer_history=false;\n",
+    """    const bool record_buffer_history=false;
+    bool recycled_queued_slot = false;
+    struct GuestKernel {};
+    struct GuestServiceContext { GuestKernel kernel{}; } service_context;
+    struct GuestWaitEvent {
+        unsigned calls{};
+        void Signal(GuestKernel&) { ++calls; }
+    } guest_event;
+    auto* buffer_wait_event = &guest_event;
+""",
+    "QueueBuffer local Binder event and recycled-slot state",
+)
 for key,value in (
     ("__CONSUMER_METHODS__",consumer_methods),
     ("__PRODUCER_PUBLISH__",producer_publish),
