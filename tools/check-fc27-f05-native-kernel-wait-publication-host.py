@@ -58,7 +58,7 @@ cpp=r"""
 #define ASSERT(x) assert(x)
 namespace Kernel {
 enum class Result {Success,InvalidState};
-constexpr Result ResultSuccess=Result::Success;
+[[maybe_unused]] constexpr Result ResultSuccess=Result::Success;
 constexpr Result ResultInvalidState=Result::InvalidState;
 #define R_SUCCEED() return Result::Success
 #define R_SUCCEED_IF(x) if(x) return Result::Success
