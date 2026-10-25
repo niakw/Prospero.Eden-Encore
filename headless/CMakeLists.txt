@@ -593,6 +593,15 @@ if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")
 endif()
 list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_producer.cpp")
 list(APPEND core_sources "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")
+# Consumer queue teardown must notify both host dequeue waiters and the
+# guest Binder handle. Keep pinned Eden unmodified and select one source owner.
+set(EDEN_MAINTAINED_NVNF_CONSUMER
+    "${PORT_ROOT}/vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp")
+if(NOT EXISTS "${EDEN_MAINTAINED_NVNF_CONSUMER}")
+    message(FATAL_ERROR "Missing maintained buffer queue consumer source")
+endif()
+list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_consumer.cpp")
+list(APPEND core_sources "${EDEN_MAINTAINED_NVNF_CONSUMER}")
 if(EDEN_DEV_PROFILE)
     target_compile_definitions(core PRIVATE EDEN_NVNF_DEQUEUE_PROFILE=1)
 endif()
