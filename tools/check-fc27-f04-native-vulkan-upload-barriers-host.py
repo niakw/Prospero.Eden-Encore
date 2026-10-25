@@ -19,7 +19,10 @@ pre=(ROOT/".github/workflows/encore-core-preflight.yml").read_text()
 cmake=(ROOT/"headless/vulkan.cmake").read_text()
 command="python3 -B tools/check-fc27-f04-native-vulkan-upload-barriers-host.py"
 assert command in fast and command in pre
-assert "vk_texture_cache_cost.cpp" in cmake
+# The maintained file is selected by CMake's cost suffix loop, not a
+# literal complete filename in the recipe.
+assert "foreach(name vk_fence_manager vk_buffer_cache vk_texture_cache" in cmake
+assert 'list(APPEND video_sources "${PORT_BUILD_DIR}/${name}_cost.cpp")' in cmake
 start="struct RangedBarrierRange {"
 end="\n[[nodiscard]] VkImageBlit MakeImageBlit("
 assert source.count(start)==1 and source.count(end)==1
