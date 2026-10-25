@@ -40,6 +40,33 @@ fast gate, la prévalidation et le tableau des six critères au commit
 La CI complète et la clôture F06 sont distinctes : **4/6 reste inchangé**,
 aucun nouveau test sur PS5 demandé.
 
+**F05, 25 octobre — recyclage des images et réveil de l'invité :**
+Le moteur conservait deux chemins de recyclage ne notifiant pas le handle
+Binder du producteur : `BufferQueueConsumer::AcquireBuffer` lorsqu'il écarte
+des images en retard, et `BufferQueueProducer::QueueBuffer` lorsqu'une frame
+remplace une frame `droppable` déjà suivie. Les corrections
+[1890067](https://github.com/niakw/Prospero.Eden-Encore/commit/1890067b9c37ff5342d152a471f7c04cac451c81)
+et [a9ba080](https://github.com/niakw/Prospero.Eden-Encore/commit/a9ba080d1ee5b054177b3ddc79a4f4bd4c55af10)
+publient l'événement invité uniquement lors de ces transitions ; le chemin
+de l'acquisition conserve un callback hors du mutex `core->mutex`.
+Les nouveaux tests `check-fc27-f05-native-acquire-drop-wake-host.py`
+(260 acquisitions, 520 suppressions simulées) et
+`check-fc27-f05-native-queue-replace-wake-host.py` (260 remplacements)
+rejouent les branches natives sous `-O0`/`-O2`, sans transformer
+ces résultats en preuve de gameplay FC27.
+Les contrôles de parité vendor, le fast gate, la prévalidation et
+`check-fc27-six-gates-host.py` ont été actualisés. **Nouvelle CI en cours** ;
+F05 reste non clôturé jusqu'à la preuve de progression HLE/IPC invitée.
+
+**Inventaire moteur, 25 octobre :** le contrôle CI sur `c403948`
+échouait parce que `owned_code_count_at_snapshot=504` et
+`post_snapshot_owned_additions` ne comptait qu'une des deux sources ajoutées.
+Le commit [54caa67](https://github.com/niakw/Prospero.Eden-Encore/commit/54caa67d6a67f85b4cf56ae8b36be3ccf089a03d)
+enregistre `buffer_queue_consumer.cpp` comme source native maintenue,
+avec sa preuve F05. L'inventaire suivi atteint **506 sources C/C++**
+(504 à la référence et 2 nouvelles), sans affirmer que 506 fichiers
+ont été optimisés ou validés sur PS5.
+
 **F05, 25 octobre — fermeture consommateur sans attente invitée persistante :**
 Le chemin épinglé `BufferQueueConsumer::Disconnect` abandonnait la file et
 réveillait `SignalDequeueCondition` (condition hôte), sans notification
