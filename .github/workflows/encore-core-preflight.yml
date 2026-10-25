@@ -327,6 +327,7 @@ jobs:
           python3 -B tools/check-fc27-match-input-profile.py
           python3 -B tools/check-fc27-f06-native-pad-transition-host.py
           python3 -B tools/check-fc27-f06-native-npad-handoff-host.py
+          python3 -B tools/check-fc27-f06-native-npad-lifo-host.py
           python3 -B tools/check-ps5-pad-freeze-observability.py
           python3 -B tools/check-ps5-autocontrol-context.py
           python3 -B tools/check-gpu-native-diagnostics.py
