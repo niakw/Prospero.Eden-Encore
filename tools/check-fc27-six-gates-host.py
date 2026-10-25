@@ -420,10 +420,10 @@ def run() -> int:
                         result.stdout,
                     )
                     integrated_release = re.findall(
-                        r"F05_NATIVE_RELEASE_TO_KTHREAD_PASS cycles=(\\d+) "
-                        r"successful_releases=(\\d+) stale_releases_quiet=(\\d+) "
-                        r"duplicate_releases_quiet=(\\d+) guest_wait_completions=(\\d+) "
-                        r"host_dequeue_generations=(\\d+) "
+                        r"F05_NATIVE_RELEASE_TO_KTHREAD_PASS cycles=(\d+) "
+                        r"successful_releases=(\d+) stale_releases_quiet=(\d+) "
+                        r"duplicate_releases_quiet=(\d+) guest_wait_completions=(\d+) "
+                        r"host_dequeue_generations=(\d+) "
                         r"scope=source_extracted_consumer_release_and_kthread_mock_scheduler",
                         result.stdout,
                     )
