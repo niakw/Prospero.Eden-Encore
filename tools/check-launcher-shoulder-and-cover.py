@@ -13,6 +13,8 @@ def method(text, start, stop):
     assert text.count(stop) >= 1, stop
     return text.split(start, 1)[1].split(stop, 1)[0]
 settings = source("headless/prosperoeden/pe/ui/settings.cpp")
+launcher = source("headless/prosperoeden/pe/ui/launcher.cpp")
+launcher_h = source("headless/prosperoeden/pe/ui/launcher.hpp")
 library = source("headless/prosperoeden/pe/ui/library.cpp")
 switch = source("headless/prosperoeden/pe/ui/switch_theme.cpp")
 mapping = source("headless/prosperoeden/pe/ui/mapping.cpp")
@@ -58,6 +60,22 @@ assert 'scene(game.cover,' not in back
 assert 'case_art_contain(' not in library
 assert 'reconstructed_paper(c, paper);' in library
 assert "constexpr float kFixedFooter = 0.41f;" in back
+# The user's fixed retail-style footer must be upright in flat Library
+# previews AND the loader's offscreen ink renderer (both share this code).
+assert 'c.list.image(c.textures.switch_rear_footer(), footer,\n                     {0.0f, 1.0f, 1.0f, -1.0f}' in back
+assert 'c.list.image(c.textures.switch_rear_footer(), footer,\n                     {0.0f, 0.0f, 1.0f, 1.0f}' not in back
+# Main tabs are navigated by L1/R1 before Library page/Settings list handlers.
+# Confirmation/modal/game input remains untouched by this global shortcut.
+press = method(launcher, "void Launcher::press(Key key)", "void Launcher::update(float dt)")
+assert press.index('if (modal_ != Modal::none)') < press.index('if ((key == Key::l1 || key == Key::r1)')
+assert press.index('if ((key == Key::l1 || key == Key::r1)') < press.index('switch (screen_)')
+assert '(active_main_tab_ + (key == Key::r1 ? 1 : 3)) % 4' in press
+assert '(void)press_top_nav(Key::cross);' in press
+assert 'int active_main_tab_ = 0;' in launcher_h
+assert 'active_main_tab_ = 2;' in launcher
+for initial in range(4):
+    assert (initial + 1) % 4 in range(4)
+    assert ((initial + 1) % 4 + 3) % 4 == initial
 assert 'c.textures.switch_rear_footer() != 0' in back
 assert "ENCORE / GAME INFORMATION" in back
 assert "const std::string& credit = !game.publisher.empty()" in back
