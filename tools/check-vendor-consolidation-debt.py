@@ -379,7 +379,7 @@ assert dequeue_legacy_projection == dequeue_expected, (
     "Maintained queue-dequeue provenance or the F05 release wake delta diverged"
 )
 assert 'check-fc27-f05-producer-release-wake-host.py' in (
-    ROOT / ".github/workflows/encore-core-fast-gate.yml").read_text()
+    root / ".github/workflows/encore-core-fast-gate.yml").read_text()
 
 # Compile one maintained source; CMake owns DEV's compile-time profiler switch.
 assert c.count('buffer_queue_producer_standard.cpp') == 0
