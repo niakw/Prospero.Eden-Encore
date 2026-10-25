@@ -17,6 +17,19 @@ edits = next(ast.literal_eval(n.value) for n in tree.body
 probes = next(ast.literal_eval(n.value) for n in tree.body
               if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and
               t.id == 'probes' for t in n.targets))
+# F04 deliberately changed the selected Vulkan upload barrier. Preserve the
+# original pre-deferred-copy fingerprint by undoing that separately reviewed
+# edit as well. Import its exact transform from the pinned-fork oracle rather
+# than copying an evolving SHA into this unrelated ownership regression.
+oracle = ast.parse((ROOT / 'tools/check-vendored-vulkan-fork.py').read_text())
+upload_nodes = [n for n in ast.walk(oracle)
+                if isinstance(n, ast.Assign) and any(
+                    isinstance(t, ast.Name) and t.id == 'upload_deltas'
+                    for t in n.targets)]
+assert len(upload_nodes) == 1
+upload_deltas = ast.literal_eval(upload_nodes[0].value)
+assert len(upload_deltas) == 4
+
 tick_snapshot = [(old, new) for old, new in probes['vk_buffer_cache']
                  if "BufferCacheRuntime::TickFrame(" in new]
 assert len(tick_snapshot) == 1
@@ -29,6 +42,14 @@ for module, changes in edits.items():
     for old, new, count in reversed(changes):
         assert previous.count(new) == count, (module, new)
         previous = previous.replace(new, old)
+    if module == 'vk_texture_cache':
+        # Upload synchronization changed after the deferred-copy optimization.
+        # Undo it before verifying the original historical blob so the fixed
+        # fingerprint continues to detect unrelated bytes or source drift.
+        for pinned_fragment, reviewed_fragment in reversed(upload_deltas):
+            assert previous.count(reviewed_fragment) == 1, (
+                "reviewed Vulkan image upload barrier moved", reviewed_fragment)
+            previous = previous.replace(reviewed_fragment, pinned_fragment)
     if module == 'vk_buffer_cache':
         # This later, independent frame-snapshot optimization must not
         # invalidate the historical fingerprint of deferred-copy ownership.
