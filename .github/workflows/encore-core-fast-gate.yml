@@ -70,6 +70,7 @@ on:
       - 'tools/check-fc27-f05-native-kernel-wait-publication-host.py'
       - 'tools/check-fc27-f05-native-kthread-endwait-host.py'
       - 'tools/check-fc27-f05-native-binder-handle-ipc-host.py'
+      - 'tools/analyze-guest-progress-stall.py'
       - 'tools/check-fc27-f06-native-pad-transition-host.py'
       - 'tools/check-fc27-f06-native-npad-handoff-host.py'
       - 'tools/check-fc27-f06-native-npad-lifo-host.py'
@@ -252,6 +253,7 @@ jobs:
           python3 -B tools/check-native-indirect-null-binding-host.py
           python3 -B tools/check-native-nvnflinger-detach-wake-host.py
           python3 -B tools/check-native-nvnflinger-dequeue-profile-host.py
+          python3 -B tools/analyze-guest-progress-stall.py --self-test
           python3 -B tools/check-native-nvnflinger-queue-callback-host.py
           python3 -B tools/check-image-repro-diagnostic-host.py
           python3 -B tools/check-native-graphics-buffer-slot-bounds-host.py
