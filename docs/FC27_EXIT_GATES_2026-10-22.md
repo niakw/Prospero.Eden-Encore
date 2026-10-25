@@ -1,5 +1,36 @@
 # Eden Encore — reste à faire pour FC27 (critères de sortie)
 
+## F05 — verrouillage producteur / noyau invité (25 octobre, nouveau lot)
+
+**Correctif moteur à qualifier par la CI du HEAD :** tous les huit sites
+`buffer_wait_event->Signal(service_context.kernel)` dans
+`BufferQueueProducer` sont désormais émis **après** la sortie de
+`core->mutex`. Les mutations de slots et le réveil hôte
+`SignalDequeueCondition` restent dans la section critique, tandis que
+`KEvent::Signal`, susceptible de prendre le verrou de l'ordonnanceur invité,
+n'y entre plus. Le cas zéro de `SetBufferCount` utilise un déverrouillage
+explicite avant retour ; `Disconnect` ne publie l'événement qu'après une
+déconnexion réussie.
+
+- Sources : `66be480` (remplacement de frame), `ae4b068` (tous les autres
+  chemins de transition).
+- Provenance : `dff582d`, parité exacte du producteur maintenu avec les
+  ajouts F05 contrôlés.
+- Tests : `c96b555` (rejeu remplacement), `4deadd0` (verrouillage pour
+  tous les chemins), `d4fe63c` (assertion mise à jour).
+- CI à confirmer : fast gate [#40212403986](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40212403986),
+  prévalidation [#40212403950](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40212403950),
+  build PS5 [#40212403951](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40212403951),
+  CodeQL [#40212403982](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40212403982).
+
+**Compteur F01–F06 : 4/6** (F01–F04 clos techniquement ; F05 et F06
+ouverts). Le fonctionnement F06 ayant été jugé satisfaisant en console,
+aucun changement du chemin des commandes. La disparition des gel/ralentissements
+de FC27 n'est pas démontrée par ces tests de source, même avec un build vert.
+
+---
+
+
 ## Dernier état contrôlé — F05
 
 **Base techniquement verte :** `e2eecc6` a réussi le fast gate
