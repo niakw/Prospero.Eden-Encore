@@ -54,6 +54,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-fc27-match-input-profile.py",
         "check-native-hid-cadence-host.py",
         "check-fc27-f06-native-pad-transition-host.py",
+        "check-fc27-f06-native-npad-handoff-host.py",
     ),
 }
 
@@ -473,6 +474,34 @@ def run() -> int:
                         print("F05_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F05_host1x_increment_handoff_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f06-native-npad-handoff-host.py":
+                    handoff = re.findall(
+                        r"F06_NATIVE_NPAD_HANDOFF_PASS plus=(\d+) releases=(\d+) masks=(\d+) "
+                        r"config_filter=(\d+) disconnect=(\d+) reconnect=(\d+) "
+                        r"joycon_right=(\d+) "
+                        r"scope=source_extracted_mock_controller_no_guest_lifo",
+                        result.stdout,
+                    )
+                    excluded = (
+                        "F06_GUEST_LIFO_GAME_ACTIONS_AND_FC27_PHASE_PROGRESS_NOT_PROVEN"
+                        in result.stdout
+                    )
+                    if handoff != [("1",)*7]*2 or not excluded:
+                        ok, reason = False, "f06_native_npad_handoff_witness_missing"
+                    else:
+                        fixture_metrics["F06_native_npad_handoff_host"] = {
+                            "plus_to_npad_state": True,
+                            "release_unchanged": True,
+                            "filtered_and_disconnected": True,
+                            "reconnect_and_joycon_style": True,
+                            "compile_modes": ["O0", "O2"],
+                            "scope": "native GetNpadButtons and RequestPadStateUpdate "
+                                     "with mock controller. Guest LIFO/FC27 NOT proven",
+                        }
+                        print("F06_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F06_native_npad_handoff_host"],
+                                         sort_keys=True), flush=True)
+
                 if ok and script == "check-fc27-f06-native-pad-transition-host.py":
                     transitions = re.findall(
                         r"F06_NATIVE_PAD_TRANSITIONS_PASS "
