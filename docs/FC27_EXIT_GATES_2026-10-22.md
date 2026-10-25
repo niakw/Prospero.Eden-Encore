@@ -1,5 +1,48 @@
 # Eden Encore — reste à faire pour FC27 (critères de sortie)
 
+## Dernier état contrôlé — F05
+
+**Base techniquement verte :** `e2eecc6` a réussi le fast gate
+[#40165760771](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40165760771),
+la prévalidation hôte complète
+[#40165760815](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40165760815)
+(34 sous-chemins sur 34), le build PS5
+[#40165760784](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40165760784)
+(`eboot.elf` produit, paquet contrôlé), et CodeQL
+[#40165760785](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40165760785).
+Ces validations confirment le code compilé et ses témoins hôtes,
+**pas la fluidité du jeu ou la reprise de son compteur d'instructions**.
+
+**Nouvelle attribution d'un blocage durable (CI encore à valider) :**
+les compteurs `guest_dequeue_wait` sont mis à jour lorsque `DequeueBuffer`
+revient ; si le producteur attend pour toujours dans
+`BufferQueueCore::WaitForDequeueCondition`, ils ne permettent pas d'attribuer
+le gel. Avec les commits `04946f1`, `ae465e5`, `71acf98d`, le mode de
+profilage **détaillé seulement** expose `dequeue_blocked` dans
+`EDEN_DEV_GUEST` et dans `EDEN_GPU_REPORT_STALLED`. C'est le nombre
+d'attentes hôtes de slots **actuellement en cours**, mesuré par un scope
+RAII autour de l'attente et décrémenté aussi sur sortie anticipée.
+Pas de polling, timeout, allocation, log supplémentaire par frame ou
+modification du prédicat de réveil ; profilage désactivé, ce compteur
+n'entraîne aucune écriture atomique sur le chemin d'attente.
+L'oracle de provenance maintenu et le test compilé sous UBSan `-O0`/`-O2`
+vérifient le scope et huit attentes concurrentes. Une valeur non nulle
+**n'est pas** la preuve que l'IPC ou le PC invité est bloqué ; les deux
+observations doivent rester indépendantes.
+
+**Inventaire séparé :** `EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS` sur la
+prévalidation verte relève `owned_code=506`, `handled=443`,
+`remaining_emulator_to_optimize_review=0` et `launcher_ui_pending_separate=63`.
+Les 63 chemins restants sont dans le volet launcher/UI et non 63 correctifs
+moteur manquants ; ce compteur n'implique ni accélération ni validation FC27.
+
+**Critères pré-console : F01–F04 validés techniquement, F05 et F06
+encore ouverts (4/6).** F06 est jugé fonctionnel par l'utilisateur et
+reste hors du chantier sauf régression reproduite. Aucun nouveau test console
+demandé tant que le lot F05 n'est pas qualifié.
+
+---
+
 ## Tableau de bord courant — 25 octobre 2026 (référence technique, 4/6)
 
 **Source de vérité automatique :** `tools/check-fc27-six-gates-host.py`, exécuté par le workflow
