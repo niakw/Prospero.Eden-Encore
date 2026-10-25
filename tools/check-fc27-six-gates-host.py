@@ -47,6 +47,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-native-gpu-composite-syncpoint-host.py",
         "check-native-vulkan-renderer-handoff-host.py",
         "check-fc27-f05-native-nvdisp-vulkan-present-chain-host.py",
+        "check-fc27-f05-producer-release-wake-host.py",
         "check-native-host1x-increment-handoff-host.py",
     ),
     "F06-input-and-pause": (
@@ -326,6 +327,33 @@ def run() -> int:
                         print("F04_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F04_native_remap_dma_upload_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f05-producer-release-wake-host.py":
+                    proofs = re.findall(
+                        r"F05_PRODUCER_RELEASE_WAKE_HOST_PASS initial=(\d+) "
+                        r"forwarded=(\d+) stop_before_close=(\d+) "
+                        r"concurrent_release=(\d+) "
+                        r"scope=source_extracted_listener_mock_guest_kernel_event",
+                        result.stdout,
+                    )
+                    outstanding = (
+                        "F05_GUEST_IPC_SCHEDULING_AND_REAL_GAME_PROGRESS_NOT_PROVEN"
+                        in result.stdout
+                    )
+                    if proofs != [("260", "260", "1", "1")]*2 or not outstanding:
+                        ok, reason = False, "f05_guest_release_wakeup_source_proof_missing"
+                    else:
+                        fixture_metrics["F05_guest_release_wake_host"] = {
+                            "initial_release_callbacks": 260,
+                            "delegate_callbacks": 260,
+                            "concurrent_teardown": True,
+                            "compile_modes": ["O0", "O2"],
+                            "scope": "native producer listener with mock kernel event; "
+                                     "actual guest wait, HIPC and FC27 liveness unproven",
+                        }
+                        print("F05_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F05_guest_release_wake_host"],
+                                         sort_keys=True), flush=True)
+
                 if ok and script == "check-native-gpu-composite-syncpoint-host.py":
                     records = re.findall(
                         r"F05_NV_DISP_GPU_SYNCPOINT_SOURCE_PASS requests=(\d+) "
