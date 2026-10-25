@@ -29,11 +29,17 @@ assert 'PPSA99008' in lifecycle
 # The rotating 3D jacket is the only authored startup animation. Both
 # render backends retain their warm-up presentations but show a plain
 # dark handoff, NOT the obsolete violet loading shader.
-vulkan_loading = (root / "headless/vulkan_hud.frag").read_text()
 graphics = (root / "headless/graphics.cpp").read_text()
 vulkan_backend = (root / "vendor/encore-active/eden-vulkan/vulkan_renderer.cpp").read_text()
-assert 'color = vec4(0.024, 0.035, 0.039, 1.0);' in vulkan_loading
-assert 'loading_scene(' not in vulkan_loading
+native_presenter = (root / "vendor/encore-active/eden-vulkan/vulkan_window_adapt_pass.cpp").read_text()
+assert 'const bool quiet_loading_handoff = hud.loading != 0;' in native_presenter
+assert 'if (hud.width && !quiet_loading_handoff && !hud_pipeline)' in native_presenter
+assert 'if (hud.width && !quiet_loading_handoff &&' in native_presenter
+assert 'const f32 bg_red = quiet_loading_handoff ? 0.024f :' in native_presenter
+assert 'const f32 bg_green = quiet_loading_handoff ? 0.035f :' in native_presenter
+assert 'const f32 bg_blue = quiet_loading_handoff ? 0.039f :' in native_presenter
+assert 'const VkRect2D scissor{' in native_presenter
+assert 'const VkRect2D scissor = hud.loading' not in native_presenter
 assert 'PresentVulkanLoading(renderer);' in graphics
 assert 'PresentLoading();' in vulkan_backend
 assert '"void main(){ color = vec4(0.024, 0.035, 0.039, 1.0); }\\n";' in graphics
