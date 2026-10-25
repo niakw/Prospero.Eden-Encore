@@ -105,6 +105,7 @@ jobs:
           python3 -B tools/check-ps5-texture-channel-missing-mapping-host.py
           python3 -B tools/check-fc27-f03-native-texture-feedback-chain-host.py
           python3 -B tools/check-fc27-f03-native-present-freshness-host.py
+          python3 -B tools/check-fc27-f04-native-dma-alias-bytes-host.py
           python3 -B tools/check-ps5-scissor-extremes-host.py
           python3 -B tools/check-ps5-pipeline-build-handoff-host.py
 
