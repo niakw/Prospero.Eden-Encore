@@ -1,6 +1,43 @@
 # Eden Encore — reste à faire pour FC27 (critères de sortie)
 
-## Tableau de bord de progression — 22 octobre, état après `da6d57c`
+## Tableau de bord courant — 25 octobre 2026 (référence technique)
+
+**Source de vérité automatique :** `tools/check-fc27-six-gates-host.py`, exécuté par le workflow
+`encore-core-preflight.yml`. Sa sortie `FC27_SIX_GATES_HOST_CHECKPOINT` contient
+`preconsole_exit_status`, `f01_to_f06_closed` et les preuves par test. Ne pas déduire
+le compteur d'un ancien tableau, des seuls commits ou du succès général d'un autre workflow.
+
+| ID | État de clôture pré-console | Preuve ciblée | État PS5 |
+| --- | --- | --- | --- |
+| **F01** contention/cache GPU-CPU | **VALIDÉ techniquement** | `3fb2986`, `d5cb865`, `a43af9c` : mesure avant/après des appels samplers, section critique avec concurrent et source native sélectionnée ; fast gate vert sur `c03a47c` | Non mesuré ; F07 |
+| **F02** JIT A32/A64 | **VALIDÉ techniquement** | `2579482`, `c03a47c` : méthodes natives épinglées/maintenues, 96 invalidations, compilation froide/chaude, recompilation et isolation des caches par cœur ; fast gate vert sur `c03a47c` | Non mesuré ; F07 |
+| **F03** HUD/fraîcheur | **EN QUALIFICATION** | `7976a38`, `77b5ee2` : TIC/TSC → descripteurs/barrières → rendu/pré-sentation, 240 frames + 1 après perte/remap ; CI de cette dernière révision à confirmer | Non mesuré ; F07 |
+| **F04** textures/contenu GPU | **OUVERT** | Aliasing, remapping, DMA, uploads et intégrité octet par octet à prouver | Non mesuré ; F07 |
+| **F05** progression HLE | **OUVERT** | Chaîne HID/HLE/IPC → buffer queue → fence → present à prouver | Non mesuré ; F07 |
+| **F06** commandes/gel | **OUVERT** | Mapping personnalisé et transitions pause/mi-temps/fin à prouver | Non mesuré ; F07 |
+
+**Dernier jalon techniquement établi : 2/6 (F01 + F02).** Pour F03, le
+rejeu nouveau ajoute une récupération de ressource après disparition : tant que
+le test et la CI alignés sur le même commit ne sont pas verts, ne pas
+l'ajouter au compteur. Un changement purement F03 ne remet pas F01/F02
+à zéro ; seuls des échecs de leurs preuves, modifications des sources
+concernées ou une régression de sélection native justifient leur réouverture.
+
+**F07 est distinct et reste ouvert :** ni ces validations techniques hôte
+ni des builds natifs verts ne démontrent les FPS, l'image ou les commandes
+réels dans FC27 sur la PS5. On ne demande pas de test console intermédiaire.
+
+**Vérifications GitHub :** [fast gate F01/F02 vert au commit c03a47c](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40146542127) ;
+[fast gate F03 précédent vert au commit 7976a38](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40148166205) ;
+[nouveau fast gate après remap 77b5ee2](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40148940424).
+Une CI annulée par un push ultérieur n'est pas un test échoué. L'état CI
+des commits changeants doit être relu avant d'affirmer une nouvelle clôture.
+
+---
+
+## Archives : tableau de bord du 22 octobre, état après `da6d57c`
+
+> **Archive historique uniquement.** Les états ci-dessous (dont le 0/6) sont antérieurs aux validations F01/F02 et ne doivent pas servir de tableau courant.
 
 **Il reste six critères techniques ouverts (F01–F06), puis la qualification console F07.** Les correctifs et les contrôles hôte réussis font avancer des sous-chemins précis, **mais aucun critère technique complet n'a encore satisfait tous ses critères de clôture**.
 

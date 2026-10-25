@@ -259,18 +259,19 @@ def run() -> int:
                     replays = re.findall(
                         r"F03_NATIVE_TIC_TO_PRESENT_FRESHNESS_PASS "
                         r"frames=(\d+) hud_unique=(\d+) remaps=(\d+) "
-                        r"pause_ticks=(\d+) barriers=(\d+) "
+                        r"transient_missing=(\d+) pause_ticks=(\d+) barriers=(\d+) "
                         r"source_sections=(\d+) "
                         r"scope=source_extracted_host_mock_gpu", result.stdout)
                     if (len(replays) != 2 or
-                            any(tuple(map(int,m)) != (240,240,1,12,240,9)
+                            any(tuple(map(int,m)) != (241,241,2,1,12,241,9)
                                 for m in replays)):
                         ok,reason=False,"f03_native_present_freshness_missing"
                     else:
                         fixture_metrics["F03_texture_to_present_host"] = {
-                            "rendered_frames":240,"distinct_hud_content_revisions":240,
-                            "remaps":1,"paused_game_ticks":12,
-                            "feedback_barriers":240,"compile_modes":["O0","O2"],
+                            "rendered_frames":241,"distinct_hud_content_revisions":241,
+                            "remaps":2,"transient_missing_recoveries":1,
+                            "paused_game_ticks":12,
+                            "feedback_barriers":241,"compile_modes":["O0","O2"],
                             "scope":"real selected native TIC/view/descriptor/barrier and "
                                     "renderer/present-manager methods with mocked GPU and "
                                     "HUD revision content; NOT device pixels or WSI scanout",
@@ -372,8 +373,8 @@ def run() -> int:
         "F02_cold_repeat_source_host" in fixture_metrics
     )
     # F03: technical HOST exit requires both selected TIC->feedback and
-    # 240-frame renderer->async presenter handoff in ONE C++ replay, with
-    # unique HUD revisions, pause and remap. Real pixels/device scanout are
+    # 240 ordinary frames plus a recovered frame in ONE C++ replay, with
+    # unique HUD revisions, pause, remap and transient resource disappearance. Real pixels/device scanout are
     # still outside the pre-console evidence and must not be certified.
     f03_technical_exit = (
         all(item["ok"] for item in status["F03-hud-freshness"]) and
