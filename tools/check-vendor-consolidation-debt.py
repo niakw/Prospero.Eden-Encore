@@ -334,6 +334,66 @@ for wake_byte in wake_block.encode("utf-8"):
 assert wake_fingerprint == 0x83686626E6E9D1A7, "F05 producer release wake block changed"
 dequeue_legacy_projection = dequeue_maintained.replace(wake_block, "", 1)
 
+# Revert the F05 queue-mutex/kernel-scheduler lock-order repair *before*
+# projecting older maintained producer patches onto the pinned Eden source.
+# Changes must be present exactly once in their own method; unreviewed
+# source drift fails the audit rather than being silently normalized.
+def strip_producer_unlocked_signal(method_begin: str, method_end: str,
+                                   before: str, after: str) -> None:
+    global dequeue_legacy_projection
+    start = dequeue_legacy_projection.index(method_begin)
+    end = dequeue_legacy_projection.index(method_end, start + len(method_begin))
+    part = dequeue_legacy_projection[start:end]
+    assert part.count(after) == 1, ("F05 producer lock-order delta drift", method_begin, after[:100])
+    part = part.replace(after, before, 1)
+    dequeue_legacy_projection = (
+        dequeue_legacy_projection[:start] + part + dequeue_legacy_projection[end:]
+    )
+
+strip_producer_unlocked_signal("Status BufferQueueProducer::SetBufferCount(", "Status BufferQueueProducer::WaitForFreeSlotThenRelock(",
+    "    std::shared_ptr<IConsumerListener> listener;\n    {\n        std::scoped_lock lock{core->mutex};",
+    "    std::shared_ptr<IConsumerListener> listener;\n    {\n        std::unique_lock lock{core->mutex};")
+strip_producer_unlocked_signal("Status BufferQueueProducer::SetBufferCount(", "Status BufferQueueProducer::WaitForFreeSlotThenRelock(",
+    "            // The guest may be sleeping on the Binder native wait handle.\n            buffer_wait_event->Signal(service_context.kernel);",
+    "            // Publish only after releasing the queue mutex: kernel event\n            // signaling acquires the scheduler lock.\n            lock.unlock();\n            buffer_wait_event->Signal(service_context.kernel);")
+strip_producer_unlocked_signal("Status BufferQueueProducer::SetBufferCount(", "Status BufferQueueProducer::WaitForFreeSlotThenRelock(",
+    "        core->override_max_buffer_count = buffer_count;\n        core->SignalDequeueCondition();\n        buffer_wait_event->Signal(service_context.kernel);\n        listener = core->consumer_listener;\n    }\n\n    // Call back without lock held",
+    "        core->override_max_buffer_count = buffer_count;\n        core->SignalDequeueCondition();\n        listener = core->consumer_listener;\n    }\n    buffer_wait_event->Signal(service_context.kernel);\n\n    // Call back without lock held")
+strip_producer_unlocked_signal("Status BufferQueueProducer::DetachBuffer(", "Status BufferQueueProducer::AttachBuffer(",
+    "Status BufferQueueProducer::DetachBuffer(s32 slot) {\n    LOG_DEBUG(Service_Nvnflinger, \"slot {}\", slot);\n\n    std::scoped_lock lock{core->mutex};",
+    "Status BufferQueueProducer::DetachBuffer(s32 slot) {\n    LOG_DEBUG(Service_Nvnflinger, \"slot {}\", slot);\n\n    std::unique_lock lock{core->mutex};")
+strip_producer_unlocked_signal("Status BufferQueueProducer::DetachBuffer(", "Status BufferQueueProducer::AttachBuffer(",
+    "    // Match CancelBuffer: expose this freed slot to guest waiters, too.\n    buffer_wait_event->Signal(service_context.kernel);",
+    "    // Host waiter publication stays under the queue lock; guest event\n    // publication must be outside it to avoid scheduler lock inversion.\n    lock.unlock();\n    buffer_wait_event->Signal(service_context.kernel);")
+strip_producer_unlocked_signal("Status BufferQueueProducer::DetachBuffer(", "Status BufferQueueProducer::AttachBuffer(",
+    "    std::scoped_lock lock{core->mutex};\n    core->WaitWhileAllocatingLocked();",
+    "    std::unique_lock lock{core->mutex};\n    core->WaitWhileAllocatingLocked();")
+strip_producer_unlocked_signal("Status BufferQueueProducer::DetachBuffer(", "Status BufferQueueProducer::AttachBuffer(",
+    "    // DetachBuffer and CancelBuffer wake waiting producers. The oldest-free\n    // detach path must publish the same state transition to all dequeuers.\n    // Notify under core->mutex so waiters cannot miss the transition.\n    core->SignalDequeueCondition();\n    buffer_wait_event->Signal(service_context.kernel);",
+    "    // Publish host dequeue-generation transition under the queue lock,\n    // then signal the Binder guest event only after dropping that lock.\n    core->SignalDequeueCondition();\n    lock.unlock();\n    buffer_wait_event->Signal(service_context.kernel);")
+strip_producer_unlocked_signal("void BufferQueueProducer::CancelBuffer(", "Status BufferQueueProducer::Query(",
+    "    std::scoped_lock lock{core->mutex};",
+    "    std::unique_lock lock{core->mutex};")
+strip_producer_unlocked_signal("void BufferQueueProducer::CancelBuffer(", "Status BufferQueueProducer::Query(",
+    "    core->SignalDequeueCondition();\n    buffer_wait_event->Signal(service_context.kernel);",
+    "    core->SignalDequeueCondition();\n    lock.unlock();\n    buffer_wait_event->Signal(service_context.kernel);")
+strip_producer_unlocked_signal("Status BufferQueueProducer::Disconnect(", "Status BufferQueueProducer::SetPreallocatedBuffer(",
+    "    std::shared_ptr<IConsumerListener> listener;\n    Status status = Status::NoError;",
+    "    std::shared_ptr<IConsumerListener> listener;\n    Status status = Status::NoError;\n    bool released_queue = false;")
+strip_producer_unlocked_signal("Status BufferQueueProducer::Disconnect(", "Status BufferQueueProducer::SetPreallocatedBuffer(",
+    "                core->SignalDequeueCondition();\n                buffer_wait_event->Signal(service_context.kernel);\n                listener = core->consumer_listener;",
+    "                core->SignalDequeueCondition();\n                released_queue = true;\n                listener = core->consumer_listener;")
+strip_producer_unlocked_signal("Status BufferQueueProducer::Disconnect(", "Status BufferQueueProducer::SetPreallocatedBuffer(",
+    "    if (listener) {\n        listener->OnBuffersReleased();",
+    "    if (released_queue) {\n        buffer_wait_event->Signal(service_context.kernel);\n    }\n    if (listener) {\n        listener->OnBuffersReleased();")
+strip_producer_unlocked_signal("Status BufferQueueProducer::SetPreallocatedBuffer(", "Kernel::KReadableEvent* BufferQueueProducer::GetNativeHandle(",
+    "    std::scoped_lock lock{core->mutex};",
+    "    std::unique_lock lock{core->mutex};")
+strip_producer_unlocked_signal("Status BufferQueueProducer::SetPreallocatedBuffer(", "Kernel::KReadableEvent* BufferQueueProducer::GetNativeHandle(",
+    "    core->SignalDequeueCondition();\n    buffer_wait_event->Signal(service_context.kernel);",
+    "    core->SignalDequeueCondition();\n    lock.unlock();\n    buffer_wait_event->Signal(service_context.kernel);")
+
+
 def strip_f05_once(before: str, after: str) -> None:
     global dequeue_legacy_projection
     assert dequeue_legacy_projection.count(after) == 1, ("F05 delta drift", after[:90])
