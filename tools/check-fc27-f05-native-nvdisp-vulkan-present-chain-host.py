@@ -113,7 +113,7 @@ guest_fb=native(host,"struct FramebufferConfig {")
 # Also include its BlendMode member type in precisely the same form.
 vulkan=once(vulkan,
     "namespace Tegra {\nstruct FramebufferConfig {std::uint64_t address{};};\n}",
-    "namespace Tegra {\nenum class BlendMode { Opaque };\n"+guest_fb+";\n}",
+    "using u64 = std::uint64_t;\nnamespace Tegra {\nenum class BlendMode { Opaque };\n"+guest_fb+";\n}",
     "identical guest/renderer span layout")
 vulkan=once(vulkan,"__PRESENT_METHODS__",presentmethods,"present methods")
 vulkan=once(vulkan,"__RENDER_METHOD__",composite,"renderer")
