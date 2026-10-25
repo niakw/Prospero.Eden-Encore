@@ -50,6 +50,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-fc27-f05-producer-release-wake-host.py",
         "check-fc27-f05-native-consumer-disconnect-host.py",
         "check-fc27-f05-native-acquire-drop-wake-host.py",
+        "check-fc27-f05-native-queue-replace-wake-host.py",
         "check-native-host1x-increment-handoff-host.py",
     ),
     "F06-input-and-pause": (
@@ -331,6 +332,32 @@ def run() -> int:
                         print("F04_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F04_native_remap_dma_upload_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f05-native-queue-replace-wake-host.py":
+                    queue_releases = re.findall(
+                        r"F05_NATIVE_QUEUE_REPLACEMENT_GUEST_WAKE_PASS replacements=(\d+) "
+                        r"tracked_release_signal=(\d+) untracked_quiet=(\d+) "
+                        r"regular_enqueue_quiet=(\d+) "
+                        r"scope=source_extracted_mock_guest_event",
+                        result.stdout,
+                    )
+                    outside = ("F05_HIPC_SCHEDULING_AND_FC27_FRAME_PROGRESS_NOT_PROVEN"
+                               in result.stdout)
+                    if queue_releases != [("260", "1", "1", "1")]*2 or not outside:
+                        ok, reason = False, "f05_queue_replacement_guest_wake_witness_missing"
+                    else:
+                        fixture_metrics["F05_native_queue_replacement_guest_wake_host"] = {
+                            "replacements": 260,
+                            "guest_event_on_tracked_drop": True,
+                            "no_event_on_untracked_replace": True,
+                            "no_event_on_ordinary_enqueue": True,
+                            "compile_modes": ["O0", "O2"],
+                            "scope": "native queue replacement source with mock guest event; "
+                                     "no real guest HIPC or FC27 frame progress",
+                        }
+                        print("F05_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F05_native_queue_replacement_guest_wake_host"],
+                                         sort_keys=True), flush=True)
+
                 if ok and script == "check-fc27-f05-native-acquire-drop-wake-host.py":
                     acquired = re.findall(
                         r"F05_NATIVE_ACQUIRE_DROP_GUEST_WAKE_PASS frames=(\d+) stale_drops=(\d+) "
