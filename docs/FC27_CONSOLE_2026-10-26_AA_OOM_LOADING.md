@@ -38,6 +38,18 @@ Les jeux/scènes, la durée, l'état du cache et les changements de qualité ont
 - **Piste qualité** : FSR 3.1 Native AA ou TAA équivalent nécessiterait l'accès correct aux images invitées, à la profondeur, à l'historique, aux vecteurs de mouvement et aux masques réactifs/composites. Pour une couche HUD absente ou retardée, un traitement temporel naïf pourrait *aggraver* la rémanence. Ne pas exposer une option Native AA sans vrai chemin de données et preuve graphique.
 - L'expérience FC 27 **4×** se termine par un épuisement mémoire ; ne pas proposer une résolution brute 3×/4× comme remplacement universel de l'AA. Ne pas désactiver les barrières/invalidations mémoire pour compenser.
 
+## Révision du correctif testé par la CI (26 octobre)
+
+Les nouveaux chemins de production sont :
+- `3a21eea` : logo rouge frontal Switch redressé ; précédent footer arrière conservé.
+- `bd4b95e` : fond neutre de transition pour le moteur OpenGL.
+- `68b9f4e` : **vrai** chemin de rendu Vulkan, `WindowAdaptPass::Draw`, sans overlay violet. La source GLSL `vulkan_hud.frag` et le SPIR-V intégré restent épinglés et **ne sont pas remplacés**.
+- `5f064ab` : générateur/oracle natif adapté **uniquement** aux cinq deltas source vérifiés (parité complète `VENDoRED_VULKAN_FORK_EQUIVALENT_OK` observée).
+- `0a20072` puis `da1b275` : test hôte `check-vulkan-present-draw-storage-host.py` mis à jour ; pour les images de jeu, l'événement GPU doit rester identique ; pour le chargement, seul l'overlay plein écran disparaît, le nombre de render passes et les draws invités restent contrôlés.
+- Test de contrat `tools/check-startup-contract.py` : exige un chargement noir identique sur les deux backends et le maintien de la progression de la swapchain.
+
+**Attention :** le test hôte ne certifie pas encore qu'une image OpenGL persiste durant la création de Vulkan ; un fondu noir peut rester entre la jaquette et la première image FC27. Un éventuel transfert inter-backends ne sera pas inventé.
+
 ## Qualification et suite technique
 
 - **F01–F06** : 6/6 contrats de prévalidation **hôte** antérieurs au test utilisateur ; ce chiffre ne représente PAS la jouabilité.
