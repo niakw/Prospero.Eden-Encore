@@ -65,6 +65,7 @@ on:
       - 'tools/check-fc27-f05-native-acquire-drop-wake-host.py'
       - 'tools/check-fc27-f05-native-queue-replace-wake-host.py'
       - 'tools/check-fc27-f05-native-kernel-wait-publication-host.py'
+      - 'tools/check-fc27-f05-native-kthread-endwait-host.py'
       - 'tools/check-fc27-f06-native-pad-transition-host.py'
       - 'tools/check-fc27-f06-native-npad-handoff-host.py'
       - 'tools/check-fc27-f06-native-npad-lifo-host.py'
@@ -219,6 +220,7 @@ jobs:
           python3 -B tools/check-fc27-f05-native-acquire-drop-wake-host.py
           python3 -B tools/check-fc27-f05-native-queue-replace-wake-host.py
           python3 -B tools/check-fc27-f05-native-kernel-wait-publication-host.py
+          python3 -B tools/check-fc27-f05-native-kthread-endwait-host.py
           python3 -B tools/check-fc27-f06-native-pad-transition-host.py
           python3 -B tools/check-fc27-f06-native-npad-handoff-host.py
           python3 -B tools/check-fc27-f06-native-npad-lifo-host.py
