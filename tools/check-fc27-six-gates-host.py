@@ -24,6 +24,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "F02-jit-invalidation": (
         "check-native-jit-invalidation-snapshot-host.py",
         "check-native-jit-code-space-bounds-host.py",
+        "check-native-jit-invalidation-lock-budget-host.py",
     ),
     "F03-hud-freshness": (
         "check-ps5-texture-channel-missing-mapping-host.py",
@@ -46,7 +47,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# Missing end-to-end evidence remains explicit even when all fifteen narrow
+# Missing end-to-end evidence remains explicit even when all sixteen narrow
 # host probes succeed. Neither a successful tool run nor a source checksum is
 # a measured frame-latency improvement or a complete technical exit proof.
 UNPROVEN_EXIT_EVIDENCE = {
@@ -156,6 +157,44 @@ def run() -> int:
                         print("F01_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F01_native_lock_budget_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-native-jit-invalidation-lock-budget-host.py":
+                    records = re.findall(
+                        r"F02_JIT_NATIVE_INVALIDATION_BUDGET_PASS "
+                        r"arch=(A32|A64) impl=(pinned|maintained) "
+                        r"range_drains=(\d+) empty_repeats=(\d+) "
+                        r"held_lock_ns=(\d+) pinned_dispatch_under_guard=(0|1) "
+                        r"scope=source_extracted_synthetic_emitter", result.stdout)
+                    expected = {(arch, impl) for arch in ("A32", "A64")
+                                for impl in ("pinned", "maintained")}
+                    groups = {}
+                    for arch, impl, drained, repeats, held, guarded in records:
+                        groups.setdefault((arch, impl), []).append(
+                            (int(drained), int(repeats), int(held), int(guarded)))
+                    if set(groups) != expected or any(len(v) != 2 for v in groups.values()):
+                        ok, reason = False, "f02_jit_invalidation_budget_missing"
+                    else:
+                        for arch in ("A32", "A64"):
+                            baseline = groups[(arch, "pinned")]
+                            maintained = groups[(arch, "maintained")]
+                            if (any(x[0] != 96 or x[1] != 96 or x[2] <= 0 for x in baseline + maintained)
+                                    or any(x[3] != 1 for x in baseline)
+                                    or any(x[3] != 0 for x in maintained)):
+                                ok, reason = False, "f02_lock_dispatch_or_drain_regression"
+                                break
+                        if ok:
+                            fixture_metrics["F02_native_invalidation_lock_host"] = {
+                                "a32": {variant: [x[2] for x in groups[("A32", variant)]]
+                                        for variant in ("pinned", "maintained")},
+                                "a64": {variant: [x[2] for x in groups[("A64", variant)]]
+                                        for variant in ("pinned", "maintained")},
+                                "range_drains": 96,
+                                "empty_repeated_drains": 96,
+                                "scope": "pinned/maintained C++ invalidation and mock emitter; "
+                                         "NOT cold compilation timing, guest behavior, or PS5 FPS",
+                            }
+                            print("F02_MEASURED_HOST_SUBPATH=" +
+                                  json.dumps(fixture_metrics["F02_native_invalidation_lock_host"],
+                                             sort_keys=True), flush=True)
                 if ok and script == "check-native-gpu-composite-syncpoint-host.py":
                     records = re.findall(
                         r"F05_NV_DISP_GPU_SYNCPOINT_SOURCE_PASS requests=(\d+) "
