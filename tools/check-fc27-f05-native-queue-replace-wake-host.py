@@ -64,8 +64,22 @@ struct Slot{
     std::shared_ptr<GraphicBuffer> graphic_buffer{};
 };
 struct IConsumerListener{};
+// Host lock-state model: try_lock on a nonrecursive std::mutex already
+// owned by this thread would be UB, so use a tracked atomic lock instead.
+struct TrackedMutex {
+    std::atomic<bool> held{};
+    void lock() {
+        bool expected=false;
+        assert(held.compare_exchange_strong(expected,true));
+    }
+    void unlock() { assert(held.exchange(false)); }
+    bool try_lock() {
+        bool expected=false;
+        return held.compare_exchange_strong(expected,true);
+    }
+};
 struct Core {
-    std::mutex mutex{};
+    TrackedMutex mutex{};
     std::array<Slot,4> slots{};
     std::vector<BufferItem> queue{};
     std::shared_ptr<IConsumerListener> consumer_listener{};
