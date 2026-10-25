@@ -12,6 +12,7 @@ import shutil, subprocess, tempfile
 root=Path(__file__).resolve().parents[1]
 src=root/"vendor/sources/eden/src/core/hle/kernel"
 producer=(root/"vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp").read_text()
+consumer=(root/"vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp").read_text()
 event=(src/"k_event.cpp").read_text()
 readable=(src/"k_readable_event.cpp").read_text()
 sync=(src/"k_synchronization_object.cpp").read_text()
@@ -55,9 +56,15 @@ methods={
 "__QUEUE_CANCEL__":native(queue,"void KThreadQueue::CancelWait(KernelCore& kernel, KThread* waiting_thread, Result wait_result, bool cancel_timer_task)"),
 "__WAIT_IMPL__":wait_impl,
 "__RELEASE_WAKE__":listener,
+"__CONSUMER_RELEASE__":native(consumer,"Status BufferQueueConsumer::ReleaseBuffer("),
 }
 assert 'waiting_thread->SetState(kernel, ThreadState::Runnable);' in methods["__QUEUE_END__"]
 assert 'm_wait_queue->NotifyAvailable(kernel, this, signaled_object, wait_result);' in methods["__THREAD_NOTIFY__"]
+release_method=methods["__CONSUMER_RELEASE__"]
+assert "core->SignalDequeueCondition();" in release_method
+assert "listener->OnBufferReleased();" in release_method
+assert release_method.index("core->SignalDequeueCondition();") < release_method.index(
+    "// Call back without lock held") < release_method.index("listener->OnBufferReleased();")
 
 cpp=r"""
 #include <array>
@@ -67,9 +74,13 @@ cpp=r"""
 #include <cstdio>
 #include <memory>
 #include <mutex>
+#include <vector>
+#define LOG_DEBUG(...) ((void)0)
+#define LOG_ERROR(...) ((void)0)
 #define ASSERT(x) assert(x)
 #define ASSERT_MSG(...) assert(false)
 using s32=std::int32_t;
+using u64=std::uint64_t;
 namespace Kernel {
 enum class Result{Success,InvalidState};
 [[maybe_unused]] constexpr Result ResultSuccess=Result::Success;
@@ -193,6 +204,33 @@ class IProducerListener{
 public:virtual ~IProducerListener()=default;virtual void OnBufferReleased()=0;
 };
 __RELEASE_WAKE__
+enum class Status {NoError,BadValue,StaleBufferSlot};
+enum class BufferState {Free,Acquired};
+struct Fence {};
+struct BufferItem {s32 slot{};};
+struct BufferQueueDefs {static constexpr s32 NUM_BUFFER_SLOTS=4;};
+struct BufferSlot {
+ BufferState buffer_state{BufferState::Free};
+ u64 frame_number{};
+ bool needs_cleanup_on_release{};
+};
+struct BufferQueueCore {
+ std::mutex mutex{};
+ std::array<BufferSlot,BufferQueueDefs::NUM_BUFFER_SLOTS> slots{};
+ std::vector<BufferItem> queue{};
+ std::shared_ptr<IProducerListener> connected_producer_listener{};
+ int host_dequeue_releases{};
+ void SignalDequeueCondition() {++host_dequeue_releases;}
+};
+class BufferQueueConsumer {
+public:
+ std::shared_ptr<BufferQueueCore> core;
+ std::array<BufferSlot,BufferQueueDefs::NUM_BUFFER_SLOTS>& slots;
+ explicit BufferQueueConsumer(std::shared_ptr<BufferQueueCore> queue)
+     : core(std::move(queue)),slots(core->slots){}
+ Status ReleaseBuffer(s32,u64,const Fence&);
+};
+__CONSUMER_RELEASE__
 }
 int main(){
  Kernel::KernelCore kernel;
@@ -200,6 +238,9 @@ int main(){
  auto& readable=event.GetReadableEvent();
  Kernel::KThread guest_game,guest_hud;
  auto wake=std::make_shared<Service::android::ProducerReleaseWake>(&event,kernel);
+ auto queue_core=std::make_shared<Service::android::BufferQueueCore>();
+ queue_core->connected_producer_listener=wake;
+ Service::android::BufferQueueConsumer consumer{queue_core};
  Kernel::KHardwareTimer timer;
  int guest_resumptions{};
  for(int frame=0;frame<260;++frame){
@@ -223,7 +264,22 @@ int main(){
    guest_hud.SetCancellable();
    assert(readable.WaitingCount()==2);
   }
-  wake->OnBufferReleased(); // release -> KEvent -> readable -> KThread -> EndWait
+  // First the consumer rejects a stale frame without a kernel wake.
+  queue_core->slots[0].frame_number=static_cast<u64>(frame+1);
+  queue_core->slots[0].buffer_state=Service::android::BufferState::Acquired;
+  assert(consumer.ReleaseBuffer(0,static_cast<u64>(frame+999),
+                                Service::android::Fence{})==
+         Service::android::Status::StaleBufferSlot);
+  assert(!readable.IsSignaled(kernel));
+  assert(readable.WaitingCount()==2);
+  // Then run the selected consumer ReleaseBuffer C++ method: the listener
+  // calls the real ProducerReleaseWake, KEvent, readable event, native
+  // KThread::NotifyAvailable and KThreadQueue::EndWait in ONE transaction.
+  assert(consumer.ReleaseBuffer(0,static_cast<u64>(frame+1),
+                                Service::android::Fence{})==
+         Service::android::Status::NoError);
+  assert(queue_core->slots[0].buffer_state==Service::android::BufferState::Free);
+  assert(queue_core->host_dequeue_releases==frame+1);
   assert(guest_game.GetState()==Kernel::ThreadState::Runnable);
   assert(guest_hud.GetState()==Kernel::ThreadState::Runnable);
   assert(!guest_game.HasWaitQueue() && !guest_hud.HasWaitQueue());
@@ -233,6 +289,14 @@ int main(){
   assert(guest_game.GetSyncedIndex()==0 && guest_hud.GetSyncedIndex()==0);
   assert(readable.WaitingCount()==0);
   guest_resumptions+=2;
+  // Releasing an already free slot must NOT publish a duplicate event.
+  assert(consumer.ReleaseBuffer(0,static_cast<u64>(frame+1),
+                                Service::android::Fence{})==
+         Service::android::Status::BadValue);
+  assert(consumer.ReleaseBuffer(-1,static_cast<u64>(frame+1),
+                                Service::android::Fence{})==
+         Service::android::Status::BadValue);
+  assert(readable.WaitingCount()==0);
   wake->OnBufferReleased(); // signaled level: no spurious duplicate resume
   assert(timer.cancelled==(frame+1)*2);
   assert(readable.Reset(kernel)==Kernel::Result::Success);
@@ -241,8 +305,14 @@ int main(){
  assert(guest_resumptions==520);
  assert(guest_game.Transitions()==520 && guest_hud.Transitions()==520);
  assert(timer.cancelled==520);
+ assert(queue_core->host_dequeue_releases==260);
  wake->Stop();wake->OnBufferReleased();
  assert(readable.WaitingCount()==0);
+ std::puts("F05_NATIVE_RELEASE_TO_KTHREAD_PASS cycles=260 "
+           "successful_releases=260 stale_releases_quiet=260 "
+           "duplicate_releases_quiet=260 guest_wait_completions=520 "
+           "host_dequeue_generations=260 "
+           "scope=source_extracted_consumer_release_and_kthread_mock_scheduler");
  std::puts("F05_NATIVE_KTHREAD_ENDWAIT_PASS cycles=260 resumed_game=260 "
            "resumed_hud=260 wait_nodes_unlinked=1 runnable_state=1 "
            "timer_cancelled=520 level_coalescing=1 safe_stop=1 "
@@ -260,11 +330,12 @@ with tempfile.TemporaryDirectory(prefix="encore-f05-endwait-") as td:
   exe=Path(td)/("wait"+mode)
   b=subprocess.run([compiler,"-std=c++20",mode,"-Wall","-Wextra","-Werror",
                     "-fsanitize=undefined","-fno-sanitize-recover=all",
-                    str(source),"-o",str(exe)],
+                    "-Wno-unused-parameter",str(source),"-o",str(exe)],
                    capture_output=True,text=True,timeout=90)
   assert b.returncode==0,(mode,b.stderr[-7500:])
   r=subprocess.run([str(exe)],capture_output=True,text=True,timeout=30)
   assert r.returncode==0,(mode,r.stderr[-7500:],r.stdout)
   assert "F05_NATIVE_KTHREAD_ENDWAIT_PASS cycles=260" in r.stdout
+  assert "F05_NATIVE_RELEASE_TO_KTHREAD_PASS cycles=260" in r.stdout
   print(mode,r.stdout.strip(),flush=True)
 print("F05_REAL_GUEST_SCHEDULER_AND_FC27_LIVENESS_NOT_PROVEN")
