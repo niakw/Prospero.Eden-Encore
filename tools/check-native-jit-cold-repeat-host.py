@@ -239,9 +239,21 @@ int main(){
     const auto hot_ns=std::chrono::duration_cast<std::chrono::nanoseconds>(
         after_hot-after_cold).count();
     assert(cold_ns>0 && hot_ns>0);
+    // Default JIT profile maintains independent per-core code namespaces.
+    // A range write in one core must never evict another core's block.
+    Probe core0,core1;
+    const CodePtr one=Lookup(core0,0x5000);
+    const CodePtr two=Lookup(core1,0x5000);
+    assert(one==two && core0.emitter.emits==1 && core1.emitter.emits==1);
+    core0.InvalidateCacheRange(static_cast<ADDR>(0x5000),4);
+    core0.PerformRequestedCacheInvalidation(HaltReason::CacheInvalidation);
+    assert(core0.emitter.blocks.empty() && core1.emitter.blocks.size()==1);
+    assert(Lookup(core0,0x5000)==one);
+    assert(Lookup(core1,0x5000)==two);
+    assert(core0.emitter.emits==2 && core1.emitter.emits==1);
     std::printf("F02_JIT_NATIVE_COLD_REPLAY_PASS arch=ARCH impl=IMPL "
                 "cold=32 repeated_hits=512 recompile=8 full_clear_compile=32 "
-                "total_emissions=72 cold_total_ns=%lld hot_total_ns=%lld "
+                "total_emissions=72 isolated_cores=2 cold_total_ns=%lld hot_total_ns=%lld "
                 "scope=source_extracted_synthetic_translator\n",
                 static_cast<long long>(cold_ns),
                 static_cast<long long>(hot_ns));
