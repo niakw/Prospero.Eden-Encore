@@ -460,8 +460,68 @@ consumer_new = """Status BufferQueueConsumer::Disconnect() {
     return Status::NoError;
 }
 """
-assert consumer_active == consumer_pinned.replace(consumer_old, consumer_new, 1), (
-    "Maintained consumer teardown diverged from pinned + F05 terminal wake")
+# Revert only reviewed F05 additions to the pinned source, not arbitrary
+# consumer text. Every replacement is unique and changes fail this audit.
+assert consumer_active.count(consumer_new) == 1
+consumer_legacy_projection = consumer_active.replace(consumer_new, consumer_old, 1)
+
+def strip_consumer_f05_once(before: str, after: str) -> None:
+    global consumer_legacy_projection
+    assert consumer_legacy_projection.count(after) == 1, (
+        "F05 consumer acquisition delta drift", after[:120])
+    consumer_legacy_projection = consumer_legacy_projection.replace(after, before, 1)
+
+strip_consumer_f05_once(
+    "    std::scoped_lock lock{core->mutex};",
+    "    std::unique_lock lock{core->mutex};\n"
+    "    bool dropped_queued_frames = false;",
+)
+strip_consumer_f05_once(
+    "            core->queue.erase(front);\n"
+    "            front = core->queue.begin();",
+    "            core->queue.erase(front);\n"
+    "            dropped_queued_frames = true;\n"
+    "            front = core->queue.begin();",
+)
+strip_consumer_f05_once(
+    '            LOG_DEBUG(Service_Nvnflinger, "defer desire={} expect={}", desired_present,\n'
+    '                      expected_present.count());\n'
+    '            return Status::PresentLater;',
+    '            LOG_DEBUG(Service_Nvnflinger, "defer desire={} expect={}", desired_present,\n'
+    '                      expected_present.count());\n'
+    '            if (dropped_queued_frames) {\n'
+    '                // Even without an acquired frame, discarded entries can make\n'
+    '                // producer progress. Wake both host dequeuers and guest Binder\n'
+    '                // waiters. Never invoke a callback while core->mutex is held.\n'
+    '                core->SignalDequeueCondition();\n'
+    '                const auto listener = core->connected_producer_listener;\n'
+    '                lock.unlock();\n'
+    '                if (listener) listener->OnBufferReleased();\n'
+    '            }\n'
+    '            return Status::PresentLater;',
+)
+strip_consumer_f05_once(
+    "    core->queue.erase(front);\n\n"
+    "    // We might have freed a slot while dropping old buffers, or the producer  may be blocked\n"
+    "    // waiting for the number of buffers in the queue to decrease.\n"
+    "    core->SignalDequeueCondition();\n\n"
+    "    return Status::NoError;",
+    "    core->queue.erase(front);\n\n"
+    "    // We might have freed a slot while dropping old buffers, or the producer\n"
+    "    // may be blocked waiting for the number of queued buffers to decrease.\n"
+    "    core->SignalDequeueCondition();\n"
+    "    if (dropped_queued_frames) {\n"
+    "        // A dropped queued buffer is another producer-availability transition.\n"
+    "        // The host condition is insufficient for the guest's Binder wait handle.\n"
+    "        const auto listener = core->connected_producer_listener;\n"
+    "        lock.unlock();\n"
+    "        if (listener) listener->OnBufferReleased();\n"
+    "    }\n\n"
+    "    return Status::NoError;",
+)
+assert consumer_legacy_projection == consumer_pinned, (
+    "Maintained consumer acquire/disconnect diverged from pinned reviewed F05 deltas"
+)
 assert c.count('list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_consumer.cpp")') == 1
 assert c.count('list(APPEND core_sources "\x24{EDEN_MAINTAINED_NVNF_CONSUMER}")') == 1
 print("VENDOR_MAINTAINED_NVNF_CONSUMER_PARITY_PASS: teardown Binder wake")
