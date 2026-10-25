@@ -229,6 +229,7 @@ jobs:
           python3 -B tools/check-native-a64-default-phases-host.py
           python3 -B tools/check-native-a64-cache-invalidation-host.py
           python3 -B tools/check-native-jit-invalidation-snapshot-host.py
+          python3 -B tools/check-native-jit-invalidation-lock-budget-host.py
           python3 -B tools/check-native-jit-empty-block-invalidation-host.py
           python3 -B tools/check-native-dynarmic-icache-range-host.py
           python3 -B tools/check-native-jit-icache-broadcast-host.py
