@@ -737,9 +737,9 @@ def run() -> int:
                                          sort_keys=True), flush=True)
                 if ok and script == "check-fc27-f06-native-pad-to-lifo-boundary-host.py":
                     linked = re.findall(
-                        r"F06_NATIVE_PAD_NPAD_LIFO_BOUNDARY_PASS phases=(\\d+) "
-                        r"samples=(\\d+) linked=(\\d+) mapping_locked=(\\d+) "
-                        r"plus_release=(\\d+) "
+                        r"F06_NATIVE_PAD_NPAD_LIFO_BOUNDARY_PASS phases=(\d+) "
+                        r"samples=(\d+) linked=(\d+) mapping_locked=(\d+) "
+                        r"plus_release=(\d+) "
                         r"scope=source_extracted_host_mock_virtual_bridge_no_real_guest_hipc",
                         result.stdout,
                     )
