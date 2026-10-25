@@ -60,6 +60,7 @@ on:
       - 'vendor/encore-active/eden-core/src/video_core/host1x/**'
       - 'tools/check-native-vulkan-renderer-handoff-host.py'
       - 'tools/check-fc27-f05-native-nvdisp-vulkan-present-chain-host.py'
+      - 'tools/check-fc27-f05-producer-release-wake-host.py'
       - 'tools/check-fc27-f06-native-pad-transition-host.py'
       - 'tools/check-vulkan-fence-completed-wait-host.py'
       - 'tools/check-vulkan-pipeline-ready-publication-host.py'
@@ -207,6 +208,7 @@ jobs:
           python3 -B tools/check-native-host1x-increment-handoff-host.py
           python3 -B tools/check-native-vulkan-renderer-handoff-host.py
           python3 -B tools/check-fc27-f05-native-nvdisp-vulkan-present-chain-host.py
+          python3 -B tools/check-fc27-f05-producer-release-wake-host.py
           python3 -B tools/check-fc27-f06-native-pad-transition-host.py
           python3 -B tools/check-ps5-active-texture-descriptor-host.py
           python3 -B tools/check-native-batched-buffer-invalidation-host.py
