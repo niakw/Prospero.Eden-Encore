@@ -347,6 +347,41 @@ def run() -> int:
                         print("F05_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F05_native_syncpoint_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f05-native-nvdisp-vulkan-present-chain-host.py":
+                    records = re.findall(
+                        r"F05_NATIVE_NVDISP_VULKAN_PRESENT_CHAIN_PASS "
+                        r"requests=(\d+) copies=(\d+) async_frame_pool=(\d+) "
+                        r"fence_gated=(\d+) frame_order_preserved=(\d+) "
+                        r"scope=source_extracted_host_mock_wsi_and_gpu",
+                        result.stdout,
+                    )
+                    independent = re.findall(
+                        r"F05_NV_DISP_GPU_SYNCPOINT_SOURCE_PASS requests=(\d+) "
+                        r"delayed_and_immediate_fences=verified",
+                        result.stdout,
+                    )
+                    bounded = result.stdout.count(
+                        "F05_HID_IPC_AND_REAL_VULKAN_GPU_PRESENT_NOT_PROVEN"
+                    ) == 1
+                    if (records != [("260","260","7","1","1")]*2 or
+                            independent != ["260","260"] or not bounded):
+                        ok,reason=False,"f05_linked_native_guest_to_present_missing"
+                    else:
+                        fixture_metrics["F05_linked_nvdisp_host1x_vulkan_present_host"] = {
+                            "native_nvdisp_guest_requests": 260,
+                            "async_mock_present_copies": 260,
+                            "frame_pool": 7,
+                            "fence_gated_order": "verified",
+                            "compile_modes": ["O0","O2"],
+                            "scope": "two linked translation units executing selected "
+                                     "nvdisp/GPU/Host1x and RendererVulkan/PresentManager "
+                                     "C++; mock NvMap, renderer GPU and WSI. "
+                                     "NOT HID/IPC or guest runtime progress.",
+                        }
+                        print("F05_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics[
+                                  "F05_linked_nvdisp_host1x_vulkan_present_host"
+                              ],sort_keys=True),flush=True)
                 if ok and script == "check-native-vulkan-renderer-handoff-host.py":
                     records = re.findall(
                         r"F05_VULKAN_RENDER_PRESENT_HOST_PASS frames=(\d+) callbacks=(\d+) "
