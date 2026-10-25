@@ -15,8 +15,8 @@ producer=(root/"vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/b
 consumer=(root/"vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp").read_text()
 event=(src/"k_event.cpp").read_text()
 readable=(src/"k_readable_event.cpp").read_text()
-sync=(root/"vendor/encore-active/eden-threading/src/core/hle/kernel/k_synchronization_object.cpp").read_text()
-thread=(src/"k_thread.cpp").read_text()
+sync=(src/"k_synchronization_object.cpp").read_text()
+thread=(root/"vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp").read_text()
 queue=(src/"k_thread_queue.cpp").read_text()
 sync_header=(src/"k_synchronization_object.h").read_text()
 binder=(root/"vendor/sources/eden/src/core/hle/service/nvnflinger/hos_binder_driver.cpp").read_text()
@@ -306,9 +306,11 @@ int main(){
  assert(guest_game.Transitions()==520 && guest_hud.Transitions()==520);
  assert(timer.cancelled==520);
  assert(queue_core->host_dequeue_releases==260);
- // Duplicate handles may designate one and the same readable event.
- // Native NotifyAvailable must not walk a detached second node after
- // ThreadQueueImplForKSynchronizationObjectWait unlinks both aliases.
+ // Two handles can reference the same readable event. The shipping
+ // synchronization list intentionally preserves each unlinked node's next
+ // pointer, while the maintained KThread::NotifyAvailable ignores a
+ // second notification after EndWait has made the thread Runnable.
+ // Guard that exact existing invariant; no new kernel override is needed.
  {
   Kernel::KSynchronizationObject* aliases[]{&readable,&readable};
   Kernel::KSynchronizationObject::ThreadListNode alias_nodes[]{
@@ -336,7 +338,7 @@ int main(){
   assert(readable.Reset(kernel)==Kernel::Result::Success);
   std::puts("F05_NATIVE_DUPLICATE_HANDLE_WAKE_PASS handles=2 wake_calls=1 "
             "synced_index=0 wait_nodes_unlinked=1 "
-            "scope=maintained_native_sync_notify_mock_scheduler");
+            "scope=pinned_sync_notify_and_maintained_kthread_mock_scheduler");
  }
  wake->Stop();wake->OnBufferReleased();
  assert(readable.WaitingCount()==0);

@@ -430,7 +430,7 @@ def run() -> int:
                     duplicate_handle = re.findall(
                         r"F05_NATIVE_DUPLICATE_HANDLE_WAKE_PASS handles=(\d+) "
                         r"wake_calls=(\d+) synced_index=(\d+) wait_nodes_unlinked=(\d+) "
-                        r"scope=maintained_native_sync_notify_mock_scheduler",
+                        r"scope=pinned_sync_notify_and_maintained_kthread_mock_scheduler",
                         result.stdout,
                     )
                     excludes = "F05_REAL_GUEST_SCHEDULER_AND_FC27_LIVENESS_NOT_PROVEN" in result.stdout
