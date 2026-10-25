@@ -12,9 +12,22 @@ le compteur d'un ancien tableau, des seuls commits ou du succès général d'un 
 | **F01** contention/cache GPU-CPU | **VALIDÉ techniquement** | `3fb2986`, `d5cb865`, `a43af9c` : mesure avant/après des appels samplers, section critique avec concurrent et source native sélectionnée ; fast gate vert sur `c03a47c` | Non mesuré ; F07 |
 | **F02** JIT A32/A64 | **VALIDÉ techniquement** | `2579482`, `c03a47c` : méthodes natives épinglées/maintenues, 96 invalidations, compilation froide/chaude, recompilation et isolation des caches par cœur ; fast gate vert sur `c03a47c` | Non mesuré ; F07 |
 | **F03** HUD/fraîcheur | **EN QUALIFICATION** | `7976a38`, `77b5ee2` : TIC/TSC → descripteurs/barrières → rendu/pré-sentation, 240 frames + 1 après perte/remap ; CI de cette dernière révision à confirmer | Non mesuré ; F07 |
-| **F04** textures/contenu GPU | **OUVERT** | Aliasing, remapping, DMA, uploads et intégrité octet par octet à prouver | Non mesuré ; F07 |
+| **F04** textures/contenu GPU | **EN QUALIFICATION** | `3231d51`, `ba30854`, `f96f3cb` : fragments natifs sélectionnés DMA → alias → invalidation CPU, avec parité d'octets `-O0`/`-O2` validée ; restent upload Vulkan/format et cas de remap | Non mesuré ; F07 |
 | **F05** progression HLE | **OUVERT** | Chaîne HID/HLE/IPC → buffer queue → fence → present à prouver | Non mesuré ; F07 |
 | **F06** commandes/gel | **OUVERT** | Mapping personnalisé et transitions pause/mi-temps/fin à prouver | Non mesuré ; F07 |
+
+**F04, 25 octobre — preuve hôte supplémentaire, non clôturante :**
+[fast gate vert #40150112743](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40150112743)
+sur `f96f3cb`. Le test `tools/check-fc27-f04-native-dma-alias-bytes-host.py`
+compile des fragments C++ réellement sélectionnés de `MaxwellDMA`,
+`TextureCache::SynchronizeAliases` et `TextureCache::WriteMemory`
+sous UBSan avec `-O0` et `-O2`. Les deux modes passent : copies DMA
+contiguës, à pitch disjoint ou à chevauchement, ordre des deux alias,
+conservation de trois régions d'octets, actualisation d'un alias et
+invalidation CPU idempotente. **Pas de Vulkan réel, ni pixels FC27, ni preuve
+de upload/décodage complet** : F04 reste EN QUALIFICATION, et le compteur
+des critères fermés reste 2/6. L'incident précédent sur le type
+`GPUVAddr` du fixture a été corrigé avant ce fast gate vert.
 
 **Dernier jalon techniquement établi : 2/6 (F01 + F02).** Pour F03, le
 rejeu nouveau ajoute une récupération de ressource après disparition : tant que
