@@ -375,6 +375,38 @@ strip_f05_once(
     '            core->connected_producer_listener = listener;\n'
     '        }',
 )
+# Three pre-existing producer-side free/reset paths also wake the guest
+# Binder event when their host dequeue condition changes (F05).
+strip_f05_once(
+    "            core->override_max_buffer_count = 0;\n"
+    "            core->SignalDequeueCondition();\n"
+    "            return Status::NoError;",
+    "            core->override_max_buffer_count = 0;\n"
+    "            core->SignalDequeueCondition();\n"
+    "            // The guest may be sleeping on the Binder native wait handle.\n"
+    "            buffer_wait_event->Signal(service_context.kernel);\n"
+    "            return Status::NoError;",
+)
+strip_f05_once(
+    "    core->FreeBufferLocked(slot);\n"
+    "    core->SignalDequeueCondition();\n\n"
+    "    return Status::NoError;",
+    "    core->FreeBufferLocked(slot);\n"
+    "    core->SignalDequeueCondition();\n"
+    "    // Match CancelBuffer: expose this freed slot to guest waiters, too.\n"
+    "    buffer_wait_event->Signal(service_context.kernel);\n\n"
+    "    return Status::NoError;",
+)
+strip_f05_once(
+    "    // Notify under core->mutex so waiters cannot miss the transition.\n"
+    "    core->SignalDequeueCondition();\n\n"
+    "    return Status::NoError;",
+    "    // Notify under core->mutex so waiters cannot miss the transition.\n"
+    "    core->SignalDequeueCondition();\n"
+    "    buffer_wait_event->Signal(service_context.kernel);\n\n"
+    "    return Status::NoError;",
+)
+
 assert dequeue_legacy_projection == dequeue_expected, (
     "Maintained queue-dequeue provenance or the F05 release wake delta diverged"
 )
