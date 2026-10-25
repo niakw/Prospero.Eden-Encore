@@ -40,6 +40,22 @@ fast gate, la prévalidation et le tableau des six critères au commit
 La CI complète et la clôture F06 sont distinctes : **4/6 reste inchangé**,
 aucun nouveau test sur PS5 demandé.
 
+**F05, 25 octobre — réveil de producteur après libération de buffer :**
+Le producteur ignorait le callback de `BufferQueueConsumer::ReleaseBuffer`
+lorsqu'une connexion HOS n'apportait aucun `IProducerListener`. Le consommateur
+réveillait la condition hôte, mais pas l'événement noyau renvoyé par
+`BufferQueueProducer::GetNativeHandle`. Le commit
+[6ae418e](https://github.com/niakw/Prospero.Eden-Encore/commit/6ae418e67143c44dcba2b5cebd4cf318658fffaf)
+installe un relais à chaque connexion, transmet éventuellement la notification
+d'origine et le désactive avant `CloseEvent` pour gérer le callback différé.
+`tools/check-fc27-f05-producer-release-wake-host.py` rejoue 260 notifications,
+le callback délégué, une concurrence libération/destruction et l'absence de
+signal après fermeture. Le test source-extrait est branché dans le fast gate,
+la prévalidation et le suivi F01–F06, sous `-O0` et `-O2`.
+**C'est un événement noyau simulé, pas le réveil de la vraie tâche invitée ;
+F05 reste en qualification tant que HIPC, ordonnancement invité et progression
+CPU ne sont pas prouvés.**
+
 **F05, 25 octobre — BufferQueue jusqu'à Vulkan, sous GPU simulé :**
 [Fast gate #40155140352 vert](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40155140352)
 sur `bfee35e`. Les deux compilations `-O0`/`-O2` exécutent
