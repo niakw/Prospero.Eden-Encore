@@ -63,6 +63,7 @@ present_methods="\n\n".join(native(PRESENT,s) for s in (
     "void PresentManager::PresentThread(std::stop_token token) {",
 ))
 render_method=native(RENDER,"void RendererVulkan::Composite(")
+assert "#ifdef PS5_NATIVE" in texture_types
 assert "CopyToSwapchain(frame);" in present_methods
 assert "present_in_flight = false;" in present_methods
 assert "present_manager.Present(frame);" in render_method
@@ -83,11 +84,6 @@ inject=r"""
     texture.fail_first_view_creation=true;
     assert(texture.gpu_memory==&texture.memory);
     assert(texture.channel_state==&texture.channel);
-    std::fprintf(stderr,"F03_BRIDGE_INIT cache=%p channel=%p guest_memory=%p descriptor=%d\n",
-                 static_cast<void*>(&texture),
-                 static_cast<void*>(texture.channel_state),
-                 static_cast<void*>(texture.gpu_memory),
-                 texture.channel_state->graphics_image_table.descriptor);
     assert(texture.VisitImageView(5,false)==NULL_IMAGE_VIEW_ID);
     assert(texture.VisitImageView(5,false)==127);
     assert(texture.texture_bindings_serial==1);
@@ -144,7 +140,7 @@ with tempfile.TemporaryDirectory(prefix="encore-f03-present-") as directory:
     source.write_text(cpp)
     for opt in ("-O0","-O2"):
         exe=Path(directory)/("hud"+opt)
-        cmd=[compiler,"-std=c++20",opt,"-g","-pthread","-Wall","-Wextra",
+        cmd=[compiler,"-std=c++20",opt,"-DPS5_NATIVE=1","-g","-pthread","-Wall","-Wextra",
              "-Werror","-fsanitize=undefined","-fno-sanitize-recover=all",
              str(source),"-o",str(exe)]
         built=subprocess.run(cmd,capture_output=True,text=True,timeout=70)
