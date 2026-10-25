@@ -1,14 +1,14 @@
 # Eden Encore — inventaire exhaustif des sources actives
 
-**Branche :** `dev/ps5-sparse-jit`. **Relevé :** 24 octobre 2026.
+**Branche :** `dev/ps5-sparse-jit`. **Relevé :** 25 octobre 2026.
 
 Cet inventaire recense chaque fichier C/C++, en-tête, fragment source et
 source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **327 fichiers** de code et d'en-têtes enregistrés.
-- **327 fichiers** possèdent une correspondance de chemin *exacte*
+- **328 fichiers** de code et d'en-têtes enregistrés.
+- **328 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -198,6 +198,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-core/src/core/hle/service/nvdrv/core/container.cpp` | `maintained-override` | N07 |
 | `eden-core/src/core/hle/service/nvdrv/devices/ioctl_serialization.h` | `maintained-override` | N22 |
 | `eden-core/src/core/hle/service/nvdrv/devices/nvhost_ctrl.cpp` | `maintained-override` | N02,N05 |
+| `eden-core/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp` | `maintained-override` | N24 |
 | `eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp` | `maintained-override` | N03 |
 | `eden-core/src/core/hle/service/server_manager.cpp` | `maintained-override` | H56 |
 | `eden-core/src/core/hle/service/server_manager.h` | `maintained-override` | H54 |
