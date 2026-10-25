@@ -18,6 +18,18 @@ déconnexion réussie.
   ajouts F05 contrôlés.
 - Tests : `c96b555` (rejeu remplacement), `4deadd0` (verrouillage pour
   tous les chemins), `d4fe63c` (assertion mise à jour).
+- Témoin de verrouillage natif renforcé : `8268dfd` vérifie l'accès au
+  mutex depuis un second thread lors du signal Binder des détachements et
+  des changements du nombre de buffers ; `9a36bf2` exécute aussi
+  `CancelBuffer`. `3347144` autorise la fin d'un autre dequeuer qui
+  reprend légitimement le mutex, pour ne pas interpréter cette concurrence
+  normale comme une inversion des verrous. Les méthodes exécutées restent
+  celles du code C++ maintenu, avec état de noyau simulé.
+- Révision complète de référence : `d4fe63c`, **les quatre workflows
+  réussis**, dont le build PS5. Dernier test ajouté : `3347144`,
+  **nouvelle CI en cours** (fast gate #40222417431,
+  prévalidation #40222417439, build PS5 #40222417453,
+  CodeQL #40222417560).
 - CI à confirmer : fast gate [#40212403986](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40212403986),
   prévalidation [#40212403950](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40212403950),
   build PS5 [#40212403951](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40212403951),
