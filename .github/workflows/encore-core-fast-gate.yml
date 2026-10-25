@@ -113,6 +113,7 @@ on:
       - 'tools/check-fc27-f04-native-dma-alias-bytes-host.py'
       - 'tools/check-fc27-f04-native-upload-revision-host.py'
       - 'tools/check-fc27-f04-native-vulkan-upload-barriers-host.py'
+      - 'tools/check-fc27-f04-native-remap-dma-upload-chain-host.py'
       - 'vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h'
       - 'vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h'
       - 'vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp'
@@ -242,6 +243,7 @@ jobs:
           python3 -B tools/check-fc27-f04-native-dma-alias-bytes-host.py
           python3 -B tools/check-fc27-f04-native-upload-revision-host.py
           python3 -B tools/check-fc27-f04-native-vulkan-upload-barriers-host.py
+          python3 -B tools/check-fc27-f04-native-remap-dma-upload-chain-host.py
           python3 -B tools/check-vulkan-multirange-overflow-host.py
           python3 -B tools/check-vulkan-fence-completed-wait-host.py
           python3 -B tools/check-vulkan-pipeline-ready-publication-host.py
