@@ -51,6 +51,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-fc27-f05-native-consumer-disconnect-host.py",
         "check-fc27-f05-native-acquire-drop-wake-host.py",
         "check-fc27-f05-native-queue-replace-wake-host.py",
+        "check-fc27-f05-native-kernel-wait-publication-host.py",
         "check-native-host1x-increment-handoff-host.py",
     ),
     "F06-input-and-pause": (
@@ -332,6 +333,36 @@ def run() -> int:
                         print("F04_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F04_native_remap_dma_upload_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f05-native-kernel-wait-publication-host.py":
+                    kernel_waits = re.findall(
+                        r"F05_NATIVE_KERNEL_GUEST_WAIT_WAKE_PASS cycles=(\d+) "
+                        r"mock_guest_threads=(\d+) resumptions=(\d+) "
+                        r"coalesced_signals=(\d+) reset_rearms=(\d+) "
+                        r"safe_stop=(\d+) scope=shipping_event_methods_mock_scheduler",
+                        result.stdout,
+                    )
+                    excludes = (
+                        "F05_NATIVE_GUEST_KTHREAD_ENDWAIT_AND_FC27_LIVENESS_NOT_PROVEN"
+                        in result.stdout
+                    )
+                    if kernel_waits != [("260","2","520","260","260","1")]*2 or not excludes:
+                        ok, reason = False, "f05_kernel_readable_mock_guest_wait_missing"
+                    else:
+                        fixture_metrics["F05_kernel_readable_wait_host"] = {
+                            "guest_style_waiter_threads": 2,
+                            "resumptions": 520,
+                            "event_cycles": 260,
+                            "level_signal_coalescing": 260,
+                            "reset_rearms": 260,
+                            "compile_modes": ["O0", "O2"],
+                            "scope": "native KEvent/KReadableEvent/KSynchronizationObject "
+                                     "C++ plus mocked KThread and kernel scheduler; "
+                                     "real guest EndWait and FC27 progress unproven",
+                        }
+                        print("F05_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F05_kernel_readable_wait_host"],
+                                         sort_keys=True), flush=True)
+
                 if ok and script == "check-fc27-f05-native-queue-replace-wake-host.py":
                     queue_releases = re.findall(
                         r"F05_NATIVE_QUEUE_REPLACEMENT_GUEST_WAKE_PASS replacements=(\d+) "
