@@ -72,6 +72,13 @@ assert press.index('if ((key == Key::l1 || key == Key::r1)') < press.index('swit
 assert '(active_main_tab_ + (key == Key::r1 ? 1 : 3)) % 4' in press
 assert '(void)press_top_nav(Key::cross);' in press
 assert 'int active_main_tab_ = 0;' in launcher_h
+# OpenGL screenshot harness must navigate the selected retail game by D-pad,
+# now that main-tab shoulders belong to the shared launcher shell.
+preview = source("headless/prosperoeden/host/preview_main.cpp")
+library_fixture = preview.split('if (const char* library_only', 1)[1].split(
+    'if (const char*', 1)[0]
+assert 's.press({Key::right, Key::right, Key::right, Key::right, Key::right,' in library_fixture
+assert 's.press({Key::r1, Key::r1});' not in library_fixture
 assert 'active_main_tab_ = 2;' in launcher
 for initial in range(4):
     assert (initial + 1) % 4 in range(4)
