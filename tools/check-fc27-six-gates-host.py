@@ -52,6 +52,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "F06-input-and-pause": (
         "check-fc27-match-input-profile.py",
         "check-native-hid-cadence-host.py",
+        "check-fc27-f06-native-pad-transition-host.py",
     ),
 }
 
@@ -444,6 +445,36 @@ def run() -> int:
                         print("F05_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F05_host1x_increment_handoff_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f06-native-pad-transition-host.py":
+                    transitions = re.findall(
+                        r"F06_NATIVE_PAD_TRANSITIONS_PASS "
+                        r"phases=(\d+) action_edges=(\d+) options_plus_edges=(\d+) "
+                        r"disconnect_releases=(\d+) home_chords=(\d+) "
+                        r"menu_shortcuts=(\d+) touch_taps=(\d+) "
+                        r"scope=source_extracted_host_mock_virtual_input_no_guest_Npad",
+                        result.stdout)
+                    missing_guest = (
+                        "F06_REAL_GUEST_NPAD_GAMEPLAY_MAPPING_AND_MATCH_PROGRESS_NOT_PROVEN"
+                        in result.stdout)
+                    if transitions != [("5","5","5","1","1","1","1")]*2 or not missing_guest:
+                        ok,reason=False,"f06_native_input_transition_witness_missing"
+                    else:
+                        fixture_metrics["F06_native_pad_transitions_host"] = {
+                            "phases": 5,
+                            "guest_action_edges": 5,
+                            "guest_plus_edges": 5,
+                            "disconnect_releases": 1,
+                            "home_chords": 1,
+                            "menu_shortcuts": 1,
+                            "touch_taps": 1,
+                            "compile_modes": ["O0","O2"],
+                            "scope": "actual PS5 Pad::Consume and PadEngine::SetButtonState "
+                                     "with native DualSense ABI but mock virtual HID sink. "
+                                     "Game Npad consumption and FC27 phases not proven.",
+                        }
+                        print("F06_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F06_native_pad_transitions_host"],
+                                         sort_keys=True),flush=True)
                 checks.append({"script": script, "ok": ok, "reason": reason})
                 if not ok:
                     print(f"FAIL {gate} {script}", flush=True)
