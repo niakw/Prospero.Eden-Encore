@@ -339,6 +339,25 @@ def strip_f05_once(before: str, after: str) -> None:
     assert dequeue_legacy_projection.count(after) == 1, ("F05 delta drift", after[:90])
     dequeue_legacy_projection = dequeue_legacy_projection.replace(after, before, 1)
 
+# Opt-in F05 live-wait attribution: this is a native-only diagnostic
+# insertion, not part of the upstream BufferQueue producer semantics.
+strip_f05_once(
+    "            if (!core->WaitForDequeueCondition(lk)) {\n"
+    "                // We are no longer running\n"
+    "                return Status::NoError;\n"
+    "            }",
+    "#ifdef EDEN_NVNF_DEQUEUE_PROFILE\n"
+    "            // F05: a producer stuck inside this wait never contributes to\n"
+    "            // completed DequeueBuffer timings. Publish in-flight waiters only\n"
+    "            // in the opt-in profile, without changing the blocking predicate.\n"
+    "            ::Eden::Performance::GuestDequeueBlockedScope blocking_scope;\n"
+    "#endif\n"
+    "            if (!core->WaitForDequeueCondition(lk)) {\n"
+    "                // We are no longer running\n"
+    "                return Status::NoError;\n"
+    "            }",
+)
+
 strip_f05_once("", '#include "core/hle/service/nvnflinger/producer_listener.h"\n#include <unordered_map>\n')
 strip_f05_once(
     '    buffer_wait_event = service_context.CreateEvent("BufferQueue:WaitEvent");',
