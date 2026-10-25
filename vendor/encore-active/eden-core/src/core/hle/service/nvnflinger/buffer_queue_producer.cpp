@@ -641,13 +641,15 @@ Status BufferQueueProducer::QueueBuffer(s32 slot, const QueueBufferInput& input,
 
         core->buffer_has_been_queued = true;
         core->SignalDequeueCondition();
-        if (recycled_queued_slot) {
-            // Frame replacement freed a queued slot. Wake an emulated
-            // producer waiting on the Binder KReadableEvent as well.
-            buffer_wait_event->Signal(service_context.kernel);
-        }
 
         output->Inflate(core->default_width, core->default_height, core->transform_hint, static_cast<u32>(core->queue.size()));
+    }
+
+    if (recycled_queued_slot) {
+        // KEvent::Signal takes the guest scheduler lock. Never acquire it
+        // while holding the BufferQueue mutex: an unblocked guest may
+        // reenter Binder/BufferQueue and reverse that lock order.
+        buffer_wait_event->Signal(service_context.kernel);
     }
 
     // Notify consumers with the actual queued item: keep its buffer and slot
