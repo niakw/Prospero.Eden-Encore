@@ -53,6 +53,9 @@ if(PS5_NATIVE)
     endif()
     target_include_directories(core BEFORE PUBLIC "${_encore_sync_root}")
 
+    # F05: notify waiters from the live list after callbacks unlink aliases.
+    encore_replace_core_source(
+        "hle/kernel/k_synchronization_object.cpp" "core/hle/kernel/k_synchronization_object.cpp")
     foreach(name IN ITEMS k_condition_variable.cpp k_address_arbiter.cpp)
         encore_replace_core_source(
             "hle/kernel/${name}" "core/hle/kernel/${name}")

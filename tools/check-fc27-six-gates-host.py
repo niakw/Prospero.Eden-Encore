@@ -427,9 +427,16 @@ def run() -> int:
                         r"scope=source_extracted_consumer_release_and_kthread_mock_scheduler",
                         result.stdout,
                     )
+                    duplicate_handle = re.findall(
+                        r"F05_NATIVE_DUPLICATE_HANDLE_WAKE_PASS handles=(\\d+) "
+                        r"wake_calls=(\\d+) synced_index=(\\d+) wait_nodes_unlinked=(\\d+) "
+                        r"scope=maintained_native_sync_notify_mock_scheduler",
+                        result.stdout,
+                    )
                     excludes = "F05_REAL_GUEST_SCHEDULER_AND_FC27_LIVENESS_NOT_PROVEN" in result.stdout
                     if (guest_endwait != [("260","260","260","1","1","520","1","1")]*2
                             or integrated_release != [("260","260","260","260","520","260")]*2
+                            or duplicate_handle != [("2","1","0","1")]*2
                             or not excludes):
                         ok, reason = False, "f05_native_guest_kthread_endwait_witness_missing"
                     else:
@@ -440,6 +447,7 @@ def run() -> int:
                             "consumer_successful_releases": 260,
                             "stale_and_duplicate_releases_quiet": True,
                             "native_consumer_to_kthread_chain": True,
+                            "duplicate_native_handle_no_double_endwait": True,
                             "wait_nodes_unlinked": True,
                             "timer_tasks_cancelled": 520,
                             "compile_modes": ["O0", "O2"],
