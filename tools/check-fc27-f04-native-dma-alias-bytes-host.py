@@ -63,6 +63,7 @@ using u32 = std::uint32_t;
 using u64 = std::uint64_t;
 using s64 = std::int64_t;
 using DAddr = u64;
+using GPUVAddr = u64;
 using ImageId = std::size_t;
 namespace boost::container {
 template<class T, std::size_t N> using small_vector = std::vector<T>;
