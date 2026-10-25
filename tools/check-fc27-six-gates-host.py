@@ -451,14 +451,14 @@ def run() -> int:
                         r"F05_NATIVE_ACQUIRE_DROP_GUEST_WAKE_PASS frames=(\d+) stale_drops=(\d+) "
                         r"guest_event=(\d+) callbacks_unlocked=(\d+) normal_acquire_quiet=(\d+) "
                         r"present_later_quiet=(\d+) invalid_quiet=(\d+) "
-                        r"scope=source_extracted_mock_kernel",
+                        r"untracked_release_quiet=(\d+) scope=source_extracted_mock_kernel",
                         result.stdout,
                     )
                     exclusions = (
                         "F05_REAL_GUEST_IPC_SCHEDULER_AND_FC27_PROGRESS_NOT_PROVEN"
                         in result.stdout
                     )
-                    if acquired != [("260", "520", "260", "1", "1", "1", "1")]*2 or not exclusions:
+                    if acquired != [("260", "520", "260", "1", "1", "1", "1", "1")]*2 or not exclusions:
                         ok, reason = False, "f05_acquire_drop_guest_wake_witness_missing"
                     else:
                         fixture_metrics["F05_native_acquire_drop_wake_host"] = {
@@ -466,6 +466,7 @@ def run() -> int:
                             "reclaimed_queued_frames": 520,
                             "guest_events": 260,
                             "no_duplicate_on_normal_acquire": True,
+                            "no_untracked_release_wake": True,
                             "callback_unlocked": True,
                             "compile_modes": ["O0", "O2"],
                             "scope": "native consumer acquisition and producer release listener "
