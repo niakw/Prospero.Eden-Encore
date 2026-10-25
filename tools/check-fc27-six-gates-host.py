@@ -46,6 +46,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-native-nvnflinger-detach-wake-host.py",
         "check-native-gpu-composite-syncpoint-host.py",
         "check-native-vulkan-renderer-handoff-host.py",
+        "check-fc27-f05-native-nvdisp-vulkan-present-chain-host.py",
         "check-native-host1x-increment-handoff-host.py",
     ),
     "F06-input-and-pause": (
