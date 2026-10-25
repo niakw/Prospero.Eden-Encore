@@ -49,6 +49,14 @@ assert "launch_description_" in launch_setup
 assert "launch_screenshots_" in launch_setup
 assert "launch_case_game_ = game;" in launch_setup
 assert "textures_.clear_case_pages();" in launch_setup
+# The initial full-bleed case front must enter the existing asynchronous
+# source-decode queue BEFORE screenshots and large Hero. Same 704px bucket
+# as the actual reconstructed renderer: no added synchronous GL decode.
+prewarm = 'textures_.cover(*front, 704.0f)'
+assert "case_media::FrontPaper(" in launch_setup
+assert launch_setup.count(prewarm) == 1
+assert launch_setup.index(prewarm) < launch_setup.index('textures_.cover(shot, 760.0f)')
+assert launch_setup.index(prewarm) < launch_setup.index('textures_.cover(launch_hero_, 1920.0f)')
 assert "launch_composed_front_ = 0;" in launch_setup
 assert "launch_composed_back_ = 0;" in launch_setup
 assert "textures_.cover(launch_box_front_, 760.0f)" in launch_setup
