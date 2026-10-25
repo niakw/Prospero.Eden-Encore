@@ -79,27 +79,29 @@ template<typename T> struct interval_set {
 };
 }
 struct TimedMutex {
+    static thread_local unsigned depth;
     std::mutex mutex;
     std::atomic<u64> held_ns{0};
     std::atomic<u64> gets{0};
     Clock::time_point entered{};
     void lock() {
-        mutex.lock();entered=Clock::now();
+        mutex.lock();++depth;entered=Clock::now();
         gets.fetch_add(1,std::memory_order_relaxed);
     }
     void unlock() {
         const auto ns=std::chrono::duration_cast<std::chrono::nanoseconds>(
             Clock::now()-entered).count();
         held_ns.fetch_add(static_cast<u64>(ns),std::memory_order_relaxed);
-        mutex.unlock();
+        --depth;mutex.unlock();
     }
     bool try_lock() {
         if(!mutex.try_lock())return false;
-        entered=Clock::now();
+        ++depth;entered=Clock::now();
         gets.fetch_add(1,std::memory_order_relaxed);
         return true;
     }
 };
+thread_local unsigned TimedMutex::depth=0;
 struct State {unsigned resets{};void ResetRSB(){++resets;}};
 struct Code {
     unsigned cleared{};
@@ -114,8 +116,9 @@ struct Emitter {
         ++ranged;
         last_count=static_cast<unsigned>(spans.spans.size());
         assert(last_count==1);
-        if(!tracked->try_lock()) executed_under_guard=true;
-        else tracked->unlock();
+        // try_lock from the owning thread on a non-recursive std::mutex is
+        // undefined; track THIS thread's lock ownership explicitly.
+        if (TimedMutex::depth) executed_under_guard=true;
         u64 v=static_cast<u64>(spans.spans[0].lo)+static_cast<u64>(spans.spans[0].hi);
         // Identical deterministic synthetic emitter cost for pinned/maintained.
         for(unsigned i=0;i<4096;++i)
