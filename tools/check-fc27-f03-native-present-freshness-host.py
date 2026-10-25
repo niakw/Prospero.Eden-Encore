@@ -125,10 +125,41 @@ inject=r"""
     assert(texture.views_created==3);
     assert(texture.samplers_found==1);
     assert(texture.runtime.calls==hud_ticks);
+
+    // A second backing loss AFTER the first successful remap must clear the
+    // old GPU view even though the guest TIC slot and cache key are unchanged.
+    // Reappearance must create a new view and reach presentation as that new
+    // identity, not silently reuse the retired HUD image.
+    texture.slot_images[128].flags.remapped=true;
+    texture.channel.graphics_image_table.descriptor=-1;
+    assert(texture.VisitImageView(5,false)==NULL_IMAGE_VIEW_ID);
+    assert(texture.channel.image_view_ids.at(5)==NULL_IMAGE_VIEW_ID);
+    assert(texture.texture_bindings_serial==3);
+    texture.channel.graphics_image_table.descriptor=27;
+    assert(texture.VisitImageView(5,false)==129);
+    assert(texture.channel.image_view_ids.at(5)==129);
+    assert(texture.texture_bindings_serial==4);
+    texture.rt_depth_image_id=129;
+    texture_draw.texture_descriptors[0].handles={{129,3},{129,3}};
+    const auto recovered_draw=BuildDraw(texture,texture_draw);
+    assert(recovered_draw.views.size()==2 && recovered_draw.views[0].id==129);
+    assert(recovered_draw.samplers.size()==2 && recovered_draw.samplers[0]==304);
+    texture.CheckFeedbackLoop(recovered_draw.views);
+    const std::uint32_t recovered_hud=129u*100000u+hud_ticks;
+    Deliver(fresh_renderer,fresh_game,recovered_hud);
+    fresh_expected.emplace_back(fresh_game,recovered_hud);
+    fresh_present.WaitPresent();
+    assert(fresh_present.presented==fresh_expected);
+    assert(fresh_present.copies==hud_ticks+1);
+    assert(fresh_renderer.gpu.notifications==hud_ticks+1);
+    assert(fresh_renderer.rasterizer.ticks==hud_ticks+1);
+    assert(texture.views_created==4);
+    assert(texture.samplers_found==1);
+    assert(texture.runtime.calls==hud_ticks+1);
     std::printf("F03_NATIVE_TIC_TO_PRESENT_FRESHNESS_PASS frames=%u "
-                "hud_unique=%u remaps=1 pause_ticks=12 barriers=%u "
+                "hud_unique=%u remaps=2 transient_missing=1 pause_ticks=12 barriers=%u "
                 "source_sections=9 scope=source_extracted_host_mock_gpu\n",
-                hud_ticks,hud_ticks,texture.runtime.calls);
+                hud_ticks+1,hud_ticks+1,texture.runtime.calls);
 """
 tag='    std::printf("F05_VULKAN_RENDER_PRESENT_HOST_PASS '
 assert cpp.count(tag)==1
