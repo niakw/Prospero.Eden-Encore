@@ -243,6 +243,7 @@ class Launcher
     Key confirmation_key_ = Key::cross;
     Key pressed_key_ = Key::cross;
     int top_nav_focus_ = -1; // -1 = content; 0..3 = Home/Library/Recents/Settings
+    int active_main_tab_ = 0; // the Recent rail is its own tab, sharing Home content
 
     // launching a game
     std::string selected_game_;
