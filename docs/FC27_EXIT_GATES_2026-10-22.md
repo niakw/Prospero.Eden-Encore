@@ -34,6 +34,10 @@
 - **F07-RÉSOLUTION** : pas d'escalade de résolution pour « réparer » les saccades ; 2160p/1,25× a été ressenti plus laid et non plus fluide.
 - **UI distincte du gameplay** : navigateur L1/R1 quatre onglets, pied de jaquette arrière inversé en bibliothèque et loader, et arrivée de la jaquette front après la boîte. Des correctifs ciblés de sources launcher sont intégrés séparément ; CI et console toujours à qualifier.
 
+**Correctifs ciblés du launcher, sans toucher au moteur FC27 :** `e7df1d5` enregistre l'onglet actif, `213bf73` fait passer L1/R1 d'une page de bibliothèque à la navigation entre les quatre onglets et met le préchargement de l'image front en tête de la file asynchrone, `c811e40` redresse l'insert fixe de jaquette arrière. Le rendu OpenGL de prévisualisation utilisait encore deux `R1` pour atteindre un jeu : le harnais `908e5f7` utilise désormais le D-pad sans désactiver les vrais raccourcis, et `139e5ae` verrouille cette propriété. Vérification native et console encore requises. Le préchargement asynchrone **réduit le retard potentiel**, mais ne prouve pas une absence totale d'attente de texture.
+
+**Séparation des journaux :** le fichier nommé `network-accepted(20261025-225408).log` contient des événements horodatés dès le 13 octobre 2026 (ex. `epoch=1791889033`) : ne pas le corréler temporellement aux sessions du 25 octobre sans marqueur de rotation. Les deux sessions utiles pour les fenêtres de FPS sont attestées par `EDEN_SESSION_SOURCE=cd4857c8` dans `heap` ; `heap.prev` décrit essentiellement le moteur OpenGL du lanceur/driver et non des mesures FPS de FC27.
+
 **Règle de sortie :** aucun nouveau « F07 validé » tant que les bandeaux noirs/HUD retardés, la réponse manette et la stabilité sous mode normal ne sont pas démontrés sur console. Les symptômes utilisateur ne sont pas des échecs de la prévalidation *hôte* F01–F06, mais montrent qu'elle est insuffisante pour qualifier le produit.
 
 ---
