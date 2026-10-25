@@ -76,14 +76,14 @@ The native build previously inherited a boilerplate `param.json` without the opt
 <!-- BEGIN AUTO-UPSTREAM-COMPARISON -->
 ### Automated comparison (daily + manual)
 
-Checked in UTC: **2026-10-23 10:05 UTC**. Changes are commits relative to pins, not proven missing fixes.
+Checked in UTC: **2026-10-25 09:50 UTC**. Changes are commits relative to pins, not proven missing fixes.
 This workflow never imports source patches, modifies dependencies, or reads console data.
 
 | Dependency | Source | Pinned revision | Ahead / behind | Status |
 |---|---|---|---:|---|
-| eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +92 / -0 | upstream ahead |
-| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +5014 / -0 | upstream ahead |
-| fmt | [fmtlib/fmt](https://github.com/fmtlib/fmt) | 12.1.0 | +364 / -0 | upstream ahead |
+| eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +93 / -0 | upstream ahead |
+| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +5151 / -0 | upstream ahead |
+| fmt | [fmtlib/fmt](https://github.com/fmtlib/fmt) | 12.1.0 | +369 / -0 | upstream ahead |
 | zbic | [kinnay/zbic](https://github.com/kinnay/zbic) | 11b08f271226 | +0 / -0 | identical |
 | compiler-rt | frozen archive / binary | — | — | not comparable |
 | pacbrew | frozen archive / binary | — | — | not comparable |
@@ -92,15 +92,15 @@ This workflow never imports source patches, modifies dependencies, or reads cons
 | boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | dd44bbdc7543 | — | repository unavailable |
 | ps5-vulkan-tools | [mihawk-99/PS5_Vulkan](https://github.com/mihawk-99/PS5_Vulkan) | 3f3ee6960701 | +19 / -0 | upstream ahead |
 | ps5-mesa | [mihawk-99/PS5_Mesa](https://github.com/mihawk-99/PS5_Mesa) | 0b2d6d1a61d9 | +111 / -103 | diverged |
-| ps5-payload-sdk-fork | [mihawk-99/PS5_PayloadSDK](https://github.com/mihawk-99/PS5_PayloadSDK) | 95c08f27386f | +100 / -48 | diverged |
+| ps5-payload-sdk-fork | [mihawk-99/PS5_PayloadSDK](https://github.com/mihawk-99/PS5_PayloadSDK) | 95c08f27386f | +104 / -48 | diverged |
 | encore-overrides | [niakw/encore-overrides](https://github.com/niakw/encore-overrides) | 4fdb329e732a | +0 / -0 | identical |
 | opengl-opengnm-psbc | [PS4-OpenGNM/opengnm-psbc](https://github.com/PS4-OpenGNM/opengnm-psbc) | a92a1228ea3a | +4 / -0 | upstream ahead |
 | opengl-opengnm | [PS4-OpenGNM/opengnm](https://github.com/PS4-OpenGNM/opengnm) | 4b295ca54c82 | +0 / -0 | identical |
 | opengl-spirv-headers | [KhronosGroup/SPIRV-Headers](https://github.com/KhronosGroup/SPIRV-Headers) | 0d25db97cb9b | +9 / -0 | upstream ahead |
 | opengl-vulkan-headers | [KhronosGroup/Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers) | b51f6b865c18 | +8 / -0 | upstream ahead |
-| opengl-imgui | [ocornut/imgui](https://github.com/ocornut/imgui) | f5befd2d29e6 | +1513 / -0 | upstream ahead |
+| opengl-imgui | [ocornut/imgui](https://github.com/ocornut/imgui) | f5befd2d29e6 | +1519 / -0 | upstream ahead |
 | opengl-nanovg | [memononen/nanovg](https://github.com/memononen/nanovg) | ce3bf745eb2d | +0 / -0 | identical |
-| opengl-sokol | [floooh/sokol](https://github.com/floooh/sokol) | 48c85905aeaa | +223 / -0 | upstream ahead |
+| opengl-sokol | [floooh/sokol](https://github.com/floooh/sokol) | 48c85905aeaa | +226 / -0 | upstream ahead |
 | opengl-native-boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | 4f531c4b517f | — | repository unavailable |
 | opengl-mesa-26-2 | frozen archive / binary | — | — | not comparable |
 
@@ -109,7 +109,6 @@ This workflow never imports source patches, modifies dependencies, or reads cons
 These are upstream commit titles, not validated Encore integrations.
 
 **eden**
-- [d76f8f91c423](https://github.com/eden-emulator/mirror/commit/d76f8f91c423) — (hle) Fix nullptr on ListApplicationIcon (#4438)
 - [fd34024f0e1f](https://github.com/eden-emulator/mirror/commit/fd34024f0e1f) — (hle/ns) fix build error due to missing async_result.h (#4440)
 - [4ce45b3b37d1](https://github.com/eden-emulator/mirror/commit/4ce45b3b37d1) — (hle) Fix crash on MK8D and SM3DW LDN (#4417)
 - [7bf95be2c293](https://github.com/eden-emulator/mirror/commit/7bf95be2c293) — (dynarmic) fix A32 crash due to wrong LEA encoding (#4444)
@@ -154,6 +153,7 @@ These are upstream commit titles, not validated Encore integrations.
 - [e0d47f2790e3](https://github.com/eden-emulator/mirror/commit/e0d47f2790e3) — (cmake) fix macOS compilation by forcing lz4 to be static (#4540)
 - [de7e6e01d43e](https://github.com/eden-emulator/mirror/commit/de7e6e01d43e) — Revert 	(input_common/joycon) Enumerate SDL devices iff SDL signals change (#4486) (#4545)
 - [989768aa4672](https://github.com/eden-emulator/mirror/commit/989768aa4672) — Fix (core, gpu, threads) Multithreading refactor (#4254) (#4548)
+- [305f40100d76](https://github.com/eden-emulator/mirror/commit/305f40100d76) — Fix aarch and android builds (#4576)
 
 **ffmpeg** (history excerpt; some commits omitted)
 - [9c51aa182488](https://github.com/FFmpeg/FFmpeg/commit/9c51aa182488) — swscale: add SwsCompiledOp.slice_align
@@ -207,7 +207,7 @@ These are upstream commit titles, not validated Encore integrations.
 - [fde48a3b031c](https://github.com/mihawk-99/PS5_Mesa/commit/fde48a3b031c) — radv/ps5: the suspend point is made by a thread of its own
 - [d0d7325e447b](https://github.com/mihawk-99/PS5_Mesa/commit/d0d7325e447b) — radv: threaded recording (RADV_THREADED_RECORDING=1)
 
-**ps5-payload-sdk-fork**
+**ps5-payload-sdk-fork** (history excerpt; some commits omitted)
 - [118653bc5d11](https://github.com/mihawk-99/PS5_PayloadSDK/commit/118653bc5d11) — setup-sdk: install the fork's compiler wrappers over the release's
 - [5e9abd707a57](https://github.com/mihawk-99/PS5_PayloadSDK/commit/5e9abd707a57) — PROBE: memory streams on a pipe, measured through the CTS title
 - [a5cbafeed4b0](https://github.com/mihawk-99/PS5_PayloadSDK/commit/a5cbafeed4b0) — platform: memfd_create, on libkernel's anonymous shared memory objects
