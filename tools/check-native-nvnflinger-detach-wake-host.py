@@ -29,8 +29,10 @@ def method(src):
 selected = method(active)
 assert 'core->FreeBufferLocked(found);\n    // DetachBuffer' in selected
 assert selected.count("core->SignalDequeueCondition();") == 1
+assert selected.count("buffer_wait_event->Signal(service_context.kernel);") == 1
 assert selected.index("core->FreeBufferLocked(found);") < selected.index("core->SignalDequeueCondition();")
 assert "core->SignalDequeueCondition();" not in method(pinned)
+assert "buffer_wait_event->Signal(service_context.kernel);" not in method(pinned)
 
 fixture = r"""
 #include <array>
@@ -74,7 +76,16 @@ struct BufferQueueCore {
     void SignalDequeueCondition();
     bool WaitForDequeueCondition(std::unique_lock<std::mutex>& lk);
 };
+struct MockKernel {};
+struct MockEvent {
+    std::atomic<int> signals{};
+    void Signal(MockKernel&) {signals.fetch_add(1);}
+};
+struct MockServiceContext {MockKernel kernel{};};
 struct BufferQueueProducer {
+    MockServiceContext service_context{};
+    MockEvent event{};
+    MockEvent* buffer_wait_event{&event};
     BufferQueueCore* core{};
     std::array<BufferSlot, BufferQueueDefs::NUM_BUFFER_SLOTS>& slots;
     explicit BufferQueueProducer(BufferQueueCore& c) : core(&c), slots(c.slots) {}
@@ -89,6 +100,7 @@ int main() {
     assert(p.DetachNextBuffer(nullptr, &fence) == Status::BadValue);
     assert(p.DetachNextBuffer(&output, nullptr) == Status::BadValue);
     assert(core.dequeue_epoch.load() == 0);
+    assert(p.event.signals.load() == 0);
     assert(p.DetachNextBuffer(&output, &fence) == Status::NoMemory);
     assert(core.dequeue_epoch.load() == 0);
     // Oldest free graphic buffer is detached first. The active slot is
@@ -103,14 +115,18 @@ int main() {
     assert(output && output->payload == 456 && fence.sequence == 9);
     assert(core.slots[1].graphic_buffer == nullptr);
     assert(core.dequeue_epoch.load() == 1);
+    assert(p.event.signals.load() == 1);
     assert(p.DetachNextBuffer(&output, &fence) == Status::NoError);
     assert(output && output->payload == 123 && fence.sequence == 2);
     assert(core.dequeue_epoch.load() == 2);
+    assert(p.event.signals.load() == 2);
     assert(p.DetachNextBuffer(&output, &fence) == Status::NoMemory);
     assert(core.dequeue_epoch.load() == 2);
+    assert(p.event.signals.load() == 2);
     core.is_abandoned = true;
     assert(p.DetachNextBuffer(&output, &fence) == Status::NoInit);
     assert(core.dequeue_epoch.load() == 2);
+    assert(p.event.signals.load() == 2);
 
     // Deterministically place TWO producers inside the actual core condition
     // wait: each must release the mutex for the next one to enter.
@@ -142,6 +158,7 @@ int main() {
             std::this_thread::yield();
         assert(woke.load() == 2);
         assert(blocked.dequeue_epoch.load() == 1);
+        assert(detacher.event.signals.load() == 1);
         first.join();
         second.join();
     }
