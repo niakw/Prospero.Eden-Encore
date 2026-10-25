@@ -360,6 +360,12 @@ def run() -> int:
                         r"delayed_and_immediate_fences=verified",
                         result.stdout,
                     )
+                    binder_records = re.findall(
+                        r"F05_NATIVE_IPC_BINDER_DISPATCH_PASS "
+                        r"auto_transactions=(\d+) forwarded=(\d+) invalid_binders=(\d+) "
+                        r"scope=source_extracted_host_mock_guest_parcels",
+                        result.stdout,
+                    )
                     queued = re.findall(
                         r"F05_NATIVE_BUFFERQUEUE_TO_VULKAN_CHAIN_PASS "
                         r"queued=(\d+) acquired_game=(\d+) acquired_hud=(\d+) "
@@ -372,12 +378,14 @@ def run() -> int:
                     ) == 1
                     if (records != [("260","260","7","1","1")]*2 or
                             independent != ["260","260"] or
-                            queued != [("260",)*5]*2 or not bounded):
+                            queued != [("260",)*5]*2 or
+                            binder_records != [("260","260","1")]*2 or not bounded):
                         ok,reason=False,"f05_linked_native_guest_to_present_missing"
                     else:
                         fixture_metrics["F05_linked_nvdisp_host1x_vulkan_present_host"] = {
                             "native_nvdisp_guest_requests": 260,
                             "native_nvnflinger_queue_buffers": 260,
+                            "native_hos_binder_auto_transactions": 260,
                             "native_nvnflinger_acquisitions_per_layer": 260,
                             "native_hardware_compositions": 260,
                             "async_mock_present_copies": 260,

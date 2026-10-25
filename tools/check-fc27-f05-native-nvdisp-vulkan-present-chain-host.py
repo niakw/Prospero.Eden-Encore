@@ -346,21 +346,119 @@ host=once(host,"    F05PipeDrain(260);\n    std::puts(",
 assert "F05QueueSubmit(game,hud);" in host
 assert "F05PipeForward(static_cast<u64>(ids[0]),static_cast<u64>(ids[1]));" in compositor
 
+# Compile the real HOS Binder service's two transaction methods into a fourth
+# C++ unit. The guest HIPC payload marshalling and game thread are mock inputs;
+# the binder lookup -> Transact call is the selected native implementation.
+binder_src=(ROOT/"vendor/sources/eden/src/core/hle/service/nvnflinger/hos_binder_driver.cpp").read_text()
+binder_methods="\n\n".join(native(binder_src,sig) for sig in (
+    "Result IHOSBinderDriver::TransactParcel(",
+    "Result IHOSBinderDriver::TransactParcelAuto(",
+))
+assert "m_server->TryGetBinder(binder_id)" in binder_methods
+assert "binder->Transact(transaction_id, parcel_data, parcel_reply, flags);" in binder_methods
+assert "this->TransactParcel(binder_id, transaction_id" in binder_methods
+binder_cpp=r"""
+#include <cassert>
+#include <cstdint>
+#include <cstdio>
+#include <memory>
+using s32=std::int32_t;
+using u32=std::uint32_t;
+using u64=std::uint64_t;
+#define LOG_DEBUG(...) ((void)0)
+#define R_SUCCEED_IF(condition) do { if(condition) return Result{}; } while(false)
+#define R_SUCCEED() return Result{}
+#define R_RETURN(value) return (value)
+extern "C" void F05QueueSubmit(u64 game,u64 hud);
+namespace Service::Nvnflinger {
+struct Result {int code=0;};
+constexpr int BufferAttr_HipcMapAlias=1;
+constexpr int BufferAttr_HipcAutoSelect=2;
+template<int Kind> struct InBuffer {
+    u64 game{},hud{};
+    template<int Other> operator InBuffer<Other>()const {
+        return {game,hud};
+    }
+};
+template<int Kind> struct OutBuffer {
+    int* status{};
+    template<int Other> operator OutBuffer<Other>()const {
+        return {status};
+    }
+};
+struct MockBinder {
+    unsigned calls{};
+    void Transact(u32 code,InBuffer<BufferAttr_HipcMapAlias> data,
+                  OutBuffer<BufferAttr_HipcMapAlias> reply,u32 flags) {
+        assert(code==7 && flags==0);
+        (void)reply;
+        ++calls;
+        F05QueueSubmit(data.game,data.hud);
+    }
+};
+struct MockServer {
+    MockBinder binder;
+    MockBinder* TryGetBinder(s32 id){return id==77?&binder:nullptr;}
+};
+struct IHOSBinderDriver {
+    std::shared_ptr<MockServer> m_server=std::make_shared<MockServer>();
+    Result TransactParcel(s32,u32,InBuffer<BufferAttr_HipcMapAlias>,
+                          OutBuffer<BufferAttr_HipcMapAlias>,u32);
+    Result TransactParcelAuto(s32,u32,InBuffer<BufferAttr_HipcAutoSelect>,
+                              OutBuffer<BufferAttr_HipcAutoSelect>,u32);
+};
+__BINDER_METHODS__
+static IHOSBinderDriver driver;
+} // namespace Service::Nvnflinger
+extern "C" void F05BinderSubmit(u64 game,u64 hud){
+    using namespace Service::Nvnflinger;
+    auto response=driver.TransactParcelAuto(
+        77,7,InBuffer<BufferAttr_HipcAutoSelect>{game,hud},
+        OutBuffer<BufferAttr_HipcAutoSelect>{},0);
+    assert(response.code==0);
+}
+extern "C" void F05BinderDrain(unsigned count){
+    using namespace Service::Nvnflinger;
+    assert(driver.m_server->binder.calls==count);
+    // Native missing-binder guard: an invalid ID must not fabricate a frame.
+    auto response=driver.TransactParcelAuto(
+        -7,7,InBuffer<BufferAttr_HipcAutoSelect>{10,20},
+        OutBuffer<BufferAttr_HipcAutoSelect>{},0);
+    assert(response.code==0 && driver.m_server->binder.calls==count);
+    std::printf("F05_NATIVE_IPC_BINDER_DISPATCH_PASS "
+                "auto_transactions=%u forwarded=%u invalid_binders=1 "
+                "scope=source_extracted_host_mock_guest_parcels\n",count,count);
+}
+""".replace("__BINDER_METHODS__",binder_methods)
+host=once(host,
+    'extern "C" void F05QueueSubmit(std::uint64_t game,std::uint64_t hud);',
+    'extern "C" void F05QueueSubmit(std::uint64_t game,std::uint64_t hud);\n'
+    'extern "C" void F05BinderSubmit(std::uint64_t game,std::uint64_t hud);\n'
+    'extern "C" void F05BinderDrain(unsigned count);',
+    "binder function declarations")
+host=once(host,'        F05QueueSubmit(game,hud);',
+          '        F05BinderSubmit(game,hud);',"binder forward")
+host=once(host,'    F05QueueDrain(260);\n    F05PipeDrain(260);',
+          '    F05BinderDrain(260);\n    F05QueueDrain(260);\n    F05PipeDrain(260);',
+          "binder final claim")
+assert 'F05BinderSubmit(game,hud);' in host
+
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler,"C++20 host compiler required"
 with tempfile.TemporaryDirectory(prefix="encore-f05-guest-to-present-") as d:
     p=Path(d)
-    a=p/"guest.cpp";b=p/"present.cpp";c=p/"surface.cpp"
-    a.write_text(host);b.write_text(vulkan);c.write_text(compositor)
+    a=p/"guest.cpp";b=p/"present.cpp";c=p/"surface.cpp";d=p/"binder.cpp"
+    a.write_text(host);b.write_text(vulkan);c.write_text(compositor);d.write_text(binder_cpp)
     for opt in ("-O0","-O2"):
         exe=p/("chain"+opt)
         build=subprocess.run([compiler,"-std=c++20",opt,"-pthread","-Wall",
                  "-Wextra","-Werror","-fsanitize=undefined",
-                 "-fno-sanitize-recover=all",str(a),str(b),str(c),"-o",str(exe)],
+                 "-fno-sanitize-recover=all",str(a),str(b),str(c),str(d),"-o",str(exe)],
                  text=True,capture_output=True,timeout=90)
         assert build.returncode==0,(opt,build.stderr[-9000:])
         run=subprocess.run([str(exe)],capture_output=True,text=True,timeout=45)
         assert run.returncode==0,(opt,run.stderr[-6000:],run.stdout[-6000:])
+        assert "F05_NATIVE_IPC_BINDER_DISPATCH_PASS auto_transactions=260" in run.stdout
         assert "F05_NATIVE_BUFFERQUEUE_TO_VULKAN_CHAIN_PASS queued=260" in run.stdout
         assert "F05_NATIVE_NVDISP_VULKAN_PRESENT_CHAIN_PASS requests=260 copies=260" in run.stdout
         assert "F05_NV_DISP_GPU_SYNCPOINT_SOURCE_PASS requests=260" in run.stdout
