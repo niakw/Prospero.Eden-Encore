@@ -61,7 +61,7 @@ struct BufferQueueCore {
  // acquire the mutex between Disconnect unlocking and the guest callback.
  // A bounded wait distinguishes that contention from callback reentrancy.
  std::timed_mutex mutex{};
- std::condition_variable condition{};
+ std::condition_variable_any condition{};
  int epoch{},freed{};
  bool is_abandoned{};
  std::shared_ptr<IConsumerListener> consumer_listener{};
