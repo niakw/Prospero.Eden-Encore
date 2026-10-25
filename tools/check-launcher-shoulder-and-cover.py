@@ -48,6 +48,10 @@ for attr in ("game.hero","case_media::BackScenes(",
              "game.description", "text_block(c, desc,", "const Rect footer"):
     assert attr in back, attr
 assert '"SWITCH"' in front
+# Native fixed paper rasters use vertically reversed sampling. The layered
+# 3D paper has its own independent FBO flip and MUST NOT be changed.
+assert 'c.list.image(c.textures.switch_logo(), logo,\n                     {0.0f, 1.0f, 1.0f, -1.0f}' in front
+assert 'c.list.image(c.textures.switch_logo(), logo,\n                     {0.0f, 0.0f, 1.0f, 1.0f}' not in front
 # Front uses a full-width cover UV crop, never stretched independently in X/Y.
 front_cover = method(library, "void reconstructed_cover(", "// Reconstructed paper inserts")
 for token in ("uv.w = target / source;", "uv.h = source / target;",
