@@ -230,8 +230,11 @@ void flat_back_fallback(Canvas& c, const Game& game, const Rect& r)
         // The exact immutable source-image rectangle is drawn in full.
         // This is a static template, never cropped or tinted, and keeps the
         // reference's game-specific printing independent of dynamic scenes.
+        // The supplied footer is upside-down with the GL/TGA default UV
+        // orientation. Correct ONLY this static paper insert. The 3D
+        // composed case performs its own final offscreen texture Y-flip.
         c.list.image(c.textures.switch_rear_footer(), footer,
-                     {0.0f, 0.0f, 1.0f, 1.0f}, Color::rgb(0xffffff));
+                     {0.0f, 1.0f, 1.0f, -1.0f}, Color::rgb(0xffffff));
     } else {
         // Works without a bundled template, but does NOT invent a publisher,
         // barcode, age rating, technical compatibility or certification.
