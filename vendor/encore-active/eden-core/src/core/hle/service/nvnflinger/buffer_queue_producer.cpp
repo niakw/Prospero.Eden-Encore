@@ -167,6 +167,8 @@ Status BufferQueueProducer::SetBufferCount(s32 buffer_count) {
         if (buffer_count == 0) {
             core->override_max_buffer_count = 0;
             core->SignalDequeueCondition();
+            // The guest may be sleeping on the Binder native wait handle.
+            buffer_wait_event->Signal(service_context.kernel);
             return Status::NoError;
         }
 
@@ -432,6 +434,8 @@ Status BufferQueueProducer::DetachBuffer(s32 slot) {
 
     core->FreeBufferLocked(slot);
     core->SignalDequeueCondition();
+    // Match CancelBuffer: expose this freed slot to guest waiters, too.
+    buffer_wait_event->Signal(service_context.kernel);
 
     return Status::NoError;
 }
@@ -479,6 +483,7 @@ Status BufferQueueProducer::DetachNextBuffer(std::shared_ptr<GraphicBuffer>* out
     // detach path must publish the same state transition to all dequeuers.
     // Notify under core->mutex so waiters cannot miss the transition.
     core->SignalDequeueCondition();
+    buffer_wait_event->Signal(service_context.kernel);
 
     return Status::NoError;
 }
