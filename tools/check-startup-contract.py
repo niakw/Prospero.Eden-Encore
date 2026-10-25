@@ -26,6 +26,18 @@ assert 'sandbox-elevator.elf' in packager
 assert 'PPSA99121' not in lifecycle, "stale lifecycle title ID"
 assert 'PPSA99008' in lifecycle
 
+# The rotating 3D jacket is the only authored startup animation. Both
+# render backends retain their warm-up presentations but show a plain
+# dark handoff, NOT the obsolete violet loading shader.
+vulkan_loading = (root / "headless/vulkan_hud.frag").read_text()
+graphics = (root / "headless/graphics.cpp").read_text()
+vulkan_backend = (root / "vendor/encore-active/eden-vulkan/vulkan_renderer.cpp").read_text()
+assert 'color = vec4(0.024, 0.035, 0.039, 1.0);' in vulkan_loading
+assert 'loading_scene(' not in vulkan_loading
+assert 'PresentVulkanLoading(renderer);' in graphics
+assert 'PresentLoading();' in vulkan_backend
+assert '"void main(){ color = vec4(0.024, 0.035, 0.039, 1.0); }\\n";' in graphics
+
 for stage in (
     "elevation: request begin",
     "elevation: connect 127.0.0.1:9021",
