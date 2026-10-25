@@ -30,6 +30,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "F03-hud-freshness": (
         "check-ps5-texture-channel-missing-mapping-host.py",
         "check-fc27-f03-native-texture-feedback-chain-host.py",
+        "check-fc27-f03-native-present-freshness-host.py",
         "check-native-hardware-composer-liveness-host.py",
     ),
     "F04-texture-integrity": (
@@ -254,6 +255,29 @@ def run() -> int:
                         print("F03_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F03_tic_descriptor_feedback_host"],
                                          sort_keys=True),flush=True)
+                if ok and script == "check-fc27-f03-native-present-freshness-host.py":
+                    replays = re.findall(
+                        r"F03_NATIVE_TIC_TO_PRESENT_FRESHNESS_PASS "
+                        r"frames=(\d+) hud_unique=(\d+) remaps=(\d+) "
+                        r"pause_ticks=(\d+) barriers=(\d+) "
+                        r"source_sections=(\d+) "
+                        r"scope=source_extracted_host_mock_gpu", result.stdout)
+                    if (len(replays) != 2 or
+                            any(tuple(map(int,m)) != (240,240,1,12,240,9)
+                                for m in replays)):
+                        ok,reason=False,"f03_native_present_freshness_missing"
+                    else:
+                        fixture_metrics["F03_texture_to_present_host"] = {
+                            "rendered_frames":240,"distinct_hud_content_revisions":240,
+                            "remaps":1,"paused_game_ticks":12,
+                            "feedback_barriers":240,"compile_modes":["O0","O2"],
+                            "scope":"real selected native TIC/view/descriptor/barrier and "
+                                    "renderer/present-manager methods with mocked GPU and "
+                                    "HUD revision content; NOT device pixels or WSI scanout",
+                        }
+                        print("F03_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F03_texture_to_present_host"],
+                                         sort_keys=True),flush=True)
                 if ok and script == "check-native-gpu-composite-syncpoint-host.py":
                     records = re.findall(
                         r"F05_NV_DISP_GPU_SYNCPOINT_SOURCE_PASS requests=(\d+) "
@@ -347,10 +371,19 @@ def run() -> int:
         "F02_native_invalidation_lock_host" in fixture_metrics and
         "F02_cold_repeat_source_host" in fixture_metrics
     )
+    # F03: technical HOST exit requires both selected TIC->feedback and
+    # 240-frame renderer->async presenter handoff in ONE C++ replay, with
+    # unique HUD revisions, pause and remap. Real pixels/device scanout are
+    # still outside the pre-console evidence and must not be certified.
+    f03_technical_exit = (
+        all(item["ok"] for item in status["F03-hud-freshness"]) and
+        "F03_tic_descriptor_feedback_host" in fixture_metrics and
+        "F03_texture_to_present_host" in fixture_metrics
+    )
     preconsole_exits = {
         "F01-cache-contention": bool(f01_technical_exit),
         "F02-jit-invalidation": bool(f02_technical_exit),
-        "F03-hud-freshness": False,
+        "F03-hud-freshness": bool(f03_technical_exit),
         "F04-texture-integrity": False,
         "F05-guest-progress": False,
         "F06-input-and-pause": False,
@@ -360,6 +393,8 @@ def run() -> int:
         remaining_exit_evidence.pop("F01-cache-contention")
     if f02_technical_exit:
         remaining_exit_evidence.pop("F02-jit-invalidation")
+    if f03_technical_exit:
+        remaining_exit_evidence.pop("F03-hud-freshness")
     summary = {"scope": "PRECONSOLE_HOST_TECHNICAL_NOT_GAMEPLAY",
                "f01_to_f06_closed": sum(preconsole_exits.values()),
                "preconsole_exit_status": preconsole_exits,
@@ -377,7 +412,7 @@ def run() -> int:
         label = "PASS" if all(x["ok"] for x in checks) else "FAIL"
         table.append(f"| {gate} | {label} ({sum(x['ok'] for x in checks)}/{len(checks)}) |")
     table += ["", f"{sum(preconsole_exits.values())}/6 PRE-CONSOLE technical "
-                    "exits verified on host (F01 only when measured); "
+                    "exits verified on host (each requires native-source metrics); "
                     "this is NOT console or FC27 in-game certification.",
               "", "#### Critical unproven exit evidence"]
     for gate, missing in remaining_exit_evidence.items():
