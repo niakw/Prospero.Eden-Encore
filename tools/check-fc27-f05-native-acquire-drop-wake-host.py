@@ -166,10 +166,31 @@ int main() {
     core->slots[2].buffer_state=BufferState::Acquired;
     assert(c.AcquireBuffer(&out,std::chrono::nanoseconds{2'000'000'000})==Status::InvalidOperation);
     assert(event.signals.load()==260);
+    // A removed entry whose buffer no longer matches its slot did not
+    // free a tracked producer slot. Wake host dequeuers for queue progress,
+    // but do not fabricate a guest Binder release notification.
+    core->queue.clear();
+    core->slots[2].buffer_state=BufferState::Free;
+    auto old_slot_buffer=std::make_shared<GraphicBuffer>(GraphicBuffer{9000});
+    auto untracked_buffer=std::make_shared<GraphicBuffer>(GraphicBuffer{9001});
+    auto live_buffer=std::make_shared<GraphicBuffer>(GraphicBuffer{9002});
+    core->slots[0].graphic_buffer=old_slot_buffer;
+    core->slots[0].buffer_state=BufferState::Queued;
+    core->slots[1].graphic_buffer=live_buffer;
+    core->slots[1].buffer_state=BufferState::Queued;
+    core->queue.push_back(BufferItem{0,untracked_buffer,false,1'500'000'000,false});
+    core->queue.push_back(BufferItem{1,live_buffer,false,1'700'000'000,false});
+    assert(c.AcquireBuffer(&out,std::chrono::nanoseconds{2'000'000'000})==Status::NoError);
+    assert(out.slot==1 && core->queue.empty());
+    assert(core->slots[0].buffer_state==BufferState::Queued);
+    assert(core->slots[1].buffer_state==BufferState::Acquired);
+    assert(core->broadcasts.load()==261);
+    assert(event.signals.load()==260 && delegate->callbacks==260);
     wake->Stop();
     std::puts("F05_NATIVE_ACQUIRE_DROP_GUEST_WAKE_PASS frames=260 stale_drops=520 "
               "guest_event=260 callbacks_unlocked=1 normal_acquire_quiet=1 "
-              "present_later_quiet=1 invalid_quiet=1 scope=source_extracted_mock_kernel");
+              "present_later_quiet=1 invalid_quiet=1 untracked_release_quiet=1 "
+              "scope=source_extracted_mock_kernel");
 }
 """.replace("__WAKE__", listener).replace("__ACQUIRE__", active)
 compiler = shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
