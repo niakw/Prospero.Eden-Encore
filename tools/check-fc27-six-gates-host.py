@@ -49,6 +49,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-fc27-f05-native-nvdisp-vulkan-present-chain-host.py",
         "check-fc27-f05-producer-release-wake-host.py",
         "check-fc27-f05-native-consumer-disconnect-host.py",
+        "check-fc27-f05-native-acquire-drop-wake-host.py",
         "check-native-host1x-increment-handoff-host.py",
     ),
     "F06-input-and-pause": (
@@ -330,6 +331,35 @@ def run() -> int:
                         print("F04_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F04_native_remap_dma_upload_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f05-native-acquire-drop-wake-host.py":
+                    acquired = re.findall(
+                        r"F05_NATIVE_ACQUIRE_DROP_GUEST_WAKE_PASS frames=(\d+) stale_drops=(\d+) "
+                        r"guest_event=(\d+) callbacks_unlocked=(\d+) normal_acquire_quiet=(\d+) "
+                        r"present_later_quiet=(\d+) invalid_quiet=(\d+) "
+                        r"scope=source_extracted_mock_kernel",
+                        result.stdout,
+                    )
+                    exclusions = (
+                        "F05_REAL_GUEST_IPC_SCHEDULER_AND_FC27_PROGRESS_NOT_PROVEN"
+                        in result.stdout
+                    )
+                    if acquired != [("260", "520", "260", "1", "1", "1", "1")]*2 or not exclusions:
+                        ok, reason = False, "f05_acquire_drop_guest_wake_witness_missing"
+                    else:
+                        fixture_metrics["F05_native_acquire_drop_wake_host"] = {
+                            "frame_cycles": 260,
+                            "reclaimed_queued_frames": 520,
+                            "guest_events": 260,
+                            "no_duplicate_on_normal_acquire": True,
+                            "callback_unlocked": True,
+                            "compile_modes": ["O0", "O2"],
+                            "scope": "native consumer acquisition and producer release listener "
+                                     "on host mocks; no real guest HIPC scheduling or FC27 proof",
+                        }
+                        print("F05_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F05_native_acquire_drop_wake_host"],
+                                         sort_keys=True), flush=True)
+
                 if ok and script == "check-fc27-f05-native-consumer-disconnect-host.py":
                     terminals = re.findall(
                         r"F05_NATIVE_CONSUMER_DISCONNECT_WAKE_PASS host_waiters=(\d+) "
