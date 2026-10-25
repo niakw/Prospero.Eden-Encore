@@ -1,5 +1,43 @@
 # Eden Encore — reste à faire pour FC27 (critères de sortie)
 
+## Retour console — F07, 26 octobre 2026 : amélioration jouable mais HUD / latence non qualifiés
+
+**Branche testée :** `dev/ps5-sparse-jit`, code natif `cd4857c8`. Les 6/6 preuves F01–F06 sont des critères pré-console **hôte uniquement** ; F07 reste **OUVERT**. La branche graphique expérimentale est en pause ; ne pas confondre ses prototypes avec les correctifs de production.
+
+**Quatre observations de l'utilisateur :**
+
+1. Ancien cache + logs : fortes latences, pratiquement injouable.
+2. Cache vidé + logs désactivés : **meilleur état jouable observé**, encore imparfait ; référence A/B à ne pas écraser.
+3. Cache conservé après le second test + logs réactivés : davantage de saccades. Les changements brusques du HUD (score, nom du joueur, popups et texte apparaissant après fond noir) coïncident visuellement avec des à-coups. Bandeau noir de dialogue durable jusqu'au rafraîchissement après l'introduction, puis de nouveau à la mi-temps. Navigation dans la gestion d'équipe à la pause ressentie comme retardée ; **la latence n'est pas limitée au HUD**.
+4. Sortie 2160p + résolution interne 1,25× : rendu ressenti plus mauvais, saccades similaires, pas de gain démontré.
+
+**Fichiers reçus :** `heap(20261025-225407).log`, `heap.prev(20261025-225407).log`, `stderr(20261025-225407).log`, `stderr.prev(20261025-225407).log` et `network-accepted(20261025-225408).log`. Les sources `heap` / `stderr` contiennent **deux sessions identifiées** sur `cd4857c8`, et non quatre jeux de compteurs indépendants ; ne pas inventer un découpage A/B précis entre les quatre essais.
+
+| Mesure issue des deux sessions enregistrées | 2560×1440 | 3840×2160 |
+| --- | ---: | ---: |
+| Fenêtres `EDEN_VULKAN_FRAME` | 204 | 48 |
+| FPS médian par fenêtre | 29,56 | 29,95 |
+| FPS le plus faible par fenêtre | 14,48 | 14,15 |
+| Frame la plus lente | 689,834 ms | 977,578 ms |
+| Frames `late100` totalisées | 142 | 67 |
+| Attentes de cache `cache_wait_ms` cumulées (plusieurs opérations, non consécutives) | 10 747,718 ms | 497,570 ms |
+| Événements `EDEN_JIT_PRESSURE` | 32 | 13 |
+
+**Ce que ces logs n'établissent pas :** les instants précis où le HUD apparaît ; la latence input-to-photon ; le temps propre à la rasterisation du texte ; l'origine causale des bandes noires ; les vitesses GPU et HIPC réelles lorsque les compteurs ne sont pas activés. `jit_ms=0`, `guest_ipc_ms=0` et les autres zéros **ne prouvent pas** qu'il n'y a pas de travail. `stderr` indique explicitement `detailed gameplay logging requires a diagnostic build; release logging unchanged` : l'option dans un paquet release ne suffit pas à garantir les compteurs avancés. La corrélation subjective HUD/saccade est une **hypothèse prioritaire, pas une causalité prouvée**.
+
+**Suivi des causes (ne pas traiter en correctif aveugle) :**
+
+- **F07-HUD-TEXTE** : tracer sur une fenêtre bornée la matérialisation des glyphes, la compilation/création des pipelines, la validité des descripteurs du texte, la fraîcheur des couches compositées, le changement d'état lors d'un bandeau noir persistant et d'une transition pause/mi-temps. Séparer fonte initiale, caches GPU et invalidation du rendu.
+- **F07-INPUT** : distinguer événements manette réellement publiés, reprise de threads guest, évolution simulation et image visible. La latence dans les menus d'équipe peut être une progression invitée ralentie, sans perte d'échantillons manette.
+- **F07-CACHE** : comparer **même scène et même configuration** avec cache à froid/chaud, toujours identifier la version et la validation du cache. Pas de purge automatique généralisée ni désactivation des invalidations nécessaires.
+- **F07-LOGS** : conserver le mode sans logs comme référence de jeu. Une instrumentation voulue doit agréger en mémoire puis reporter hors boucle de rendu ; éviter des écritures synchrones par dessin/glyphe. Le test release actuel n'établit pas le coût relatif des différents points de logs.
+- **F07-RÉSOLUTION** : pas d'escalade de résolution pour « réparer » les saccades ; 2160p/1,25× a été ressenti plus laid et non plus fluide.
+- **UI distincte du gameplay** : navigateur L1/R1 quatre onglets, pied de jaquette arrière inversé en bibliothèque et loader, et arrivée de la jaquette front après la boîte. Des correctifs ciblés de sources launcher sont intégrés séparément ; CI et console toujours à qualifier.
+
+**Règle de sortie :** aucun nouveau « F07 validé » tant que les bandeaux noirs/HUD retardés, la réponse manette et la stabilité sous mode normal ne sont pas démontrés sur console. Les symptômes utilisateur ne sont pas des échecs de la prévalidation *hôte* F01–F06, mais montrent qu'elle est insuffisante pour qualifier le produit.
+
+---
+
 ## État officiel — F06 clôturé techniquement, 6/6 (25 octobre 2026)
 
 **Code de référence : [`cd4857c`](https://github.com/niakw/Prospero.Eden-Encore/commit/cd4857c8b525ab39d9280bb693f5c2ad974057c6)**, branche unique de validation `dev/ps5-sparse-jit`. La branche expérimentale `feat/graphics-network-achievements` reste **strictement séparée**.
