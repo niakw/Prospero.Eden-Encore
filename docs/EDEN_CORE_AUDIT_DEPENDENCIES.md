@@ -11,7 +11,7 @@ This is the **single place to resume this technical audit**.
 **P0 source review batch:** see [EDEN_P0_SOURCE_REVIEW_2026-10-20.md](EDEN_P0_SOURCE_REVIEW_2026-10-20.md) for ten explicitly inspected IPC/HLE/JIT/GPU source paths. The host IPC wake proof is not guest progress; no contract statuses or qualification debt counters are reduced.
 
 **Two-axis progress rule:** read [EDEN_TWO_AXIS_PROGRESS_2026-10-20.md](EDEN_TWO_AXIS_PROGRESS_2026-10-20.md). SOURCE+OPEN means *qualification pending*, **not** code files necessarily requiring further optimization. Do not repeatedly modify a recently fixed hotpath merely to lower that count; distinguish host test, current-SHA native build, and PS5/gameplay evidence.
-**Non, this is not an exhaustive repository-wide inventory.** The 489
+**Non, this is not an exhaustive repository-wide inventory.** The 490
 indexed graph rows cover known high-relevance paths; the completed register
 captures prior host checks, and unenumerated dependencies are separately
 flagged below. New source discoveries must be added rather than forgotten. Do not open
@@ -245,22 +245,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 489 | 466 | 982 |
+| Graphe connu | 490 | 467 | 985 |
 | HOST — preuve ciblée hôte | 62 | 57 | 127 |
-| SOURCE — lecture effectuée, preuve insuffisante | 404 | 394 | 816 |
+| SOURCE — lecture effectuée, preuve insuffisante | 405 | 395 | 819 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **419** | **408** | **844** |
-| Dont priorité P0 (SOURCE + OPEN) | 101 | 96 | 230 |
+| **Encore à qualifier (SOURCE + OPEN)** | **420** | **409** | **847** |
+| Dont priorité P0 (SOURCE + OPEN) | 102 | 97 | 233 |
 
-Le **noyau restant** compte donc 419 critères répartis sur
-408 fichiers et 844 mentions fonction/contrat :
-15 OPEN et 404 SOURCE.
+Le **noyau restant** compte donc 420 critères répartis sur
+409 fichiers et 847 mentions fonction/contrat :
+15 OPEN et 405 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-326 fichiers de code/en-têtes présents et 326 avec un chemin de
+328 fichiers de code/en-têtes présents et 328 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
