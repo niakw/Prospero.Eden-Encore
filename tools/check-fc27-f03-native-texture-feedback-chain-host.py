@@ -48,7 +48,7 @@ assert "views.push_back({handle.first});" in loop
 # and extend them with the actual selected feedback-loop method.
 prefix=old.split('fixture=r"""',1)[1].split('""" + sampler + image + r"""',1)[0]
 assert 'template<class P> struct TextureCache {' in prefix
-prefix=prefix.replace("#include <array>","#include <array>\n#include <span>\n#include <vector>")
+prefix=prefix.replace("#include <array>","#include <array>\n#include <cstdio>\n#include <span>\n#include <vector>")
 prefix=prefix.replace("using u32=std::uint32_t;","using u32=std::uint32_t;\nusing u64=std::uint64_t;\nusing ImageId=u32;\nconstexpr unsigned NUM_RT=8;\nnamespace VideoCommon {using SamplerId=u32;}")
 before="template<class P> struct TextureCache {"
 add="""struct ImageViewInOut {ImageViewId id{};};
