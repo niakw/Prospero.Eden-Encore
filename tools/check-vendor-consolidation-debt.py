@@ -315,8 +315,72 @@ dequeue_frame_before_3 = "    LOG_DEBUG(Service_Nvnflinger, \"returning slot={} 
 dequeue_frame_after_3 = "    LOG_DEBUG(Service_Nvnflinger, \"returning slot={} frame={}, flags={}\", *out_slot,\n              returned_frame_number, return_flags);"
 assert dequeue_expected.count(dequeue_frame_before_3) == 1
 dequeue_expected = dequeue_expected.replace(dequeue_frame_before_3, dequeue_frame_after_3)
-assert dequeue_maintained == dequeue_expected, (
-    "Maintained queue-dequeue diagnostic diverges from prior generated source")
+# R435/F05: the prior producer-dequeue oracle is still useful for proving
+# byte-for-byte provenance of all old maintained changes, but F05 now adds a
+# producer release->guest-event listener. Project ONLY that separately tested
+# change away before comparing against the historical expected TU. Fingerprint
+# the complete new listener/registry block, so new unchecked code cannot be
+# silently absorbed into an arbitrary skipped region.
+wake_begin = "// A guest waiting on BufferQueueProducer::GetNativeHandle"
+wake_end = "BufferQueueProducer::BufferQueueProducer("
+assert dequeue_maintained.count(wake_begin) == 1
+assert dequeue_maintained.count(wake_end) == 1
+wake_block = dequeue_maintained[
+    dequeue_maintained.index(wake_begin):dequeue_maintained.index(wake_end)
+]
+wake_fingerprint = 14695981039346656037
+for wake_byte in wake_block.encode("utf-8"):
+    wake_fingerprint = ((wake_fingerprint ^ wake_byte) * 1099511628211) & ((1 << 64) - 1)
+assert wake_fingerprint == 0x83686626E6E9D1A7, "F05 producer release wake block changed"
+dequeue_legacy_projection = dequeue_maintained.replace(wake_block, "", 1)
+
+def strip_f05_once(before: str, after: str) -> None:
+    global dequeue_legacy_projection
+    assert dequeue_legacy_projection.count(after) == 1, ("F05 delta drift", after[:90])
+    dequeue_legacy_projection = dequeue_legacy_projection.replace(after, before, 1)
+
+strip_f05_once("", '#include "core/hle/service/nvnflinger/producer_listener.h"\n#include <unordered_map>\n')
+strip_f05_once(
+    '    buffer_wait_event = service_context.CreateEvent("BufferQueue:WaitEvent");',
+    '    buffer_wait_event = service_context.CreateEvent("BufferQueue:WaitEvent");\n'
+    '    auto wake = std::make_shared<ProducerReleaseWake>(buffer_wait_event, service_context.kernel);\n'
+    '    std::scoped_lock lock{release_wakes_mutex};\n'
+    '    release_wakes.emplace(this, std::move(wake));',
+)
+strip_f05_once(
+    "BufferQueueProducer::~BufferQueueProducer() {\n"
+    "    service_context.CloseEvent(buffer_wait_event);\n}",
+    "BufferQueueProducer::~BufferQueueProducer() {\n"
+    "    std::shared_ptr<ProducerReleaseWake> wake;\n"
+    "    {\n"
+    "        std::scoped_lock lock{release_wakes_mutex};\n"
+    "        const auto it = release_wakes.find(this);\n"
+    "        if (it != release_wakes.end()) {\n"
+    "            wake = std::move(it->second);\n"
+    "            release_wakes.erase(it);\n"
+    "        }\n"
+    "    }\n"
+    "    if (wake) wake->Stop();\n"
+    "    service_context.CloseEvent(buffer_wait_event);\n}",
+)
+strip_f05_once(
+    '        core->connected_producer_listener = listener;',
+    '        // HOS IPC connects with no guest listener. Always keep a local wake\n'
+    '        // callback so the kernel wait handle is signalled on consumer release.\n'
+    '        // Preserve an explicit listener by forwarding its notification.\n'
+    '        if (const auto wake = GetReleaseWake(this)) {\n'
+    '            wake->SetDelegate(listener);\n'
+    '            core->connected_producer_listener = wake;\n'
+    '        } else {\n'
+    '            core->connected_producer_listener = listener;\n'
+    '        }',
+)
+assert dequeue_legacy_projection == dequeue_expected, (
+    "Maintained queue-dequeue provenance or the F05 release wake delta diverged"
+)
+assert 'check-fc27-f05-producer-release-wake-host.py' in (
+    ROOT / ".github/workflows/encore-core-fast-gate.yml").read_text()
+
 # Compile one maintained source; CMake owns DEV's compile-time profiler switch.
 assert c.count('buffer_queue_producer_standard.cpp') == 0
 assert c.count('target_compile_definitions(core PRIVATE EDEN_NVNF_DEQUEUE_PROFILE=1)') == 1
