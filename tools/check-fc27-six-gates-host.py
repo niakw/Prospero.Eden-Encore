@@ -36,6 +36,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "F04-texture-integrity": (
         "check-fc27-f04-native-dma-alias-bytes-host.py",
         "check-fc27-f04-native-upload-revision-host.py",
+        "check-fc27-f04-native-vulkan-upload-barriers-host.py",
         "check-ps5-scissor-extremes-host.py",
         "check-ps5-buffer-region-multipage-host.py",
     ),
