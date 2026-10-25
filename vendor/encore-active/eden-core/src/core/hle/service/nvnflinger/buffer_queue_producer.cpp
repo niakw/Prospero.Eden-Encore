@@ -555,6 +555,7 @@ Status BufferQueueProducer::QueueBuffer(s32 slot, const QueueBufferInput& input,
     BufferItem item;
     std::shared_ptr<IConsumerListener> listener_available;
     std::shared_ptr<IConsumerListener> listener_replaced;
+    bool recycled_queued_slot = false;
 
     {
         std::scoped_lock lock{core->mutex};
@@ -612,6 +613,7 @@ Status BufferQueueProducer::QueueBuffer(s32 slot, const QueueBufferInput& input,
             auto front = core->queue.begin();
             if (front->is_droppable && core->StillTracking(*front)) {
                 slots[front->slot].buffer_state = BufferState::Free;
+                recycled_queued_slot = true;
                 if (record_buffer_history) {
                     core->UpdateHistory(front->frame_number, BufferState::Free);
                 }
@@ -633,6 +635,11 @@ Status BufferQueueProducer::QueueBuffer(s32 slot, const QueueBufferInput& input,
 
         core->buffer_has_been_queued = true;
         core->SignalDequeueCondition();
+        if (recycled_queued_slot) {
+            // Frame replacement freed a queued slot. Wake an emulated
+            // producer waiting on the Binder KReadableEvent as well.
+            buffer_wait_event->Signal(service_context.kernel);
+        }
 
         output->Inflate(core->default_width, core->default_height, core->transform_hint, static_cast<u32>(core->queue.size()));
     }
