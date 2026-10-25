@@ -214,7 +214,7 @@ __CORE_METHODS__
 struct Producer {
     BufferQueueCore* core;
     Status BlockOnce(std::atomic<int>& entered) {
-        std::unique_lock lock{core->mutex};
+        std::unique_lock lk{core->mutex};
         entered.fetch_add(1, std::memory_order_release);
 __BLOCK_PATH__
         return Status::NoError;
