@@ -155,7 +155,23 @@ struct BufferQueueCore {
 struct MockKernel {};
 struct MockEvent {
     std::atomic<int> signals{};
-    void Signal(MockKernel&) {signals.fetch_add(1);}
+    std::mutex* queue_mutex{};
+    void Signal(MockKernel&) {
+        // Probe from a distinct thread: calling try_lock on a mutex this
+        // same thread owns would be undefined behavior. Joining the probe
+        // before return proves Signal did NOT run under core->mutex.
+        assert(queue_mutex);
+        std::atomic<bool> acquired{};
+        std::thread probe([&] {
+            if (queue_mutex->try_lock()) {
+                queue_mutex->unlock();
+                acquired.store(true, std::memory_order_release);
+            }
+        });
+        probe.join();
+        assert(acquired.load(std::memory_order_acquire));
+        signals.fetch_add(1);
+    }
 };
 struct MockServiceContext {MockKernel kernel{};};
 struct BufferQueueProducer {
@@ -164,7 +180,9 @@ struct BufferQueueProducer {
     MockEvent* buffer_wait_event{&event};
     BufferQueueCore* core{};
     std::array<BufferSlot, BufferQueueDefs::NUM_BUFFER_SLOTS>& slots;
-    explicit BufferQueueProducer(BufferQueueCore& c) : core(&c), slots(c.slots) {}
+    explicit BufferQueueProducer(BufferQueueCore& c) : core(&c), slots(c.slots) {
+        event.queue_mutex = &c.mutex;
+    }
     Status DetachNextBuffer(std::shared_ptr<GraphicBuffer>* out_buffer, Fence* out_fence);
     Status DetachBuffer(s32 slot);
     Status SetBufferCount(s32 count);
@@ -293,4 +311,4 @@ with tempfile.TemporaryDirectory(prefix="encore-nvn-detach-") as tmp:
                         "-Werror", "-pthread", "-fsanitize=undefined", "-fno-sanitize-recover=all",
                         str(source), "-o", str(binary)], check=True, timeout=40)
         subprocess.run([str(binary)], check=True, timeout=15)
-        print("NATIVE_NVN_DETACH_BROADCAST_PASS", opt)
+        print("NATIVE_NVN_DETACH_BROADCAST_PASS", opt, "guest_event_unlocked=1")
