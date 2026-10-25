@@ -31,6 +31,7 @@ listener=producer[i:producer.index("\n};",i)+3]
 cpp=r"""
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -56,7 +57,10 @@ struct IProducerListener {
 };
 struct IConsumerListener {};
 struct BufferQueueCore {
- std::mutex mutex{};
+ // Test-only timed lock: another awakened host waiter can legitimately
+ // acquire the mutex between Disconnect unlocking and the guest callback.
+ // A bounded wait distinguishes that contention from callback reentrancy.
+ std::timed_mutex mutex{};
  std::condition_variable condition{};
  int epoch{},freed{};
  bool is_abandoned{};
@@ -79,7 +83,7 @@ struct Delegate final : IProducerListener {
  bool unlocked{};
  explicit Delegate(BufferQueueCore& c):core(c){}
  void OnBufferReleased()override {
-  unlocked=core.mutex.try_lock();
+  unlocked=core.mutex.try_lock_for(std::chrono::seconds(2));
   if(unlocked)core.mutex.unlock();
   ++called;
  }
