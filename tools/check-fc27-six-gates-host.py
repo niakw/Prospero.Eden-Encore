@@ -29,6 +29,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     ),
     "F03-hud-freshness": (
         "check-ps5-texture-channel-missing-mapping-host.py",
+        "check-fc27-f03-native-texture-feedback-chain-host.py",
         "check-native-hardware-composer-liveness-host.py",
     ),
     "F04-texture-integrity": (
@@ -230,6 +231,29 @@ def run() -> int:
                             print("F02_MEASURED_HOST_SUBPATH=" +
                                   json.dumps(fixture_metrics["F02_native_invalidation_lock_host"],
                                              sort_keys=True), flush=True)
+                if ok and script == "check-fc27-f03-native-texture-feedback-chain-host.py":
+                    actual = re.findall(
+                        r"F03_NATIVE_TIC_DESCRIPTOR_BARRIER_CHAIN_PASS "
+                        r"frames=(\d+) transient_recoveries=(\d+) "
+                        r"remapped_recoveries=(\d+) sampler_lookups=(\d+) "
+                        r"barriers=(\d+) native_functions=(\d+) "
+                        r"scope=source_extracted_host_no_gpu_present",result.stdout)
+                    if (len(actual) != 2 or
+                            any(tuple(map(int,m)) != (60,1,1,1,63,3)
+                                for m in actual)):
+                        ok,reason = False,"f03_integrated_texture_feedback_proof_missing"
+                    else:
+                        fixture_metrics["F03_tic_descriptor_feedback_host"] = {
+                            "hud_frames":60,"transient_recoveries":1,
+                            "remap_recoveries":1,"native_bound_descriptor_loops":2,
+                            "feedback_barrier_calls":63,
+                            "compile_modes":["O0","O2"],
+                            "scope":"selected TIC/TSC cache, view map, graphic loop, "
+                                    "feedback barrier. No Vulkan submit/fence/present.",
+                        }
+                        print("F03_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F03_tic_descriptor_feedback_host"],
+                                         sort_keys=True),flush=True)
                 if ok and script == "check-native-gpu-composite-syncpoint-host.py":
                     records = re.findall(
                         r"F05_NV_DISP_GPU_SYNCPOINT_SOURCE_PASS requests=(\d+) "
