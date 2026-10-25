@@ -17,7 +17,11 @@ on:
       - 'tools/**'
       # Review manifests are executable source-ownership contracts. Re-run
       # their actual checks when a reviewed Git blob gets a new stamp.
+      # N24 native source ownership and the 328-file active catalogue are
+      # executable audit inputs, not decorative documentation.
       - 'docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json'
+      - 'docs/EDEN_CORE_AUDIT_DEPENDENCIES.md'
+      - 'docs/EDEN_ACTIVE_SOURCE_CATALOG.md'
       - 'docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md'
       - '.github/workflows/encore-core-preflight.yml'
       # The preflight audits neutral step descriptions across ALL workflows,
