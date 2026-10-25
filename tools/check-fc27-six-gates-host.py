@@ -646,15 +646,32 @@ def run() -> int:
                         r"scope=source_extracted_host_mock_binder_and_wsi",
                         result.stdout,
                     )
+                    release_to_present = re.findall(
+                        r"F05_NATIVE_RELEASE_KTHREAD_TO_PRESENT_BOUNDARY_PASS "
+                        r"releases=(\d+) resumes=(\d+) binder_frames_gated=(\d+) "
+                        r"scope=source_extracted_host_mock_guest_kernel_hipc_gpu_wsi",
+                        result.stdout,
+                    )
                     bounded = result.stdout.count(
                         "F05_HID_IPC_AND_REAL_VULKAN_GPU_PRESENT_NOT_PROVEN"
                     ) == 1
                     if (records != [("260","260","7","1","1")]*2 or
                             independent != ["260","260"] or
                             queued != [("260",)*5]*2 or
-                            binder_records != [("260","260","1")]*2 or not bounded):
+                            binder_records != [("260","260","1")]*2 or
+                            release_to_present != [("260","520","1")]*2 or not bounded):
                         ok,reason=False,"f05_linked_native_guest_to_present_missing"
                     else:
+                        fixture_metrics["F05_native_release_to_present_boundary_host"] = {
+                            "consumer_releases": 260,
+                            "source_selected_guest_endwait_resumptions": 520,
+                            "binder_frames_gated_on_kthread_wake": 260,
+                            "compile_modes": ["O0", "O2"],
+                            "scope": "single linked host executable with native C++ "
+                                     "ReleaseBuffer/event/KThread EndWait and selected "
+                                     "Binder/queue/fence/Vulkan methods; mock guest "
+                                     "scheduler, HIPC packet, GPU and WSI; NOT FC27 liveness",
+                        }
                         fixture_metrics["F05_linked_nvdisp_host1x_vulkan_present_host"] = {
                             "native_nvdisp_guest_requests": 260,
                             "native_nvnflinger_queue_buffers": 260,
@@ -850,12 +867,24 @@ def run() -> int:
         all(item["ok"] for item in status["F04-texture-integrity"]) and
         "F04_native_remap_dma_upload_host" in fixture_metrics
     )
+    # F05 requires the linked end-to-end *source-host* replay, not merely
+    # 14 independent green fixtures. Every Binder-forwarded frame must have
+    # completed native consumer release -> KThread EndWait first. The actual
+    # guest scheduler, HIPC packets and PS5 GPU still belong to F07.
+    f05_technical_exit = (
+        f04_technical_exit and
+        all(item["ok"] for item in status["F05-guest-progress"]) and
+        "F05_native_kthread_endwait_host" in fixture_metrics and
+        "F05_binder_native_handle_ipc_host" in fixture_metrics and
+        "F05_native_release_to_present_boundary_host" in fixture_metrics and
+        "F05_linked_nvdisp_host1x_vulkan_present_host" in fixture_metrics
+    )
     preconsole_exits = {
         "F01-cache-contention": bool(f01_technical_exit),
         "F02-jit-invalidation": bool(f02_technical_exit),
         "F03-hud-freshness": bool(f03_technical_exit),
         "F04-texture-integrity": bool(f04_technical_exit),
-        "F05-guest-progress": False,
+        "F05-guest-progress": bool(f05_technical_exit),
         "F06-input-and-pause": False,
     }
     remaining_exit_evidence = dict(UNPROVEN_EXIT_EVIDENCE)
@@ -867,6 +896,8 @@ def run() -> int:
         remaining_exit_evidence.pop("F03-hud-freshness")
     if f04_technical_exit:
         remaining_exit_evidence.pop("F04-texture-integrity")
+    if f05_technical_exit:
+        remaining_exit_evidence.pop("F05-guest-progress")
     summary = {"scope": "PRECONSOLE_HOST_TECHNICAL_NOT_GAMEPLAY",
                "f01_to_f06_closed": sum(preconsole_exits.values()),
                "preconsole_exit_status": preconsole_exits,
