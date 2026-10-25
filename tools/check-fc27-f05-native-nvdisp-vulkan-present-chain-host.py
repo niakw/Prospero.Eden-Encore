@@ -105,6 +105,16 @@ presentmethods="\n\n".join(native(PRESENT,sig) for sig in (
     "void PresentManager::PresentThread(std::stop_token token) {",
 ))
 composite=native(RENDER,"void RendererVulkan::Composite(")
+# Both C++ translation units instantiate std::span<Tegra::FramebufferConfig>.
+# Reuse the full pinned guest FramebufferConfig declaration verbatim. Two
+# different definitions with the same C++ mangled type would violate ODR and
+# can silently use the wrong stride for the second layer on some compilers.
+guest_fb=native(host.split("struct FramebufferConfig {",1)[0]+"struct FramebufferConfig {"+host.split("struct FramebufferConfig {",1)[1], "struct FramebufferConfig {")
+# Also include its BlendMode member type in precisely the same form.
+vulkan=once(vulkan,
+    "namespace Tegra {\nstruct FramebufferConfig {std::uint64_t address{};};\n}",
+    "namespace Tegra {\nenum class BlendMode { Opaque };\n"+guest_fb+"\n}",
+    "identical guest/renderer span layout")
 vulkan=once(vulkan,"__PRESENT_METHODS__",presentmethods,"present methods")
 vulkan=once(vulkan,"__RENDER_METHOD__",composite,"renderer")
 vulkan=once(vulkan,"int main(){","void F05StandalonePresentationReplay(){","different mains")
@@ -130,7 +140,23 @@ extern "C" void F05PipeDrain(unsigned expected_count) {
     assert(pipeline_present && pipeline_renderer);
     pipeline_present->WaitPresent();
     assert(pipeline_expected.size()==expected_count);
-    assert(pipeline_present->presented==pipeline_expected);
+    if(pipeline_present->presented!=pipeline_expected) {
+        const auto& observed=pipeline_present->presented;
+        const auto& expected=pipeline_expected;
+        std::size_t first=0;
+        while(first<observed.size() && first<expected.size() &&
+              observed[first]==expected[first])++first;
+        auto og=first<observed.size()?observed[first].first:0;
+        auto oh=first<observed.size()?observed[first].second:0;
+        auto eg=first<expected.size()?expected[first].first:0;
+        auto eh=first<expected.size()?expected[first].second:0;
+        std::fprintf(stderr,
+            "F05_NATIVE_PRESENT_MISMATCH expected_count=%zu actual_count=%zu "
+            "first=%zu expected_game=%u expected_hud=%u "
+            "actual_game=%u actual_hud=%u\\n",
+            expected.size(),observed.size(),first,eg,eh,og,oh);
+        assert(false && "guest layers and Vulkan-present image revisions diverged");
+    }
     assert(pipeline_present->copies==expected_count);
     assert(pipeline_renderer->render_window.displayed==expected_count);
     assert(pipeline_renderer->gpu.notifications==expected_count);
