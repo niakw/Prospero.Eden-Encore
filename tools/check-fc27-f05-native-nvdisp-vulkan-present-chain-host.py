@@ -610,7 +610,7 @@ with tempfile.TemporaryDirectory(prefix="encore-f05-guest-to-present-") as d:
     for opt in ("-O0","-O2"):
         exe=p/("chain"+opt)
         build=subprocess.run([compiler,"-std=c++20",opt,"-pthread","-Wall",
-                 "-Wextra","-Werror","-fsanitize=undefined",
+                 "-Wextra","-Werror","-Wno-unused-parameter","-fsanitize=undefined",
                  "-fno-sanitize-recover=all",str(a),str(b),str(c),str(d),str(e),"-o",str(exe)],
                  text=True,capture_output=True,timeout=90)
         assert build.returncode==0,(opt,build.stderr[-9000:])
