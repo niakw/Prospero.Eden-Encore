@@ -283,6 +283,47 @@ def run() -> int:
                         print("F03_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F03_texture_to_present_host"],
                                          sort_keys=True),flush=True)
+                if ok and script == "check-fc27-f04-native-remap-dma-upload-chain-host.py":
+                    # The same executable combines source-selected GPU unmap,
+                    # MaxwellDMA, cache invalidation, alias ordering and image
+                    # staging. Require the full numeric witness at O0 and O2;
+                    # a green narrow fixture without this record is NOT exit.
+                    matches = re.findall(
+                        r"F04_NATIVE_REMAP_DMA_UPLOAD_CHAIN_PASS "
+                        r"dma_copies=(\d+) alias_copies=(\d+) remaps=(\d+) "
+                        r"revisions=(\d+) barriers=(\d+) "
+                        r"scope=source_extracted_host_mock_address_rebind_and_gpu_bytes",
+                        result.stdout,
+                    )
+                    modes = re.findall(
+                        r"F04_NATIVE_REMAP_DMA_UPLOAD_CHAIN_PASS[^\n]*"
+                        r"\s-(O0|O2)", result.stdout)
+                    excluded = (
+                        "F04_REAL_VULKAN_PIXELS_AND_GPU_ADDRESS_REBIND_UNVERIFIED"
+                        in result.stdout
+                    )
+                    if (len(matches) != 2 or
+                            any(tuple(map(int,values)) != (3,2,1,3,3)
+                                for values in matches) or
+                            modes != ["O0","O2"] or not excluded):
+                        ok, reason = False, "f04_native_chain_metrics_missing_or_invalid"
+                    else:
+                        fixture_metrics["F04_native_remap_dma_upload_host"] = {
+                            "dma_copies": 3,
+                            "alias_copies": 2,
+                            "gpu_unmaps": 1,
+                            "content_revisions": 3,
+                            "upload_barriers": 3,
+                            "compile_modes": ["O0","O2"],
+                            "scope": "selected MaxwellDMA pitch, GPU image-unmap, "
+                                     "CPU cache invalidation, alias sorting and "
+                                     "Vulkan texture-refresh C++ in ONE replay. "
+                                     "GPU-address rebind, Vulkan upload execution "
+                                     "and guest image/pixels are host-mocked.",
+                        }
+                        print("F04_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F04_native_remap_dma_upload_host"],
+                                         sort_keys=True), flush=True)
                 if ok and script == "check-native-gpu-composite-syncpoint-host.py":
                     records = re.findall(
                         r"F05_NV_DISP_GPU_SYNCPOINT_SOURCE_PASS requests=(\d+) "
@@ -385,11 +426,21 @@ def run() -> int:
         "F03_tic_descriptor_feedback_host" in fixture_metrics and
         "F03_texture_to_present_host" in fixture_metrics
     )
+    # F04 technical PRE-CONSOLE exit requires ONE real-source C++ replay
+    # connecting cache map loss -> DMA -> invalidation -> alias -> staging,
+    # as well as standalone Vulkan barrier/copy ownership regression checks.
+    # The GPU address translation after unmap and device execution are mocked
+    # and explicitly belong to F07, not this host technical certificate.
+    f04_technical_exit = (
+        f03_technical_exit and
+        all(item["ok"] for item in status["F04-texture-integrity"]) and
+        "F04_native_remap_dma_upload_host" in fixture_metrics
+    )
     preconsole_exits = {
         "F01-cache-contention": bool(f01_technical_exit),
         "F02-jit-invalidation": bool(f02_technical_exit),
         "F03-hud-freshness": bool(f03_technical_exit),
-        "F04-texture-integrity": False,
+        "F04-texture-integrity": bool(f04_technical_exit),
         "F05-guest-progress": False,
         "F06-input-and-pause": False,
     }
@@ -400,6 +451,8 @@ def run() -> int:
         remaining_exit_evidence.pop("F02-jit-invalidation")
     if f03_technical_exit:
         remaining_exit_evidence.pop("F03-hud-freshness")
+    if f04_technical_exit:
+        remaining_exit_evidence.pop("F04-texture-integrity")
     summary = {"scope": "PRECONSOLE_HOST_TECHNICAL_NOT_GAMEPLAY",
                "f01_to_f06_closed": sum(preconsole_exits.values()),
                "preconsole_exit_status": preconsole_exits,
