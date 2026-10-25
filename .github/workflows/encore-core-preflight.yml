@@ -108,6 +108,7 @@ jobs:
           python3 -B tools/check-fc27-f04-native-dma-alias-bytes-host.py
           python3 -B tools/check-fc27-f04-native-upload-revision-host.py
           python3 -B tools/check-fc27-f04-native-vulkan-upload-barriers-host.py
+          python3 -B tools/check-fc27-f04-native-remap-dma-upload-chain-host.py
           python3 -B tools/check-ps5-scissor-extremes-host.py
           python3 -B tools/check-ps5-pipeline-build-handoff-host.py
 
