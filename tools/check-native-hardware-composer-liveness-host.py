@@ -82,6 +82,8 @@ producer_publish = producer_method[publish_start:publish_stop]
 listener_start = producer_method.index("    // Notify consumers with the actual queued item:", publish_stop)
 producer_callback = producer_method[listener_start:]
 assert producer_callback.endswith("return Status::NoError;\n}\n")
+assert "recycled_queued_slot = true;" in producer_publish
+assert "buffer_wait_event->Signal(service_context.kernel);" in producer_publish
 for marker in ("slots[slot].fence = fence;", "item.fence = fence;",
                "core->SignalDequeueCondition();", "listener_available->OnFrameAvailable(item)",
                "listener_replaced->OnFrameReplaced(item)"):
@@ -276,6 +278,16 @@ android::Status MockConsumer::QueueNative(android::BufferItem queued) {
     const s32 swap_interval=queued.swap_interval;
     const android::Fence fence=queued.fence;
     const bool record_buffer_history=false;
+    // QueueBuffer now tracks discarded queued slots and signals the guest
+    // Binder event. Keep those native dependencies in the composed mock.
+    bool recycled_queued_slot = false;
+    struct GuestKernel {};
+    struct GuestServiceContext { GuestKernel kernel{}; } service_context;
+    struct GuestWaitEvent {
+        unsigned calls{};
+        void Signal(GuestKernel&) { ++calls; }
+    } guest_event;
+    auto* buffer_wait_event = &guest_event;
     [[maybe_unused]] unsigned sticky_transform{};
     const unsigned sticky_transform_=0;
     {
