@@ -504,6 +504,40 @@ def strip_consumer_f05_once(before: str, after: str) -> None:
         "F05 consumer acquisition delta drift", after[:120])
     consumer_legacy_projection = consumer_legacy_projection.replace(after, before, 1)
 
+# F05: discard of an untracked/stale buffer is NOT a release of an
+# available producer slot. Keep the new notification predicate independent
+# of the host dequeuer's more general queue-size broadcast.
+strip_consumer_f05_once(
+    "    bool dropped_queued_frames = false;",
+    "    bool dropped_queued_frames = false;\n"
+    "    bool freed_tracked_slot = false;",
+)
+strip_consumer_f05_once(
+    "                slots[front->slot].buffer_state = BufferState::Free;\n"
+    "            }\n\n"
+    "            core->queue.erase(front);",
+    "                slots[front->slot].buffer_state = BufferState::Free;\n"
+    "                freed_tracked_slot = true;\n"
+    "            }\n\n"
+    "            core->queue.erase(front);",
+)
+strip_consumer_f05_once(
+    "                const auto listener = core->connected_producer_listener;\n"
+    "                lock.unlock();\n"
+    "                if (listener) listener->OnBufferReleased();",
+    "                if (freed_tracked_slot) {\n"
+    "                    const auto listener = core->connected_producer_listener;\n"
+    "                    lock.unlock();\n"
+    "                    if (listener) listener->OnBufferReleased();\n"
+    "                }",
+)
+strip_consumer_f05_once(
+    "    if (dropped_queued_frames) {\n"
+    "        // A dropped queued buffer is another producer-availability transition.",
+    "    if (freed_tracked_slot) {\n"
+    "        // Only a freed tracked slot creates a guest producer-availability transition.",
+)
+
 strip_consumer_f05_once(
     "    std::scoped_lock lock{core->mutex};",
     "    std::unique_lock lock{core->mutex};\n"
