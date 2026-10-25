@@ -26,6 +26,7 @@ Status BufferQueueConsumer::AcquireBuffer(BufferItem* out_buffer,
                                           std::chrono::nanoseconds expected_present) {
     std::unique_lock lock{core->mutex};
     bool dropped_queued_frames = false;
+    bool freed_tracked_slot = false;
 
     // Check that the consumer doesn't currently have the maximum number of buffers acquired.
     const s32 num_acquired_buffers{
@@ -71,6 +72,7 @@ Status BufferQueueConsumer::AcquireBuffer(BufferItem* out_buffer,
             if (core->StillTracking(*front)) {
                 // Front buffer is still in mSlots, so mark the slot as free
                 slots[front->slot].buffer_state = BufferState::Free;
+                freed_tracked_slot = true;
             }
 
             core->queue.erase(front);
@@ -89,9 +91,11 @@ Status BufferQueueConsumer::AcquireBuffer(BufferItem* out_buffer,
                 // producer progress. Wake both host dequeuers and guest Binder
                 // waiters. Never invoke a callback while core->mutex is held.
                 core->SignalDequeueCondition();
-                const auto listener = core->connected_producer_listener;
-                lock.unlock();
-                if (listener) listener->OnBufferReleased();
+                if (freed_tracked_slot) {
+                    const auto listener = core->connected_producer_listener;
+                    lock.unlock();
+                    if (listener) listener->OnBufferReleased();
+                }
             }
             return Status::PresentLater;
         }
@@ -123,8 +127,8 @@ Status BufferQueueConsumer::AcquireBuffer(BufferItem* out_buffer,
     // We might have freed a slot while dropping old buffers, or the producer
     // may be blocked waiting for the number of queued buffers to decrease.
     core->SignalDequeueCondition();
-    if (dropped_queued_frames) {
-        // A dropped queued buffer is another producer-availability transition.
+    if (freed_tracked_slot) {
+        // Only a freed tracked slot creates a guest producer-availability transition.
         // The host condition is insufficient for the guest's Binder wait handle.
         const auto listener = core->connected_producer_listener;
         lock.unlock();
