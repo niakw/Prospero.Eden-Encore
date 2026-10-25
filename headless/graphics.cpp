@@ -398,9 +398,12 @@ private:
         Check(eglMakeCurrent(display, surface, surface, hud_context), "loading current");
         SCOPE_EXIT { Cleanup(eglMakeCurrent(display, surface, surface, context), "loading restore"); };
         if (!loading_program) {
-            const std::string fragment = std::string("#version 330 core\n") + kLoadingSceneGlsl +
-                "uniform vec2 size; uniform float seconds; out vec4 color;\n"
-                "void main(){ color = vec4(loading_scene(gl_FragCoord.xy, size, seconds), 1.0); }\n";
+            // The rotating case is the sole branded loading animation.
+            // Keep the original GPU warm-up/pacing but never replace the
+            // fading case with the obsolete purple GL fallback scene.
+            const std::string fragment =
+                "#version 330 core\nout vec4 color;\n"
+                "void main(){ color = vec4(0.024, 0.035, 0.039, 1.0); }\n";
             const char* sources[]{
                 "#version 330 core\nvoid main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);"
                 "gl_Position=vec4(p*2.0-1.0,0.0,1.0);}",
