@@ -40,6 +40,27 @@ fast gate, la prévalidation et le tableau des six critères au commit
 La CI complète et la clôture F06 sont distinctes : **4/6 reste inchangé**,
 aucun nouveau test sur PS5 demandé.
 
+**F05, 25 octobre — fermeture consommateur sans attente invitée persistante :**
+Le chemin épinglé `BufferQueueConsumer::Disconnect` abandonnait la file et
+réveillait `SignalDequeueCondition` (condition hôte), sans notification
+du handle Binder de la tâche invitée. Une implémentation maintenue distincte
+est maintenant sélectionnée par `headless/CMakeLists.txt` pour libérer la file
+et transmettre un dernier `OnBufferReleased` au relais de réveil du producteur.
+Le callback intervient après libération de `core->mutex` pour empêcher un
+réentrance/deadlock. Sources et points de contrôle :
+[ca32b64](https://github.com/niakw/Prospero.Eden-Encore/commit/ca32b64c484a69b34014e8f17b82bdb8f55ad3c0)
+(correctif),
+[37eef47](https://github.com/niakw/Prospero.Eden-Encore/commit/37eef4781d72ed2d506f631cb9620d85a68a3c39)
+(sélection CMake),
+`tools/check-fc27-f05-native-consumer-disconnect-host.py`
+(source extraite, deux attentes hôtes, événement invité simulé, callback
+hors mutex, chemin erreur, arrêt sécurisé, compilations O0/O2).
+L'oracle `check-vendor-consolidation-debt.py` vérifie la parité avec la
+source épinglée et ce seul delta de production. Test ajouté au fast gate,
+à la prévalidation et au tableau des six critères. **Ce test ne couvre
+pas l'ordonnancement réel des threads invités ni la progression FC27 :
+F05 reste en qualification et le total reste à 4/6.**
+
 **Réorientation du 25 octobre — retour fonctionnel utilisateur sur F06 :**
 L'utilisateur jugeait les commandes F06 déjà satisfaisantes dans ses essais.
 Ne pas ouvrir de nouvelle refonte du pad ou de ses raccourcis en l'absence
