@@ -215,7 +215,7 @@ queued=producer_source[producer_source.index("Status BufferQueueProducer::QueueB
                        producer_source.index("\nvoid BufferQueueProducer::CancelBuffer(")]
 producer_publish=queued[queued.index("        ++core->frame_counter;"):
                        queued.index("        output->Inflate(")]
-producer_callback=queued[queued.index("    // Notify consumers with the actual queued item:"):]
+producer_callback=queued[queued.index("    if (recycled_queued_slot) {", queued.index("        output->Inflate(")):]
 assert producer_callback.endswith("return Status::NoError;\n}\n")
 assert "slots[slot].fence = fence;" in producer_publish
 assert "listener_available->OnFrameAvailable(item);" in producer_callback
@@ -239,7 +239,9 @@ compositor=resolve_template(assignments[0])
 # flag and kernel-event interface in the mock. Do not strip or rewrite
 # the native body: it must still call Signal() on recycled tracked frames.
 assert "    bool recycled_queued_slot = false;" in queued
-assert "buffer_wait_event->Signal(service_context.kernel);" in producer_publish
+assert "buffer_wait_event->Signal(service_context.kernel);" not in producer_publish
+assert "buffer_wait_event->Signal(service_context.kernel);" in producer_callback
+assert producer_callback.index("buffer_wait_event->Signal(service_context.kernel);") < producer_callback.index("// Notify consumers")
 # The underlying HardwareComposer fixture now declares native F05 QueueBuffer
 # event dependencies itself; this linked bridge must not duplicate them.
 assert compositor.count("bool recycled_queued_slot = false;") == 1
