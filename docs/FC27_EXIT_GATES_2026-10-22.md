@@ -40,6 +40,34 @@ fast gate, la prévalidation et le tableau des six critères au commit
 La CI complète et la clôture F06 sont distinctes : **4/6 reste inchangé**,
 aucun nouveau test sur PS5 demandé.
 
+**F05, 25 octobre — vérification de l'événement Binder jusqu'à la notification d'attente :**
+Le contrôle `tools/check-fc27-f05-native-kernel-wait-publication-host.py`
+extrait les méthodes C++ de production `KEvent::Signal`,
+`KReadableEvent::{IsSignaled,Signal,Reset}`,
+`KSynchronizationObject::NotifyAvailable` et le relais
+`ProducerReleaseWake::OnBufferReleased`. Il fait évoluer deux threads
+hôtes **simulant les attentes d'un jeu**, sur 260 cycles, en contrôlant
+le caractère *level-triggered* de l'événement (un signal supplémentaire
+avant `Reset` n'est pas un nouveau réveil), puis son réarmement.
+Les endpoints `IHOSBinderDriver::GetNativeHandle`,
+`BufferQueueProducer::GetNativeHandle` et
+`Svc::WaitSynchronization` sont référencés par les assertions de source.
+Le test natif a été ajouté au fast gate, à la prévalidation et au checkpoint
+au commit [c28436f](https://github.com/niakw/Prospero.Eden-Encore/commit/c28436fa8139d38320f9f70f9eacafd75b6f5999).
+**Statut : CI en cours**, ce n'est pas encore une preuve d'exécution du
+véritable `KThread::EndWait`, de son ordonnanceur PS5 ni d'une transition
+pause/mi-temps/fin de match dans FC27. F05 reste ouvert.
+
+**CI réparée :** après le recyclage `QueueBuffer`, les deux simulations
+du compositeur (`check-native-hardware-composer-liveness-host.py` et
+`check-fc27-f05-native-nvdisp-vulkan-present-chain-host.py`) devaient
+recevoir les nouveaux paramètres de l'événement invité. Corrections
+[4ef9ec4](https://github.com/niakw/Prospero.Eden-Encore/commit/4ef9ec45bec721f3e13adfbe5ee962bdb2c02b66)
+et [8d04691](https://github.com/niakw/Prospero.Eden-Encore/commit/8d0469132caa0be5095a6265b000c46b945abd8d).
+Les succès du moteur, des hôtes et de la CI doivent être qualifiés
+séparément. Aucun passage à 5/6 tant que la progression invitée n'est
+pas démontrée.
+
 **F05, 25 octobre — recyclage des images et réveil de l'invité :**
 Le moteur conservait deux chemins de recyclage ne notifiant pas le handle
 Binder du producteur : `BufferQueueConsumer::AcquireBuffer` lorsqu'il écarte
