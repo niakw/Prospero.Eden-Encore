@@ -34,6 +34,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-native-hardware-composer-liveness-host.py",
     ),
     "F04-texture-integrity": (
+        "check-fc27-f04-native-dma-alias-bytes-host.py",
         "check-ps5-scissor-extremes-host.py",
         "check-ps5-buffer-region-multipage-host.py",
     ),
