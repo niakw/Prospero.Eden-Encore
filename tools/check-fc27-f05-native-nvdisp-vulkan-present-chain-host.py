@@ -222,7 +222,8 @@ assert "listener_available->OnFrameAvailable(item);" in producer_callback
 compositor_module=ast.parse((ROOT/"tools/check-native-hardware-composer-liveness-host.py").read_text())
 assignments=[n.value for n in compositor_module.body if isinstance(n,ast.Assign)
              and any(isinstance(target,ast.Name) and target.id=="fixture"
-                     for target in n.targets)]
+                     for target in n.targets)
+             and isinstance(n.value,ast.BinOp)]
 assert len(assignments)==1
 def resolve_template(expression):
     if isinstance(expression,ast.Constant) and isinstance(expression.value,str):
