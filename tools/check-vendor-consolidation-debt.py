@@ -421,6 +421,51 @@ assert c.count('list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_que
 assert 'if(NOT EXISTS "${EDEN_MAINTAINED_PROFILE_DEQUEUE}")' in c
 assert 'write_derived("${PORT_BUILD_DIR}/buffer_queue_producer.cpp"' not in c
 assert "producer_source" not in c and "producer_old" not in c
+# F05: pinned-to-maintained consumer delta for abandonment wake.
+consumer_rel = "core/hle/service/nvnflinger/buffer_queue_consumer.cpp"
+consumer_pinned = (sources / "eden/src" / consumer_rel).read_text()
+consumer_active = (active / "eden-core/src" / consumer_rel).read_text()
+consumer_start = "Status BufferQueueConsumer::Disconnect() {"
+consumer_end = "\nStatus BufferQueueConsumer::GetReleasedBuffers("
+assert consumer_pinned.count(consumer_start) == 1 and consumer_pinned.count(consumer_end) == 1
+consumer_old = consumer_pinned[consumer_pinned.index(consumer_start):
+                               consumer_pinned.index(consumer_end)]
+consumer_new = """Status BufferQueueConsumer::Disconnect() {
+    LOG_DEBUG(Service_Nvnflinger, "called");
+
+    std::shared_ptr<IProducerListener> producer_listener;
+    {
+        std::scoped_lock lock{core->mutex};
+        if (core->consumer_listener == nullptr) {
+            LOG_ERROR(Service_Nvnflinger, "no consumer is connected");
+            return Status::BadValue;
+        }
+
+        core->is_abandoned = true;
+        core->consumer_listener = nullptr;
+        core->queue.clear();
+        core->FreeAllBuffersLocked();
+        core->SignalDequeueCondition();
+        // A guest blocked on the producer's Binder native handle cannot
+        // observe the host condition variable. Publish the terminal wake
+        // through the same release listener used for ordinary buffer frees.
+        producer_listener = std::move(core->connected_producer_listener);
+    }
+
+    // Release callbacks must never execute under core->mutex: a guest or
+    // external listener can reenter the queue and otherwise deadlock.
+    if (producer_listener) {
+        producer_listener->OnBufferReleased();
+    }
+    return Status::NoError;
+}
+"""
+assert consumer_active == consumer_pinned.replace(consumer_old, consumer_new, 1), (
+    "Maintained consumer teardown diverged from pinned + F05 terminal wake")
+assert c.count('list(REMOVE_ITEM core_sources "hle/service/nvnflinger/buffer_queue_consumer.cpp")') == 1
+assert c.count('list(APPEND core_sources "\x24{EDEN_MAINTAINED_NVNF_CONSUMER}")') == 1
+print("VENDOR_MAINTAINED_NVNF_CONSUMER_PARITY_PASS: teardown Binder wake")
+
 print("VENDOR_MAINTAINED_DEQUEUE_PARITY_PASS: wait timing, detach wake, DEV selection")
 
 print("VENDOR_MAINTAINED_NVCTRL_PARITY_PASS: async callback capture, quiet clock, DEV selection")
