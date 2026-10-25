@@ -27,6 +27,16 @@ def method(src):
     end = src.index("\nStatus BufferQueueProducer::AttachBuffer(", start)
     return src[start:end].rstrip()
 selected = method(active)
+single_begin = "Status BufferQueueProducer::DetachBuffer("
+single_end = "Status BufferQueueProducer::DetachNextBuffer("
+assert active.count(single_begin) == 1 and active.count(single_end) == 1
+selected_single = active[active.index(single_begin):active.index(single_end)].rstrip()
+assert selected_single.count("core->SignalDequeueCondition();") == 1
+assert selected_single.count("buffer_wait_event->Signal(service_context.kernel);") == 1
+assert selected_single.index("core->FreeBufferLocked(slot);") < selected_single.index(
+    "buffer_wait_event->Signal(service_context.kernel);")
+assert "buffer_wait_event->Signal(service_context.kernel);" not in pinned[
+    pinned.index(single_begin):pinned.index(single_end)]
 assert 'core->FreeBufferLocked(found);\n    // DetachBuffer' in selected
 assert selected.count("core->SignalDequeueCondition();") == 1
 assert selected.count("buffer_wait_event->Signal(service_context.kernel);") == 1
@@ -58,6 +68,7 @@ struct BufferSlot {
     std::shared_ptr<GraphicBuffer> graphic_buffer{};
     u32 frame_number{};
     Fence fence{};
+    bool request_buffer_called{};
 };
 struct BufferQueueCore {
     static constexpr s32 INVALID_BUFFER_SLOT = -1;
@@ -90,8 +101,9 @@ struct BufferQueueProducer {
     std::array<BufferSlot, BufferQueueDefs::NUM_BUFFER_SLOTS>& slots;
     explicit BufferQueueProducer(BufferQueueCore& c) : core(&c), slots(c.slots) {}
     Status DetachNextBuffer(std::shared_ptr<GraphicBuffer>* out_buffer, Fence* out_fence);
+    Status DetachBuffer(s32 slot);
 };
-""" + "\n" + core_methods + "\n" + selected + r"""
+""" + "\n" + core_methods + "\n" + selected_single + "\n" + selected + r"""
 int main() {
     BufferQueueCore core{};
     BufferQueueProducer p(core);
@@ -127,6 +139,24 @@ int main() {
     assert(p.DetachNextBuffer(&output, &fence) == Status::NoInit);
     assert(core.dequeue_epoch.load() == 2);
     assert(p.event.signals.load() == 2);
+
+    // A second producer path detaches an owned dequeued slot, notifies the
+    // host broadcast and the native guest event exactly once on success.
+    BufferQueueCore single{};
+    BufferQueueProducer owned(single);
+    assert(owned.DetachBuffer(-1) == Status::BadValue);
+    assert(owned.DetachBuffer(0) == Status::BadValue);
+    single.slots[0].buffer_state = BufferState::Dequeued;
+    single.slots[0].graphic_buffer = std::make_shared<GraphicBuffer>(GraphicBuffer{123});
+    assert(owned.DetachBuffer(0) == Status::BadValue);
+    single.slots[0].request_buffer_called = true;
+    assert(owned.DetachBuffer(0) == Status::NoError);
+    assert(single.slots[0].buffer_state == BufferState::Free);
+    assert(!single.slots[0].graphic_buffer);
+    assert(single.dequeue_epoch.load() == 1);
+    assert(owned.event.signals.load() == 1);
+    assert(owned.DetachBuffer(0) == Status::BadValue);
+    assert(owned.event.signals.load() == 1);
 
     // Deterministically place TWO producers inside the actual core condition
     // wait: each must release the mutex for the next one to enter.
