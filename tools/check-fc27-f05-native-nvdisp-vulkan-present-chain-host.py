@@ -109,11 +109,11 @@ composite=native(RENDER,"void RendererVulkan::Composite(")
 # Reuse the full pinned guest FramebufferConfig declaration verbatim. Two
 # different definitions with the same C++ mangled type would violate ODR and
 # can silently use the wrong stride for the second layer on some compilers.
-guest_fb=native(host.split("struct FramebufferConfig {",1)[0]+"struct FramebufferConfig {"+host.split("struct FramebufferConfig {",1)[1], "struct FramebufferConfig {")
+guest_fb=native(host,"struct FramebufferConfig {")
 # Also include its BlendMode member type in precisely the same form.
 vulkan=once(vulkan,
     "namespace Tegra {\nstruct FramebufferConfig {std::uint64_t address{};};\n}",
-    "namespace Tegra {\nenum class BlendMode { Opaque };\n"+guest_fb+"\n}",
+    "namespace Tegra {\nenum class BlendMode { Opaque };\n"+guest_fb+";\n}",
     "identical guest/renderer span layout")
 vulkan=once(vulkan,"__PRESENT_METHODS__",presentmethods,"present methods")
 vulkan=once(vulkan,"__RENDER_METHOD__",composite,"renderer")
