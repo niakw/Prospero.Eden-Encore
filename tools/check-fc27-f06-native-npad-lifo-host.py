@@ -231,6 +231,13 @@ for token, value in (
 ):
     once(token, value)
 
+# Export the exact generated, source-extracted fixture for the linked F06
+# boundary regression. Default standalone execution remains unchanged.
+import sys
+if len(sys.argv) == 3 and sys.argv[1] == "--emit-cpp":
+    Path(sys.argv[2]).write_text(cpp)
+    raise SystemExit(0)
+
 compiler = shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler, "C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="encore-f06-npad-lifo-") as folder:
