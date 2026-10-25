@@ -419,14 +419,27 @@ def run() -> int:
                         r"scope=source_extracted_kthread_queue_mock_scheduler",
                         result.stdout,
                     )
+                    integrated_release = re.findall(
+                        r"F05_NATIVE_RELEASE_TO_KTHREAD_PASS cycles=(\\d+) "
+                        r"successful_releases=(\\d+) stale_releases_quiet=(\\d+) "
+                        r"duplicate_releases_quiet=(\\d+) guest_wait_completions=(\\d+) "
+                        r"host_dequeue_generations=(\\d+) "
+                        r"scope=source_extracted_consumer_release_and_kthread_mock_scheduler",
+                        result.stdout,
+                    )
                     excludes = "F05_REAL_GUEST_SCHEDULER_AND_FC27_LIVENESS_NOT_PROVEN" in result.stdout
-                    if guest_endwait != [("260","260","260","1","1","520","1","1")]*2 or not excludes:
+                    if (guest_endwait != [("260","260","260","1","1","520","1","1")]*2
+                            or integrated_release != [("260","260","260","260","520","260")]*2
+                            or not excludes):
                         ok, reason = False, "f05_native_guest_kthread_endwait_witness_missing"
                     else:
                         fixture_metrics["F05_native_kthread_endwait_host"] = {
                             "wait_cycles": 260,
                             "guest_style_threads": 2,
                             "native_guest_resume_transitions": 520,
+                            "consumer_successful_releases": 260,
+                            "stale_and_duplicate_releases_quiet": True,
+                            "native_consumer_to_kthread_chain": True,
                             "wait_nodes_unlinked": True,
                             "timer_tasks_cancelled": 520,
                             "compile_modes": ["O0", "O2"],
