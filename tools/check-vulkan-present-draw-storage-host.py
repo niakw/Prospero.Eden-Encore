@@ -15,6 +15,19 @@ edits = next(ast.literal_eval(n.value) for n in tree.body
              t.id == 'present_draw_edits' for t in n.targets))
 current = (ACTIVE / 'vulkan_window_adapt_pass.cpp').read_text()
 previous = current
+# Source-owning audit already validates the five exact Vulkan warm-up
+# presentation deltas against the generated native code. Restore those
+# deltas in the OLD-side comparison only: preserve the original pinned
+# Git blob SHA, while exercising the actual new shipping Draw() below.
+validator = ast.parse((ROOT / 'tools/check-vendored-vulkan-fork.py').read_text())
+loader_edits = next(ast.literal_eval(node.iter) for node in ast.walk(validator)
+    if isinstance(node, ast.For) and isinstance(node.target, ast.Tuple)
+    and [v.id for v in node.target.elts if isinstance(v, ast.Name)] == ['before', 'after']
+    and isinstance(node.iter, ast.Tuple))
+assert len(loader_edits) == 5
+for old, new in reversed(loader_edits):
+    assert previous.count(new) == 1, 'unreviewed loading-presenter modification'
+    previous = previous.replace(new, old)
 for old, new in reversed(edits):
     assert previous.count(new) == 1, new
     previous = previous.replace(new, old)
