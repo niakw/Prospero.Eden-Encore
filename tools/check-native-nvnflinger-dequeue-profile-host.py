@@ -8,11 +8,24 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 src = (ROOT / "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_producer.cpp").read_text()
 cmake = (ROOT / "headless/CMakeLists.txt").read_text()
+header = (ROOT / "headless/performance.h").read_text()
+report = (ROOT / "headless/performance.cpp").read_text()
 profile = "EDEN_NVNF_DEQUEUE_PROFILE"
 assert src.startswith('#ifdef ' + profile + '\n#include "performance.h"\n#endif\n')
 assert cmake.count('list(APPEND core_sources "$' + '{EDEN_MAINTAINED_PROFILE_DEQUEUE}")') == 1
 assert cmake.count("target_compile_definitions(core PRIVATE " + profile + "=1)") == 1
 assert "buffer_queue_producer_standard.cpp" not in cmake
+assert "::Eden::Performance::GuestDequeueBlockedScope blocking_scope;" in src
+assert src.count("::Eden::Performance::GuestDequeueBlockedScope blocking_scope;") == 1
+assert "dequeue_blocked=%u" in report
+assert "guest_dequeue_blocked.load(std::memory_order_acquire)" in report
+scope_start = "class GuestDequeueBlockedScope {"
+assert header.count(scope_start) == 1
+begin = header.index(scope_start)
+scope = header[begin:header.index("\n};", begin)+3]
+assert "guest_dequeue_blocked.fetch_add(1, std::memory_order_acq_rel)" in scope
+assert "guest_dequeue_blocked.fetch_sub(1, std::memory_order_acq_rel)" in scope
+assert "detailed_gpu_profile.load(std::memory_order_relaxed)" in scope
 start = src.index("#ifdef " + profile + "\n        const auto dequeue_start")
 end = src.index("        if (status != Status::NoError)", start)
 fragment = src[start:end]
@@ -85,3 +98,64 @@ with tempfile.TemporaryDirectory(prefix="encore-dequeue-profile-") as tmp:
             subprocess.run([*args, str(source), "-o", str(binary)], check=True, timeout=45)
             subprocess.run([str(binary)], check=True, timeout=12)
             print("NATIVE_NVN_DEQUEUE_PROFILE_PASS", "dev" if profile_on else "release", opt)
+
+
+# Native source-extracted scope: multiple host dequeuers, early scope exit
+# and disabled-profile path must never leak a nonzero active-blocker counter.
+active_scope_fixture = r"""
+#include <atomic>
+#include <cassert>
+#include <thread>
+#include <vector>
+#include <cstdio>
+namespace Eden::Performance {
+inline std::atomic<bool> detailed_gpu_profile{true};
+inline std::atomic<unsigned> guest_dequeue_blocked{};
+__SCOPE__
+}
+int main() {
+    using namespace Eden::Performance;
+    {
+        GuestDequeueBlockedScope first{};
+        assert(guest_dequeue_blocked.load() == 1);
+        { GuestDequeueBlockedScope second{}; assert(guest_dequeue_blocked.load() == 2); }
+        assert(guest_dequeue_blocked.load() == 1);
+    }
+    assert(guest_dequeue_blocked.load() == 0);
+    std::atomic<unsigned> entered{};
+    std::atomic<bool> release{};
+    std::vector<std::thread> workers;
+    for (int n = 0; n < 8; ++n) {
+        workers.emplace_back([&] {
+            GuestDequeueBlockedScope active{};
+            entered.fetch_add(1, std::memory_order_release);
+            while (!release.load(std::memory_order_acquire)) std::this_thread::yield();
+        });
+    }
+    while (entered.load(std::memory_order_acquire) != 8) std::this_thread::yield();
+    assert(guest_dequeue_blocked.load(std::memory_order_acquire) == 8);
+    release.store(true, std::memory_order_release);
+    for (auto& worker : workers) worker.join();
+    assert(guest_dequeue_blocked.load(std::memory_order_acquire) == 0);
+    detailed_gpu_profile.store(false);
+    { GuestDequeueBlockedScope quiet{}; assert(guest_dequeue_blocked.load() == 0); }
+    assert(guest_dequeue_blocked.load() == 0);
+    std::puts("F05_ACTIVE_DEQUEUE_BLOCKERS_PASS blocked=8 cleared=1 disabled_quiet=1 scope=source_extracted");
+}
+""".replace("__SCOPE__", scope)
+with tempfile.TemporaryDirectory(prefix="encore-f05-live-dequeue-") as tmp:
+    source = Path(tmp) / "live.cpp"
+    source.write_text(active_scope_fixture)
+    for opt in ("-O0", "-O2"):
+        exe = Path(tmp) / ("live" + opt)
+        compiled = subprocess.run([compiler, "-std=c++20", opt, "-Wall", "-Wextra",
+                                   "-Werror", "-pthread", "-fsanitize=undefined",
+                                   "-fno-sanitize-recover=all",
+                                   str(source), "-o", str(exe)],
+                                  capture_output=True, text=True, timeout=45)
+        assert compiled.returncode == 0, (opt, compiled.stderr[-6000:])
+        run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=15)
+        assert run.returncode == 0, (opt, run.stderr[-6000:], run.stdout)
+        assert "F05_ACTIVE_DEQUEUE_BLOCKERS_PASS blocked=8 cleared=1 disabled_quiet=1" in run.stdout
+        print(opt, run.stdout.strip(), flush=True)
+print("F05_LIVE_DEQUEUE_DIAGNOSTIC_NOT_GUEST_PC_OR_FC27_LIVENESS_PROOF")
