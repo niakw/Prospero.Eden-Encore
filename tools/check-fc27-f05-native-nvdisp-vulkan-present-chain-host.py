@@ -107,7 +107,7 @@ presentmethods="\n\n".join(native(PRESENT,sig) for sig in (
 composite=native(RENDER,"void RendererVulkan::Composite(")
 vulkan=once(vulkan,"__PRESENT_METHODS__",presentmethods,"present methods")
 vulkan=once(vulkan,"__RENDER_METHOD__",composite,"renderer")
-vulkan=once(vulkan,"int main(){","int F05StandalonePresentationReplay(){","different mains")
+vulkan=once(vulkan,"int main(){","void F05StandalonePresentationReplay(){","different mains")
 # One living instance of the real native renderer/presenter methods accepts
 # every Host1x-gated completion, rather than resetting the mock each frame.
 vulkan+=r"""
