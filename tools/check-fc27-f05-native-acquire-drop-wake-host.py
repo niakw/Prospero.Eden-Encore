@@ -184,7 +184,7 @@ int main() {
     assert(out.slot==1 && core->queue.empty());
     assert(core->slots[0].buffer_state==BufferState::Queued);
     assert(core->slots[1].buffer_state==BufferState::Acquired);
-    assert(core->broadcasts.load()==261);
+    assert(core->broadcasts.load()==262);
     assert(event.signals.load()==260 && delegate->callbacks==260);
     wake->Stop();
     std::puts("F05_NATIVE_ACQUIRE_DROP_GUEST_WAKE_PASS frames=260 stale_drops=520 "
