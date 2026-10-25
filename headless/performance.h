@@ -280,6 +280,26 @@ inline void ResetCachePhases() noexcept {
 // Guest waits: nvhost_ctrl syncpoint event registration -> signal, and
 // BufferQueueProducer::DequeueBuffer waiting for a free buffer slot.
 inline Totals guest_sync_wait, guest_dequeue_wait;
+// F05: a hung producer never returns from DequeueBuffer, so completed-call
+// timers stay flat. Count *currently* blocked host dequeuers separately.
+// Multi-producer safe; only an actual wait updates this count, and only
+// with detailed profiling enabled. No guest scheduling or queue semantics
+// change. One diagnostic count is not a per-thread/guest PC proof.
+inline std::atomic<unsigned> guest_dequeue_blocked{};
+class GuestDequeueBlockedScope {
+public:
+    GuestDequeueBlockedScope() noexcept
+        : enabled(detailed_gpu_profile.load(std::memory_order_relaxed)) {
+        if (enabled) guest_dequeue_blocked.fetch_add(1, std::memory_order_acq_rel);
+    }
+    GuestDequeueBlockedScope(const GuestDequeueBlockedScope&) = delete;
+    GuestDequeueBlockedScope& operator=(const GuestDequeueBlockedScope&) = delete;
+    ~GuestDequeueBlockedScope() {
+        if (enabled) guest_dequeue_blocked.fetch_sub(1, std::memory_order_acq_rel);
+    }
+private:
+    bool enabled{};
+};
 // fsp-srv IFile/IStorage reads (guest asset streaming): time in the backend and bytes.
 inline Totals guest_fs_file, guest_fs_storage;
 inline std::atomic<unsigned long long> guest_fs_file_bytes{}, guest_fs_storage_bytes{};
