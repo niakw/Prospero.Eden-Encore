@@ -90,7 +90,7 @@ assert selected_single.index("core->FreeBufferLocked(slot);") < selected_single.
     "buffer_wait_event->Signal(service_context.kernel);")
 assert "buffer_wait_event->Signal(service_context.kernel);" not in pinned[
     pinned.index(single_begin):pinned.index(single_end)]
-assert 'core->FreeBufferLocked(found);\n    // DetachBuffer' in selected
+assert 'core->FreeBufferLocked(found);\n    // Publish host dequeue-generation transition' in selected
 assert selected.count("core->SignalDequeueCondition();") == 1
 assert selected.count("buffer_wait_event->Signal(service_context.kernel);") == 1
 assert selected.index("core->FreeBufferLocked(found);") < selected.index("core->SignalDequeueCondition();")
