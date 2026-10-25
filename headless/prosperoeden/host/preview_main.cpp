@@ -266,8 +266,11 @@ void pictures(Stage &s)
         s.wait(1.0f);
         // Fixture games are alphabetically sorted. BOTW's real flat scans
         // are on the eleventh title (index 10), not on Moss & Lantern.
-        // A page is five entries, so two page moves reach the actual artwork.
-        s.press({Key::r1, Key::r1});
+        // L1/R1 now change main tabs globally. The old R1 page shortcut
+        // would leave Library before this L2/R2 viewer test. Navigate ten
+        // items with ordinary D-pad Right to reach the SAME BOTW fixture.
+        s.press({Key::right, Key::right, Key::right, Key::right, Key::right,
+                 Key::right, Key::right, Key::right, Key::right, Key::right});
         s.wait(0.4f);
         // The host advances game-list frames far faster than the console.
         // Wait for the actual original retail textures AND their fade-in
