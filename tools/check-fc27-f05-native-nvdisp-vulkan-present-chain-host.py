@@ -383,6 +383,7 @@ using u64=std::uint64_t;
 #define R_SUCCEED() return Result{}
 #define R_RETURN(value) return (value)
 extern "C" void F05QueueSubmit(u64 game,u64 hud);
+extern "C" void F05GuestResumeForFrame(unsigned sequence);
 namespace Service::Nvnflinger {
 struct Result {int code=0;};
 constexpr int BufferAttr_HipcMapAlias=1;
@@ -406,6 +407,7 @@ struct MockBinder {
         assert(code==7 && flags==0);
         (void)reply;
         ++calls;
+        F05GuestResumeForFrame(calls);
         F05QueueSubmit(data.game,data.hud);
     }
 };
@@ -456,21 +458,165 @@ host=once(host,'    F05QueueDrain(260);\n    F05PipeDrain(260);',
           "binder final claim")
 assert 'F05BinderSubmit(game,hud);' in host
 
+
+# One integrated executable must require native Consumer::ReleaseBuffer ->
+# ProducerReleaseWake -> KEvent -> readable notifier -> KThreadQueue::EndWait
+# before the HOS Binder mock may forward each game/HUD frame to Vulkan.
+# Guest scheduler/HIPC packets, GPU and WSI remain mocked and unqualified.
+ka=ast.parse((ROOT/"tools/check-fc27-f05-native-kthread-endwait-host.py").read_text())
+kt=[ast.literal_eval(n.value) for n in ka.body if isinstance(n,ast.Assign)
+    and any(isinstance(t,ast.Name) and t.id=="cpp" for t in n.targets)
+    and isinstance(n.value,ast.Constant) and isinstance(n.value.value,str)]
+assert len(kt)==1
+kt=kt[0]
+kr=ROOT/"vendor/sources/eden/src/core/hle/kernel"
+s=(kr/"k_synchronization_object.cpp").read_text()
+q=(kr/"k_thread_queue.cpp").read_text()
+t=(ROOT/"vendor/encore-active/eden-threading/src/core/hle/kernel/k_thread.cpp").read_text()
+c=(ROOT/"vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp").read_text()
+re=(kr/"k_readable_event.cpp").read_text()
+ev=(kr/"k_event.cpp").read_text()
+ws="class ThreadQueueImplForKSynchronizationObjectWait final : public KThreadQueueWithoutEndWait {"
+assert s.count(ws)==1
+at=s.index(ws)
+wait_impl=s[at:s.index("\n};",at)+3]
+ws="class ProducerReleaseWake final : public IProducerListener {"
+assert producer_source.count(ws)==1
+at=producer_source.index(ws)
+wake_impl=producer_source[at:producer_source.index("\n};",at)+3]
+methods={
+ "__QUEUE_END__":native(q,"void KThreadQueue::EndWait(KernelCore& kernel, KThread* waiting_thread, Result wait_result)"),
+ "__QUEUE_CANCEL__":native(q,"void KThreadQueue::CancelWait(KernelCore& kernel, KThread* waiting_thread, Result wait_result, bool cancel_timer_task)"),
+ "__THREAD_BEGIN__":native(t,"void KThread::BeginWait(KernelCore& kernel, KThreadQueue* queue)"),
+ "__THREAD_NOTIFY__":native(t,"void KThread::NotifyAvailable(KernelCore& kernel, KSynchronizationObject* signaled_object, Result wait_result)"),
+ "__SYNC_NOTIFY__":native(s,"void KSynchronizationObject::NotifyAvailable(KernelCore& kernel, Result result)"),
+ "__READABLE_IS_SIGNALED__":native(re,"bool KReadableEvent::IsSignaled(KernelCore& kernel) const"),
+ "__READABLE_SIGNAL__":native(re,"Result KReadableEvent::Signal(KernelCore& kernel)"),
+ "__READABLE_RESET__":native(re,"Result KReadableEvent::Reset(KernelCore& kernel)"),
+ "__EVENT_SIGNAL__":native(ev,"Result KEvent::Signal(KernelCore& kernel)"),
+ "__WAIT_IMPL__":wait_impl,
+ "__RELEASE_WAKE__":wake_impl,
+ "__CONSUMER_RELEASE__":native(c,"Status BufferQueueConsumer::ReleaseBuffer(")
+}
+for k,v in methods.items():
+    assert kt.count(k)==1,k
+    kt=kt.replace(k,v)
+assert kt.count("int main(){")==1
+kt=kt[:kt.index("int main(){")]
+assert kt.count("namespace Kernel {")==1
+# Avoid mock class ODR clashes with existing source-extracted TUs.
+kt=kt.replace("namespace Kernel {","namespace F05Guest {\nnamespace Kernel {",1)
+guest_cpp=kt+r"""
+} // namespace F05Guest
+namespace F05Guest {
+struct WaitHarness {
+ Kernel::KernelCore kernel{};
+ Kernel::KEvent event{};
+ Kernel::KThread game{},hud{};
+ Kernel::KHardwareTimer timer{};
+ std::shared_ptr<Service::android::BufferQueueCore> core{
+   std::make_shared<Service::android::BufferQueueCore>()};
+ std::shared_ptr<Service::android::ProducerReleaseWake> wake{
+   std::make_shared<Service::android::ProducerReleaseWake>(&event,kernel)};
+ Service::android::BufferQueueConsumer consumer{core};
+ unsigned released{};
+ WaitHarness(){core->connected_producer_listener=wake;}
+ void Step(unsigned sequence) {
+  assert(sequence==released+1);
+  auto& readable=event.GetReadableEvent();
+  Kernel::KSynchronizationObject* go[]{&readable};
+  Kernel::KSynchronizationObject* ho[]{&readable};
+  Kernel::KSynchronizationObject::ThreadListNode gn{nullptr,&game};
+  Kernel::KSynchronizationObject::ThreadListNode hn{nullptr,&hud};
+  Kernel::ThreadQueueImplForKSynchronizationObjectWait gw(kernel,go,&gn,1);
+  Kernel::ThreadQueueImplForKSynchronizationObjectWait hw(kernel,ho,&hn,1);
+  gw.SetHardwareTimer(&timer);hw.SetHardwareTimer(&timer);
+  {
+   Kernel::KScopedSchedulerLock lock{kernel};
+   assert(!readable.IsSignaled(kernel));
+   readable.LinkNode(&gn);readable.LinkNode(&hn);
+   game.BeginWait(kernel,&gw);hud.BeginWait(kernel,&hw);
+   game.SetCancellable();hud.SetCancellable();
+   assert(readable.WaitingCount()==2);
+  }
+  core->slots[0].frame_number=sequence;
+  core->slots[0].buffer_state=Service::android::BufferState::Acquired;
+  assert(consumer.ReleaseBuffer(0,sequence+999,Service::android::Fence{})==
+      Service::android::Status::StaleBufferSlot);
+  assert(game.GetState()==Kernel::ThreadState::Waiting);
+  assert(hud.GetState()==Kernel::ThreadState::Waiting);
+  assert(consumer.ReleaseBuffer(0,sequence,Service::android::Fence{})==
+      Service::android::Status::NoError);
+  assert(game.GetState()==Kernel::ThreadState::Runnable);
+  assert(hud.GetState()==Kernel::ThreadState::Runnable);
+  assert(!game.HasWaitQueue() && !hud.HasWaitQueue());
+  assert(!game.IsCancellable() && !hud.IsCancellable());
+  assert(game.GetSyncedIndex()==0 && hud.GetSyncedIndex()==0);
+  assert(readable.WaitingCount()==0);
+  assert(consumer.ReleaseBuffer(0,sequence,Service::android::Fence{})==
+      Service::android::Status::BadValue);
+  assert(readable.Reset(kernel)==Kernel::Result::Success);
+  ++released;
+  assert(core->host_dequeue_releases==static_cast<int>(released));
+ }
+};
+static std::unique_ptr<WaitHarness> harness;
+}
+extern "C" void F05GuestStart() {
+ assert(!F05Guest::harness);
+ F05Guest::harness=std::make_unique<F05Guest::WaitHarness>();
+}
+extern "C" void F05GuestResumeForFrame(unsigned seq) {
+ assert(F05Guest::harness);
+ F05Guest::harness->Step(seq);
+}
+extern "C" void F05GuestDrain(unsigned count) {
+ auto& h=F05Guest::harness;
+ assert(h && h->released==count);
+ assert(h->game.Transitions()==static_cast<int>(2*count));
+ assert(h->hud.Transitions()==static_cast<int>(2*count));
+ assert(h->timer.cancelled==static_cast<int>(2*count));
+ h->wake->Stop();
+ h.reset();
+ std::printf("F05_NATIVE_RELEASE_KTHREAD_TO_PRESENT_BOUNDARY_PASS "
+             "releases=%u resumes=%u binder_frames_gated=1 "
+             "scope=source_extracted_host_mock_guest_kernel_hipc_gpu_wsi\n",
+             count,2*count);
+}
+"""
+# Link the guest producer/consumer event to *the same* Binder->frame chain.
+host=once(host,
+    'extern "C" void F05QueueStart();',
+    'extern "C" void F05QueueStart();\n'
+    'extern "C" void F05GuestStart();\n'
+    'extern "C" void F05GuestDrain(unsigned);',
+    "native guest release boundary declaration")
+host=once(host,
+    '    F05PipeStart();\n    F05QueueStart();\n    Core::System system;',
+    '    F05PipeStart();\n    F05QueueStart();\n    F05GuestStart();\n    Core::System system;',
+    "guest waiting startup")
+host=once(host,
+    '    F05BinderDrain(260);\n    F05QueueDrain(260);\n    F05PipeDrain(260);',
+    '    F05BinderDrain(260);\n    F05QueueDrain(260);\n'
+    '    F05PipeDrain(260);\n    F05GuestDrain(260);',
+    "guest waiting drain")
+
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler,"C++20 host compiler required"
 with tempfile.TemporaryDirectory(prefix="encore-f05-guest-to-present-") as d:
     p=Path(d)
-    a=p/"guest.cpp";b=p/"present.cpp";c=p/"surface.cpp";d=p/"binder.cpp"
-    a.write_text(host);b.write_text(vulkan);c.write_text(compositor);d.write_text(binder_cpp)
+    a=p/"guest.cpp";b=p/"present.cpp";c=p/"surface.cpp";d=p/"binder.cpp";e=p/"guest_wait.cpp"
+    a.write_text(host);b.write_text(vulkan);c.write_text(compositor);d.write_text(binder_cpp);e.write_text(guest_cpp)
     for opt in ("-O0","-O2"):
         exe=p/("chain"+opt)
         build=subprocess.run([compiler,"-std=c++20",opt,"-pthread","-Wall",
                  "-Wextra","-Werror","-fsanitize=undefined",
-                 "-fno-sanitize-recover=all",str(a),str(b),str(c),str(d),"-o",str(exe)],
+                 "-fno-sanitize-recover=all",str(a),str(b),str(c),str(d),str(e),"-o",str(exe)],
                  text=True,capture_output=True,timeout=90)
         assert build.returncode==0,(opt,build.stderr[-9000:])
         run=subprocess.run([str(exe)],capture_output=True,text=True,timeout=45)
         assert run.returncode==0,(opt,run.stderr[-6000:],run.stdout[-6000:])
+        assert "F05_NATIVE_RELEASE_KTHREAD_TO_PRESENT_BOUNDARY_PASS releases=260 resumes=520 binder_frames_gated=1" in run.stdout
         assert "F05_NATIVE_IPC_BINDER_DISPATCH_PASS auto_transactions=260" in run.stdout
         assert "F05_NATIVE_BUFFERQUEUE_TO_VULKAN_CHAIN_PASS queued=260" in run.stdout
         assert "F05_NATIVE_NVDISP_VULKAN_PRESENT_CHAIN_PASS requests=260 copies=260" in run.stdout
