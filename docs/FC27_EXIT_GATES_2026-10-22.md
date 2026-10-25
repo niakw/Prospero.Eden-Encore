@@ -1,5 +1,25 @@
 # Eden Encore — reste à faire pour FC27 (critères de sortie)
 
+## État officiel — F06 clôturé techniquement, 6/6 (25 octobre 2026)
+
+**Code de référence : [`cd4857c`](https://github.com/niakw/Prospero.Eden-Encore/commit/cd4857c8b525ab39d9280bb693f5c2ad974057c6)**, branche unique de validation `dev/ps5-sparse-jit`. La branche expérimentale `feat/graphics-network-achievements` reste **strictement séparée**.
+
+- [Fast gate #40233098572](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40233098572) : **SUCCESS** sur le même code et les mêmes tests F06 (révision `f4110ce`, immédiatement avant l'édition du workflow de prévalidation).
+- [Prévalidation complète #40233101645](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40233101645) : **SUCCESS** sur `cd4857c`. Checkpoint exact : `f01_to_f06_closed=6`, `host_subpaths_passed=36`, `host_subpaths_total=36`, `F06-input-and-pause=true`.
+- [Compilation et packaging PS5 #40233101642](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40233101642) : **SUCCESS** sur `cd4857c`.
+- [CodeQL #40233101633](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40233101633) : **analyse C/C++ encore en cours à cette mise à jour**, actions et Python déjà réussies. Ne pas marquer ce workflow global réussi avant sa conclusion.
+
+**F06 validé pour le contrat pré-console.** Le nouveau témoin exécute dans un même binaire lié les méthodes de production sélectionnées `Pad::Consume`, `PadEngine::SetButtonState`, `EmulatedController::GetNpadButtons`, `NPad::RequestPadStateUpdate` et `NPad::OnUpdate`. Il valide **79 publications d'échantillons Npad** sous `-O0` et `-O2`, le relâchement de Plus, l'ordre des numéros d'échantillon et la publication `fullkey` / `system_ext`. Les cinq phases de match sont des **étiquettes synthétiques** ; le raccord `InputCommon` entre les deux unités est un adaptateur de test simulé.
+
+Le diff de code `771afa2..cd4857c` ne change **aucune source de production du moteur** : seulement les tests F06, les workflows, le checkpoint et la documentation. Les commandes déjà jugées fonctionnelles restent intactes.
+
+**Compte officiel de prévalidation : F01, F02, F03, F04, F05 et F06 = 6/6.**
+**F07 reste ouvert et séparé :** le code testé ne prouve pas la lecture HIPC du jeu, ses configurations de commandes enregistrées, les FPS, la fidélité des textures ou l'absence de freeze sur une PS5 13.60. Une campagne de test matériel finale reste nécessaire après livraison d'un paquet de la révision validée.
+
+**Historique :** les états 5/6 et 4/6 ci-dessous sont antérieurs au checkpoint `cd4857c` et ne représentent plus le compteur courant.
+
+---
+
 
 ## État officiel — F05 clôturé techniquement, 5/6 (25 octobre 2026)
 
