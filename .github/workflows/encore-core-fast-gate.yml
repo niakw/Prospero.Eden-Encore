@@ -141,6 +141,7 @@ on:
       - 'tools/check-native-a64-cache-invalidation-host.py'
       - 'tools/check-native-jit-invalidation-snapshot-host.py'
       - 'tools/check-native-jit-invalidation-lock-budget-host.py'
+      - 'tools/check-native-jit-cold-repeat-host.py'
       - 'tools/check-native-jit-empty-block-invalidation-host.py'
       - 'tools/check-maintained-common-emit-x64.py'
       - 'vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp'
@@ -265,6 +266,7 @@ jobs:
           python3 -B tools/check-native-a64-cache-invalidation-host.py
           python3 -B tools/check-native-jit-invalidation-snapshot-host.py
           python3 -B tools/check-native-jit-invalidation-lock-budget-host.py
+          python3 -B tools/check-native-jit-cold-repeat-host.py
           python3 -B tools/check-native-jit-empty-block-invalidation-host.py
           python3 -B tools/check-maintained-common-emit-x64.py
           python3 -B tools/check-native-jit-code-space-bounds-host.py

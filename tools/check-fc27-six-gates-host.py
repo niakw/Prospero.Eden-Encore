@@ -25,6 +25,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "check-native-jit-invalidation-snapshot-host.py",
         "check-native-jit-code-space-bounds-host.py",
         "check-native-jit-invalidation-lock-budget-host.py",
+        "check-native-jit-cold-repeat-host.py",
     ),
     "F03-hud-freshness": (
         "check-ps5-texture-channel-missing-mapping-host.py",
@@ -47,7 +48,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# Missing end-to-end evidence remains explicit even when all sixteen narrow
+# Missing end-to-end evidence remains explicit even when all seventeen narrow
 # host probes succeed. Neither a successful tool run nor a source checksum is
 # a measured frame-latency improvement or a complete technical exit proof.
 UNPROVEN_EXIT_EVIDENCE = {
@@ -157,6 +158,40 @@ def run() -> int:
                         print("F01_MEASURED_HOST_SUBPATH=" +
                               json.dumps(fixture_metrics["F01_native_lock_budget_host"],
                                          sort_keys=True), flush=True)
+                if ok and script == "check-native-jit-cold-repeat-host.py":
+                    found = re.findall(
+                        r"F02_JIT_NATIVE_COLD_REPLAY_PASS arch=(A32|A64) "
+                        r"impl=(pinned|maintained) cold=(\d+) repeated_hits=(\d+) "
+                        r"recompile=(\d+) full_clear_compile=(\d+) "
+                        r"total_emissions=(\d+) cold_total_ns=(\d+) "
+                        r"hot_total_ns=(\d+) "
+                        r"scope=source_extracted_synthetic_translator", result.stdout)
+                    counts = {}
+                    for arch, kind, cold, hits, recompile, cleared, emissions, cold_ns, hot_ns in found:
+                        counts.setdefault((arch, kind), []).append(
+                            (int(cold), int(hits), int(recompile), int(cleared),
+                             int(emissions), int(cold_ns), int(hot_ns)))
+                    desired = {(arch, kind) for arch in ("A32","A64")
+                               for kind in ("pinned","maintained")}
+                    if (set(counts) != desired or
+                            any(len(series) != 2 for series in counts.values()) or
+                            any(values[:5] != (32, 512, 8, 32, 72) or
+                                min(values[5:]) <= 0
+                                for series in counts.values() for values in series)):
+                        ok, reason = False, "f02_cold_repeat_invalidations_evidence_missing"
+                    else:
+                        fixture_metrics["F02_cold_repeat_source_host"] = {
+                            arch: {kind: [
+                                {"cold_ns": x[5], "hot_ns": x[6]} for x in counts[(arch,kind)]]
+                                for kind in ("pinned","maintained")}
+                            for arch in ("A32","A64")
+                        }
+                        fixture_metrics["F02_cold_repeat_source_host"]["scope"] = (
+                            "executed pinned and selected GetBlock methods with mock emitter, "
+                            "not real guest JIT compilation or PS5 FPS")
+                        print("F02_MEASURED_HOST_SUBPATH=" +
+                              json.dumps(fixture_metrics["F02_cold_repeat_source_host"],
+                                         sort_keys=True),flush=True)
                 if ok and script == "check-native-jit-invalidation-lock-budget-host.py":
                     records = re.findall(
                         r"F02_JIT_NATIVE_INVALIDATION_BUDGET_PASS "
