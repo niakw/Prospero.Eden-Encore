@@ -26,9 +26,17 @@ Pas de polling, timeout, allocation, log supplémentaire par frame ou
 modification du prédicat de réveil ; profilage désactivé, ce compteur
 n'entraîne aucune écriture atomique sur le chemin d'attente.
 L'oracle de provenance maintenu et le test compilé sous UBSan `-O0`/`-O2`
-vérifient le scope et huit attentes concurrentes. Une valeur non nulle
-**n'est pas** la preuve que l'IPC ou le PC invité est bloqué ; les deux
-observations doivent rester indépendantes.
+vérifient le scope et huit attentes concurrentes. Le témoin supplémentaire
+`check-native-nvnflinger-dequeue-profile-host.py` exécute désormais aussi
+les méthodes natives `BufferQueueCore::{WaitForDequeueCondition,SignalDequeueCondition}`
+avec le bloc d'attente réellement sélectionné dans `WaitForFreeSlotThenRelock`.
+Il rejoue huit producteurs sous quatre variantes (`-O0`/`-O2`, profilage
+actif/absent), et exige la suppression du compteur à la reprise. Ce témoin
+est raccordé au checkpoint `check-fc27-six-gates-host.py` depuis `2819a4a`.
+Son premier essai CI a révélé une divergence **de nom du verrou dans le mock**,
+corrigée en `e762f2b` ; la validation complète du nouveau HEAD reste en cours.
+Une valeur non nulle **n'est pas** la preuve que l'IPC ou le PC invité est
+bloqué ; les deux observations doivent rester indépendantes.
 
 **Inventaire séparé :** `EDEN_OPTIMIZATION_REVIEW_BACKLOG_PASS` sur la
 prévalidation verte relève `owned_code=506`, `handled=443`,
