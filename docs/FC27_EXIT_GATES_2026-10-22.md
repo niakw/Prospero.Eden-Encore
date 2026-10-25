@@ -13,8 +13,8 @@ le compteur d'un ancien tableau, des seuls commits ou du succès général d'un 
 | **F02** JIT A32/A64 | **VALIDÉ techniquement** | `2579482`, `c03a47c` : méthodes natives épinglées/maintenues, 96 invalidations, compilation froide/chaude, recompilation et isolation des caches par cœur ; fast gate vert sur `c03a47c` | Non mesuré ; F07 |
 | **F03** HUD/fraîcheur | **VALIDÉ techniquement** | Préflight [40149972349](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40149972349) vert : `FC27_SIX_GATES_HOST_CHECKPOINT` déclare `F03-hud-freshness=true`, 241 révisions HUD, 2 remaps, 1 perte/récupération, 12 ticks pause, O0/O2 | Non mesuré ; F07 |
 | **F04** textures/contenu GPU | **VALIDÉ techniquement** | [prévalidation #40152839640](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40152839640), SHA `c757d02` : `F04-texture-integrity=true`, 6/6 sous-tests F04. Rejeu compilé `-O0`/`-O2` : 3 copies DMA, 2 alias, 1 unmap/remap simulé, 3 révisions d’upload et 3 barrières ; tests des barrières Vulkan et de la parité des sources également verts. | GPU réel/pixels FC27 non mesurés ; F07 |
-| **F05** progression HLE | **EN QUALIFICATION — buffers/fences vérifiés** | [fast gate #40155140352](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40155140352) vert : 260 buffers acquis pour jeu + HUD, 260 compositions et 260 copies Vulkan dans une chaîne C++ 3 TU, `-O0`/`-O2`. Un quatrième TU source-extrait `IHOSBinderDriver::TransactParcelAuto` / `TransactParcel` est en qualification, et la progression du guest reste non démontrée. | HID/IPC invités et jeu réel non mesurés ; F07 |
-| **F06** commandes/gel | **OUVERT** | Mapping personnalisé et transitions pause/mi-temps/fin à prouver | Non mesuré ; F07 |
+| **F05** progression HLE | **EN QUALIFICATION — Binder, buffers/fences vérifiés** | [fast gate #40155675552](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40155675552) vert : 260 transactions `IHOSBinderDriver`, 260 acquisitions jeu + HUD, compositions et copies Vulkan dans une chaîne C++ liée à quatre unités, `-O0`/`-O2`. Le marshaling HIPC réel et la progression CPU du jeu restent non démontrés. | HID/IPC invités et jeu réel non mesurés ; F07 |
+| **F06** commandes/gel | **EN QUALIFICATION — transitions DualSense source vérifiées** | Rejeu C++ `Pad::Consume` + `PadEngine::SetButtonState` ajouté le 25 octobre (`5101844` puis `a7738bd`) : commandes titre personnalisées, Options→Plus, Home, raccourcis, déconnexion, cinq phases simulées, `-O0`/`-O2`. Consommation Npad, mapping interne FC27 et progression pause/mi-temps/fin toujours ouverts. | Jeu réel non mesuré ; F07 |
 
 **Jalon certifié le 25 octobre : 4/6 pré-console (F01, F02, F03, F04).**
 [Prévalidation entière verte #40152839640](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40152839640)
@@ -25,6 +25,20 @@ au commit `c757d02` : `FC27_SIX_GATES_HOST_CHECKPOINT` a émis
 F04 est **clôturé techniquement pré-console**, comme F01–F03.
 Le mock d'adressage et de GPU ne permet **ni d'affirmer les pixels
 réels ni les FPS du jeu** ; cela reste F07.
+
+**F06, 25 octobre — DualSense vers l'entrée virtuelle, preuve source supplémentaire :**
+Le test `tools/check-fc27-f06-native-pad-transition-host.py` compile les méthodes
+C++ sélectionnées `Pad::Consume` et `PadEngine::SetButtonState` sous UBSan à
+`-O0` et `-O2`. Il rejoue cinq étapes synthétiques du match avec une
+configuration de touches par titre figée, des pressions Options→Plus, une
+perte de connexion, le chord Home et les raccourcis. Son fixture utilise
+la vraie structure d'entrée DualSense `third_party/ps5_pad.hpp`, mais un
+récepteur virtuel simulé ; les cinq *phases* sont des étiquettes de test,
+**pas des transitions FC27 exécutées**. Le contrôle est appelé depuis le
+fast gate, la prévalidation et le tableau des six critères au commit
+[`a7738bd`](https://github.com/niakw/Prospero.Eden-Encore/commit/a7738bdfc67bddf064539de79b6b33e89fde8e92).
+La CI complète et la clôture F06 sont distinctes : **4/6 reste inchangé**,
+aucun nouveau test sur PS5 demandé.
 
 **F05, 25 octobre — BufferQueue jusqu'à Vulkan, sous GPU simulé :**
 [Fast gate #40155140352 vert](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40155140352)
