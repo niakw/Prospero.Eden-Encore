@@ -124,7 +124,7 @@ inject=r"""
     assert(texture.runtime.calls==hud_ticks);
     std::printf("F03_NATIVE_TIC_TO_PRESENT_FRESHNESS_PASS frames=%u "
                 "hud_unique=%u remaps=1 pause_ticks=12 barriers=%u "
-                "source_methods=7 scope=source_extracted_host_mock_gpu\n",
+                "source_sections=9 scope=source_extracted_host_mock_gpu\n",
                 hud_ticks,hud_ticks,texture.runtime.calls);
 """
 tag='    std::printf("F05_VULKAN_RENDER_PRESENT_HOST_PASS '
