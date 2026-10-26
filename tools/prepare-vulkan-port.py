@@ -1718,6 +1718,23 @@ adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
     ('#include <atomic>', '#include <atomic>\n#include <memory>'),
 ])
 
+
+# F07 native CPU hot path: a long transition list must not rescan dozens of
+# heavyweight GraphicsPipelineCacheKey objects on each HUD/scene switch.
+# The index is stable across vector reallocation; the small-list path and all
+# non-PS5 builds retain the original lookup. No shader, draw or lock changes.
+transition_header = output / 'include/video_core/renderer_vulkan/vk_graphics_pipeline.h'
+transition_source = transition_header.read_text()
+transition_next_old = "    [[nodiscard]] GraphicsPipeline* Next(const GraphicsPipelineCacheKey& current_key) noexcept {\n        if (key == current_key) {\n            return this;\n        }\n        const auto it{std::find(transition_keys.begin(), transition_keys.end(), current_key)};\n        return it != transition_keys.end() ? transitions[std::distance(transition_keys.begin(), it)]\n                                           : nullptr;\n    }"
+transition_next_new = "    [[nodiscard]] GraphicsPipeline* Next(const GraphicsPipelineCacheKey& current_key) noexcept {\n        if (key == current_key) {\n            return this;\n        }\n#ifdef PS5_NATIVE\n        // The GPU owner often revisits the same overlay/scene transition.\n        // Keep the last successful index, not a pointer into a reallocating\n        // vector. Below eight transitions the original linear scan is cheaper.\n        if (transition_keys.size() >= 8 && hot_transition_index < transition_keys.size() &&\n            transition_keys[hot_transition_index] == current_key) {\n            return transitions[hot_transition_index];\n        }\n#endif\n        const auto it{std::find(transition_keys.begin(), transition_keys.end(), current_key)};\n        if (it == transition_keys.end()) {\n            return nullptr;\n        }\n        const size_t index{static_cast<size_t>(std::distance(transition_keys.begin(), it))};\n#ifdef PS5_NATIVE\n        hot_transition_index = index;\n#endif\n        return transitions[index];\n    }"
+transition_member_old = "    std::vector<GraphicsPipeline*> transitions;"
+transition_member_new = "    std::vector<GraphicsPipeline*> transitions;\n#ifdef PS5_NATIVE\n    // Only the rasterizer GPU owner reads/writes this index. Appends never\n    // invalidate it; transitions remain cache-owned until pipeline teardown.\n    size_t hot_transition_index{};\n#endif"
+if transition_source.count(transition_next_old) != 1 or transition_source.count(transition_member_old) != 1:
+    raise RuntimeError('F07 graphics transition header source anchor drift')
+transition_header.write_text(
+    transition_source.replace(transition_next_old, transition_next_new, 1)
+                     .replace(transition_member_old, transition_member_new, 1))
+
 # Adapted from Mihawk PS5 fast-first pipelines with important corrections:
 # * one optimizer worker to avoid contending with guest JIT cores
 # * only runtime-discovered pipelines, not preloaded disk cache entries

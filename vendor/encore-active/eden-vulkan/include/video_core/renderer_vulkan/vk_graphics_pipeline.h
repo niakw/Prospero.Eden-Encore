@@ -141,9 +141,24 @@ public:
         if (key == current_key) {
             return this;
         }
+#ifdef PS5_NATIVE
+        // The GPU owner often revisits the same overlay/scene transition.
+        // Keep the last successful index, not a pointer into a reallocating
+        // vector. Below eight transitions the original linear scan is cheaper.
+        if (transition_keys.size() >= 8 && hot_transition_index < transition_keys.size() &&
+            transition_keys[hot_transition_index] == current_key) {
+            return transitions[hot_transition_index];
+        }
+#endif
         const auto it{std::find(transition_keys.begin(), transition_keys.end(), current_key)};
-        return it != transition_keys.end() ? transitions[std::distance(transition_keys.begin(), it)]
-                                           : nullptr;
+        if (it == transition_keys.end()) {
+            return nullptr;
+        }
+        const size_t index{static_cast<size_t>(std::distance(transition_keys.begin(), it))};
+#ifdef PS5_NATIVE
+        hot_transition_index = index;
+#endif
+        return transitions[index];
     }
 
     [[nodiscard]] bool IsBuilt() const noexcept {
@@ -193,6 +208,11 @@ private:
 
     std::vector<GraphicsPipelineCacheKey> transition_keys;
     std::vector<GraphicsPipeline*> transitions;
+#ifdef PS5_NATIVE
+    // Only the rasterizer GPU owner reads/writes this index. Appends never
+    // invalidate it; transitions remain cache-owned until pipeline teardown.
+    size_t hot_transition_index{};
+#endif
 
     std::array<vk::ShaderModule, NUM_STAGES> spv_modules;
 
