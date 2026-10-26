@@ -36,3 +36,7 @@
 ## F07: avoid redundant Vulkan compute builder lock on delayed callback
 
 `vk_compute_pipeline_cost.cpp` queued a scheduler callback if the compute build was unfinished at enqueue time, even though the build could complete before the callback executed. Unlike graphics, its callback always acquired the build mutex and entered the condition-variable path. Compute now performs a release/acquire-compatible `is_built.load(acquire)` first and skips the lock when already complete. Unfinished builds still block in order; failed builds keep their existing rejection behavior. The pinned generator and native TU are updated together; source-extracted O0/O2 tests cover ready-before-callback, unfinished-at-callback and failed-build cases. This is a bounded CPU/lock optimization, **not** an FPS result.
+
+## F07: recurring Vulkan driver-cache flush survives failures
+
+The async disk-cache writer used to clear `flush_in_flight` only after a successful driver `Read()`. An exceptional read (or worker enqueue failure) could leave the title's background cache snapshots permanently suppressed. The production Vulkan source and reproducible generator now use a scoped release of the guard, catch serializer/read exceptions inside the worker and clear the guard when queue admission itself fails. The save frequency, Vulkan cache content, shader compilation, filenames and game-thread ordering remain unchanged. A native-source-extracted host fixture checks failure and recovery at O0/O2. **This protects warm-cache persistence; no FPS gain asserted.**
