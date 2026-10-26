@@ -939,14 +939,31 @@ void PipelineCache::QueueVulkanPipelineCacheFlush() {
     }
     pipelines_since_flush = 0;
     last_flush = now;
-    serialization_thread.QueueWork([this] {
-        SerializeVulkanPipelineCache(vulkan_pipeline_cache_filename, vulkan_pipeline_cache,
-                                     CACHE_VERSION);
-        size_t size = 0;
-        vulkan_pipeline_cache.Read(&size, nullptr);
-        last_cache_size.store(size, std::memory_order_relaxed);
+    // A transient driver-cache read or serializer exception must not pin
+    // flush_in_flight=true for the lifetime of the foreground title.
+    // Keep the existing periodic budget, filename and background worker.
+    try {
+        serialization_thread.QueueWork([this] {
+            struct ReleaseFlush {
+                std::atomic_bool& in_flight;
+                ~ReleaseFlush() { in_flight.store(false, std::memory_order_release); }
+            } release{flush_in_flight};
+            try {
+                SerializeVulkanPipelineCache(vulkan_pipeline_cache_filename, vulkan_pipeline_cache,
+                                             CACHE_VERSION);
+                size_t size = 0;
+                vulkan_pipeline_cache.Read(&size, nullptr);
+                last_cache_size.store(size, std::memory_order_relaxed);
+            } catch (const std::exception& error) {
+                LOG_WARNING(Render_Vulkan, "Deferred driver cache flush failed: {}", error.what());
+            } catch (...) {
+                LOG_WARNING(Render_Vulkan, "Deferred driver cache flush failed: unknown exception");
+            }
+        });
+    } catch (...) {
         flush_in_flight.store(false, std::memory_order_release);
-    });
+        throw;
+    }
 }
 
 GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {

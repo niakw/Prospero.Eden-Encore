@@ -2499,6 +2499,16 @@ if shader_source.count(f07_pipeline_old) != 1:
     raise RuntimeError('F07 pinned cold graphics pipeline source drift')
 shader_source = shader_source.replace(f07_pipeline_old, f07_pipeline_new, 1)
 
+# F07: a failed deferred driver-cache save/read must release its in-flight
+# guard or all subsequent scheduled cache snapshots become permanently blocked.
+# Fail closed on pinned shader cache source changes; keep the active native
+# translation unit exactly reproducible from this generator.
+f07_flush_old = "    serialization_thread.QueueWork([this] {\n        SerializeVulkanPipelineCache(vulkan_pipeline_cache_filename, vulkan_pipeline_cache,\n                                     CACHE_VERSION);\n        size_t size = 0;\n        vulkan_pipeline_cache.Read(&size, nullptr);\n        last_cache_size.store(size, std::memory_order_relaxed);\n        flush_in_flight.store(false, std::memory_order_release);\n    });"
+f07_flush_new = "    // A transient driver-cache read or serializer exception must not pin\n    // flush_in_flight=true for the lifetime of the foreground title.\n    // Keep the existing periodic budget, filename and background worker.\n    try {\n        serialization_thread.QueueWork([this] {\n            struct ReleaseFlush {\n                std::atomic_bool& in_flight;\n                ~ReleaseFlush() { in_flight.store(false, std::memory_order_release); }\n            } release{flush_in_flight};\n            try {\n                SerializeVulkanPipelineCache(vulkan_pipeline_cache_filename, vulkan_pipeline_cache,\n                                             CACHE_VERSION);\n                size_t size = 0;\n                vulkan_pipeline_cache.Read(&size, nullptr);\n                last_cache_size.store(size, std::memory_order_relaxed);\n            } catch (const std::exception& error) {\n                LOG_WARNING(Render_Vulkan, \"Deferred driver cache flush failed: {}\", error.what());\n            } catch (...) {\n                LOG_WARNING(Render_Vulkan, \"Deferred driver cache flush failed: unknown exception\");\n            }\n        });\n    } catch (...) {\n        flush_in_flight.store(false, std::memory_order_release);\n        throw;\n    }"
+if shader_source.count(f07_flush_old) != 1:
+    raise RuntimeError('F07 pipeline disk-cache flush anchor drift')
+shader_source = shader_source.replace(f07_flush_old, f07_flush_new, 1)
+
 shader_output = output / 'vk_pipeline_cache_cost.cpp'
 if not shader_output.exists() or shader_output.read_text() != shader_source:
     shader_output.write_text(shader_source)
