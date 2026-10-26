@@ -2525,10 +2525,6 @@ if shader_source.count(f07_flush_old) != 1:
     raise RuntimeError('F07 pipeline disk-cache flush anchor drift')
 shader_source = shader_source.replace(f07_flush_old, f07_flush_new, 1)
 
-shader_output = output / 'vk_pipeline_cache_cost.cpp'
-if not shader_output.exists() or shader_output.read_text() != shader_source:
-    shader_output.write_text(shader_source)
-
 # F07: PS5 restores a strictly bounded prefix of persisted title pipelines.
 # Only the file-reader stop token is cancelled. Never pass that token to
 # ThreadWorker::WaitForRequests: it would stop the persistent shader pool.
@@ -2557,6 +2553,13 @@ f07_warm_after_4 = "    workers.WaitForRequests(stop_loading);\n#ifdef PS5_NATIV
 if shader_source.count(f07_warm_before_4) != 1:
     raise RuntimeError('F07 bounded cache prewarm anchor 4 moved')
 shader_source = shader_source.replace(f07_warm_before_4, f07_warm_after_4)
+
+# Write only after ALL native pipeline-cache deltas, including startup prewarm.
+# Earlier emission silently discarded the last five F07 transformations.
+shader_output = output / 'vk_pipeline_cache_cost.cpp'
+if not shader_output.exists() or shader_output.read_text() != shader_source:
+    shader_output.write_text(shader_source)
+
 
 # Scope only the existing synchronous operations; never alter their ordering.
 # Report these caller costs separately from the overlapping API totals.
