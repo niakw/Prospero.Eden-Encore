@@ -4130,9 +4130,9 @@
     {
       "path": "headless/prosperoeden/pe/gfx/font.cpp",
       "disposition": "new_source_issue_corrected",
-      "reviewed_source_git_blob": "219fe43c951ecf98b6f2a1319677720dd16d5d64",
+      "reviewed_source_git_blob": "eca34ae52985857d186669afead150e65b35c5ca",
       "proof_ref": "tools/check-release-font-fit-alloc-host.py",
-      "evidence": "Font::fit reuses one UTF-8 prefix, eliminating temporary string per glyph; O0/O2 host witness. Exact selected source/O0/O2 host code parity; no PS5 FPS claim.",
+      "evidence": "Font::fit reuses a UTF-8 prefix; Font::wrap now appends and rolls back instead of copying per-word/per-glyph candidates. O0/O2 source-extracted host parity against former wrap behavior, including Unicode clusters. No PS5 FPS claim.",
       "review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md"
     },
     {
