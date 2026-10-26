@@ -15,6 +15,7 @@
 #include <iostream>
 #include <memory>
 #include <span>
+#include <stop_token>
 #include <thread>
 #ifdef PS5_NATIVE
 #include <pthread.h>
@@ -810,6 +811,13 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
     }
 #endif
 
+#ifdef PS5_NATIVE
+    // Eight entries at most: restore some persisted pipelines without
+    // rebuilding an unbounded title cache at launch. This token controls only
+    // the disk READER; the persistent Vulkan compiler workers stay alive.
+    constexpr size_t kStartupPrewarmPipelines = 8;
+    std::stop_source startup_reader;
+#endif
     struct {
         std::mutex mutex;
         size_t total{};
@@ -838,6 +846,10 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
             }
         });
         ++state.total;
+#ifdef PS5_NATIVE
+        if (state.total == kStartupPrewarmPipelines)
+            startup_reader.request_stop();
+#endif
     }};
     const auto load_graphics{[&](std::ifstream& file, std::vector<FileEnvironment> envs) {
         GraphicsPipelineCacheKey key;
@@ -893,8 +905,20 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
             }
         });
         ++state.total;
+#ifdef PS5_NATIVE
+        if (state.total == kStartupPrewarmPipelines)
+            startup_reader.request_stop();
+#endif
     }};
-    VideoCommon::LoadPipelines(stop_loading, pipeline_cache_filename, CACHE_VERSION, load_compute,
+    // Only the reader observes the quota stop. Passing this token to
+    // workers.WaitForRequests() would permanently request_stop() on the
+    // shader-builder pool, breaking first-use shaders later in gameplay.
+#ifdef PS5_NATIVE
+    const std::stop_token reader_token{startup_reader.get_token()};
+#else
+    const std::stop_token reader_token{stop_loading};
+#endif
+    VideoCommon::LoadPipelines(reader_token, pipeline_cache_filename, CACHE_VERSION, load_compute,
                                load_graphics);
 
     LOG_INFO(Render_Vulkan, "Total Pipeline Count: {}", state.total);
@@ -905,6 +929,10 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
     lock.unlock();
 
     workers.WaitForRequests(stop_loading);
+#ifdef PS5_NATIVE
+    LOG_INFO(Render_Vulkan, "PS5 shader cache bounded prewarm built {}/{} entries",
+             state.built, state.total);
+#endif
 
     if (use_vulkan_pipeline_cache) {
         SerializeVulkanPipelineCache(vulkan_pipeline_cache_filename, vulkan_pipeline_cache,
