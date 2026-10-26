@@ -27,6 +27,39 @@ Console logs and player screenshots remain private; never ship them as public Gi
 
 **Measurement rules:** per-5s CPU wait and JIT totals sum work across workers; do not subtract them directly from one frame's wall time. A compositor callback rate, frame `lateN` counts and zero draw drops cannot prove fresh pixels. Missing DEV counters in RELEASE are **unavailable**, not zero actual work.
 
+## Relecture indépendante du dernier paquet RELEASE, sessions correctement séparées
+
+L'ancien analyseur détaillé \`analyze-fc27-stutter.py\` attend les marqueurs
+\`EDEN_DEV_GPU\`, absents des journaux RELEASE \`heap(20261025-225407).log\`.
+Le nouvel outil \`tools/analyze-fc27-release-sessions.py\` utilise les marqueurs
+\`EDEN_SESSION_SOURCE\` pour **séparer les deux sessions de même SHA** et apparie
+les seuls \`EDEN_VULKAN_FRAME total=\` / \`EDEN_FRAME_PRESSURE frame=\`
+disponibles.
+
+| Mesure | 1440p/1× | 2160p/1,25× |
+| --- | ---: | ---: |
+| Fenêtres appariées | 204 | 48 |
+| Retards de présentation >50ms (\`late50\`) | **1 073** | **192** |
+| Retards >100ms (\`late100\`) | 142 | 67 |
+| Plus longue présentation | 689,834ms | 977,578ms |
+| Corrélation cinq secondes \`cache_wait_ms\` / \`late50\` | +0,222 | +0,313 |
+| Fenêtres avec au moins cinq \`late50\` | 71 | 16 |
+| Part des \`late50\` dans ces fenêtres | 90,8% | 91,1% |
+
+Les fenêtres lentes se **concentrent en rafales** mais plusieurs rafales
+surviennent avec peu de contention. À 2160p, la fenêtre se terminant à
+\`frame=5439\` montre **37** retards >50ms et un intervalle de
+**977,578ms**, pour seulement **15,283ms d'attente de cache agrégée**.
+Le cache ne peut pas, à lui seul, expliquer le long intervalle. Le
+\`jit_ms=0\` et \`guest_ipc_ms=0\` des journaux RELEASE ne sont **pas
+des mesures de travail JIT/IPC nul**. Descriptions et données agrégées
+uniquement : aucune archive de journaux privée publiée.
+
+Les sessions diffèrent par résolution, longueur et contexte ;
+ces chiffres ne constituent PAS un benchmark avant/après du GPU ni une
+preuve de causalité HUD. Le ressenti avec journalisation coupée reste
+la référence pratique.
+
 ## Causal paths to prioritize, in order
 
 **P0: simultaneous FPS jitter and buffered HUD/correctness.** Audit the *currently compiled* draw path:
