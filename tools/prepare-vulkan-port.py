@@ -2506,10 +2506,18 @@ shader_source = shader_source.replace(f07_pipeline_old, f07_pipeline_new, 1)
 f07_flush_old = "    serialization_thread.QueueWork([this] {\n        SerializeVulkanPipelineCache(vulkan_pipeline_cache_filename, vulkan_pipeline_cache,\n                                     CACHE_VERSION);\n        size_t size = 0;\n        vulkan_pipeline_cache.Read(&size, nullptr);\n        last_cache_size.store(size, std::memory_order_relaxed);\n        flush_in_flight.store(false, std::memory_order_release);\n    });"
 f07_flush_new = "    // A transient driver-cache read or serializer exception must not pin\n    // flush_in_flight=true for the lifetime of the foreground title.\n    // Keep the existing periodic budget, filename and background worker.\n    try {\n        serialization_thread.QueueWork([this] {\n            struct ReleaseFlush {\n                std::atomic_bool& in_flight;\n                ~ReleaseFlush() { in_flight.store(false, std::memory_order_release); }\n            } release{flush_in_flight};\n            try {\n                SerializeVulkanPipelineCache(vulkan_pipeline_cache_filename, vulkan_pipeline_cache,\n                                             CACHE_VERSION);\n                size_t size = 0;\n                vulkan_pipeline_cache.Read(&size, nullptr);\n                last_cache_size.store(size, std::memory_order_relaxed);\n            } catch (const std::exception& error) {\n                LOG_WARNING(Render_Vulkan, \"Deferred driver cache flush failed: {}\", error.what());\n            } catch (...) {\n                LOG_WARNING(Render_Vulkan, \"Deferred driver cache flush failed: unknown exception\");\n            }\n        });\n    } catch (...) {\n        flush_in_flight.store(false, std::memory_order_release);\n        throw;\n    }"
 # A rejected asynchronous cache-save job is non-fatal for gameplay.
-# The generated fragment replaces the lambda body, not the enclosing function.
-# Match only the C++ catch suffix; otherwise this replacement silently misses.
-f07_reject_old = "    } catch (...) {\\n        flush_in_flight.store(false, std::memory_order_release);\\n        throw;\\n    }"
-f07_reject_new = "    } catch (const std::exception& error) {\\n        flush_in_flight.store(false, std::memory_order_release);\\n        LOG_WARNING(Render_Vulkan, \\"Deferred cache flush queue rejected: {}\\", error.what());\\n    } catch (...) {\\n        flush_in_flight.store(false, std::memory_order_release);\\n        LOG_WARNING(Render_Vulkan, \\"Deferred cache flush queue rejected: unknown exception\\");\\n    }"
+# The generated fragment replaces only the C++ catch suffix, not the outer function.
+f07_reject_old = '''    } catch (...) {
+        flush_in_flight.store(false, std::memory_order_release);
+        throw;
+    }'''
+f07_reject_new = '''    } catch (const std::exception& error) {
+        flush_in_flight.store(false, std::memory_order_release);
+        LOG_WARNING(Render_Vulkan, "Deferred cache flush queue rejected: {}", error.what());
+    } catch (...) {
+        flush_in_flight.store(false, std::memory_order_release);
+        LOG_WARNING(Render_Vulkan, "Deferred cache flush queue rejected: unknown exception");
+    }'''
 if f07_flush_new.count(f07_reject_old) != 1:
     raise RuntimeError('F07 queue rejection source anchor drift')
 f07_flush_new = f07_flush_new.replace(f07_reject_old, f07_reject_new, 1)
