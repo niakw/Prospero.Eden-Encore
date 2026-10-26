@@ -65,7 +65,7 @@ with tempfile.TemporaryDirectory(prefix="eden-sparse-native-only-") as temp:
     p.write_text(code)
     for native in (False,True):
         for opt in ("-O0","-O2"):
-            exe=Path(temp)/("native" if native else "host")+opt[1:]
+            exe=Path(temp)/(("native" if native else "host")+opt[1:])
             flags=["-DPS5_NATIVE=1"] if native else []
             subprocess.run([cc,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
                             *flags,str(p),"-o",str(exe)],check=True,
