@@ -1983,6 +1983,7 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
     # The same callback still waits normally while compilation is unfinished.
     # Both graphics and compute can finish between queuing and callback execution.
     if name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
+        wait_phase = 'GraphicsPipelineWait' if name == 'vk_graphics_pipeline' else 'ComputePipelineWait'
         replacements.append((
             "        scheduler.Record([this](vk::CommandBuffer) {\n"
             "            auto timer = Eden::Performance::VulkanTimer(16);\n"
@@ -1993,6 +1994,10 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
             "            // An unfinished build still follows the original condition wait.\n"
             "            if (is_built.load(std::memory_order_acquire)) return;\n"
             "            auto timer = Eden::Performance::VulkanTimer(16);\n"
+            "            // Only unfinished builds contribute a worker wait; no clock in quiet mode.\n"
+            "            ::Eden::Performance::CachePhaseTimer pipeline_ready_wait{\n"
+            f"                ::Eden::Performance::CachePhase::{wait_phase},\n"
+            "                ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};\n"
             "            std::unique_lock lock{build_mutex};",
         ))
     if name == 'vk_graphics_pipeline':

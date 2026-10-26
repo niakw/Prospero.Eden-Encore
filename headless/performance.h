@@ -208,7 +208,8 @@ enum class CachePhase : unsigned {
     GuestWriteBufferWait, GuestWriteBufferWork, GuestWriteTextureWait,
     GuestWriteTextureWork, GuestWriteShaderInvalidate,
     GraphicsPipelineCreate, ShaderPoolReset, ShaderCfg, ShaderIr,
-    ShaderSpirv, ShaderModule, TextureUploadStaging, TextureUploadContents,
+    ShaderSpirv, ShaderModule, GraphicsPipelineWait, ComputePipelineWait,
+    TextureUploadStaging, TextureUploadContents,
     TextureUploadBarrier, Count
 };
 struct CachePhaseTotal {

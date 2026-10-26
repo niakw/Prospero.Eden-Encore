@@ -390,6 +390,10 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
             // An unfinished build still follows the original condition wait.
             if (is_built.load(std::memory_order_acquire)) return;
             auto timer = Eden::Performance::VulkanTimer(16);
+            // Only unfinished builds contribute a worker wait; no clock in quiet mode.
+            ::Eden::Performance::CachePhaseTimer pipeline_ready_wait{
+                ::Eden::Performance::CachePhase::ComputePipelineWait,
+                ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
             std::unique_lock lock{build_mutex};
             build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });
         });
