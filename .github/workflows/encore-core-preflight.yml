@@ -224,6 +224,8 @@ jobs:
           python3 -B tools/check-native-gpu-composite-syncpoint-host.py
           python3 -B tools/check-native-host1x-register-reentrant-host.py
           python3 -B tools/check-native-host1x-increment-handoff-host.py
+          python3 -B tools/check-feature-r01-native-frame-metrics-host.py
+          python3 -B tools/test-analyze-r01-frame-metrics.py
           python3 -B tools/check-native-vulkan-renderer-handoff-host.py
           python3 -B tools/check-fc27-f05-native-nvdisp-vulkan-present-chain-host.py
           python3 -B tools/check-fc27-f05-producer-release-wake-host.py
