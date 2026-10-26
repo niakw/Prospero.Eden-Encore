@@ -86,3 +86,32 @@ return, invalidation epoch, repeat clears, 16 MiB core 3, and demand
 recommit policy at O0/O2. Full CPU/GPU/RAM arbitration (priorities, pressure
 sampling and safe GPU reclamation) is **not** yet implemented; this change
 repairs the missing return path and must not be labeled fully adaptive.
+
+## 26 October — one shipping PS5 sparse JIT; release is the sole integration gate
+
+The developer-only sparse-vs-dense split conflicted with the product's single
+native release requirement. Native `PS5_NATIVE` now selects one code allocator:
+stable RX/RW virtual arenas + demand-backed 2 MiB physical chunks. Full,
+quiesced cache invalidation returns the unused physical tail for unified
+guest/GPU allocations, preserving the code prelude and one growth chunk. No
+`EDEN_SPARSE_JIT_DEV` CMake selector, runtime atomic sparse mode toggle,
+dense native code-JIT fallback, or independently packaged `dev TITLE_ID`
+variant remains in this integration. Host-only tests continue to compile
+without `PS5_NATIVE`, which is a different target architecture, not an
+alternate PS5 user mode.
+
+Native launch verifies the current firmware's RW/RX alias behavior before
+creating the CPU JIT; a failed proof **rejects the launch** rather than
+silently switching to dense executable backing. Sparse VA size remains bounded
+per title; physical pages can grow as the guest compiles and shrink after a
+full code-cache clear. This is dynamic RAM reclamation, **not** an already
+qualified cross-subsystem CPU/GPU scheduling arbiter. It does not assert
+improved FC27 frame times or fix asynchronous shader freshness by itself.
+
+Source ownership and CI updated together: the release installer passes only
+the single production profile, architecture/compiled selector tests require
+native sparse emission, page-hint epochs invalidate on create/trim/release,
+host O0/O2 guards and full native package/build must pass for this exact HEAD.
+A green host or cross-compiled PS5 build is not native firmware qualification;
+an actual console runtime still needs proof of alias mapping, JIT clear
+liveness, recycled physical backing, game frame cadence and HUD correctness.

@@ -35,7 +35,7 @@ void ReleaseSparseJitCode(void*) noexcept;
 #endif
 }
 // Separate RW/NX and RX views avoid changing page permissions per compiled block.
-// Unsupported native JIT allocation falls back to the qualified owned W^X path.
+// PS5 JIT exclusively uses the sparse RX/RW allocator; no dense production fallback.
 inline Xbyak::Allocator* EdenJitAllocator() {
     struct Allocator final : Xbyak::Allocator {
         struct Mapping { void* writable; std::size_t size; bool sparse = false; };
@@ -57,7 +57,9 @@ inline Xbyak::Allocator* EdenJitAllocator() {
 #ifdef EDEN_JIT_ALIAS_NATIVE
             // Optional per-title path: stable RX/RW virtual ranges, commit only
             // the pages requested by BlockOfCode::EnsureMemoryCommitted.
-            if (Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed)) {
+            // The PS5 has ONE JIT allocation path: virtual RX/RW sparse
+            // reservation, demand-backed 2 MiB direct chunks. No dense retry.
+            {
                 // Xbyak may request an arena ending between two 2 MiB direct
                 // memory chunks. Reserve whole *virtual* chunks while keeping
                 // physical commits demand-backed; otherwise a valid uneven
@@ -95,24 +97,8 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                              sparse_span, errno);
                 return nullptr;
             }
-            writable = Common::AllocateMemoryPages(size);
-            if (!writable) return nullptr;
-            Common::CountDenseJitDirect(writable, true);
-            executable = Common::MapExecutableAlias(writable, size);
-            if (!executable) {
-                // PS5's JIT code must have a distinct executable alias.
-                // Returning RW/NX here silently publishes a non-executable
-                // instruction pointer. Release direct RAM and let Xbyak
-                // propagate ERR_CANT_ALLOC to the bounded startup fallback.
-                const int original_errno = errno;
-                std::fprintf(diagnostics,
-                             "EDEN_JIT_ALIAS bytes=%zu active=0 errno=%d fallback=retry\n",
-                             span, original_errno);
-                Common::CountDenseJitDirect(writable, false);
-                Common::FreeMemoryPages(writable);
-                errno = original_errno;
-                return nullptr;
-            }
+            // The return above on both success and reservation failure
+            // makes dense direct-memory allocation unreachable in PS5 builds.
 #else
             const int executable_fd = memfd_create("eden-jit", MFD_CLOEXEC);
             if (executable_fd >= 0 && ftruncate(executable_fd, span) == 0) {
@@ -127,10 +113,6 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                 // large-page alias. Keep the REAL RX mapping length so free()
                 // cannot leave an orphan executable tail after game exit.
                 std::size_t mapped_span = span;
-#ifdef EDEN_JIT_ALIAS_NATIVE
-                mapped_span = Common::ExecutableAliasSpan(writable);
-                if (mapped_span < span) std::abort();
-#endif
                 try {
                     std::lock_guard lock(mutex);
                     if (!mappings.emplace(pointer, Mapping{writable, mapped_span}).second)
@@ -143,18 +125,11 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                 } catch (...) {
                     // Release both views before reporting allocation failure.
                     if (munmap(executable, mapped_span) != 0) std::abort();
-#ifdef EDEN_JIT_ALIAS_NATIVE
-                    Common::CountDenseJitDirect(writable, false);
-                    Common::FreeMemoryPages(writable);
-#else
                     if (munmap(writable, span) != 0) std::abort();
-#endif
                     return nullptr;
                 }
             }
-#ifdef EDEN_JIT_ALIAS_NATIVE
-            std::abort(); // Distinct views are required by the direct mapper.
-#else
+#ifndef EDEN_JIT_ALIAS_NATIVE
             if (executable != MAP_FAILED && executable && munmap(executable, span) != 0) std::abort();
             if (writable != MAP_FAILED && writable && writable != executable && munmap(writable, span) != 0) std::abort();
             std::fprintf(diagnostics, "EDEN_JIT_ALIAS bytes=%zu active=0 errno=%d\n", span, errno);
@@ -196,16 +171,18 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                     if (mapping.sparse) {
 #ifdef EDEN_JIT_ALIAS_NATIVE
                         Common::ReleaseSparseJitCode(pointer);
+#else
+                        std::abort(); // Sparse only exists in native builds.
 #endif
                         mappings.erase(entry);
                         mapping_generation.fetch_add(1, std::memory_order_release);
                         return;
                     }
-                    if (munmap(pointer, mapping.size) != 0) std::abort();
 #ifdef EDEN_JIT_ALIAS_NATIVE
-                    Common::CountDenseJitDirect(mapping.writable, false);
-                    Common::FreeMemoryPages(mapping.writable);
+                    // Only native sparse mappings may reach this ownership map.
+                    std::abort();
 #else
+                    if (munmap(pointer, mapping.size) != 0) std::abort();
                     if (munmap(mapping.writable, mapping.size) != 0) std::abort();
 #endif
                     mappings.erase(entry);
@@ -214,9 +191,10 @@ inline Xbyak::Allocator* EdenJitAllocator() {
                 }
             }
 #ifdef EDEN_JIT_ALIAS_NATIVE
-            Common::CountDenseJitDirect(pointer, false);
-#endif
+            std::abort(); // No untracked dense JIT regions in the PS5 profile.
+#else
             Common::FreeMemoryPages(pointer);
+#endif
         }
         bool useProtect() const override { return false; }
     };

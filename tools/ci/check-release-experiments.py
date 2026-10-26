@@ -15,7 +15,6 @@ RELEASE = ROOT / "build/release/PPSA99008"
 REQUIRED = {
     "EDEN_PS5_VULKAN:BOOL": "ON",
     "EDEN_VULKAN_DRIVER:STRING": "RADV",
-    "EDEN_SPARSE_JIT_DEV:BOOL": "OFF",
     "EDEN_FINAL_RELEASE_PROFILE:BOOL": "ON",
     "EDEN_GUEST_WRITE_BRIDGE_DEV:BOOL": "OFF",
     "EDEN_UNQUALIFIED_FERMI2D_COPY:BOOL": "OFF",
@@ -30,6 +29,7 @@ REQUIRED = {
 # The compiled CMakeCache policy is checked fail-closed below.
 MARKERS = (
     b"EDEN_EXPERIMENT_DEFAULTS sparse=%u logical_cpu=%u frame_probe=%u safe=%u",
+    b"EDEN_JIT_SPARSE_TRIM released=",
     b"EDEN_PS5_JIT_POLICY scope=all_titles",
     b"EDEN_GPU_REPORT_STALLED age_ms=",
 )
@@ -89,7 +89,7 @@ def main() -> int:
     except (OSError, ValueError) as exc:
         print(f"EDEN_RELEASE_EXPERIMENTS_REJECTED: {exc}", file=sys.stderr)
         return 1
-    print("EDEN_RELEASE_EXPERIMENTS_COMPILED: sparse=off native_profile=release "
+    print("EDEN_RELEASE_EXPERIMENTS_COMPILED: sparse=on native_profile=release "
           "cross_core_shared_jit=off batch=off alias_runtime_probe=pending hardware=untested")
     return 0
 

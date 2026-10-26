@@ -78,18 +78,14 @@ def main() -> None:
     require('clock_gettime(CLOCK_MONOTONIC' in native and 'std::memset(address, 0, size);' in native,
             "Native heap timing must preserve mandatory zeroed memory")
 
-    require('option(EDEN_SPARSE_JIT_DEV "Allow developer-only PS5 sparse JIT cache experiments" OFF)' in cmake,
-            "Sparse JIT must not be a shipping build default")
-    require('target_compile_definitions(eden-headless PRIVATE EDEN_SPARSE_JIT_DEV=1)' in cmake,
-            "Native opt-in compile guard is missing")
-    require('#ifdef PS5_NATIVE\n        // Default experimental profile for all native console builds' in app,
-            "Native experiment defaults must apply to release and dev")
-    require('#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)' in app,
-            "Sparse alias preflight must remain gated")
-    require('if (experimental_sparse_jit && !Common::ProbeSparseJitAlias())' in app,
-            "Sparse JIT alias preflight is missing")
-    require('experimental_sparse_jit = false;' in app,
-            "Sparse JIT failure must retain the dense fallback")
+    require('EDEN_SPARSE_JIT_DEV' not in cmake,
+            "Parallel native JIT build modes must not return")
+    require('experimental_sparse_jit = true;' in app and
+            'if (!Common::ProbeSparseJitAlias())' in app and
+            'throw std::runtime_error("PS5 sparse JIT alias preflight failed")' in app,
+            "The single native JIT must fail closed when firmware aliases fail")
+    require('Common::AllocateMemoryPages(size);' not in native_alloc,
+            "The PS5 JIT allocator must not silently fall back to dense memory")
     require('bool ProbeSparseJitAlias() noexcept' in native,
             "Native sparse mapping preflight is missing")
     require('void* unexpected_rw = nullptr;' in native and
@@ -106,8 +102,8 @@ def main() -> None:
             'local.generation == generation && local.executable == executable' in native and
             'required <= local.committed' in native and
             'local.committed = region.committed;' in native and
-            native.count('sparse_jit_generation.fetch_add(1, std::memory_order_acq_rel);') == 2,
-            "Sparse JIT per-thread committed-page hint must invalidate on region create/release")
+            native.count('sparse_jit_generation.fetch_add(1, std::memory_order_acq_rel);') == 3,
+            "Sparse JIT committed-page hints must invalidate on create, trim and release")
     require('::Common::SparseJitUsage(&jit_reserved, &jit_committed)' in perf,
             "Physical JIT memory accounting must target global Common")
     native_alloc = read("headless/jit-allocator.h")
@@ -122,17 +118,16 @@ def main() -> None:
     # CommitSparseJitCode itself verifies that the RX address belongs to an
     # actual sparse mapping and fails closed if not.
     require('bool IsSparseJitCode(const void* executable) noexcept' in native and
-            'if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed))' in native_boc and
+            '#ifdef PS5_NATIVE' in native_boc and
+            '::Common::TrimSparseJitCode(const_cast<u8*>(getCode()), begin)' in native_boc and
             '::Eden::Jit::PlanSparseCommit(written, codesize, maxSize_)' in native_boc and
             '::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), target.bytes)' in native_boc and
             'jit-sparse-commit.h' in native_boc and
             '::Common::IsSparseJitCode(getCode())' not in native_boc,
             "Sparse translated-code commits must validate mapping ownership without per-block duplicate locks")
-    require('std::size_t ExecutableAliasSpan(void* writable) noexcept' in native and
-            'Common::ExecutableAliasSpan(writable)' in native_alloc and
-            'mappings.emplace(pointer, Mapping{writable, mapped_span})' in native_alloc and
-            'munmap(executable, mapped_span)' in native_alloc,
-            "Full rounded native RX alias must be recorded and released")
+    require('Mapping{writable, sparse_span, true}' in native_alloc and
+            'Common::ReleaseSparseJitCode(pointer)' in native_alloc,
+            "The sole native sparse mapping must have one release owner")
     require('EDEN_JIT_SPARSE_MAP_FAILED stage=' in native and
             'MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS' in native and
             'rollback("rw", ENOMEM)' in native and
@@ -141,13 +136,13 @@ def main() -> None:
             "Sparse native partial map must restore fixed inaccessible guards")
     require('EDEN_JIT_SPARSE_RESERVE_FAILED bytes=' in native_alloc and
             'fallback=smaller_virtual_arena' in native_alloc and
-            'return nullptr;\n            }\n            writable = Common::AllocateMemoryPages(size);' in native_alloc,
+            'Common::AllocateMemoryPages(size);' not in native_alloc and
+            'return nullptr;' in native_alloc,
             "Explicit sparse reservation failure must retry a smaller VA arena, never eagerly allocate all dense RAM")
-    require('if (!executable) {' in native_alloc and
-            'Common::CountDenseJitDirect(writable, false);' in native_alloc and
-            'Common::FreeMemoryPages(writable);' in native_alloc and
+    require('Common::ReserveSparseJitCode(sparse_span, &writable)' in native_alloc and
+            'Common::ReleaseSparseJitCode(executable)' in native_alloc and
             'return static_cast<std::uint8_t*>(writable);' not in native_alloc,
-            "Failed native RX alias must release dense direct pages, never return RW/NX as code")
+            "Native allocation must be sparse RX/RW or fail without a fallback")
     require('configure_file("${EDEN_BOC_UNIT}" "${PORT_BUILD_DIR}/block_of_code.cpp" COPYONLY)' in cmake and
             'set_property(SOURCE "${PORT_BUILD_DIR}/block_of_code.cpp"' in cmake and
             'TARGET_DIRECTORY dynarmic APPEND PROPERTY COMPILE_DEFINITIONS "PS5_NATIVE=1"' in cmake,
@@ -164,8 +159,9 @@ def main() -> None:
     require('CountDenseJitDirect(void* writable, bool acquire) noexcept' in native and
             'DenseJitDirectBytes() noexcept' in native,
             "Normal dense JIT physical allocation accounting absent")
-    require(native_alloc.count('Common::CountDenseJitDirect(') >= 4,
-            "Dense JIT alloc/catch/free physical ownership paths not instrumented")
+    require('Common::CountDenseJitDirect(' not in native_alloc and
+            'Common::MapExecutableAlias(' not in native_alloc,
+            "The release must not include an alternate dense JIT allocator")
     require('EDEN_JIT_DENSE_MEMORY phase=' in perf and
             '::Common::DenseJitDirectBytes()' in perf,
             "Lifecycle memory must include actual dense JIT residency")
@@ -220,8 +216,8 @@ def main() -> None:
             "Startup retry must only catch actual code allocator failures")
     require('NextCapacity(capacity, baseline)' in startup,
             "A64/A32 cache retry must step toward each core baseline")
-    native_start = app.index('#ifdef PS5_NATIVE\n        // Default experimental profile for all native console builds')
-    native_end = app.index('\n#endif\n#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)', native_start)
+    native_start = app.index('#ifdef PS5_NATIVE\n        // One shipping PS5 sparse JIT:')
+    native_end = app.index('\n#endif\n#ifdef PS5_NATIVE', native_start)
     require(app.index('ApplyJitMemoryPlan(jit_plan)') > native_end,
             "Native JIT memory policy must be applied after experiment selection")
     require('EDEN_PS5_JIT_POLICY scope=all_titles' in app,
@@ -242,7 +238,7 @@ def main() -> None:
     print("PASS PS5_NATIVE_ARCHITECTURE_CONTRACTS")
     print(f"  direct-memory lifecycle: {', '.join(sorted(direct_stages))}")
     print(f"  JIT ownership lifecycle: {', '.join(sorted(jit_stages))}")
-    print("  JIT memory: dense physical accounting + developer sparse bootstrap, alias and OOM retry")
+    print("  JIT memory: one native sparse allocator, demand commit, quiesced trim, OOM retry")
     print("  all titles: continuous A64/A32 capacities from available direct memory")
     print("  Vulkan: available CPU mask, pinned-source transformation, bounded worker budget")
     print("  Native PS5 compile and firmware 13.60 tests: NOT RUN")

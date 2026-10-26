@@ -23,19 +23,9 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDEN_SCALAR_INP
 # off unless a development build explicitly opts in.
 option(EDEN_SHARED_JIT "Enable the experimental cross-core A64 JIT" OFF)
 option(EDEN_JIT_COMPILE_BATCH "Compile bounded A64 successor chains on a cache miss" OFF)
-# Incomplete PS5 sparse JIT page mapper; never expose to normal builds via JSON alone.
-option(EDEN_SPARSE_JIT_DEV "Allow developer-only PS5 sparse JIT cache experiments" OFF)
-# A release selects exactly one runtime execution profile; experimental
-# sources remain in the repository but must never enter a final package.
+# Exactly one native PS5 JIT profile: the code-address contract and sparse
+# backing are selected by PS5_NATIVE, never by a dev/release toggle.
 option(EDEN_FINAL_RELEASE_PROFILE "Enforce a single PS5 release execution profile" OFF)
-if(EDEN_SPARSE_JIT_DEV AND NOT PS5_NATIVE)
-    message(FATAL_ERROR "EDEN_SPARSE_JIT_DEV requires PS5_NATIVE")
-endif()
-# The switch must reach the native Dynarmic library itself, not only the
-# frontend. No compiled sparse memory branch is permitted in final release.
-if(EDEN_SPARSE_JIT_DEV)
-    target_compile_definitions(dynarmic PRIVATE EDEN_SPARSE_JIT_DEV=1)
-endif()
 include("${CMAKE_CURRENT_LIST_DIR}/dynarmic/shared-jit.cmake")
 # Register-allocator bookkeeping visits only the host locations in use (compile time).
 include("${CMAKE_CURRENT_LIST_DIR}/dynarmic/reg_alloc.cmake")
@@ -1548,9 +1538,6 @@ if(PS5_NATIVE)
     endif()
     set_property(SOURCE "${EDEN_PORT_DIR}/main.cpp" APPEND PROPERTY
         COMPILE_DEFINITIONS "EDEN_NATIVE_SOURCE_COMMIT=\"${EDEN_ENCORE_SOURCE_COMMIT}\"")
-    if(EDEN_SPARSE_JIT_DEV)
-        target_compile_definitions(eden-headless PRIVATE EDEN_SPARSE_JIT_DEV=1)
-    endif()
     # Native-title libc rejects socket fcntl and its resolver may depend on an
     # unloaded WebKit module. ps5_net_compat.c supplies sceNetResolver DNS and
     # translates only refused socket flags to native SO_NBIO.
@@ -1806,7 +1793,7 @@ if(EDEN_FINAL_RELEASE_PROFILE)
        NOT EDEN_VULKAN_DRIVER STREQUAL "RADV")
         message(FATAL_ERROR "Final Encore requires native Vulkan/RADV and OpenGL launcher/recovery")
     endif()
-    if(EDEN_SHARED_JIT OR EDEN_JIT_COMPILE_BATCH OR EDEN_SPARSE_JIT_DEV OR
+    if(EDEN_SHARED_JIT OR EDEN_JIT_COMPILE_BATCH OR
        EDEN_INLINE_EXCLUSIVES OR EDEN_DEV_PROFILE OR EDEN_DEV_VULKAN OR
        EDEN_DEV_WAIT_CALLERS OR EDEN_GPU_PROBE OR EDEN_HEAP_GUARD OR
        EDEN_DEVICE_FRONTEND OR EDEN_GUEST_WRITE_BRIDGE_DEV OR

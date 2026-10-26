@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
-// Common PS5 CPU-code budget, not game-specific C/B/A settings.
-// Dense JIT allocation currently commits this entire budget at launch.
-// Sparse physical backing and multi-arena growth need separate qualification.
+// Common PS5 CPU-code virtual reservation budget for one native sparse JIT.
+// Code pages commit in 2 MiB chunks only as needed, and quiesced full-clear
+// returns unused physical tail pages to unified RAM. Per-arena capacity is
+// fixed because guest code contains PC-relative branches; GPU and guest
+// allocations can reuse reclaimed physical pages.
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -11,7 +13,6 @@
 #include <limits>
 
 namespace Eden::Experimental {
-inline std::atomic<bool> sparse_jit_cache{false}; // developer-only / not PS5-qualified
 inline std::atomic<bool> vulkan_frame_probe{false};
 
 inline constexpr std::uint32_t kMiB = 1024u * 1024u;
