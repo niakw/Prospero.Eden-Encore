@@ -1427,7 +1427,8 @@ void ReportGpuThread(unsigned frame) {
             "guest_write_texture_wait", "guest_write_texture_work",
             "guest_write_shader_invalidate",
             "graphics_pipeline_create", "shader_pool_reset", "shader_cfg",
-            "shader_ir", "shader_spirv", "shader_module", "texture_upload_staging",
+            "shader_ir", "shader_spirv", "shader_module",
+            "graphics_pipeline_wait", "compute_pipeline_wait", "texture_upload_staging",
             "texture_upload_contents", "texture_upload_barrier"
         };
         static_assert(std::size(cache_phase_names) == cache_phase_totals.size());
