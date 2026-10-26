@@ -35,7 +35,9 @@ cpp = r"""
 #include <thread>
 #include <utility>
 namespace vk { struct CommandBuffer {}; }
-namespace Eden::Performance { struct VulkanTimer { explicit VulkanTimer(int) {} }; }
+// Real VulkanTimer is RAII and therefore not a trivial throwaway local.
+// Mirror its destructor so -Werror does not reject the source-extracted timer.
+namespace Eden::Performance { struct VulkanTimer { explicit VulkanTimer(int) {} ~VulkanTimer() {} }; }
 struct CountingMutex {
     std::mutex inner;
     std::atomic<int> lock_calls{0};
@@ -107,6 +109,6 @@ with tempfile.TemporaryDirectory(prefix="encore-f07-compute-ready-") as d:
         executable = Path(d) / ("test-" + optimization[1:])
         subprocess.run([compiler, "-std=c++20", optimization, "-pthread",
                         "-Wall", "-Wextra", "-Werror", str(file), "-o", str(executable)],
-                       check=True, capture_output=True, text=True, timeout=40)
+                       capture_output=True, text=True, timeout=40, check=True)
         subprocess.run([str(executable)], check=True, timeout=25)
 print("F07_COMPUTE_READY_CALLBACK_PASS release_acquire=1 short_circuit=1 unfinished_wait=1 O0=1 O2=1")
