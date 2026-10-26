@@ -23,7 +23,8 @@ assert '#include "performance.h"' not in normal
 assert '#include "performance.h"' in dev
 # A final build must be rejected if any experimental JIT or DEV profile is ON.
 assert 'if(EDEN_FINAL_RELEASE_PROFILE)' in cmake
-assert 'if(EDEN_SHARED_JIT OR EDEN_JIT_COMPILE_BATCH OR EDEN_SPARSE_JIT_DEV OR' in cmake
+assert 'if(EDEN_SHARED_JIT OR EDEN_JIT_COMPILE_BATCH OR' in cmake
+assert 'EDEN_SPARSE_JIT_DEV' not in cmake
 assert 'EDEN_INLINE_EXCLUSIVES OR EDEN_DEV_PROFILE OR EDEN_DEV_VULKAN OR' in cmake
 start=main.index('// Shipping path: no periodic profiler/watchdog work')
 end=main.index('#endif',start)

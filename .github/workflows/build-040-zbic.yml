@@ -408,7 +408,7 @@ jobs:
             echo "::warning::Optional case index unavailable; cached/user-provided artwork remains supported"
           fi
 
-      - name: Build and stage the only native PS5 release
+      - name: Build and stage native release
         id: stage
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         env:
