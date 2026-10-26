@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Read-only pre-build proof that the all-on PS5 dev workflow cannot silently
-become a standard dense/release build. No compilation or PS5 test here.
+"""Source-only guard for the ONE PS5 release's sparse native JIT and packages.
+
+The legacy all-on fixture name is retained for workflow references, but it
+MUST refuse alternate developer builds and dense/native JIT selection.
 """
 from pathlib import Path
-
 root=Path(__file__).resolve().parents[1]
 read=lambda name:(root/name).read_text("utf-8")
 workflow=read(".github/workflows/build-040-zbic.yml")
@@ -11,49 +12,38 @@ builder=read("tools/build-package.sh")
 native=read("tools/build-headless-native.sh")
 source=read("headless/main.cpp")
 cmake=read("headless/CMakeLists.txt")
-binary_gate=read("tools/ci/check-all-on-test-binary.py")
-
-assert "test_all_on:" in workflow
-assert "test_title_id:" in workflow
-assert "test \"$GITHUB_REF\" = refs/heads/dev/ps5-sparse-jit" in workflow
-assert 'test "${{ inputs.publish }}" != true' in workflow
-assert 'bash tools/build-package.sh dev "$EDEN_TEST_TITLE_ID"' in workflow
-assert "EDEN_TEST_ALL_ON: ${{ (inputs.test_all_on || (github.ref == 'refs/heads/dev/ps5-sparse-jit' && contains(github.event.head_commit.message || '', '[test-all-on]'))) && '1' || '0' }}" in workflow
-assert "EDEN_STAGE_DIR: ${{ (inputs.test_all_on || (github.ref == 'refs/heads/dev/ps5-sparse-jit' && contains(github.event.head_commit.message || '', '[test-all-on]'))) && 'build/dev/PPSA99008' || 'build/release/PPSA99008' }}" in workflow
-assert "if: ${{ env.EDEN_TEST_ALL_ON != '1' }}" in workflow
-assert "if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}" in workflow
-assert "!inputs.test_all_on &&" in workflow
-assert 'Prospero.Eden-Encore-PS5-all-on-test' in workflow
-assert 'python3 -B tools/ci/check-all-on-test-binary.py "$EDEN_STAGE_DIR" "$EDEN_TEST_TITLE_ID"' in workflow
-assert 'export EDEN_SPARSE_JIT_DEV=ON' in builder
-# Dev all-on compiles all three candidate features; final release keeps them OFF.
-assert 'export EDEN_SHARED_JIT=ON EDEN_JIT_COMPILE_BATCH=ON' in builder
-assert 'export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=OFF' in builder
-assert '"EDEN_SHARED_JIT:BOOL": "ON"' in binary_gate
-assert '"EDEN_JIT_COMPILE_BATCH:BOOL": "ON"' in binary_gate
-assert 'if(EDEN_FINAL_RELEASE_PROFILE)' in cmake
-assert 'if(EDEN_SHARED_JIT OR EDEN_JIT_COMPILE_BATCH OR EDEN_SPARSE_JIT_DEV OR' in cmake
-assert 'EDEN_EXPERIMENT_DEFAULTS sparse=%u logical_cpu=%u frame_probe=%u safe=%u' in source
-assert '#ifdef PS5_NATIVE\n        // Default experimental profile for all native console builds' in source
-assert '-DEDEN_SPARSE_JIT_DEV="${EDEN_SPARSE_JIT_DEV:-OFF}"' in native
-assert 'option(EDEN_SPARSE_JIT_DEV "Allow developer-only PS5 sparse JIT cache experiments" OFF)' in cmake
-assert 'target_compile_definitions(eden-headless PRIVATE EDEN_SPARSE_JIT_DEV=1)' in cmake
-assert 'experimental_sparse_jit = true;' in source
-assert 'experimental_logical_cpu = true;' in source
-assert 'experimental_frame_probe = true;' in source
-assert 'if (experimental_sparse_jit && !Common::ProbeSparseJitAlias())' in source
-assert 'ConfigFile("experiments.json")' not in source
-assert 'if (!safe_launch)' in source
-assert 'experimental_sparse_jit = false;' in source  # alias probe
-assert '"EDEN_SPARSE_JIT_DEV:BOOL": "ON"' in binary_gate
-assert '"EDEN_DEV_PROFILE:BOOL": "ON"' in binary_gate
-assert '"EDEN_PS5_VULKAN:BOOL": "ON"' in binary_gate
-assert '"EDEN_VULKAN_DRIVER:STRING": "RADV"' in binary_gate
-assert "native_ps5_execution_verified" in binary_gate
+release_gate=read("tools/ci/check-release-experiments.py")
+jit=read("headless/jit-allocator.h")
+boc=read("vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp")
+assert "test_all_on:" not in workflow and "EDEN_TEST_ALL_ON" not in workflow
+assert "build/dev/PPSA99008" not in workflow
+assert 'bash tools/build-package.sh release-stage' in workflow
+assert 'bash tools/build-package.sh dev ' not in workflow
+assert "Prospero.Eden-Encore-PS5-all-on-test" not in workflow
+assert "EDEN_STAGE_DIR: build/release/PPSA99008" in workflow
+assert "Eden-Encore-PS5-FTP-PPSA99008" in workflow
+assert '\\ndev)\\n' not in builder and "EDEN_SPARSE_JIT_DEV" not in builder
+assert "EDEN_SPARSE_JIT_DEV" not in cmake and "EDEN_SPARSE_JIT_DEV" not in native
+assert "if(EDEN_FINAL_RELEASE_PROFILE)" in cmake
+assert "if(EDEN_SHARED_JIT OR EDEN_JIT_COMPILE_BATCH OR" in cmake
+assert "EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF" in builder
+assert "EDEN_EXPERIMENT_DEFAULTS sparse=%u logical_cpu=%u frame_probe=%u safe=%u" in source
+assert "experimental_sparse_jit = true;" in source
+assert "if (!Common::ProbeSparseJitAlias())" in source
+assert 'throw std::runtime_error("PS5 sparse JIT alias preflight failed")' in source
+assert "ConfigFile(\"experiments.json\")" not in source
+assert "Common::ReserveSparseJitCode(sparse_span, &writable)" in jit
+assert "Common::AllocateMemoryPages(size);" not in jit
+assert "::Common::CommitSparseJitCode(const_cast<u8*>(getCode()), target.bytes)" in boc
+assert "TrimSparseJitCode(const_cast<u8*>(getCode()), begin)" in boc
+assert '"EDEN_FINAL_RELEASE_PROFILE:BOOL": "ON"' in release_gate
+assert '"EDEN_PS5_VULKAN:BOOL": "ON"' in release_gate
+assert '"EDEN_VULKAN_DRIVER:STRING": "RADV"' in release_gate
+assert "EDEN_JIT_SPARSE_TRIM released=" in release_gate
 
 # Execute the extracted prebuild shell gates with a fake python3 command, so
 # this verifies real Bash flag behavior (not merely the presence of a string).
-# Dev all-on must execute native Clang syntax even though it skips the older
+# Native release must execute the Clang syntax gate, even when prebuild skips the older
 # release-only source-contract suite. The explicit prebuild bypass remains valid.
 import os
 import subprocess
@@ -91,8 +81,8 @@ with tempfile.TemporaryDirectory() as tmp:
         assert result.returncode == 0, result.stderr
         return calls.read_text().splitlines()
 
-    dev=run_gate("1", "0", "ON")
-    assert len(dev)==1 and "check-native-source-syntax.py" in dev[0], dev
+    bypass_source=run_gate("1", "0", "ON")
+    assert len(bypass_source)==1 and "check-native-source-syntax.py" in bypass_source[0], bypass_source
     release=run_gate("0", "0", "ON")
     assert release and "check-native-source-syntax.py" in release[0], release
     assert any("check-load-failure.py" in call for call in release), release
@@ -114,7 +104,7 @@ for generated in (False, True):
 assert input_flags == ["clang++-18", "-std=gnu++20", "-Wno-error-all", "-Wall"]
 print("PASS: native Clang syntax flags reject invalid upstream alias and preserve compiler error checks")
 
-print("PASS: PS5 native syntax gate runs in dev/release, honors prebuild bypass, keeps release-only checks isolated")
+print("PASS: single native release syntax gate runs with or without source review bypass")
 
-print("PASS ALL_ON_PS5_TEST_CONTRACT: dev compiles sparse/shared/batch variants; final release forbids all three and keeps a separate shipping path")
+print("PASS SINGLE_PS5_RELEASE_CONTRACT: PS5 sparse JIT on, dev/dense package absent, no shared/batch variant")
 print("No PS5 hardware/glyph art qualification, SDK build or CI run")

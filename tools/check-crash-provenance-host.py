@@ -76,7 +76,15 @@ for wrong in (
     else:
         raise AssertionError("mismatched ELF receipt passed symbolizer")
 workflow = (root / ".github/workflows/build-040-zbic.yml").read_text()
+writer = source.read_text()
+assert 'build/release/PPSA99008' in writer
+assert 'build/dev/PPSA99008' not in writer
+assert 'if title_id != "PPSA99008"' in writer
+assert '"app_title_id": title_id' in writer
 assert "tools/ci/write-crash-provenance.py" in workflow
+assert "--app build/release/PPSA99008" in workflow
+assert "--app-title PPSA99008" in workflow
 assert "build/headless-native/crash-provenance.json" in workflow
-assert "env.EDEN_TEST_ALL_ON == '1'" in workflow
+assert "build/symbols/crash-provenance.json" in workflow
+assert "EDEN_TEST_ALL_ON" not in workflow
 print("PASS host-only PS5 crash provenance: ELF bounds, SHA256 receipt binding and build gate")
