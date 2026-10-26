@@ -1,5 +1,7 @@
 # FC27 — F07: priority is visual stutter, HUD freshness and input-to-image (26 October 2026)
 
+**Suivi maître actuel (P0/P1/P2 et statut sparse JIT natif) :** [FC27_F07_MASTER_TRACKER.md](FC27_F07_MASTER_TRACKER.md). Les passages historiques ci-dessous qui évoquent le sparse JIT « DEV uniquement » reflètent les anciennes révisions, pas le chemin `PS5_NATIVE` unique intégré le 26 octobre. La qualification PS5 réelle demeure ouverte.
+
 **Branch:** `dev/ps5-sparse-jit`. **Hardware baseline:** native `cd4857c8` (25 October).
 **Status:** F01–F06 = 6/6 *host pre-console contracts*, NOT 6/6 gameplay fixes. **F07 OPEN**.
 This note reconstructs previously documented hardware evidence rather than claiming a new fix.
