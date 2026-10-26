@@ -3920,6 +3920,12 @@
       "disposition": "new_source_issue_corrected",
       "proof_ref": "tools/check-launcher-release-hotpaths-host.py",
       "evidence": "Shipping launcher confirmed-missing title check: sorted worker snapshots and sorted set_intersection permit binary search rather than a linear comparison for every game; O0/O2 source host proof; no console FPS claim."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/gl_batch.cpp",
+      "disposition": "new_source_issue_corrected",
+      "proof_ref": "tools/check-launcher-gl-scissor-reuse-host.py",
+      "evidence": "Shipping GL launcher draw: repeated same-clip texture runs used to submit duplicate glScissor state and recalculate pixel rectangles on each run. Cache last clip only within one draw, preserve disabled/re-enabled and changed rectangles; actual GlBatch::draw source compiled O0/O2 with mocked GL calls. No console FPS claim."
     }
   ],
   "inventoried_including_pinned": 538,

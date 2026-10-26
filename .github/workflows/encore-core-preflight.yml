@@ -65,6 +65,7 @@ jobs:
           python3 -B tools/check-encore-ncz-sources.py
           python3 -B tools/check-exefs-directory-host.py
           python3 -B tools/check-ncz.py
+          python3 -B tools/check-launcher-gl-scissor-reuse-host.py
           python3 -B tools/check-launcher-release-hotpaths-host.py
           python3 -B tools/check-ps5-avatar-dds-host.py
           python3 -B tools/check-deferred-native-access-coverage.py
