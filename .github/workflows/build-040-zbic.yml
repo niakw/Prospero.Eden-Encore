@@ -569,6 +569,13 @@ jobs:
         if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
         run: python3 -B tools/ci/check-ftp-archive-root.py dist
 
+      - name: Reject release folder wrappers or extra staged files
+        if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
+        run: |
+          test "$(ls -A build/release)" = PPSA99008
+          test -f build/release/PPSA99008/eboot.bin
+          test -f build/release/PPSA99008/sce_sys/param.json
+
       # This is the ready-to-install Actions ZIP. Unlike the release-bundle
       # artifact (which includes dist/ and symbols), its sole top-level folder
       # is PPSA99008/ with eboot.bin immediately inside.
