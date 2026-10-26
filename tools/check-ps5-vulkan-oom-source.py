@@ -41,6 +41,15 @@ def valid(source: str) -> bool:
             < f.index("vmaGetHeapBudgets(") < f.index("std::fflush(stderr)")
             < f.index("vk::Check(result);"))
 
+# The active fork must differ from upstream ONLY by the reviewed OOM hook.
+# This is a stronger oracle than generic source/token assertions.
+reconstructed = fork.replace("#include <array>\\n#include <cstdio>\\n", "")
+start = reconstructed.index("    const VkResult result = vmaCreateImage(")
+end = reconstructed.index("    vk::Check(result);", start) + len("    vk::Check(result);")
+upstream_call = "    vk::Check(vmaCreateImage(allocator, &ci, &alloc_ci, &handle, &allocation, &alloc_info));"
+reconstructed = reconstructed[:start] + upstream_call + reconstructed[end:]
+assert reconstructed == original, "native allocator diverges from pinned upstream outside F07 diagnostic"
+
 assert valid(fork), "F07 native OOM allocation proof missing"
 assert not valid(fork.replace("vk::Check(result);", "// missing exception"))
 assert not valid(fork.replace("#ifdef PS5_NATIVE", "// missing PS5 guard"))
