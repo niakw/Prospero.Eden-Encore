@@ -35,7 +35,7 @@ Tests source-extraits : `tools/check-release-case-index-dedup-host.py`, `tools/c
 | `headless/prosperoeden/pe/gfx/bidi.hpp` | `2f938e9fb0ee` | Revue statique | Bidirectional text shaping interfaces only. |
 | `headless/prosperoeden/pe/gfx/draw_list.cpp` | `5bcba9105df3` | Revue statique | DrawList grouping/rounded-rectangle primitives produce batched instance runs. |
 | `headless/prosperoeden/pe/gfx/draw_list.hpp` | `864b70c350a9` | Revue statique | DrawList reusable vectors and clip/transform stack declarations. |
-| `headless/prosperoeden/pe/gfx/font.cpp` | `eca34ae52985` | Optimisation intégrée | Font::fit reuses one UTF-8 prefix; Font::wrap removes copied word/glyph candidates using append/rollback (O0/O2 equivalence). |
+| `headless/prosperoeden/pe/gfx/font.cpp` | `1d7c2e186ac4` | Optimisation intégrée | Font::fit reuses one UTF-8 prefix; Font::wrap removes copied word/glyph candidates using bounded append/rollback (O0/O2 equivalence). |
 | `headless/prosperoeden/pe/gfx/font.hpp` | `0a129cd37e16` | Revue statique | Font atlas/dynamic layout declarations and shaping cache ownership. |
 | `headless/prosperoeden/pe/gfx/font_format.hpp` | `cc807dc31fbf` | Revue statique | Packed immutable font/glyph format definitions. |
 | `headless/prosperoeden/pe/gfx/gl_batch.hpp` | `e881358bb08a` | Revue statique | GL stream slot/capacity and one batch submission API; renderer cpp already reviewed. |

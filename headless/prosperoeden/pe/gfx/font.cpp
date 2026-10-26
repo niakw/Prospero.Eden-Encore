@@ -641,7 +641,7 @@ std::vector<std::string> Font::wrap(std::string_view text, float size, float max
     const auto split_word = [&](std::string_view word)
     {
         std::string part;
-        part.reserve(word.size());
+        part.reserve(std::min(word.size(), std::size_t{128}));
         for (std::size_t index = 0; index < word.size();)
         {
             const std::size_t start = index;
