@@ -94,12 +94,11 @@ replace_once('    std::array<u8,256> bytes{};\n    unsigned read_calls=0;',
         std::memmove(bytes.data()+dst,bytes.data()+src,count);
         ++dma_calls;
     }''',"gpu bytes")
-replace_once('enum class CachePhase {TextureCpuRefresh};',
-             'enum class CachePhase {TextureCpuRefresh,TextureAliasScan,TextureAliasCopy};',
-             "cost timers")
-replace_once('struct CachePhaseTimer {explicit CachePhaseTimer(CachePhase){}};',
-             'struct CachePhaseTimer {explicit CachePhaseTimer(CachePhase){} void Stop() {}};',
-             "stop timer")
+# Reuse the same diagnostics-aware upload fixture as the F04 upload test.
+# TextureCpuRefresh, alias counters and the three new F07 upload stages are
+# all no-op host counters; do not rewrite the fixture's timer vocabulary.
+assert "TextureAliasScan" in cpp and "TextureUploadStaging" in cpp
+assert "void Stop() noexcept {}" in cpp
 replace_once('    Runtime runtime{};\n',
              '''    Runtime runtime{};
     std::vector<Image> slot_images{3};
