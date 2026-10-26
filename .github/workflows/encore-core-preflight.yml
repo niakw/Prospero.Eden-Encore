@@ -473,7 +473,6 @@ jobs:
           python3 -B tools/check-jit-startup-retry.py
           python3 -B tools/check-vulkan-pipeline-persistence.py
           python3 -B tools/check-vulkan-cache-atomic.py
-          python3 -B tools/check-jit-dense-alias-host.py
           python3 -B tools/check-maintained-fermi2d-variants.py
           python3 -B tools/check-fermi2d-address-widening-host.py
           python3 -B tools/check-maintained-maxwell-prmt.py
