@@ -21,6 +21,11 @@ report = (root / "headless/performance.cpp").read_text()
 
 names = (
     ("GraphicsPipelineCreate", "graphics_pipeline_create"),
+    ("ShaderPoolReset", "shader_pool_reset"),
+    ("ShaderCfg", "shader_cfg"),
+    ("ShaderIr", "shader_ir"),
+    ("ShaderSpirv", "shader_spirv"),
+    ("ShaderModule", "shader_module"),
     ("TextureUploadStaging", "texture_upload_staging"),
     ("TextureUploadContents", "texture_upload_contents"),
     ("TextureUploadBarrier", "texture_upload_barrier"),
@@ -30,6 +35,13 @@ for enum_name, log_name in names:
     assert report.count('"' + log_name + '"') == 1, log_name
     assert enum_name in gen, enum_name
 
+# Exact active shader phase sites and generation policy.
+for stage, expected in (("ShaderPoolReset",2), ("ShaderCfg",3),
+                        ("ShaderIr",3), ("ShaderSpirv",2), ("ShaderModule",2)):
+    assert pipeline.count("CachePhase::"+stage) == expected, stage
+    assert stage in gen, stage
+assert pipeline.count("cfg_stage_cost.Stop();") == 3
+assert "if len(re.findall(cfg_match, shader_source)) != 3:" in gen
 assert 'if shader_source.count(f07_pipeline_old) != 1:' in gen
 assert "shader_source = shader_source.replace(f07_pipeline_old, f07_pipeline_new, 1)" in gen
 assert "texture_costs.append((" in gen
