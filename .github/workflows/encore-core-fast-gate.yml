@@ -286,6 +286,7 @@ jobs:
           python3 -B tools/check-ps5-quad-index-initial-fence-host.py
           python3 -B tools/check-vulkan-worker-fatal-drain-host.py
           python3 -B tools/check-vulkan-query-allocation-host.py
+          python3 -B tools/check-ps5-vulkan-oom-source.py
           python3 -B tools/check-vulkan-query-grouping-host.py
           python3 -B tools/check-vulkan-query-copy-plan-host.py
           python3 -B tools/check-vulkan-deferred-copy-ownership-host.py
