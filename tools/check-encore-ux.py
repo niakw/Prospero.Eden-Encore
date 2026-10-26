@@ -180,8 +180,14 @@ assert 'hero_intro' not in home
 widgets_src = read('headless/prosperoeden/pe/ui/widgets.cpp')
 textures_src = read('headless/prosperoeden/pe/ui/textures.cpp')
 assert 'if (image.missing && c.textures.brand() != 0)' not in widgets_src
+# Retry age is computed lazily per queried cover in the shipping launcher.
+# Keep the first-load retry and never briefly discard the confirmed-missing
+# cover state while its asynchronous refresh is queued.
+assert 'uptime_seconds_ - it->second.loaded_at_seconds' in textures_src
 assert 'it->second.loaded && it->second.texture == 0 &&' in textures_src
-assert 'it->second.age >= retry_after' in textures_src
+assert 'age >= retry_after' in textures_src
+assert 'it->second.loaded_at_seconds = uptime_seconds_;' in textures_src
+assert 'it->second.loaded || it->second.failed_loads != 0' in textures_src
 # Visual regressions from actual 1920x1080 PS5 captures (2026-10-08): the
 # Zelda title must not occupy the same vertical lines as its description.
 # R385 screenshot geometry: one bounded hero column, readable title and
