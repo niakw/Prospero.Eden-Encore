@@ -14,7 +14,7 @@ source = (root/"headless/prosperoeden/pe/gfx/font.cpp").read_text()
 start = "std::vector<std::string> Font::wrap(std::string_view text, float size, float max_width) const"
 assert source.count(start) == 1
 real = start + source.split(start, 1)[1].split("\n}\n\nstd::string Font::fit", 1)[0] + "\n}"
-assert "part.reserve(word.size());" in real
+assert "part.reserve(std::min(word.size(), std::size_t{128}));" in real
 assert "const std::size_t previous = part.size();" in real
 assert "part.resize(previous);" in real
 assert "const std::size_t previous = line.size();" in real
@@ -22,7 +22,7 @@ assert "line.resize(previous);" in real
 assert "std::string candidate" not in real
 assert "measure(part + std::string(character)" not in real
 
-new1 = "        part.reserve(word.size());\n"
+new1 = "        part.reserve(std::min(word.size(), std::size_t{128}));\n"
 new2 = """            if (!part.empty())
             {
                 // Append in-place, then roll back only if this cluster crosses
@@ -81,6 +81,7 @@ legacy = real.replace(new1, "", 1).replace(new2,old2,1).replace(new3,old3,1)
 legacy = legacy.replace("Font::wrap(", "LegacyFont::wrap(", 1)
 
 cpp = r"""
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <string>
