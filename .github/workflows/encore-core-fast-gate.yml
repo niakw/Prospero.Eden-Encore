@@ -72,6 +72,7 @@ on:
       - 'tools/check-fc27-f05-native-binder-handle-ipc-host.py'
       - 'tools/analyze-guest-progress-stall.py'
       - 'tools/analyze-fc27-release-sessions.py'
+      - 'tools/check-fc27-f07-blit-pipeline-state-host.py'
       - 'tools/check-fc27-f06-native-pad-transition-host.py'
       - 'tools/check-fc27-f06-native-npad-handoff-host.py'
       - 'tools/check-fc27-f06-native-npad-lifo-host.py'
@@ -289,6 +290,7 @@ jobs:
           python3 -B tools/check-vulkan-query-allocation-host.py
           python3 -B tools/check-ps5-vulkan-oom-source.py
           python3 -B tools/analyze-fc27-release-sessions.py --self-test
+          python3 -B tools/check-fc27-f07-blit-pipeline-state-host.py
           python3 -B tools/check-vulkan-query-grouping-host.py
           python3 -B tools/check-vulkan-query-copy-plan-host.py
           python3 -B tools/check-vulkan-deferred-copy-ownership-host.py
