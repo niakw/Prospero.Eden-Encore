@@ -245,22 +245,22 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 490 | 467 | 985 |
+| Graphe connu | 491 | 468 | 986 |
 | HOST — preuve ciblée hôte | 62 | 57 | 127 |
-| SOURCE — lecture effectuée, preuve insuffisante | 405 | 395 | 819 |
+| SOURCE — lecture effectuée, preuve insuffisante | 406 | 396 | 820 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **420** | **409** | **847** |
+| **Encore à qualifier (SOURCE + OPEN)** | **421** | **410** | **848** |
 | Dont priorité P0 (SOURCE + OPEN) | 102 | 97 | 233 |
 
-Le **noyau restant** compte donc 420 critères répartis sur
-409 fichiers et 847 mentions fonction/contrat :
-15 OPEN et 405 SOURCE.
+Le **noyau restant** compte donc 421 critères répartis sur
+410 fichiers et 848 mentions fonction/contrat :
+15 OPEN et 406 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-328 fichiers de code/en-têtes présents et 328 avec un chemin de
+329 fichiers de code/en-têtes présents et 329 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.

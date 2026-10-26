@@ -384,6 +384,7 @@ jobs:
           python3 -B tools/install-vendored-surface-lifecycle.py --check
           python3 -B tools/install-active-core-backports.py
           python3 -B tools/check-vendored-vulkan-fork.py
+          python3 -B tools/check-ps5-vulkan-oom-source.py
           python3 -B tools/check-native-vulkan-striped-pipeline-host.py
           python3 -B tools/check-native-vulkan-completed-build-wait-host.py
           python3 -B tools/check-vulkan-pipeline-ready-publication-host.py
