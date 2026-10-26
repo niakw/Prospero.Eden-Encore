@@ -1,6 +1,7 @@
 """Adapt the pinned Eden Vulkan platform boundary and required renderer fixes."""
 from pathlib import Path
 import struct
+import re
 import os
 import subprocess
 import sys
@@ -2462,6 +2463,37 @@ for old, new in shader_costs:
     if shader_source.count(old) != 1:
         raise RuntimeError(f'Shader pipeline anchor changed: {old[:60]}')
     shader_source = shader_source.replace(old, new)
+# F07 P0.1: profile actual cold shader work in the native detailed profile.
+# Quiet mode does not take additional clock readings. Preserve exact source parity.
+for shader_call, index, phase, expected in (
+    ("main_pools.ReleaseContents()", 19, "ShaderPoolReset", 2),
+    ("TranslateProgram(pools.inst, pools.block, env, cfg, host_info)", 21, "ShaderIr", 3),
+    ("EmitSPIRV(profile, runtime_info, program, binding)", 22, "ShaderSpirv", 1),
+    ("EmitSPIRV(profile, program)", 22, "ShaderSpirv", 1),
+    ("BuildShader(device, code)", 23, "ShaderModule", 2),
+):
+    before = f'auto cost = Eden::Performance::VulkanTimer({index}); return {shader_call};'
+    after = (f'auto cost = Eden::Performance::VulkanTimer({index}); '
+             f'::Eden::Performance::CachePhaseTimer stage_cost{{::Eden::Performance::CachePhase::{phase}, '
+             f'::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)}}; return {shader_call};')
+    if shader_source.count(before) != expected:
+        raise RuntimeError(f'F07 shader stage timing drift {phase}: {shader_call}')
+    shader_source = shader_source.replace(before, after)
+cfg_match = r'(?m)^( +)auto cfg_cost = Eden::Performance::VulkanTimer\(20\);$'
+def add_shader_cfg_timer(match):
+    indent = match.group(1)
+    return (indent + '::Eden::Performance::CachePhaseTimer cfg_stage_cost{\n'
+            + indent + '    ::Eden::Performance::CachePhase::ShaderCfg,\n'
+            + indent + '    ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};\n'
+            + match.group(0))
+if len(re.findall(cfg_match, shader_source)) != 3:
+    raise RuntimeError('F07 shader CFG stage timer insertion mismatch')
+shader_source = re.sub(cfg_match, add_shader_cfg_timer, shader_source)
+cfg_done = '        cfg_cost.reset();'
+if shader_source.count(cfg_done) != 3:
+    raise RuntimeError('F07 shader CFG completion mismatch')
+shader_source = shader_source.replace(cfg_done, cfg_done + '\n        cfg_stage_cost.Stop();')
+
 # R403: On native PS5 do not silently discard a guest graphics draw just
 # because its asynchronous shader pipeline is compiling. ConfigureDraw already
 # waits via a GPU scheduler worker and R378 publishes completion even on error.

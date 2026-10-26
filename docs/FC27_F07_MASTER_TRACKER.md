@@ -78,6 +78,18 @@ peut encore être revendiqué. R03 RADV/SPIR-V, R04 AudioIn/RomFS et R06
 frame generation restent hors de ce lot (pas de fusion globale). Détails :
 [FC27_R01_SOURCE_TELEMETRY_PORT_2026-10-26.md](FC27_R01_SOURCE_TELEMETRY_PORT_2026-10-26.md).
 
+## P0.1 — temps de traduction des shaders, détail RELEASE
+
+Une première création de pipeline appelle déjà des phases CPU distinctes
+qui restaient masquées par les anciens timers Vulkan DEV. Le chemin natif
+sélectionné mesure maintenant en **diagnostic détaillé uniquement** :
+`shader_pool_reset`, `shader_cfg`, `shader_ir`, `shader_spirv`,
+`shader_module`. Les durées, sous-phases de `graphics_pipeline_create`,
+ne doivent pas être additionnées comme une seule frame si plusieurs workers
+les rapportent. Aucun shader, fence ni ordre de dessin ne change.
+**F07 reste ouvert :** c'est une attribution, pas un gain FPS démontré.
+Le chemin silencieux ne prend aucun chronométrage supplémentaire.
+
 ## Dossiers de preuves existants
 
 - [F07 — priorités et mesures](FC27_F07_STUTTER_HUD_PRIORITY_2026-10-26.md)

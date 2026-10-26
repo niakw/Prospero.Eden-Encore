@@ -1115,16 +1115,20 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         ++env_index;
 
         const u32 cfg_offset{static_cast<u32>(env.StartAddress() + sizeof(Shader::ProgramHeader))};
+        ::Eden::Performance::CachePhaseTimer cfg_stage_cost{
+            ::Eden::Performance::CachePhase::ShaderCfg,
+            ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
         auto cfg_cost = Eden::Performance::VulkanTimer(20);
         Shader::Maxwell::Flow::CFG cfg(env, pools.flow_block, cfg_offset, index == 0);
         cfg_cost.reset();
+        cfg_stage_cost.Stop();
         if (!uses_vertex_a || index != 1) {
             // Normal path
-            programs[index] = ([&] { auto cost = Eden::Performance::VulkanTimer(21); return TranslateProgram(pools.inst, pools.block, env, cfg, host_info); }());
+            programs[index] = ([&] { auto cost = Eden::Performance::VulkanTimer(21); ::Eden::Performance::CachePhaseTimer stage_cost{::Eden::Performance::CachePhase::ShaderIr, ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)}; return TranslateProgram(pools.inst, pools.block, env, cfg, host_info); }());
         } else {
             // VertexB path when VertexA is present.
             auto& program_va{programs[0]};
-            auto program_vb{([&] { auto cost = Eden::Performance::VulkanTimer(21); return TranslateProgram(pools.inst, pools.block, env, cfg, host_info); }())};
+            auto program_vb{([&] { auto cost = Eden::Performance::VulkanTimer(21); ::Eden::Performance::CachePhaseTimer stage_cost{::Eden::Performance::CachePhase::ShaderIr, ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)}; return TranslateProgram(pools.inst, pools.block, env, cfg, host_info); }())};
             programs[index] = MergeDualVertexPrograms(program_va, program_vb, env);
         }
 
@@ -1159,9 +1163,9 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
 
         const auto runtime_info{MakeRuntimeInfo(programs, key, program, previous_stage, device)};
         ConvertLegacyToGeneric(program, runtime_info);
-        const std::vector<u32> code{([&] { auto cost = Eden::Performance::VulkanTimer(22); return EmitSPIRV(profile, runtime_info, program, binding); }())};
+        const std::vector<u32> code{([&] { auto cost = Eden::Performance::VulkanTimer(22); ::Eden::Performance::CachePhaseTimer stage_cost{::Eden::Performance::CachePhase::ShaderSpirv, ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)}; return EmitSPIRV(profile, runtime_info, program, binding); }())};
         device.SaveShader(code);
-        modules[stage_index] = ([&] { auto cost = Eden::Performance::VulkanTimer(23); return BuildShader(device, code); }());
+        modules[stage_index] = ([&] { auto cost = Eden::Performance::VulkanTimer(23); ::Eden::Performance::CachePhaseTimer stage_cost{::Eden::Performance::CachePhase::ShaderModule, ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)}; return BuildShader(device, code); }());
 
         // Text log + .spv dump. Text log is gated by gpu_log_level != Off; .spv dump
         // is independent and gated only by gpu_log_shader_dumps.
@@ -1204,9 +1208,13 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         ++env_index;
 
         const u32 cfg_offset{static_cast<u32>(env.StartAddress() + sizeof(Shader::ProgramHeader))};
+        ::Eden::Performance::CachePhaseTimer cfg_stage_cost{
+            ::Eden::Performance::CachePhase::ShaderCfg,
+            ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
         auto cfg_cost = Eden::Performance::VulkanTimer(20);
         Shader::Maxwell::Flow::CFG cfg(env, pools.flow_block, cfg_offset, index == 0);
         cfg_cost.reset();
+        cfg_stage_cost.Stop();
         env.Dump(hash, key.unique_hashes[index]);
     }
     LOG_ERROR(Render_Vulkan, "{}", exception.what());
@@ -1218,7 +1226,7 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {
     GraphicsEnvironments environments;
     GetGraphicsEnvironments(environments, graphics_key.unique_hashes);
 
-    ([&] { auto cost = Eden::Performance::VulkanTimer(19); return main_pools.ReleaseContents(); }());
+    ([&] { auto cost = Eden::Performance::VulkanTimer(19); ::Eden::Performance::CachePhaseTimer stage_cost{::Eden::Performance::CachePhase::ShaderPoolReset, ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)}; return main_pools.ReleaseContents(); }());
     auto pipeline{
         CreateGraphicsPipeline(main_pools, graphics_key, environments.Span(), nullptr, true)};
     if (!pipeline || pipeline_cache_filename.empty()) {
@@ -1246,7 +1254,7 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
     ComputeEnvironment env{*kepler_compute, *gpu_memory, program_base, qmd.program_start};
     env.SetCachedSize(shader->size_bytes);
 
-    ([&] { auto cost = Eden::Performance::VulkanTimer(19); return main_pools.ReleaseContents(); }());
+    ([&] { auto cost = Eden::Performance::VulkanTimer(19); ::Eden::Performance::CachePhaseTimer stage_cost{::Eden::Performance::CachePhase::ShaderPoolReset, ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)}; return main_pools.ReleaseContents(); }());
     auto pipeline{CreateComputePipeline(main_pools, key, env, nullptr, true)};
     if (!pipeline || pipeline_cache_filename.empty()) {
         return pipeline;
@@ -1270,16 +1278,20 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
 
     LOG_DEBUG(Render_Vulkan, "{:#016x}", hash);
 
+    ::Eden::Performance::CachePhaseTimer cfg_stage_cost{
+        ::Eden::Performance::CachePhase::ShaderCfg,
+        ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
     auto cfg_cost = Eden::Performance::VulkanTimer(20);
         Shader::Maxwell::Flow::CFG cfg{env, pools.flow_block, env.StartAddress()};
         cfg_cost.reset();
+        cfg_stage_cost.Stop();
 
     // Dump it before error.
     if (Settings::values.dump_guest_shaders) {
         env.Dump(hash, key.unique_hash);
     }
 
-    auto program{([&] { auto cost = Eden::Performance::VulkanTimer(21); return TranslateProgram(pools.inst, pools.block, env, cfg, host_info); }())};
+    auto program{([&] { auto cost = Eden::Performance::VulkanTimer(21); ::Eden::Performance::CachePhaseTimer stage_cost{::Eden::Performance::CachePhase::ShaderIr, ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)}; return TranslateProgram(pools.inst, pools.block, env, cfg, host_info); }())};
     const VkDriverIdKHR driver_id = device.GetDriverID();
     const bool needs_shared_mem_clamp =
         driver_id == VK_DRIVER_ID_QUALCOMM_PROPRIETARY ||
@@ -1293,9 +1305,9 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
                     max_shared_memory / 1024);
         program.shared_memory_size = max_shared_memory;
     }
-    const std::vector<u32> code{([&] { auto cost = Eden::Performance::VulkanTimer(22); return EmitSPIRV(profile, program); }())};
+    const std::vector<u32> code{([&] { auto cost = Eden::Performance::VulkanTimer(22); ::Eden::Performance::CachePhaseTimer stage_cost{::Eden::Performance::CachePhase::ShaderSpirv, ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)}; return EmitSPIRV(profile, program); }())};
     device.SaveShader(code);
-    vk::ShaderModule spv_module{([&] { auto cost = Eden::Performance::VulkanTimer(23); return BuildShader(device, code); }())};
+    vk::ShaderModule spv_module{([&] { auto cost = Eden::Performance::VulkanTimer(23); ::Eden::Performance::CachePhaseTimer stage_cost{::Eden::Performance::CachePhase::ShaderModule, ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)}; return BuildShader(device, code); }())};
 
     // Text log + .spv dump. Same split as the graphics path.
     const bool should_log = GPU::Logging::IsActive();
