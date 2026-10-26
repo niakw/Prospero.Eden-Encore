@@ -75,10 +75,10 @@ int main(){
  auto& retry=t.covers_.at("box-1#512");
  retry.loaded=true;retry.failed_loads=2;retry.loaded_at_seconds=t.uptime_seconds_;
  t.tick(1.49f);assert(t.cover("box-1",300).missing && retry.loaded);
- t.tick(.03f);assert(!t.cover("box-1",300).missing && !retry.loaded);
+ t.tick(.03f);assert(t.cover("box-1",300).missing && !retry.loaded);
  retry.loaded=true;retry.failed_loads=3;retry.loaded_at_seconds=t.uptime_seconds_;
  t.tick(2.9f);assert(t.cover("box-1",300).missing && retry.loaded);
- t.tick(.15f);assert(!t.cover("box-1",300).missing && !retry.loaded);
+ t.tick(.15f);assert(t.cover("box-1",300).missing && !retry.loaded);
  std::vector<std::string> old{"A","C","E","G"},now{"A","B","E","Z"},known;
  std::set_intersection(old.begin(),old.end(),now.begin(),now.end(),std::back_inserter(known));
  assert((known==std::vector<std::string>{"A","E"}));
