@@ -18,6 +18,11 @@ assert "is_built.load(std::memory_order::acquire) && static_cast<bool>(pipeline)
 assert "return static_cast<bool>(pipeline);" in compute_h
 assert active.count("if (pipeline && pipeline->IsBound()) {") == 1
 assert active.count("if (pipeline && pipeline->CanExecuteDraw()) {") == 1
+assert active.count("++state.valid;") == 2
+assert "EDEN_PS5_SHADER_PREWARM queued=%zu completed=%zu valid=%zu rejected=%zu prebuild_ms=%lld" in active
+assert active.index("workers.WaitForRequests(stop_loading);") < active.index("EDEN_PS5_SHADER_PREWARM queued=")
+assert "startup_prewarm_started = std::chrono::steady_clock::now();" in active
+assert "f07_prewarm_metrics_old_4" in generator
 for name in ("compute","graphics"):
     assert f"shader_source.count(f07_preseed_{name}_old) != 1" in generator
     assert generator.index(f"shader_source = shader_source.replace(f07_preseed_{name}_old, f07_preseed_{name}_new, 1)") < generator.index("shader_output.write_text(shader_source)")
@@ -30,6 +35,7 @@ graphics=start_graphics+active.split(start_graphics,1)[1].split("\n            }
 assert "compute_cache.emplace" in compute and "graphics_cache.emplace" in graphics
 cpp=r"""
 #include <cassert>
+#include <cstddef>
 #include <memory>
 #include <unordered_map>
 #include <utility>
@@ -40,6 +46,7 @@ struct Pipeline {
     bool CanExecuteDraw() const noexcept { return ready && handle; }
 };
 struct Fixture {
+    struct State {std::size_t valid{};} state;
     std::unordered_map<int,std::unique_ptr<Pipeline>> compute_cache,graphics_cache;
     void AdmitCompute(int key,std::unique_ptr<Pipeline> pipeline) {
 """ + compute + r"""
@@ -51,18 +58,24 @@ struct Fixture {
 int main() {
     Fixture f;
     f.AdmitCompute(1,std::make_unique<Pipeline>(Pipeline{true,false}));
-    assert(f.compute_cache.empty());
+    assert(f.compute_cache.empty() && f.state.valid==0);
     f.AdmitCompute(1,std::make_unique<Pipeline>(Pipeline{true,true}));
     assert(f.compute_cache.size()==1 && f.compute_cache.at(1)->IsBound());
+    assert(f.state.valid==1);
     f.AdmitGraphics(2,std::make_unique<Pipeline>(Pipeline{true,false}));
 #ifdef PS5_NATIVE
-    assert(f.graphics_cache.empty());
+    assert(f.graphics_cache.empty() && f.state.valid==1);
 #else
-    assert(f.graphics_cache.size()==1);
+    assert(f.graphics_cache.size()==1 && f.state.valid==2);
     f.graphics_cache.clear();
 #endif
     f.AdmitGraphics(2,std::make_unique<Pipeline>(Pipeline{true,true}));
     assert(f.graphics_cache.size()==1 && f.graphics_cache.at(2)->CanExecuteDraw());
+#ifdef PS5_NATIVE
+    assert(f.state.valid==2);
+#else
+    assert(f.state.valid==3);
+#endif
 }
 """
 compiler=shutil.which("clang++") or shutil.which("g++")
