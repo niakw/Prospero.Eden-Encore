@@ -26,6 +26,7 @@
 #include "video_core/renderer_vulkan/present/util.h"
 #include "video_core/renderer_vulkan/renderer_vulkan.h"
 #include "display_refresh.h"
+#include "frame_metrics.h"
 #include "video_core/renderer_vulkan/vk_blit_screen.h"
 #include "video_core/renderer_vulkan/vk_rasterizer.h"
 #include "video_core/renderer_vulkan/vk_scheduler.h"
@@ -208,7 +209,10 @@ void RendererVulkan::Composite(std::span<const Tegra::FramebufferConfig> framebu
     }
 
     RenderScreenshot(framebuffers);
+    // Count a source callback separately from submitted or displayed frames.
+    ::Eden::FrameMetrics::OnSourceComposite();
     if (::Eden::Display::SkipFrame()) {
+        ::Eden::FrameMetrics::OnSourceSkipped();
         gpu.RendererFrameEndNotify();
         rasterizer.TickFrame();
         return;
@@ -232,12 +236,14 @@ void RendererVulkan::Composite(std::span<const Tegra::FramebufferConfig> framebu
         frame_gen.GenerateInto(device, generated, generation);
         scheduler.Flush(*generated->render_ready);
         present_manager.Present(generated);
+        ::Eden::FrameMetrics::OnGeneratedQueued();
     }
 #endif
 
     scheduler.Flush(*frame->render_ready);
 
     present_manager.Present(frame);
+    ::Eden::FrameMetrics::OnRealQueued();
     scheduler.DispatchWork();
 
     gpu.RendererFrameEndNotify();
@@ -254,6 +260,7 @@ void RendererVulkan::PresentLoading() {
                               present_manager.SwapchainImageViewFormat(), true);
     scheduler.Flush(*frame->render_ready);
     present_manager.Present(frame);
+    ::Eden::FrameMetrics::OnLoadingQueued();
 }
 
 void RendererVulkan::Report() const {

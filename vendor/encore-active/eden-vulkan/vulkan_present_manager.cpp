@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "common/settings.h"
+#include "frame_metrics.h"
 #include "common/thread.h"
 #include "core/frontend/emu_window.h"
 #ifdef HAS_LSFG
@@ -630,8 +631,9 @@ void PresentManager::CopyToSwapchainImpl(Frame* frame) {
         }
     }
 
-    // Present
+    // CPU API return only, not proof of HDMI scanout.
     swapchain.Present(render_semaphore);
+    ::Eden::FrameMetrics::OnSwapchainPresentReturned();
 }
 
 } // namespace Vulkan
