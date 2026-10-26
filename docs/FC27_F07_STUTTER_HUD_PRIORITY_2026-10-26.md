@@ -74,6 +74,19 @@ especially the paired `buffer_cache.mutex / texture_cache.mutex` scope and guest
 `vulkan_present_manager.cpp`.
 Earlier R312 / R314 and Oct 22 missing TIC/TSC map fixes have HOST witnesses; their console effect remains **unverified**. Later HUD loss cannot be attributed to the nine early R400c `no_pipeline` drops. Keep draw rejection/error accounting but do not skip invalid drawing, force full cache invalidation every frame, or introduce unsafe frame skipping.
 
+**F07 DrawTexture→Vulkan pipeline handoff corrected (source/host, NOT console):** the raw-image
+\`BlitImageHelper::BlitColor\` called by \`RasterizerVulkan::DrawTexture\` binds an independent
+graphics pipeline and descriptor set directly in the Vulkan command buffer. Unlike
+\`BlitImpl\`, this path never invalidated the scheduler's cached guest graphics pipeline.
+The next guest draw with an unchanged pipeline pointer could thus **skip the Vulkan
+rebind and retain the blit's pipeline**. On PS5, DrawTexture now calls
+\`Scheduler::InvalidateState\` after queuing the raw blit, refreshing graphics pipeline,
+rescaling and descriptor state on the next draw. The new F07 host test compiles the
+real selected Scheduler methods at O0/O2, exhibits the stale-state route, and
+requires recovery through the corrected source. No shader cache, guest fences,
+rasterizer cache mutexes, game input or CPU/JIT timing policy is bypassed.
+**This is a specific HUD/2D correctness candidate, not a measured FPS improvement.**
+
 **P1: intermittent >300–1000ms pauses.** The Oct 15 long-gap subset was often JIT-heavy even with little cache wait; inspect real A32/A64 compile/retranslate/invalidation and async first-use pipeline blocking separately. Current standard per-core JIT DEV counters do not capture all invalidations in older logs. Do not activate sparse/shared JIT by default without controlled evidence.
 
 **P1: guest progress and input-to-visible-state.** Binder/BufferQueue/NvDisp/Host1x/HLE wake correctness (F05 HOST), physical pad → NPad publications (F06 HOST) and title's own action profile are three distinct properties. The reported frozen menu/match can persist while backend Vulkan produces 30 callbacks/s. Use future evidence only if it pairs guest thread progress and image-content freshness; no guest-save edits or artificial HOME/Plus events.

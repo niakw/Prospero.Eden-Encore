@@ -618,6 +618,12 @@ void RasterizerVulkan::DrawTexture() {
                          static_cast<u32>(ScaleSrc(texture.size.height)), texture.size.depth};
     blit_image.BlitColor(framebuffer, texture.RenderTarget(), texture.ImageHandle(),
                          sampler->Handle(), dst_region, src_region, src_size);
+#ifdef PS5_NATIVE
+    // Raw-image blit directly binds its own Vulkan graphics pipeline.
+    // It does not invalidate Scheduler's cached guest graphics state.
+    // Ensure the following guest draw rebinds pipeline and descriptors.
+    scheduler.InvalidateState();
+#endif
 }
 
 void RasterizerVulkan::Clear(u32 layer_count) {
