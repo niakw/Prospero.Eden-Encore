@@ -133,11 +133,11 @@ def self_test() -> None:
                 lines.append(f"EDEN_DEV_GPU frame={frame} dispatch_calls={index}")
         return "\n".join(lines)
     output = analyze("irrelevant startup" + "\n" +
-                     session(first, [0, 5, 10], [0, 2, 4]) + "\n" +
-                     session(second, [10, 5, 0], [0, 2, 4]) + "\n")
+                     session(first, [0, 5, 10], [0, 4, 8]) + "\n" +
+                     session(second, [10, 5, 0], [0, 4, 8]) + "\n")
     assert len(output) == 2
     assert output[0]["source_sha"] == first and output[1]["source_sha"] == second
-    assert output[0]["late50"] == output[1]["late50"] == 6
+    assert output[0]["late50"] == output[1]["late50"] == 12
     assert output[0]["paired_windows"] == output[1]["paired_windows"] == 3
     assert output[0]["cache_wait_late50_pearson"] == 1.0
     assert output[1]["cache_wait_late50_pearson"] == -1.0
@@ -146,7 +146,7 @@ def self_test() -> None:
     assert "jit_compile_duration" in output[0]["unmeasured_release_fields"]
     assert analyze(session(first, [0, 1, 2], [0, 0, 0]))[0]["cache_wait_late50_pearson"] is None
     assert analyze(session(first, [1, 2, 3], [1, 2, 3], detailed=True))[0]["status"] == "DETAILED_GPU_PRESENT"
-    mixed = session(first, [0, 5, 10], [0, 2, 4]) + "\n"
+    mixed = session(first, [0, 5, 10], [0, 4, 8]) + "\n"
     mixed += "EDEN_VULKAN_FRAME frames=150 seconds=5 fps=30 worst_ms=100 total=150 late50=1 late100=0"
     try:
         analyze(mixed)
