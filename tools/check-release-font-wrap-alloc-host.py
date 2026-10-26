@@ -138,7 +138,7 @@ int main() {
         "", " ", "   ", "one", "FC27 player career HUD scoreboard",
         "Zelda Breath of the Wild", "superlongunbreakablewordtestcase",
         "word    lots   of spaces", "alpha\n\nbeta", "\ntrailing\n",
-        "Éden a\xcc\x81 team", "a\xcc\x81\xcc\x88bc a\xcc\x81 xyz",
+        "Éden a\xcc\x81 team", "a\xcc\x81\xcc\x88" "bc a\xcc\x81 xyz",
         "\xe4\xbd\xa0\xe5\xa5\xbd\xe4\xb8\x96\xe7\x95\x8c", // Chinese
         "\xd7\x90\xd7\x91\xd7\x92 \xd7\x93\xd7\x94  abc", // RTL
         "\xe4\xb8\xad\xe5\x9b\xbd hello \xe4\xb8\x96\xe7\x95\x8c"
