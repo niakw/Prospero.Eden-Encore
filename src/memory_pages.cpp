@@ -19,6 +19,10 @@
 #include <unistd.h>
 
 #ifdef PS5_NATIVE
+#include "jit-sparse-commit.h"
+#endif
+
+#ifdef PS5_NATIVE
 // Keep CPU heaps/tables and JIT views out of RADV's high-word-2 GPU window.
 // This is a non-fixed hint: the kernel retains ownership of collision handling.
 constexpr std::uintptr_t cpu_mapping_hint = 0x1000000000ull;
@@ -563,8 +567,47 @@ bool CommitSparseJitCode(void* executable, std::size_t required) noexcept {
     return true;
 }
 
-// The VA reservation and every physical chunk have one owner. Do not release
-// partial chunks on ClearCache: the region may contain still-executing code.
+// Release only the physical tail of a FULLY quiesced Dynarmic cache.
+bool TrimSparseJitCode(void* executable, std::size_t live_code_end) noexcept {
+    const std::lock_guard lock{sparse_jit_mutex};
+    const auto it = sparse_jit_regions.find(executable);
+    if (it == sparse_jit_regions.end()) return false;
+    auto& region = it->second;
+    const auto plan = ::Eden::Jit::PlanSparseTrim(
+        live_code_end, region.committed, region.capacity, LargePage);
+    if (!plan.valid) return false;
+    if (!plan.release) return true;
+
+    // Invalidate thread-local positive commitment hints before returning
+    // physical pages; a later shader/guest compiler must reallocate them.
+    sparse_jit_generation.fetch_add(1, std::memory_order_acq_rel);
+    const auto guard = [](void* address) noexcept {
+        void* restored = mmap(address, LargePage, PROT_NONE,
+                              MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (restored != address) std::abort();
+    };
+    while (region.committed > plan.keep) {
+        const std::size_t offset = region.committed - LargePage;
+        auto* rx = static_cast<std::uint8_t*>(executable) + offset;
+        auto* rw = static_cast<std::uint8_t*>(region.writable) + offset;
+        // Both aliases must stop referencing the backing BEFORE it is freed.
+        guard(rx);
+        guard(rw);
+        const auto physical = region.physical.back();
+        if (sceKernelReleaseDirectMemory(physical, LargePage) != 0)
+            std::abort();
+        region.physical.pop_back();
+        region.committed -= LargePage;
+        sparse_jit_committed -= LargePage;
+        sparse_jit_committed_live.fetch_sub(LargePage, std::memory_order_relaxed);
+    }
+    std::printf("EDEN_JIT_SPARSE_TRIM released=%zu retained=%zu capacity=%zu\n",
+                plan.release, plan.keep, region.capacity);
+    return true;
+}
+
+// The virtual reservation and every remaining physical chunk have one owner.
+// Untrimmed full-region release still happens only on JIT teardown.
 void ReleaseSparseJitCode(void* executable) noexcept {
     SparseJitRegion region;
     std::size_t remaining = 0;

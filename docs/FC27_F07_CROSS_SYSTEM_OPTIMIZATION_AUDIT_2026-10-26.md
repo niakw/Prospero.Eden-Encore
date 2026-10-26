@@ -60,3 +60,29 @@ The first eight serialized shader environments were restored synchronously and i
 ## F07: actionable shader-prewarm health metrics (no frame overhead)
 
 The old prewarm log said `built N/N` even when Vulkan returned a completed-but-unusable pipeline object. The startup worker now counts `valid` only on successfully admitted graphics/compute handles, retaining `completed` for all build attempts. Once all warm builds have joined, PS5 prints exactly one `EDEN_PS5_SHADER_PREWARM queued=... completed=... valid=... rejected=... prebuild_ms=...` line. This separates actual reusable shaders from disk entries scanned, reports startup cost, and makes regressions between runs measurable. It adds **zero frame-loop clocks or counters**, preserves the eight-entry quota and cannot by itself improve frame pacing. The same change is in the pinned generator and in the source-extracted host fixture.
+
+## F07: sparse JIT physical return after a quiesced full cache eviction (DEV only)
+
+The intended dynamic unified-memory policy cannot be achieved by fixed launch
+budgets alone. The existing PS5 sparse allocator already reserves stable
+RX/RW virtual ranges and commits physical 2 MiB chunks on demand, but previously
+held every committed chunk until whole-title teardown. A full JIT cache
+evacuation left those direct pages unavailable to subsequent GPU texture/guest
+allocation even though all code had been invalidated.
+
+A new **developer-only** path calls `Common::TrimSparseJitCode` after
+`BlockOfCode::ClearCache` resets the code cursor. It retains the executable
+prelude, at least the initial 4 MiB bootstrap, and one 2 MiB recompilation
+chunk; returns ONLY whole unused physical chunks; replaces BOTH their
+old RX/RW mappings with inaccessible guards BEFORE releasing backing; and
+bumps `sparse_jit_generation` to invalidate thread-local prior commit hints.
+It does not relocate the executable VA, allocate outside the reserved arena,
+run on partial invalidations, touch the GPU cache, or change W^X.
+
+This is limited by `EDEN_SPARSE_JIT_DEV`. Production CMake still rejects
+sparse JIT in `EDEN_FINAL_RELEASE_PROFILE`; no console validation is claimed.
+A C++ source-extracted host fixture tests alias guard ordering, exact 2 MiB
+return, invalidation epoch, repeat clears, 16 MiB core 3, and demand
+recommit policy at O0/O2. Full CPU/GPU/RAM arbitration (priorities, pressure
+sampling and safe GPU reclamation) is **not** yet implemented; this change
+repairs the missing return path and must not be labeled fully adaptive.

@@ -492,6 +492,7 @@ jobs:
           python3 -B tools/check-maintained-reg-alloc.py
           python3 -B tools/check-maintained-sparse-vector.py
           python3 -B tools/check-jit-sparse-host.py
+          python3 -B tools/check-native-sparse-jit-trim-host.py
           python3 -B tools/check-sparse-index-boundary.py
           python3 -B tools/check-sparse-zero-bounds-host.py
           python3 -B tools/check-sparse-slot-reuse-host.py

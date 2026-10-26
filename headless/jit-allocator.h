@@ -27,6 +27,9 @@ std::size_t ExecutableAliasSpan(void*) noexcept;
 #ifdef EDEN_JIT_ALIAS_NATIVE
 void* ReserveSparseJitCode(std::size_t, void**) noexcept;
 bool CommitSparseJitCode(void*, std::size_t) noexcept;
+// DEV-only, after a quiesced whole-cache invalidation: return unused physical
+// direct chunks to PS5, keeping both virtual aliases stable.
+bool TrimSparseJitCode(void*, std::size_t live_code_end) noexcept;
 bool IsSparseJitCode(const void*) noexcept;
 void ReleaseSparseJitCode(void*) noexcept;
 #endif
