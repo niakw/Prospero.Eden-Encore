@@ -19,7 +19,8 @@ end=SRC.index("\n        });",start) + len("\n        });")
 snippet=SRC[start:end]
 assert SRC.count("        scheduler.Record([this](vk::CommandBuffer) {\n") == 1
 assert "if (is_built.load(std::memory_order_acquire)) return;" in snippet
-assert snippet.index("std::memory_order_acquire") < snippet.index("std::unique_lock lock{build_mutex}")
+assert snippet.index("std::memory_order_acquire") < snippet.index("CachePhase::GraphicsPipelineWait") < snippet.index("std::unique_lock lock{build_mutex}")
+assert snippet.count("CachePhase::GraphicsPipelineWait") == 1
 assert "build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });" in snippet
 assert 'Builder published the pipeline before this ordered GPU callback' in GEN
 
@@ -36,6 +37,14 @@ CPP=r"""
 namespace vk { using CommandBuffer = int; }
 namespace Eden::Performance {
 struct VulkanTimer { explicit VulkanTimer(int) {} };
+enum class CachePhase { GraphicsPipelineWait };
+inline std::atomic<bool> detailed_gpu_profile{true};
+inline std::atomic<unsigned> measured_waits{0};
+struct CachePhaseTimer {
+    explicit CachePhaseTimer(CachePhase, bool active) {
+        if (active) measured_waits.fetch_add(1, std::memory_order_relaxed);
+    }
+};
 }
 struct CountingMutex {
     std::mutex internal;
@@ -75,6 +84,7 @@ int main() {
         p.is_built.store(true, std::memory_order_release);
         p.scheduler.queued[0](0);
         assert(p.build_mutex.count.load() == 0);
+        assert(Eden::Performance::measured_waits.load() == 0);
     }
     {
         Probe p;
@@ -96,6 +106,21 @@ int main() {
         p.build_condvar.notify_all();
         worker.join();
         assert(took_lock && returned.load());
+        assert(Eden::Performance::measured_waits.load() == 1);
+    }
+    {
+        Eden::Performance::detailed_gpu_profile.store(false);
+        Probe p;
+        p.Queue();
+        std::thread publisher([&] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            { std::scoped_lock lock{p.build_mutex};
+              p.is_built.store(true, std::memory_order_release); }
+            p.build_condvar.notify_all();
+        });
+        p.scheduler.queued[0](0);
+        publisher.join();
+        assert(Eden::Performance::measured_waits.load() == 1);
     }
 }
 """.replace("INJECT",snippet)
