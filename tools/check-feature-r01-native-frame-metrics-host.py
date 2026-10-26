@@ -36,6 +36,12 @@ assert swap.index("swapchain.Present(render_semaphore);") < swap.index("::Eden::
 report=perf.split("void ReportGpuThread(unsigned frame)",1)[1]
 assert report.index("if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return;") < report.index("::Eden::FrameMetrics::Sample(")
 assert 'scope=cpu_observed_not_guest_fps_not_scanout_not_latency' in report
+# Native PS5 report has a separate Fastmem window in the same scope.
+# Keep the opt-in frame sample's local name distinct from that later snapshot.
+assert 'const auto frame_window = ::Eden::FrameMetrics::Sample(frame_sample_ns);' in report
+assert 'const auto window = Eden::Fastmem::WindowStats();' in report
+assert 'const auto window = ::Eden::FrameMetrics::Sample(frame_sample_ns);' not in report
+
 assert main.count("Eden::FrameMetrics::ResetForTitle(deep_frame_profile,") == 1
 assert 'Eden::Performance::detailed_gpu_profile.store(deep_frame_profile' in main
 assert "if (Enabled())" in hdr and "if (!Enabled()) return {};" in hdr
