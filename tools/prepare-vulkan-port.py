@@ -1552,6 +1552,14 @@ texture_costs.extend([
      '#endif\n'
      '    const bool can_rescale = ImageCanRescale(image);'),
 ])
+# F07: distinguish the three unavoidable steps of a CPU-modified texture
+# refresh, sampled inside its existing lock. Keep pinned-source generation
+# authoritative: never hand-patch only the emitted texture_cache.h.
+texture_costs.append((
+    "    auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));\n    UploadImageContents(image, staging);\n    runtime.InsertUploadMemoryBarrier();",
+    "#ifdef PS5_NATIVE\n    // F07: isolate staging allocation, CPU decode/unswizzle and the required\n    // upload barrier within the existing 1-in-16 sampled refresh.\n    // No lock, image flag, command order or guest-visible upload is changed.\n    ::Eden::Performance::CachePhaseTimer staging_phase{\n        ::Eden::Performance::CachePhase::TextureUploadStaging};\n#endif\n    auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));\n#ifdef PS5_NATIVE\n    staging_phase.Stop();\n    ::Eden::Performance::CachePhaseTimer contents_phase{\n        ::Eden::Performance::CachePhase::TextureUploadContents};\n#endif\n    UploadImageContents(image, staging);\n#ifdef PS5_NATIVE\n    contents_phase.Stop();\n    ::Eden::Performance::CachePhaseTimer barrier_phase{\n        ::Eden::Performance::CachePhase::TextureUploadBarrier};\n#endif\n    runtime.InsertUploadMemoryBarrier();\n#ifdef PS5_NATIVE\n    barrier_phase.Stop();\n#endif"
+))
+
 adapt('src/video_core/texture_cache/texture_cache.h',
       'vulkan-cache/video_core/texture_cache/texture_cache.h', [
     ('namespace VideoCommon {', '#include "performance.h"\n#include "image_pages.h"\n#include "vulkan_gc_budget.h"\n#include "common/scope_exit.h"\nnamespace Vulkan { class TextureCacheRuntime; }\n\nnamespace VideoCommon {'),
@@ -2452,6 +2460,15 @@ ps5_first_use_new = (
 if shader_source.count(ps5_first_use_old) != 1:
     raise RuntimeError('PS5 visual-first pipeline source anchor drift')
 shader_source = shader_source.replace(ps5_first_use_old, ps5_first_use_new)
+
+# F07: instrument ALL cold graphics pipeline CPU creations when detailed
+# diagnostics are enabled; leave the quiet hot path and draw order unchanged.
+f07_pipeline_old = "    if (is_new) {\n        pipeline = CreateGraphicsPipeline();\n    }"
+f07_pipeline_new = "    if (is_new) {\n#ifdef PS5_NATIVE\n        // F07: first-use guest shader translation and SPIR-V generation are\n        // synchronous even when the Vulkan pipeline build is queued.\n        // Count EVERY cold miss with Detailed Logging, not one in 16 draws.\n        // Quiet releases take no clock readings on this path.\n        ::Eden::Performance::CachePhaseTimer first_use_cpu_phase{\n            ::Eden::Performance::CachePhase::GraphicsPipelineCreate,\n            ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};\n#endif\n        pipeline = CreateGraphicsPipeline();\n    }"
+if shader_source.count(f07_pipeline_old) != 1:
+    raise RuntimeError('F07 pinned cold graphics pipeline source drift')
+shader_source = shader_source.replace(f07_pipeline_old, f07_pipeline_new, 1)
+
 shader_output = output / 'vk_pipeline_cache_cost.cpp'
 if not shader_output.exists() or shader_output.read_text() != shader_source:
     shader_output.write_text(shader_source)
