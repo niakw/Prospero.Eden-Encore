@@ -154,8 +154,17 @@ struct Runtime {
     }
 };
 namespace Eden::Performance {
-enum class CachePhase {TextureCpuRefresh};
-struct CachePhaseTimer {explicit CachePhaseTimer(CachePhase){}};
+// Keep the host upload fixture compatible with the shipping F07 sampled
+// diagnostics. These stand-ins intentionally preserve the same no-op effects:
+// image bytes, barriers and cache ownership are validated independently.
+enum class CachePhase {
+    TextureCpuRefresh, TextureUploadStaging, TextureUploadContents,
+    TextureUploadBarrier
+};
+struct CachePhaseTimer {
+    explicit CachePhaseTimer(CachePhase) {}
+    void Stop() noexcept {}
+};
 }
 #define LOG_WARNING(...) ((void)0)
 #define HW_GPU 0
