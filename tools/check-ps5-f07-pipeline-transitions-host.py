@@ -19,7 +19,7 @@ end = "\n\n    [[nodiscard]] bool IsBuilt() const noexcept {"
 assert header.count(begin) == 1
 assert header.count(end) == 1
 selected = begin + header.split(begin, 1)[1].split(end, 1)[0]
-assert selected.count("hot_transition_index") == 3
+assert selected.count("hot_transition_index") == 4
 assert header.count("    size_t hot_transition_index{};") == 1
 assert "transition_source.count(transition_next_old) != 1" in generator
 assert "transition_source.replace(transition_next_old, transition_next_new, 1)" in generator
