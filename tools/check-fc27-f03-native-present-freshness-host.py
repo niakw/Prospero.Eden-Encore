@@ -171,7 +171,7 @@ with tempfile.TemporaryDirectory(prefix="encore-f03-present-") as directory:
     source.write_text(cpp)
     for opt in ("-O0","-O2"):
         exe=Path(directory)/("hud"+opt)
-        cmd=[compiler,"-std=c++20",opt,"-DPS5_NATIVE=1","-g","-pthread","-Wall","-Wextra",
+        cmd=[compiler,"-std=c++20",opt,"-I",str(ROOT/"headless"),"-DPS5_NATIVE=1","-g","-pthread","-Wall","-Wextra",
              "-Werror","-fsanitize=undefined","-fno-sanitize-recover=all",
              str(source),"-o",str(exe)]
         built=subprocess.run(cmd,capture_output=True,text=True,timeout=70)

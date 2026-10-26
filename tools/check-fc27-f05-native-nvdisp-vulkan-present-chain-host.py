@@ -609,7 +609,7 @@ with tempfile.TemporaryDirectory(prefix="encore-f05-guest-to-present-") as d:
     a.write_text(host);b.write_text(vulkan);c.write_text(compositor);d.write_text(binder_cpp);e.write_text(guest_cpp)
     for opt in ("-O0","-O2"):
         exe=p/("chain"+opt)
-        build=subprocess.run([compiler,"-std=c++20",opt,"-pthread","-Wall",
+        build=subprocess.run([compiler,"-std=c++20",opt,"-I",str(ROOT/"headless"),"-pthread","-Wall",
                  "-Wextra","-Werror","-Wno-unused-parameter","-fsanitize=undefined",
                  "-fno-sanitize-recover=all",str(a),str(b),str(c),str(d),str(e),"-o",str(exe)],
                  text=True,capture_output=True,timeout=90)
