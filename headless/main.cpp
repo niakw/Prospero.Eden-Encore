@@ -994,6 +994,16 @@ int main(int argc, char** argv) {
         const int profile_fsr = effective_authored_tier >= 0 ? title_profile.fsr_sharpness : launch_preferences.fsr_sharpness;
         const int profile_aa = effective_authored_tier >= 0 ? title_profile.anti_aliasing : launch_preferences.anti_aliasing;
         const int profile_refresh = effective_authored_tier >= 0 ? title_profile.refresh : launch_preferences.refresh;
+#if defined(PS5_NATIVE) && !defined(EDEN_DEV_PROFILE)
+        // A saved Detailed Logging preference can be loaded without passing
+        // through the live launcher settings callback. The shipping title
+        // must initialize sampled cache/draw diagnostics on every launch;
+        // otherwise the ON UI state silently yields no GPU-owner attribution.
+        // OFF remains a zero-timer path in the very same release binary.
+        Eden::Performance::ResetCachePhases();
+        Eden::Performance::detailed_gpu_profile.store(
+            launch_preferences.detailed_logging, std::memory_order_relaxed);
+#endif
 #ifdef EDEN_DEV_VULKAN
         // New game session: old Vulkan timestamp query pools are tied to a
         // destroyed VkDevice. Reset even when the dev probe is off now.

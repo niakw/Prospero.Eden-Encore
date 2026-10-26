@@ -27,6 +27,7 @@ on:
       - 'vendor/encore-active/eden-core/overrides/core/guest_memory.h'
       - 'tools/check-native-guest-memory-empty-read-host.py'
       - 'headless/main.cpp'
+      - 'tools/check-ps5-release-saved-diagnostics-host.py'
       - 'tools/check-native-quiet-shutdown-heap-host.py'
       - 'tools/check-native-fastmem-signal-install-host.py'
       - 'tools/check-sparse-zero-bounds-host.py'
@@ -366,6 +367,7 @@ jobs:
           python3 -B tools/check-vendored-hid-resource-source.py
           python3 -B tools/check-native-hid-cadence-host.py
           python3 -B tools/audit-eden-progress-state.py
+          python3 -B tools/check-ps5-release-saved-diagnostics-host.py
           python3 -B tools/check-eden-optimization-coverage.py
           python3 -B tools/check-vendor-archive-pin-contract-host.py
           python3 -B tools/check-native-hle-wait-null-queue-host.py
