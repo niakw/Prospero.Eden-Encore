@@ -630,6 +630,13 @@ void EdenResetStaticVertexInputBinding() noexcept;
 
 PipelineCache::~PipelineCache() {
     EdenResetStaticVertexInputBinding();
+#ifdef PS5_NATIVE
+    // First-use shader environments are serialized on this worker. Let all
+    // accepted writes finish before destroying the worker and VkPipelineCache,
+    // or a later launch re-translates shaders that were never persisted.
+    // This is a shutdown-only drain, never a wait in the draw hot path.
+    serialization_thread.WaitForRequests();
+#endif
     if (use_vulkan_pipeline_cache && !vulkan_pipeline_cache_filename.empty()) {
         SerializeVulkanPipelineCache(vulkan_pipeline_cache_filename, vulkan_pipeline_cache,
                                      CACHE_VERSION);

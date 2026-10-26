@@ -2554,6 +2554,16 @@ if shader_source.count(f07_warm_before_4) != 1:
     raise RuntimeError('F07 bounded cache prewarm anchor 4 moved')
 shader_source = shader_source.replace(f07_warm_before_4, f07_warm_after_4)
 
+# F07: on PS5, drain queued shader-environment serialization at game exit.
+# Without it ThreadWorker's jthread destruction can stop queued jobs before
+# they are persisted; the next session recompiles the same first-use shaders.
+# No gameplay-frame lock or additional disk write is introduced.
+f07_drain_old = "PipelineCache::~PipelineCache() {\n    EdenResetStaticVertexInputBinding();"
+f07_drain_new = "PipelineCache::~PipelineCache() {\n    EdenResetStaticVertexInputBinding();\n#ifdef PS5_NATIVE\n    // First-use shader environments are serialized on this worker. Let all\n    // accepted writes finish before destroying the worker and VkPipelineCache,\n    // or a later launch re-translates shaders that were never persisted.\n    // This is a shutdown-only drain, never a wait in the draw hot path.\n    serialization_thread.WaitForRequests();\n#endif"
+if shader_source.count(f07_drain_old) != 1:
+    raise RuntimeError('F07 pipeline-cache shutdown drain anchor drift')
+shader_source = shader_source.replace(f07_drain_old, f07_drain_new, 1)
+
 # Write only after ALL native pipeline-cache deltas, including startup prewarm.
 # Earlier emission silently discarded the last five F07 transformations.
 shader_output = output / 'vk_pipeline_cache_cost.cpp'
