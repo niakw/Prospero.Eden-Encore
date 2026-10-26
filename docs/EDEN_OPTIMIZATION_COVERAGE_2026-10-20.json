@@ -3926,6 +3926,478 @@
       "disposition": "new_source_issue_corrected",
       "proof_ref": "tools/check-launcher-gl-scissor-reuse-host.py",
       "evidence": "Shipping GL launcher draw: repeated same-clip texture runs used to submit duplicate glScissor state and recalculate pixel rectangles on each run. Cache last clip only within one draw, preserve disabled/re-enabled and changed rectangles; actual GlBatch::draw source compiled O0/O2 with mocked GL calls. No console FPS claim."
+    },
+    {
+      "path": "headless/prosperoeden/eden_services.cpp",
+      "disposition": "new_source_issue_corrected",
+      "reviewed_source_git_blob": "0e8df785961d6f87ec5b13eb99b93c5e7635ea3f",
+      "proof_ref": "tools/check-release-case-index-dedup-host.py",
+      "evidence": "LocaleCaseCandidates: linear-time stable regional dedup now replaces repeated vector search; actual release test. Exact selected source/O0/O2 host code parity; no PS5 FPS claim.",
+      "review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md"
+    },
+    {
+      "path": "headless/prosperoeden/eden_services.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "b47c4b8a09e5288ebfe841266d57228abbbc4af7",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "EdenServices API and async media cancellation boundary; interface only. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/fr_fr_embedded.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "7ebe8df590bf6f7e371f7982ff75e1eb4f2255f6",
+      "review_scope": "generated-configuration",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Embedded French catalog data, not a per-frame algorithm. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/frontend.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "6b0e980fb727b9dce86824994004e49964a41fe4",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "RunApp input/render loop, language and capture entry; no further proven hotpath defect. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/frontend.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "a2a7f8fffa990900543c3eb2ff4f750381c8153b",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "SelectProsperoEdenGame launcher interface only. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/frontend_stub.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "386e9893835d915935d87e7b61e0c6d95f278ab6",
+      "review_scope": "startup-shim",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Headless alternative frontend stub; not the shipping graphical path. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/host/fake_services.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "00702b9d5b1f7898570cdec98bb6bcfb10b1448f",
+      "review_scope": "host-only-test",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "FakeServices scripted fixture/media creation used by host previews. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/host/fake_services.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "414360bf0fb1348ca2e7bed359bd7bcb18b0a0c4",
+      "review_scope": "host-only-test",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "FakeServices host contract declarations; not PS5 runtime. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/host/preview_main.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "84ef0e1466b10865f4df12e2c68824dfebe0a941",
+      "review_scope": "host-only-test",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Preview Stage render/press/screenshot scripting, including timed waits, host-only. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/audio/mixer.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "6b814bbd5e3eca9a25dd208a57e134584920fbd5",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Mixer::render/command bus, bounded live voice and command processing; no proven redundant native work. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/audio/mixer.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "73bac058eccd18cd9761b9eb187cbebcc590c0f3",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Mixer command/voice fields and audio callback interface. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/audio/sounds.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "3fec935a1a779bd54c1eeb857ab358bb58a0f40e",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "SoundBank::load occurs during startup; play posts cue through mixer. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/audio/sounds.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "8818b3923e5f438a1fed035ca5aa6d7932861fc4",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Static sound cue and sample ownership declarations. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/audio/stream_ring.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "48a7205d87f965cac77566850afff918c18f286d",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "StreamRing read/write circular float buffer; no filesystem or GL calls. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/audio/wav.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "9f04abce17f6d948ab9ac233ea8417300a407489",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "decode_wav PCM parser called on sound load, not each audio callback. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/audio/wav.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "ecc8a878f7c2eebf9fc0463a6de4694f787e2111",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "DecodedWav representation and decode signature. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/core/file.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "63e01611dfc584364010b137512a7eaec3ba3328",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "read_file bounded to configured max size and only called by loaders. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/core/log.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "de37255b2a8c46b29cbbbd985fde547a3ddb0338",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "printf-style diagnostic helper; no steady-state processing logic. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/core/strings.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "2a1578e80c0949c8c376f412a88912f7514fc6b5",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Catalog::load and translation lookup; key normalization and UTF-8 fallback only. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/core/strings.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "3916b4a8366dc584a67f4820e94ce636b82add53",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Catalog dictionary and translation API; non-renderer declarations. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/core/tween.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "a1aa75b026ebe10f61423a3fb10218e88bd274dc",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Inline cubic/expo easing and scalar interpolation only. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/bidi.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "bfe3552274b50591343647ea9197293e542830c9",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Bidi::resolve/visual_order Unicode grapheme and bracket ordering; preserve correctness. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/bidi.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "2f938e9fb0ee8c1ae9bb35c549f1795e15856dbd",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Bidirectional text shaping interfaces only. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/draw_list.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "5bcba9105df30b618b3ebaded4017249dc4f51ce",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "DrawList grouping/rounded-rectangle primitives produce batched instance runs. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/draw_list.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "864b70c350a981a1bcbcd3e493206997c66943a0",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "DrawList reusable vectors and clip/transform stack declarations. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/font.cpp",
+      "disposition": "new_source_issue_corrected",
+      "reviewed_source_git_blob": "219fe43c951ecf98b6f2a1319677720dd16d5d64",
+      "proof_ref": "tools/check-release-font-fit-alloc-host.py",
+      "evidence": "Font::fit reuses one UTF-8 prefix, eliminating temporary string per glyph; O0/O2 host witness. Exact selected source/O0/O2 host code parity; no PS5 FPS claim.",
+      "review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md"
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/font.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "0a129cd37e168eed7cd97a4d0460abf0fb7577c1",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Font atlas/dynamic layout declarations and shaping cache ownership. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/font_format.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "cc807dc31fbf062682a9ebc39a3355c6b70e0bf2",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Packed immutable font/glyph format definitions. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/gl_batch.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "e881358bb08acf6224a18abe9662f23fe5397490",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "GL stream slot/capacity and one batch submission API; renderer cpp already reviewed. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/gl_program.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "6aa10a3f064b7fb8212e475e6834bce5bae4d74e",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "GL shader compile/link startup helper; not frame-loop compilation. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/gl_program.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "102dbe5c0739ed8cc20d59fb08d372d9cd0dbadb",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "GL shader program creation API. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/harfbuzz.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "b65200e2af41716cb16712ccba130cace700eeff",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "External text shaping implementation shim; no app-owned hot loop. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/image.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "296809efb6b18f7686f43ab6a6b11946b5c312bd",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "TGA and DDS decode plus halve; image decoding moved to async cover worker. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/image.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "95e1d43c26906b335b1dc54b424896fc83d4e53d",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Image pixel buffer and decode functions. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/stream_ring_policy.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "91cd2ead70c1523f1f8b4ae2a575a521f653bda7",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "StreamCapacity growth policy; amortized buffer sizing. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/system_fonts.cpp",
+      "disposition": "new_source_issue_corrected",
+      "reviewed_source_git_blob": "a721c95a81c9fe309fcff9fa3be01b8b21cd9272",
+      "proof_ref": "tools/check-release-font-sdf-scratch-host.py",
+      "evidence": "distances() SDF scratch now TLS reused across glyphs/inside/outside; O0/O2 reference witness. Exact selected source/O0/O2 host code parity; no PS5 FPS claim.",
+      "review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md"
+    },
+    {
+      "path": "headless/prosperoeden/pe/gfx/system_fonts.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "4a4baaa602f6f9a6148c342fa66f185ef3c579e9",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "SystemFonts glyph fallback and face selection declarations. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/platform/audio_out.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "2b8a12c86119c1fa0dd94713e23b2e560eed4015",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "AudioOut::run uses fixed hardware grain and Mixer::render output. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/platform/audio_out.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "060842253e0156ffa65044eb880d28262236093c",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "AudioOut worker lifecycle counters and channel declarations. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/platform/display_egl.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "a31fb6db879928c4fe7d96318046cae7eb68b2b8",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Display::swap/open/close EGL surface boundary; native GL batch owns drawing. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/platform/display_egl.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "7438f8f6fa10b7f0aa8ea170be2dfbb522d912eb",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "EGL display lifecycle surface and error signatures. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/browse.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "96afbbbae783279625e88c18e39ec1115f2b4730",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "browse_to/press_files/draw_files path browser; disk navigation not guest GPU hotpath. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/case_media_selection.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "3a3ddb5916701487537e6670f4ebc56b4d4d9716",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "FrontPaper/BackScenes ranked pointer selection; bounded to face inputs. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/dualsense_mask_asset.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "ba9a3d15e7cf7203fc1376d5f936e3eefa2037d2",
+      "review_scope": "generated-configuration",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Immutable inline controller-mask artwork; no runtime decode/search. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/hero_text_layout.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "9e76a77e987b2b599bb660724bd5471d5d236d67",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "wrap_description word-boundary layout, weak endings; bounded by hero text. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/home.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "a40fd7f010aa77ec58222ec002a94fd9c3947995",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "refresh_home_hero/press_home and home draw, reused current game media. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/launcher.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "c4e101f7dc6b47134a104cee49e3e4bdc14a51d4",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Launcher update, asynchronous avatar discovery and screen transitions. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/launcher.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "d49a244840e25071154d5e40854c11d6c500b20d",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Launcher screen/notification/selection state and async task ownership. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/mapping.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "2ce53b13a38b1c7168d4859360a6f34e664e77ea",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Button mapping UI, profile names and input binding page. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/services.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "3d26738cbf0f8a3804d4147a147d433573861f84",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Services abstract media and title interface; no implementation allocation. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/settings.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "be3b42b9740e084ab2e494b0b88cb70ef5336e44",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Settings press/render/dialog and preference labels; no frame-blocking I/O identified. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/switch_theme.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "f852926a48bc5d02d641a190c6c94ad5010f3e49",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Switch-theme tile/advanced panel drawing via reused DrawList painter. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/theme.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "fc7b378ab519a454068a8802c3f871aee63411d7",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Inline color/text sizing and visual easing policy. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/video_presets.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "05a735ec7b059c92aecdb32a08a7f1e9061d31c0",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Inline profile lookup/compare with no disk or GPU work. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/widgets.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "7b50467e172a985590a590027615868c2c8036f3",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Canvas text/box/case-face drawing functions; batched GL and cover queries. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/widgets.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "1b31fd1a9e3917792ed69a2a27499aa55e704fd9",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Widget layout/color/cover interfaces only. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/radio_input.c",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "e42b0ba4c27f35257167e627b8bc6db92e8a6a90",
+      "review_scope": "launcher-release-hotpath",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Pad polling and bounded edge-event translation; no network/disk dependency. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/radio_input.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "e994a36c5a1d2263f9f6dadc648c8e787e8f1d68",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Pad polling/event API declarations. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
+      "path": "headless/prosperoeden/version.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "6b0dd31b2266917627b53e3e657d7d406f90e2f5",
+      "review_scope": "generated-configuration",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Canonical package/app version constants only. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
     }
   ],
   "inventoried_including_pinned": 538,

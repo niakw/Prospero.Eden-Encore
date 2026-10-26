@@ -1,0 +1,75 @@
+# Eden Encore — fin de la première passe d’optimisation du lanceur RELEASE
+
+**26 octobre 2026.** Sur l'unique branche `dev/ps5-sparse-jit`, l'application destinée à l'utilisateur est construite par `tools/build-package.sh release-stage`, avec `EDEN_FINAL_RELEASE_PROFILE=ON`. Les variantes DEV ne sont pas des livrables utilisateur et **ne font pas partie de ce chantier**.
+
+## Portée vérifiée
+
+Inventaire à partir des `git ls-files` actuellement suivis : **507 fichiers sources maintenus**, **448** déjà traités, **59** nouveaux fichiers du lanceur classés ci-dessous. Aucun propriétaire CPU/JIT/GPU/HLE nouveau parmi les 59. Trois fonctions RELEASE ont nécessité un changement de code (`LocaleCaseCandidates`, `Font::fit`, `distances`); les autres ont une décision de première revue. La revue couvre le périmètre et les principaux chemins; elle **ne démontre ni absence universelle de bugs, ni benchmark FPS, ni revue exhaustive de toutes les branches de chaque fonction**.
+
+Tests source-extraits : `tools/check-release-case-index-dedup-host.py`, `tools/check-release-font-fit-alloc-host.py`, `tools/check-release-font-sdf-scratch-host.py` (`-O0`/`-O2`). Tous doivent passer sur les octets de cette source avant qualification du ZIP release. Les chemins non modifiés sont épinglés à leur blob Git exact : leur modification invalide automatiquement cette première revue lors du contrôle `tools/check-eden-optimization-coverage.py`.
+
+| Source | Blob Git | Décision | Fonction/coût examiné |
+| --- | --- | --- | --- |
+| `headless/prosperoeden/eden_services.cpp` | `0e8df785961d` | Optimisation intégrée | LocaleCaseCandidates: linear-time stable regional dedup now replaces repeated vector search; actual release test. |
+| `headless/prosperoeden/eden_services.h` | `b47c4b8a09e5` | Revue statique | EdenServices API and async media cancellation boundary; interface only. |
+| `headless/prosperoeden/fr_fr_embedded.h` | `7ebe8df590bf` | Données/constantes | Embedded French catalog data, not a per-frame algorithm. |
+| `headless/prosperoeden/frontend.cpp` | `6b0e980fb727` | Revue statique | RunApp input/render loop, language and capture entry; no further proven hotpath defect. |
+| `headless/prosperoeden/frontend.h` | `a2a7f8fffa99` | Revue statique | SelectProsperoEdenGame launcher interface only. |
+| `headless/prosperoeden/frontend_stub.cpp` | `386e9893835d` | Revue statique | Headless alternative frontend stub; not the shipping graphical path. |
+| `headless/prosperoeden/host/fake_services.cpp` | `00702b9d5b1f` | Test hôte | FakeServices scripted fixture/media creation used by host previews. |
+| `headless/prosperoeden/host/fake_services.hpp` | `414360bf0fb1` | Test hôte | FakeServices host contract declarations; not PS5 runtime. |
+| `headless/prosperoeden/host/preview_main.cpp` | `84ef0e1466b1` | Test hôte | Preview Stage render/press/screenshot scripting, including timed waits, host-only. |
+| `headless/prosperoeden/pe/audio/mixer.cpp` | `6b814bbd5e3e` | Revue statique | Mixer::render/command bus, bounded live voice and command processing; no proven redundant native work. |
+| `headless/prosperoeden/pe/audio/mixer.hpp` | `73bac058eccd` | Revue statique | Mixer command/voice fields and audio callback interface. |
+| `headless/prosperoeden/pe/audio/sounds.cpp` | `3fec935a1a77` | Revue statique | SoundBank::load occurs during startup; play posts cue through mixer. |
+| `headless/prosperoeden/pe/audio/sounds.hpp` | `8818b3923e5f` | Revue statique | Static sound cue and sample ownership declarations. |
+| `headless/prosperoeden/pe/audio/stream_ring.hpp` | `48a7205d87f9` | Revue statique | StreamRing read/write circular float buffer; no filesystem or GL calls. |
+| `headless/prosperoeden/pe/audio/wav.cpp` | `9f04abce17f6` | Revue statique | decode_wav PCM parser called on sound load, not each audio callback. |
+| `headless/prosperoeden/pe/audio/wav.hpp` | `ecc8a878f7c2` | Revue statique | DecodedWav representation and decode signature. |
+| `headless/prosperoeden/pe/core/file.hpp` | `63e01611dfc5` | Revue statique | read_file bounded to configured max size and only called by loaders. |
+| `headless/prosperoeden/pe/core/log.hpp` | `de37255b2a8c` | Revue statique | printf-style diagnostic helper; no steady-state processing logic. |
+| `headless/prosperoeden/pe/core/strings.cpp` | `2a1578e80c09` | Revue statique | Catalog::load and translation lookup; key normalization and UTF-8 fallback only. |
+| `headless/prosperoeden/pe/core/strings.hpp` | `3916b4a8366d` | Revue statique | Catalog dictionary and translation API; non-renderer declarations. |
+| `headless/prosperoeden/pe/core/tween.hpp` | `a1aa75b026eb` | Revue statique | Inline cubic/expo easing and scalar interpolation only. |
+| `headless/prosperoeden/pe/gfx/bidi.cpp` | `bfe3552274b5` | Revue statique | Bidi::resolve/visual_order Unicode grapheme and bracket ordering; preserve correctness. |
+| `headless/prosperoeden/pe/gfx/bidi.hpp` | `2f938e9fb0ee` | Revue statique | Bidirectional text shaping interfaces only. |
+| `headless/prosperoeden/pe/gfx/draw_list.cpp` | `5bcba9105df3` | Revue statique | DrawList grouping/rounded-rectangle primitives produce batched instance runs. |
+| `headless/prosperoeden/pe/gfx/draw_list.hpp` | `864b70c350a9` | Revue statique | DrawList reusable vectors and clip/transform stack declarations. |
+| `headless/prosperoeden/pe/gfx/font.cpp` | `219fe43c951e` | Optimisation intégrée | Font::fit reuses one UTF-8 prefix, eliminating temporary string per glyph; O0/O2 host witness. |
+| `headless/prosperoeden/pe/gfx/font.hpp` | `0a129cd37e16` | Revue statique | Font atlas/dynamic layout declarations and shaping cache ownership. |
+| `headless/prosperoeden/pe/gfx/font_format.hpp` | `cc807dc31fbf` | Revue statique | Packed immutable font/glyph format definitions. |
+| `headless/prosperoeden/pe/gfx/gl_batch.hpp` | `e881358bb08a` | Revue statique | GL stream slot/capacity and one batch submission API; renderer cpp already reviewed. |
+| `headless/prosperoeden/pe/gfx/gl_program.cpp` | `6aa10a3f064b` | Revue statique | GL shader compile/link startup helper; not frame-loop compilation. |
+| `headless/prosperoeden/pe/gfx/gl_program.hpp` | `102dbe5c0739` | Revue statique | GL shader program creation API. |
+| `headless/prosperoeden/pe/gfx/harfbuzz.cpp` | `b65200e2af41` | Revue statique | External text shaping implementation shim; no app-owned hot loop. |
+| `headless/prosperoeden/pe/gfx/image.cpp` | `296809efb6b1` | Revue statique | TGA and DDS decode plus halve; image decoding moved to async cover worker. |
+| `headless/prosperoeden/pe/gfx/image.hpp` | `95e1d43c2690` | Revue statique | Image pixel buffer and decode functions. |
+| `headless/prosperoeden/pe/gfx/stream_ring_policy.hpp` | `91cd2ead70c1` | Revue statique | StreamCapacity growth policy; amortized buffer sizing. |
+| `headless/prosperoeden/pe/gfx/system_fonts.cpp` | `a721c95a81c9` | Optimisation intégrée | distances() SDF scratch now TLS reused across glyphs/inside/outside; O0/O2 reference witness. |
+| `headless/prosperoeden/pe/gfx/system_fonts.hpp` | `4a4baaa602f6` | Revue statique | SystemFonts glyph fallback and face selection declarations. |
+| `headless/prosperoeden/pe/platform/audio_out.cpp` | `2b8a12c86119` | Revue statique | AudioOut::run uses fixed hardware grain and Mixer::render output. |
+| `headless/prosperoeden/pe/platform/audio_out.hpp` | `060842253e01` | Revue statique | AudioOut worker lifecycle counters and channel declarations. |
+| `headless/prosperoeden/pe/platform/display_egl.cpp` | `a31fb6db8799` | Revue statique | Display::swap/open/close EGL surface boundary; native GL batch owns drawing. |
+| `headless/prosperoeden/pe/platform/display_egl.hpp` | `7438f8f6fa10` | Revue statique | EGL display lifecycle surface and error signatures. |
+| `headless/prosperoeden/pe/ui/browse.cpp` | `96afbbbae783` | Revue statique | browse_to/press_files/draw_files path browser; disk navigation not guest GPU hotpath. |
+| `headless/prosperoeden/pe/ui/case_media_selection.hpp` | `3a3ddb591670` | Revue statique | FrontPaper/BackScenes ranked pointer selection; bounded to face inputs. |
+| `headless/prosperoeden/pe/ui/dualsense_mask_asset.hpp` | `ba9a3d15e7cf` | Données/constantes | Immutable inline controller-mask artwork; no runtime decode/search. |
+| `headless/prosperoeden/pe/ui/hero_text_layout.hpp` | `9e76a77e987b` | Revue statique | wrap_description word-boundary layout, weak endings; bounded by hero text. |
+| `headless/prosperoeden/pe/ui/home.cpp` | `a40fd7f010aa` | Revue statique | refresh_home_hero/press_home and home draw, reused current game media. |
+| `headless/prosperoeden/pe/ui/launcher.cpp` | `c4e101f7dc6b` | Revue statique | Launcher update, asynchronous avatar discovery and screen transitions. |
+| `headless/prosperoeden/pe/ui/launcher.hpp` | `d49a244840e2` | Revue statique | Launcher screen/notification/selection state and async task ownership. |
+| `headless/prosperoeden/pe/ui/mapping.cpp` | `2ce53b13a38b` | Revue statique | Button mapping UI, profile names and input binding page. |
+| `headless/prosperoeden/pe/ui/services.hpp` | `3d26738cbf0f` | Revue statique | Services abstract media and title interface; no implementation allocation. |
+| `headless/prosperoeden/pe/ui/settings.cpp` | `be3b42b9740e` | Revue statique | Settings press/render/dialog and preference labels; no frame-blocking I/O identified. |
+| `headless/prosperoeden/pe/ui/switch_theme.cpp` | `f852926a48bc` | Revue statique | Switch-theme tile/advanced panel drawing via reused DrawList painter. |
+| `headless/prosperoeden/pe/ui/theme.hpp` | `fc7b378ab519` | Revue statique | Inline color/text sizing and visual easing policy. |
+| `headless/prosperoeden/pe/ui/video_presets.hpp` | `05a735ec7b05` | Revue statique | Inline profile lookup/compare with no disk or GPU work. |
+| `headless/prosperoeden/pe/ui/widgets.cpp` | `7b50467e172a` | Revue statique | Canvas text/box/case-face drawing functions; batched GL and cover queries. |
+| `headless/prosperoeden/pe/ui/widgets.hpp` | `1b31fd1a9e39` | Revue statique | Widget layout/color/cover interfaces only. |
+| `headless/prosperoeden/radio_input.c` | `e42b0ba4c27f` | Revue statique | Pad polling and bounded edge-event translation; no network/disk dependency. |
+| `headless/prosperoeden/radio_input.h` | `e994a36c5a1d` | Revue statique | Pad polling/event API declarations. |
+| `headless/prosperoeden/version.h` | `6b0dd31b2266` | Données/constantes | Canonical package/app version constants only. |
+
+## Ce qui n'est pas clos
+
+Cette première passe est un **audit de couverture du code**. Les saccades du jeu, la fraîcheur du HUD, les verrous GPU, la qualité d'antialiasing et le comportement PS5 restent des critères indépendants, non certifiés par ces 59 décisions. Ne pas compter les fichiers inactifs ou hôte comme des FPS optimisés.
