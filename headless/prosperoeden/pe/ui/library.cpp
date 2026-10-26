@@ -1060,10 +1060,12 @@ bool Launcher::drop_missing_games(const std::vector<std::string>* known_missing)
             games_[static_cast<std::size_t>(library_.selected)].file : std::string{};
     const auto gone = std::remove_if(games_.begin(), games_.end(),
         [this, known_missing](const Game &game) {
+            // Input is sorted by set_intersection of two worker-sorted lists.
+            // Binary search avoids O(game count * confirmed missing) scans.
             // Periodic background poll has already checked these paths.
             // Avoid repeating hundreds of filesystem calls on the UI thread.
             if (known_missing)
-                return std::find(known_missing->begin(), known_missing->end(), game.file) != known_missing->end();
+                return std::binary_search(known_missing->begin(), known_missing->end(), game.file);
             return !services_.game_exists(game.file);
         });
     if (gone == games_.end())
