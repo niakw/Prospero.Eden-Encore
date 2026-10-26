@@ -269,6 +269,7 @@ jobs:
           python3 -B tools/check-maintained-memory-units.py
           python3 -B tools/check-maintained-memory-g06-g07.py
           python3 -B tools/check-ps5-quiet-jit-timers.py
+          python3 -B tools/check-ps5-release-saved-diagnostics-host.py
           python3 -B tools/check-ps5-gpu-producer-wake.py
           python3 -B tools/check-ps5-native-load-replay.py
           python3 -B tools/check-ps5-native-timing-replay.py
