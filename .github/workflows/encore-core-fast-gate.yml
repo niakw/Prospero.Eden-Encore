@@ -61,6 +61,8 @@ on:
       - 'tools/check-vendor-archive-pin-contract-host.py'
       - 'tools/deps.json'
       - 'docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json'
+      # The source-coverage gate compares audited paths against this review table.
+      - 'docs/FC27_F07_CROSS_SYSTEM_OPTIMIZATION_AUDIT_2026-10-26.md'
       - 'docs/EDEN_CORE_AUDIT_DEPENDENCIES.md'
       - 'docs/EDEN_ACTIVE_SOURCE_CATALOG.md'
       - 'tools/check-active-source-inventory.py'
