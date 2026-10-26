@@ -380,9 +380,29 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: Prospero.Eden-Encore-staged-app
-          path: build/release/PPSA99008
+          # New staged archives include PPSA99008/; download to its parent.
+          path: build/release/
           github-token: ${{ github.token }}
           run-id: ${{ env.RESUME_STAGE_RUN_ID }}
+
+      - name: Normalize older flattened staged artifacts (restore only)
+        if: ${{ env.RESUME_STAGE_RUN_ID != '' }}
+        run: |
+          set -euo pipefail
+          # Former upload-artifact rooted at build/release/PPSA99008/ and
+          # stripped the title directory. Preserve compatibility solely when
+          # resuming these historical already-published artifacts.
+          if [[ -f build/release/eboot.bin && ! -e build/release/PPSA99008 ]]; then
+            mkdir -p build/release/PPSA99008
+            shopt -s nullglob dotglob
+            for item in build/release/*; do
+              [[ $item == build/release/PPSA99008 ]] && continue
+              mv -- "$item" build/release/PPSA99008/
+            done
+          fi
+          test -f build/release/PPSA99008/eboot.bin
+          test -f build/release/PPSA99008/sce_sys/param.json
+          test ! -e build/release/eboot.bin
 
       - name: Prepare native build inputs
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
@@ -419,9 +439,32 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Prospero.Eden-Encore-staged-app
-          path: ${{ env.EDEN_STAGE_DIR }}/
+          # Upload the parent, otherwise upload-artifact strips PPSA99008/.
+          path: build/release/
           retention-days: 7
           if-no-files-found: error
+
+      - name: Verify downloadable staged ZIP root
+        if: ${{ steps.stage.outcome == 'success' && env.EDEN_TEST_ALL_ON != '1' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: Prospero.Eden-Encore-staged-app
+          path: build/staged-zip-layout-verification
+
+      - name: Reject flattened staged archives
+        if: ${{ steps.stage.outcome == 'success' && env.EDEN_TEST_ALL_ON != '1' }}
+        run: |
+          test -f build/staged-zip-layout-verification/PPSA99008/eboot.bin
+          test -f build/staged-zip-layout-verification/PPSA99008/sce_sys/param.json
+          test ! -f build/staged-zip-layout-verification/eboot.bin
+          test "$(ls -A build/staged-zip-layout-verification)" = PPSA99008
+          python3 - <<'PY_STAGED'
+          import json
+          from pathlib import Path
+          app = Path('build/staged-zip-layout-verification/PPSA99008')
+          assert json.loads((app/'sce_sys/param.json').read_text())['titleId'] == app.name
+          print('STAGED_FTP_ARCHIVE_ROOT_OK PPSA99008/eboot.bin')
+          PY_STAGED
 
       - name: Validate freshly built staged app
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
@@ -521,6 +564,44 @@ jobs:
       - name: Assemble release files
         if: ${{ env.EDEN_TEST_ALL_ON != '1' }}
         run: python3 -B tools/ci/make-dist.py build/release/PPSA99008
+
+      - name: Verify release ZIP content paths
+        if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
+        run: python3 -B tools/ci/check-ftp-archive-root.py dist
+
+      # This is the ready-to-install Actions ZIP. Unlike the release-bundle
+      # artifact (which includes dist/ and symbols), its sole top-level folder
+      # is PPSA99008/ with eboot.bin immediately inside.
+      - name: Upload PS5 FTP-ready title folder
+        if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Eden-Encore-PS5-FTP-PPSA99008
+          path: build/release/
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Retrieve FTP-ready archive and verify exact folder
+        if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: Eden-Encore-PS5-FTP-PPSA99008
+          path: build/release-zip-layout-verification
+
+      - name: Validate actual downloadable FTP ZIP root
+        if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
+        run: |
+          test "$(ls -A build/release-zip-layout-verification)" = PPSA99008
+          test -s build/release-zip-layout-verification/PPSA99008/eboot.bin
+          test -f build/release-zip-layout-verification/PPSA99008/sce_sys/param.json
+          test ! -e build/release-zip-layout-verification/eboot.bin
+          python3 - <<'PY_FTP'
+          import json
+          from pathlib import Path
+          app = Path('build/release-zip-layout-verification/PPSA99008')
+          assert json.loads((app/'sce_sys/param.json').read_text())['titleId'] == app.name
+          print('RELEASE_FTP_ARCHIVE_ROOT_OK PPSA99008/eboot.bin')
+          PY_FTP
 
       - name: Upload compiled release bundle
         if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}

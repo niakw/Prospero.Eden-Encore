@@ -215,6 +215,14 @@ The installation should include at least:
 
 Do not copy only `eboot.bin`.
 
+The GitHub Actions **native build and package** run additionally provides an
+`Eden-Encore-PS5-FTP-PPSA99008` artifact: extract it once and copy its
+`PPSA99008/` folder to `/data/homebrew/`. The `Prospero.Eden-Encore-release`
+Actions artifact is instead a **distribution bundle** containing `dist/`
+archives and debug symbols; do not copy that wrapper folder to the console.
+Older `Prospero.Eden-Encore-staged-app` archives could be flattened and are
+not the recommended installer.
+
 For a **manual FTP install**, the release also provides:
 
 ```text
