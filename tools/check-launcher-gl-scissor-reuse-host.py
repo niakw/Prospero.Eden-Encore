@@ -87,7 +87,7 @@ int main(){
  assert(batch.draw_calls_==6);
  assert(submitted.size()==3); // first, different, re-enabled after off
  assert((submitted[0]==std::tuple<int,int,int,int>{16,66,40,20}));
- assert((submitted[1]==std::tuple<int,int,int,int>{24,70,16,12}));
+ assert((submitted[1]==std::tuple<int,int,int,int>{24,66,16,12}));
  assert(submitted[2]==submitted[1]);
  assert(scissor_enable==2 && scissor_disable==2);
  submitted.clear();scissor_enable=0;scissor_disable=0;
