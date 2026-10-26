@@ -385,6 +385,10 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
     if (!is_built.load(std::memory_order_acquire)) {
         // Wait for the pipeline to be built
         scheduler.Record([this](vk::CommandBuffer) {
+            // The builder may finish while the callback is still queued.
+            // Acquire its published handle and avoid locking on the ready path.
+            // Incomplete builds retain the original ordered wait.
+            if (is_built.load(std::memory_order_acquire)) return;
             auto timer = Eden::Performance::VulkanTimer(16);
             std::unique_lock lock{build_mutex};
             build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });

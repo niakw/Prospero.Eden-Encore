@@ -373,6 +373,7 @@ jobs:
           python3 -B tools/check-ps5-f07-cold-stalls-host.py
           python3 -B tools/check-ps5-f07-pipeline-transitions-host.py
           python3 -B tools/check-ps5-f07-pipeline-publication-host.py
+          python3 -B tools/check-ps5-f07-compute-ready-callback-host.py
           python3 -B tools/check-eden-optimization-coverage.py
           python3 -B tools/check-vendor-archive-pin-contract-host.py
           python3 -B tools/check-native-hle-wait-null-queue-host.py

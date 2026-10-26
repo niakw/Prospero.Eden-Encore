@@ -32,3 +32,7 @@
 `GraphicsPipeline` sets `is_built=true` with a **release** store after its Vulkan pipeline handle is constructed. Two readers test the status before accessing that non-atomic handle. `CanExecuteDraw()` already used **acquire**, while `IsBuilt()` still used **relaxed**: the latter did not establish the required publication ordering. The maintained PS5 native header and the pinned Vulkan generator now use **acquire** for `IsBuilt()`.
 
 `check-ps5-f07-pipeline-publication-host.py` compiles both methods extracted from the actual native header, verifies the builder's release store, tests threaded release/acquire publication and failed-pipeline behavior under O0/O2. No shader is skipped, no new GPU wait is inserted, and no FPS claim follows from the memory-order fix.
+
+## F07: avoid redundant Vulkan compute builder lock on delayed callback
+
+`vk_compute_pipeline_cost.cpp` queued a scheduler callback if the compute build was unfinished at enqueue time, even though the build could complete before the callback executed. Unlike graphics, its callback always acquired the build mutex and entered the condition-variable path. Compute now performs a release/acquire-compatible `is_built.load(acquire)` first and skips the lock when already complete. Unfinished builds still block in order; failed builds keep their existing rejection behavior. The pinned generator and native TU are updated together; source-extracted O0/O2 tests cover ready-before-callback, unfinished-at-callback and failed-build cases. This is a bounded CPU/lock optimization, **not** an FPS result.
