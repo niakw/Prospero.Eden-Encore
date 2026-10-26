@@ -170,8 +170,8 @@ get_target_property(common_sources common SOURCES)
 list(REMOVE_ITEM common_sources host_memory.cpp sparse_large_vector.cpp)
 set_property(TARGET common PROPERTY SOURCES "${common_sources}")
 target_sources(common PRIVATE "${PORT_ROOT}/src/host_memory.cpp" "${PORT_ROOT}/src/memory_pages.cpp")
-// Sparse JIT memory's quiescent trim policy is shared with Dynarmic. The
-// header is compile-time arithmetic only; release still excludes sparse mode.
+# Sparse JIT trim helpers are shared with Dynarmic. The native release
+# uses the one sparse JIT allocator path; these are compile-time helpers.
 target_include_directories(common PRIVATE "${EDEN_PORT_DIR}")
 
 # Complete native sparse vector header is owned by Encore, not constructed
