@@ -42,7 +42,10 @@ assert "std::shared_ptr<OptimizeState> optimize_state;" in generator
 assert "fast_first_pipelines = true;" in dev and "fast_first_pipelines = false;" in dev
 assert "fast_pipelines=off" in main and "fast_pipelines=on" in main
 assert "EDEN_DEV_PROFILE" in dev
-assert generator.count("'include/video_core/renderer_vulkan/vk_graphics_pipeline.h'") == 1
+# The F07 post-adaptation transition memo legitimately references this path
+# again. Uniqueness must cover the R313 source adaptation, not every mention.
+assert generator.count("adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h'") == 1
+assert "transition_header = output / 'include/video_core/renderer_vulkan/vk_graphics_pipeline.h'" in generator
 
 # Compile the precise native C++ optimization worker/dtor/queue implementation,
 # not a Python approximation. A queued job after object destruction must see
