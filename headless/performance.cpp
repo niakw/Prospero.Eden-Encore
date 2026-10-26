@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "performance.h"
+#include "frame_metrics.h"
 #include "ps5_cpu_topology.h"
 #include "direct_pool_accounting.h"
 #include "direct_pool_probe_policy.h"
@@ -1128,6 +1129,31 @@ void ReportGpuThread(unsigned frame) {
     // stalled GPU worker; full snapshots can require expensive memory scans,
     // clock queries and synchronous printing every report window.
     if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return;
+    // R01: CPU-observed Vulkan callbacks, not guest FPS or physical scanout.
+    // Sample only on the existing opt-in five-second report window.
+    const auto frame_sample_ns = static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+    const auto window = ::Eden::FrameMetrics::Sample(frame_sample_ns);
+    if (window.valid) {
+        std::printf(
+            "EDEN_R01_FRAME_METRICS frame=%u interval_ns=%llu "
+            "source_composites=%llu real_queued=%llu generated_queued=%llu "
+            "source_skipped=%llu loading_queued=%llu present_returned=%llu "
+            "source_callback_fps=%.3f real_queue_fps=%.3f generated_queue_fps=%.3f "
+            "present_return_fps=%.3f scope=cpu_observed_not_guest_fps_not_scanout_not_latency\n",
+            frame, static_cast<unsigned long long>(window.interval_ns),
+            static_cast<unsigned long long>(window.source_composites),
+            static_cast<unsigned long long>(window.real_frames_queued),
+            static_cast<unsigned long long>(window.generated_frames_queued),
+            static_cast<unsigned long long>(window.skipped_source_frames),
+            static_cast<unsigned long long>(window.loading_frames_queued),
+            static_cast<unsigned long long>(window.present_calls_returned),
+            ::Eden::FrameMetrics::Rate(window.source_composites, window.interval_ns),
+            ::Eden::FrameMetrics::Rate(window.real_frames_queued, window.interval_ns),
+            ::Eden::FrameMetrics::Rate(window.generated_frames_queued, window.interval_ns),
+            ::Eden::FrameMetrics::Rate(window.present_calls_returned, window.interval_ns));
+    }
     if (detailed_gpu_profile.load(std::memory_order_relaxed)) {
         // Fresh UTC/monotonic correlation every sampled five-second frame
         // window, even when the session-start segment has already rotated.
