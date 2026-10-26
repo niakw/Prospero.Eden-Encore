@@ -2566,6 +2566,18 @@ shader_source = shader_source.replace(f07_drain_old, f07_drain_new, 1)
 
 # Write only after ALL native pipeline-cache deltas, including startup prewarm.
 # Earlier emission silently discarded the last five F07 transformations.
+# F07: do not admit failed Vulkan handles into the bounded startup cache.
+f07_preseed_compute_old = "            if (pipeline) {\n                compute_cache.emplace(key, std::move(pipeline));\n            }"
+f07_preseed_compute_new = "            // Do not seed a failed Vulkan compute pipeline for future dispatches.\n            if (pipeline && pipeline->IsBound()) {\n                compute_cache.emplace(key, std::move(pipeline));\n            }"
+if shader_source.count(f07_preseed_compute_old) != 1:
+    raise RuntimeError('F07 compute warm cache insertion anchor drift')
+shader_source = shader_source.replace(f07_preseed_compute_old, f07_preseed_compute_new, 1)
+f07_preseed_graphics_old = "            if (pipeline) {\n                graphics_cache.emplace(key, std::move(pipeline));\n            }"
+f07_preseed_graphics_new = "            // Leave a failed Vulkan build absent from the prewarm map,\n            // so the normal first-use path may try the key again.\n#ifdef PS5_NATIVE\n            if (pipeline && pipeline->CanExecuteDraw()) {\n#else\n            if (pipeline) {\n#endif\n                graphics_cache.emplace(key, std::move(pipeline));\n            }"
+if shader_source.count(f07_preseed_graphics_old) != 1:
+    raise RuntimeError('F07 graphics warm cache insertion anchor drift')
+shader_source = shader_source.replace(f07_preseed_graphics_old, f07_preseed_graphics_new, 1)
+
 shader_output = output / 'vk_pipeline_cache_cost.cpp'
 if not shader_output.exists() or shader_output.read_text() != shader_source:
     shader_output.write_text(shader_source)

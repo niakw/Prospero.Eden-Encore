@@ -844,7 +844,8 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
             ShaderPools pools;
             auto pipeline{CreateComputePipeline(pools, key, env_, state.statistics.get(), false)};
             std::scoped_lock lock{state.mutex};
-            if (pipeline) {
+            // Do not seed a failed Vulkan compute pipeline for future dispatches.
+            if (pipeline && pipeline->IsBound()) {
                 compute_cache.emplace(key, std::move(pipeline));
             }
             ++state.built;
@@ -903,7 +904,13 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
                                                  state.statistics.get(), false)};
 
             std::scoped_lock lock{state.mutex};
+            // Leave a failed Vulkan build absent from the prewarm map,
+            // so the normal first-use path may try the key again.
+#ifdef PS5_NATIVE
+            if (pipeline && pipeline->CanExecuteDraw()) {
+#else
             if (pipeline) {
+#endif
                 graphics_cache.emplace(key, std::move(pipeline));
             }
             ++state.built;
