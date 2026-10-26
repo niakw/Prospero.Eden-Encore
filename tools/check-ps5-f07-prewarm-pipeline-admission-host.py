@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+"""PS5 F07: compile selected persisted Vulkan cache insertion guards.
+
+A completed-but-failed synchronous prewarm must not poison the runtime cache
+with a permanently unusable graphics/compute pipeline object.
+"""
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+
+root = Path(__file__).resolve().parents[1]
+active = (root/"vendor/encore-active/eden-vulkan/vk_pipeline_cache_cost.cpp").read_text()
+generator = (root/"tools/prepare-vulkan-port.py").read_text()
+graphics_h = (root/"vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h").read_text()
+compute_h = (root/"vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h").read_text()
+assert "is_built.load(std::memory_order::acquire) && static_cast<bool>(pipeline)" in graphics_h
+assert "return static_cast<bool>(pipeline);" in compute_h
+assert active.count("if (pipeline && pipeline->IsBound()) {") == 1
+assert active.count("if (pipeline && pipeline->CanExecuteDraw()) {") == 1
+for name in ("compute","graphics"):
+    assert f"shader_source.count(f07_preseed_{name}_old) != 1" in generator
+    assert generator.index(f"shader_source = shader_source.replace(f07_preseed_{name}_old, f07_preseed_{name}_new, 1)") < generator.index("shader_output.write_text(shader_source)")
+
+start_compute="            if (pipeline && pipeline->IsBound()) {"
+start_graphics="#ifdef PS5_NATIVE\n            if (pipeline && pipeline->CanExecuteDraw()) {"
+assert active.count(start_compute)==1 and active.count(start_graphics)==1
+compute=start_compute+active.split(start_compute,1)[1].split("\n            }",1)[0]+"\n            }"
+graphics=start_graphics+active.split(start_graphics,1)[1].split("\n            }",1)[0]+"\n            }"
+assert "compute_cache.emplace" in compute and "graphics_cache.emplace" in graphics
+cpp=r"""
+#include <cassert>
+#include <memory>
+#include <unordered_map>
+#include <utility>
+struct Pipeline {
+    bool ready{};
+    bool handle{};
+    bool IsBound() const noexcept { return handle; }
+    bool CanExecuteDraw() const noexcept { return ready && handle; }
+};
+struct Fixture {
+    std::unordered_map<int,std::unique_ptr<Pipeline>> compute_cache,graphics_cache;
+    void AdmitCompute(int key,std::unique_ptr<Pipeline> pipeline) {
+""" + compute + r"""
+    }
+    void AdmitGraphics(int key,std::unique_ptr<Pipeline> pipeline) {
+""" + graphics + r"""
+    }
+};
+int main() {
+    Fixture f;
+    f.AdmitCompute(1,std::make_unique<Pipeline>(Pipeline{true,false}));
+    assert(f.compute_cache.empty());
+    f.AdmitCompute(1,std::make_unique<Pipeline>(Pipeline{true,true}));
+    assert(f.compute_cache.size()==1 && f.compute_cache.at(1)->IsBound());
+    f.AdmitGraphics(2,std::make_unique<Pipeline>(Pipeline{true,false}));
+#ifdef PS5_NATIVE
+    assert(f.graphics_cache.empty());
+#else
+    assert(f.graphics_cache.size()==1);
+    f.graphics_cache.clear();
+#endif
+    f.AdmitGraphics(2,std::make_unique<Pipeline>(Pipeline{true,true}));
+    assert(f.graphics_cache.size()==1 && f.graphics_cache.at(2)->CanExecuteDraw());
+}
+"""
+compiler=shutil.which("clang++") or shutil.which("g++")
+assert compiler, "C++ compiler required"
+with tempfile.TemporaryDirectory(prefix="eden-f07-preseed-") as d:
+    p=Path(d)/"test.cpp"
+    p.write_text(cpp)
+    for variant in ([],["-DPS5_NATIVE=1"]):
+        for level in ("-O0","-O2"):
+            exe=Path(d)/("run"+("ps5" if variant else "desktop")+level[1:])
+            subprocess.run([compiler,"-std=c++20",level,*variant,"-Wall","-Wextra","-Werror",str(p),"-o",str(exe)],check=True,capture_output=True,text=True,timeout=35)
+            subprocess.run([str(exe)],check=True,timeout=15)
+print("F07_PREWARM_PIPELINE_ADMISSION_HOST_PASS native_graphics_invalid=1 compute_invalid=1 valid=1 desktop=1 O0=1 O2=1")
