@@ -66,6 +66,18 @@
 5. **P2** : pression VRAM/direct-mem et OOM extrême, puis réglages visuels seulement quand le chemin principal est stable.
 6. **Une campagne console**, une fois le paquet complètement vert et le lot P0 testable. Aucun nouveau « 7/7 » tant que la jouabilité n'est pas prouvée.
 
+## Réutilisation ciblée depuis la branche expérimentale — 26 octobre
+
+Le lot **R01** a été adapté dans les sources natives de production : compteurs
+séparés des composites Vulkan, images réelles/générées mises en file, images
+ignorées, écrans de chargement et retours d'appel `Present`. La mesure n'est
+active qu'en profil de diagnostic détaillé ; les tests C++ natifs, analyseur
+hors-ligne, replay F03/F05 et contrôle de parité du générateur sont intégrés.
+**État : SOURCE INTÉGRÉE, CI ET CONSOLE NON QUALIFIÉES** ; aucun gain FPS/HUD ne
+peut encore être revendiqué. R03 RADV/SPIR-V, R04 AudioIn/RomFS et R06
+frame generation restent hors de ce lot (pas de fusion globale). Détails :
+[FC27_R01_SOURCE_TELEMETRY_PORT_2026-10-26.md](FC27_R01_SOURCE_TELEMETRY_PORT_2026-10-26.md).
+
 ## Dossiers de preuves existants
 
 - [F07 — priorités et mesures](FC27_F07_STUTTER_HUD_PRIORITY_2026-10-26.md)
