@@ -1735,6 +1735,18 @@ transition_header.write_text(
     transition_source.replace(transition_next_old, transition_next_new, 1)
                      .replace(transition_member_old, transition_member_new, 1))
 
+# F07: SCOPE_EXIT release-publishes the constructed Vulkan pipeline.
+# IsBuilt is also queried before reading the non-atomic Vulkan handle,
+# so its read must acquire that release rather than merely inspect a flag.
+# No wait, mutex or shader-build scheduling changes.
+ready_header = output / 'include/video_core/renderer_vulkan/vk_graphics_pipeline.h'
+ready_source = ready_header.read_text()
+ready_old = "    [[nodiscard]] bool IsBuilt() const noexcept {\n        return is_built.load(std::memory_order::relaxed);\n    }"
+ready_new = "    [[nodiscard]] bool IsBuilt() const noexcept {\n        // Matches the release store in the builder's SCOPE_EXIT. Consumers\n        // can only inspect the constructed VkPipeline after acquiring it.\n        return is_built.load(std::memory_order::acquire);\n    }"
+if ready_source.count(ready_old) != 1:
+    raise RuntimeError('F07 IsBuilt publication source anchor drift')
+ready_header.write_text(ready_source.replace(ready_old, ready_new, 1))
+
 # Adapted from Mihawk PS5 fast-first pipelines with important corrections:
 # * one optimizer worker to avoid contending with guest JIT cores
 # * only runtime-discovered pipelines, not preloaded disk cache entries

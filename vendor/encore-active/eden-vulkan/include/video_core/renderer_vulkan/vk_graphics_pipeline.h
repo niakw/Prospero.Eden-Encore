@@ -162,7 +162,9 @@ public:
     }
 
     [[nodiscard]] bool IsBuilt() const noexcept {
-        return is_built.load(std::memory_order::relaxed);
+        // Matches the release store in the builder's SCOPE_EXIT. Consumers
+        // can only inspect the constructed VkPipeline after acquiring it.
+        return is_built.load(std::memory_order::acquire);
     }
 
     // Queued worker checks pipeline readiness AFTER async build wait.
