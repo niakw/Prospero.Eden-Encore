@@ -209,9 +209,15 @@ for e in entries:
         assert e.get("review_scope") in {
             "host-only-test","startup-shim","shutdown-only",
             "generated-configuration","startup-interface","inactive-experimental",
-            "runtime-abi-interface",
+            "runtime-abi-interface", "launcher-release-hotpath",
+            "launcher-release-support",
         }
         assert e["path"] not in {r["path"] for r in by_id.values()}
+        if e.get("review_scope") in {"launcher-release-hotpath","launcher-release-support"}:
+            assert e["path"].startswith("headless/prosperoeden/")
+            assert e.get("reviewed_source_git_blob") and e["source_review_document"].startswith(
+                "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_")
+
     source_review=ROOT/e["source_review_document"]
     assert source_review.is_file()
     assert "| `"+e["path"]+"` |" in source_review.read_text(),e["path"]
