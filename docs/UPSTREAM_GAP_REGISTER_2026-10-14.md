@@ -76,14 +76,14 @@ The native build previously inherited a boilerplate `param.json` without the opt
 <!-- BEGIN AUTO-UPSTREAM-COMPARISON -->
 ### Automated comparison (daily + manual)
 
-Checked in UTC: **2026-10-25 09:50 UTC**. Changes are commits relative to pins, not proven missing fixes.
+Checked in UTC: **2026-10-26 11:08 UTC**. Changes are commits relative to pins, not proven missing fixes.
 This workflow never imports source patches, modifies dependencies, or reads console data.
 
 | Dependency | Source | Pinned revision | Ahead / behind | Status |
 |---|---|---|---:|---|
-| eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +93 / -0 | upstream ahead |
-| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +5151 / -0 | upstream ahead |
-| fmt | [fmtlib/fmt](https://github.com/fmtlib/fmt) | 12.1.0 | +369 / -0 | upstream ahead |
+| eden | [eden-emulator/mirror](https://github.com/eden-emulator/mirror) | 5f142c7926d0 | +94 / -0 | upstream ahead |
+| ffmpeg | [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg) | c7b5f1537d9c | +5155 / -0 | upstream ahead |
+| fmt | [fmtlib/fmt](https://github.com/fmtlib/fmt) | 12.1.0 | +372 / -0 | upstream ahead |
 | zbic | [kinnay/zbic](https://github.com/kinnay/zbic) | 11b08f271226 | +0 / -0 | identical |
 | compiler-rt | frozen archive / binary | — | — | not comparable |
 | pacbrew | frozen archive / binary | — | — | not comparable |
@@ -100,7 +100,7 @@ This workflow never imports source patches, modifies dependencies, or reads cons
 | opengl-vulkan-headers | [KhronosGroup/Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers) | b51f6b865c18 | +8 / -0 | upstream ahead |
 | opengl-imgui | [ocornut/imgui](https://github.com/ocornut/imgui) | f5befd2d29e6 | +1519 / -0 | upstream ahead |
 | opengl-nanovg | [memononen/nanovg](https://github.com/memononen/nanovg) | ce3bf745eb2d | +0 / -0 | identical |
-| opengl-sokol | [floooh/sokol](https://github.com/floooh/sokol) | 48c85905aeaa | +226 / -0 | upstream ahead |
+| opengl-sokol | [floooh/sokol](https://github.com/floooh/sokol) | 48c85905aeaa | +280 / -0 | upstream ahead |
 | opengl-native-boilerplate | [blackbearreloaded/ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) | 4f531c4b517f | — | repository unavailable |
 | opengl-mesa-26-2 | frozen archive / binary | — | — | not comparable |
 
@@ -109,7 +109,6 @@ This workflow never imports source patches, modifies dependencies, or reads cons
 These are upstream commit titles, not validated Encore integrations.
 
 **eden**
-- [fd34024f0e1f](https://github.com/eden-emulator/mirror/commit/fd34024f0e1f) — (hle/ns) fix build error due to missing async_result.h (#4440)
 - [4ce45b3b37d1](https://github.com/eden-emulator/mirror/commit/4ce45b3b37d1) — (hle) Fix crash on MK8D and SM3DW LDN (#4417)
 - [7bf95be2c293](https://github.com/eden-emulator/mirror/commit/7bf95be2c293) — (dynarmic) fix A32 crash due to wrong LEA encoding (#4444)
 - [ac35358b3ffe](https://github.com/eden-emulator/mirror/commit/ac35358b3ffe) — (common) Replace 'Common::SpinLock' with 'std::mutex' (#4436)
@@ -154,6 +153,7 @@ These are upstream commit titles, not validated Encore integrations.
 - [de7e6e01d43e](https://github.com/eden-emulator/mirror/commit/de7e6e01d43e) — Revert 	(input_common/joycon) Enumerate SDL devices iff SDL signals change (#4486) (#4545)
 - [989768aa4672](https://github.com/eden-emulator/mirror/commit/989768aa4672) — Fix (core, gpu, threads) Multithreading refactor (#4254) (#4548)
 - [305f40100d76](https://github.com/eden-emulator/mirror/commit/305f40100d76) — Fix aarch and android builds (#4576)
+- [eb88a40a8eb0](https://github.com/eden-emulator/mirror/commit/eb88a40a8eb0) — (qt) fix graphics API toggle getting stuck on OpenGL_GLSL (#4577)
 
 **ffmpeg** (history excerpt; some commits omitted)
 - [9c51aa182488](https://github.com/FFmpeg/FFmpeg/commit/9c51aa182488) — swscale: add SwsCompiledOp.slice_align
