@@ -40,3 +40,5 @@
 ## F07: recurring Vulkan driver-cache flush survives failures
 
 The async disk-cache writer used to clear `flush_in_flight` only after a successful driver `Read()`. An exceptional read (or worker enqueue failure) could leave the title's background cache snapshots permanently suppressed. The production Vulkan source and reproducible generator now use a scoped release of the guard, catch serializer/read exceptions inside the worker and clear the guard when queue admission itself fails. The save frequency, Vulkan cache content, shader compilation, filenames and game-thread ordering remain unchanged. A native-source-extracted host fixture checks failure and recovery at O0/O2. **This protects warm-cache persistence; no FPS gain asserted.**
+
+The enqueue-failure path is deliberately **non-fatal**: logging the rejection and clearing `flush_in_flight` must not turn an optional cache save into a gameplay exception.
