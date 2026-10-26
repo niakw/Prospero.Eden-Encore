@@ -35,6 +35,10 @@ assert "thread.request_stop();" in worker
 for i in range(5):
     assert f"shader_source.count(f07_warm_before_{i})" in gen
 assert "#include <stop_token>" in shader
+# The pinned generator must write the FINAL prewarm source, not a stale
+# pre-transformation snapshot. The full fork reproduction also checks bytes.
+assert gen.index("shader_source = shader_source.replace(f07_warm_before_4, f07_warm_after_4)") < gen.index("shader_output.write_text(shader_source)")
+assert gen.count("shader_output.write_text(shader_source)") == 1
 
 cpp=r"""
 #include <cassert>
