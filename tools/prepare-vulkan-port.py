@@ -1980,7 +1980,8 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
     # ordered GPU callback is dequeued. Their release-published completion
     # makes the build mutex and condition wait unnecessary in that case.
     # The same callback still waits normally while compilation is unfinished.
-    if name == 'vk_graphics_pipeline':
+    # Both graphics and compute can finish between queuing and callback execution.
+    if name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
         replacements.append((
             "        scheduler.Record([this](vk::CommandBuffer) {\n"
             "            auto timer = Eden::Performance::VulkanTimer(16);\n"
