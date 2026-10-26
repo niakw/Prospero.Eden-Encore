@@ -19,7 +19,8 @@ end = "\n        });"
 assert source.count(start) == 1
 callback = start + source.split(start, 1)[1].split(end, 1)[0] + end
 assert callback.count("is_built.load(std::memory_order_acquire)") == 1
-assert callback.index("is_built.load(std::memory_order_acquire)") < callback.index("std::unique_lock lock{build_mutex};")
+assert callback.index("is_built.load(std::memory_order_acquire)") < callback.index("CachePhase::ComputePipelineWait") < callback.index("std::unique_lock lock{build_mutex};")
+assert callback.count("CachePhase::ComputePipelineWait") == 1
 assert "build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });" in callback
 assert "is_built.store(true, std::memory_order_release);" in source
 assert "if (is_built.load(std::memory_order_acquire)) return;" in graphics
@@ -37,7 +38,17 @@ cpp = r"""
 namespace vk { struct CommandBuffer {}; }
 // Real VulkanTimer is RAII and therefore not a trivial throwaway local.
 // Mirror its destructor so -Werror does not reject the source-extracted timer.
-namespace Eden::Performance { struct VulkanTimer { explicit VulkanTimer(int) {} ~VulkanTimer() {} }; }
+namespace Eden::Performance {
+struct VulkanTimer { explicit VulkanTimer(int) {} ~VulkanTimer() {} };
+enum class CachePhase { ComputePipelineWait };
+inline std::atomic<bool> detailed_gpu_profile{true};
+inline std::atomic<unsigned> measured_waits{0};
+struct CachePhaseTimer {
+    explicit CachePhaseTimer(CachePhase, bool enabled) {
+        if (enabled) measured_waits.fetch_add(1, std::memory_order_relaxed);
+    }
+};
+}
 struct CountingMutex {
     std::mutex inner;
     std::atomic<int> lock_calls{0};
@@ -79,6 +90,7 @@ int main() {
         assert(c.build_mutex.lock_calls.load() == 0);
         assert(c.pipeline == 93);
     }
+    assert(Eden::Performance::measured_waits.load() == 0);
     for (int i = 0; i < 120; ++i) {
         Compute c;
         c.Queue();
@@ -90,6 +102,20 @@ int main() {
         producer.join();
         assert(c.build_mutex.lock_calls.load() >= 1);
         assert(c.pipeline == 93);
+    }
+    assert(Eden::Performance::measured_waits.load() == 120);
+    Eden::Performance::detailed_gpu_profile.store(false);
+    {
+        Compute c;
+        c.Queue();
+        std::thread producer([&] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            c.Publish(true);
+        });
+        c.scheduler.run();
+        producer.join();
+        assert(c.pipeline == 93);
+        assert(Eden::Performance::measured_waits.load() == 120);
     }
     Compute failed;
     failed.Queue();

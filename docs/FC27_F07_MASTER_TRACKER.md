@@ -90,6 +90,20 @@ les rapportent. Aucun shader, fence ni ordre de dessin ne change.
 **F07 reste ouvert :** c'est une attribution, pas un gain FPS démontré.
 Le chemin silencieux ne prend aucun chronométrage supplémentaire.
 
+## P0.2 — coût des attentes de pipeline Vulkan
+
+Le chemin graphique et compute conservent leur vérification de disponibilité
+acquire avant d'enregistrer et d'exécuter la callback du scheduler. Si la
+compilation est encore en cours **au moment réel de la callback**, la section
+bloquante signale maintenant respectivement `graphics_pipeline_wait`
+ou `compute_pipeline_wait` dans `EDEN_GPU_CACHE_PHASE`, uniquement lorsque
+la journalisation détaillée est activée. Cela mesure mutex + condition
+d'attente, et non du temps GPU. Les tests extraient la callback C++ et couvrent
+pipeline prêt en avance, construction inachevée, profil silencieux, et échec
+de pipeline compute. Aucun `wait`, fence ou ordre de commande n'est supprimé.
+**Ce changement apporte une attribution des blocages, sans gain FPS revendiqué.**
+Les coûts agrégés des différents threads ne valent pas durée d'une frame.
+
 ## Dossiers de preuves existants
 
 - [F07 — priorités et mesures](FC27_F07_STUTTER_HUD_PRIORITY_2026-10-26.md)

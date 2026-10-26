@@ -27,6 +27,20 @@ assert "GraphicsDrawDrop::WorkerPipelineFailed" in graphics
 assert "GraphicsDrawDrop::WorkerPipelineFailed" in generator
 assert "WorkerPipelineFailed" in perf
 assert '"worker_pipeline_failed"' in report
+# F07 P0.2 worker waits are distinct from cold CPU shader translation.
+for phase, label, native in (
+    ("GraphicsPipelineWait", "graphics_pipeline_wait", "vk_graphics_pipeline_cost.cpp"),
+    ("ComputePipelineWait", "compute_pipeline_wait", "vk_compute_pipeline_cost.cpp"),
+):
+    assert phase in perf
+    assert report.count('"' + label + '"') == 1
+    selected = (root / "vendor/encore-active/eden-vulkan" / native).read_text()
+    site = selected.index("scheduler.Record([this](vk::CommandBuffer) {")
+    callback = selected[site:selected.index("        });", site)]
+    assert callback.index("if (is_built.load(std::memory_order_acquire)) return;") < callback.index("CachePhase::" + phase) < callback.index("std::unique_lock lock{build_mutex};")
+    assert callback.count("detailed_gpu_profile.load(std::memory_order_relaxed)") == 1
+    assert "wait_phase = 'GraphicsPipelineWait' if name" in generator
+
 assert "GraphicsDrawDrop::DescriptorBufferFull" in generator
 assert "GraphicsDrawDrop::ConfigureRejected" in generator
 # R362 uses 1-in-16 timers without altering the guest cache lock lifetimes.
