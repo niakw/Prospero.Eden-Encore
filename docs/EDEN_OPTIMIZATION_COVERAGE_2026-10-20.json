@@ -3894,6 +3894,14 @@
       "disposition": "new_source_issue_corrected",
       "proof_ref": "tools/check-fc27-f05-native-consumer-disconnect-host.py",
       "evidence": "F05 native source selected by CMake; consumer abandonment now wakes the host dequeue condition and the producer Binder guest event via a callback outside core->mutex. Source-extracted O0/O2 tests cover two blocked host waiters, exactly one mocked guest signal, no signal on invalid disconnect and safe callback teardown. Real guest HIPC and FC27 liveness NOT proven."
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan_memory_allocator.cpp",
+      "disposition": "new_source_issue_corrected",
+      "contract_id": "V109",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-ps5-vulkan-oom-source.py",
+      "evidence": "PS5-selected full allocator translation unit inspected: first-failure-only VkImage/VMA-heap diagnostics, original within-budget VMA policy and exception retained. The host test pins exact source delta; FC27 OOM and HUD/stutter remain NOT fixed or console-qualified."
     }
   ],
   "inventoried_including_pinned": 538,
@@ -3921,6 +3929,7 @@
   ],
   "post_snapshot_owned_additions": [
     "vendor/encore-active/eden-core/src/video_core/host1x/syncpoint_manager.cpp",
-    "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp"
+    "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp",
+    "vendor/encore-active/eden-vulkan/vulkan_memory_allocator.cpp"
   ]
 }

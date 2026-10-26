@@ -1,5 +1,7 @@
 # Eden Encore — reste à faire pour FC27 (critères de sortie)
 
+**Priorité d'exécution F07 (26 octobre) :** [saccades + fraîcheur HUD + progression guest](FC27_F07_STUTTER_HUD_PRIORITY_2026-10-26.md). Le crash mémoire 4× est un sous-dossier séparé et ne remplace pas la recherche des saccades à 1×/1440p.
+
 ## Retour console — F07, 26 octobre 2026 : amélioration jouable mais HUD / latence non qualifiés
 
 **Branche testée :** `dev/ps5-sparse-jit`, code natif `cd4857c8`. Les 6/6 preuves F01–F06 sont des critères pré-console **hôte uniquement** ; F07 reste **OUVERT**. La branche graphique expérimentale est en pause ; ne pas confondre ses prototypes avec les correctifs de production.
