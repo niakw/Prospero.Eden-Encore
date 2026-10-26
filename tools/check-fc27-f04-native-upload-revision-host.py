@@ -158,8 +158,8 @@ namespace Eden::Performance {
 // diagnostics. These stand-ins intentionally preserve the same no-op effects:
 // image bytes, barriers and cache ownership are validated independently.
 enum class CachePhase {
-    TextureCpuRefresh, TextureUploadStaging, TextureUploadContents,
-    TextureUploadBarrier
+    TextureCpuRefresh, TextureAliasScan, TextureAliasCopy,
+    TextureUploadStaging, TextureUploadContents, TextureUploadBarrier
 };
 struct CachePhaseTimer {
     explicit CachePhaseTimer(CachePhase) {}
