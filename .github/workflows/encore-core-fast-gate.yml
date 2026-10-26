@@ -9,6 +9,10 @@ on:
       - 'vendor/encore-active/eden-core/src/common/sparse_large_vector.h'
       - 'src/host_memory.cpp'
       - 'src/memory_pages.cpp'
+      - 'headless/jit-sparse-commit.h'
+      - 'headless/jit-allocator.h'
+      - 'headless/CMakeLists.txt'
+      - 'tools/check-native-sparse-jit-trim-host.py'
       - 'headless/performance.h'
       - 'headless/performance.cpp'
       - 'tools/check-native-quiet-gpu-report-host.py'
@@ -349,6 +353,7 @@ jobs:
           python3 -B tools/ci/check-final-engine-owner-contracts.py
           python3 -B tools/check-native-sparse-jit-release-selector-host.py
           python3 -B tools/check-jit-sparse-host.py
+          python3 -B tools/check-native-sparse-jit-trim-host.py
           python3 -B tools/check-sparse-zero-bounds-host.py
           python3 -B tools/check-maintained-sparse-vector.py
           python3 -B tools/check-fastmem-window-bounds-host.py

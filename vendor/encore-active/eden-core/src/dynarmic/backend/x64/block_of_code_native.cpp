@@ -234,6 +234,17 @@ void BlockOfCode::ClearCache() {
     if (hasWritableAlias()) {
         protection_end = begin;
         setSize(begin);
+#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)
+        // Called only after the owning guest core has left generated code
+        // (or after the shared JIT group quiesces), so NO old PC can target
+        // the discarded tail. Keep RX/RW virtual addresses and the prelude.
+        // Reclaim only whole physical 2 MiB chunks; GPU/guest memory may
+        // reuse them until the next JIT emission commits more on demand.
+        if (::Eden::Experimental::sparse_jit_cache.load(std::memory_order_relaxed) &&
+            !::Common::TrimSparseJitCode(getCode(), begin)) {
+            std::abort();  // Sparse alias ownership drift is not recoverable.
+        }
+#endif
         writing = was_writing;
         return;
     }
