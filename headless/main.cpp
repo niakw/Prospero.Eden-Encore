@@ -2047,18 +2047,16 @@ int main(int argc, char** argv) {
 #endif
 #ifdef EDEN_PS5_VULKAN
                 if (game && Settings::values.use_disk_shader_cache.GetValue()) {
-                    // Vulkan's per-title pipeline metadata was never configured:
-                    // previous launches could serialize nothing because the
-                    // filename stayed empty. Request initialization only, NOT
-                    // Worker's destructive stop-token cancellation path.
-                    std::stop_source lazy_cache;
-                    lazy_cache.request_stop();
+                    // Restore a SMALL part of the per-title cache before guest
+                    // execution. LoadDiskResources bounds the reader itself;
+                    // passing a cancelled token would kill the persistent
+                    // shader builder pool if it reached WaitForRequests().
                     const auto title_id = system.GetApplicationProcessProgramID();
                     if (title_id) {
                         system.Renderer().ReadRasterizer()->LoadDiskResources(
-                            title_id, lazy_cache.get_token(),
+                            title_id, std::stop_token{},
                             [](VideoCore::LoadCallbackStage, size_t, size_t) {});
-                        std::printf("EDEN_VULKAN_SHADER_CACHE title=%016llX mode=lazy-persistent\n",
+                        std::printf("EDEN_VULKAN_SHADER_CACHE title=%016llX mode=bounded-prewarm8\n",
                                     static_cast<unsigned long long>(title_id));
                     }
                 }

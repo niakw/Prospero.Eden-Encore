@@ -13,8 +13,9 @@ ast.parse(port)
 assert 'Settings::values.use_disk_shader_cache = game;' in main
 assert 'Settings::values.use_vulkan_driver_pipeline_cache = game;' in main
 assert '#ifdef EDEN_PS5_VULKAN\n                if (game && Settings::values.use_disk_shader_cache.GetValue())' in main
-assert 'lazy_cache.request_stop();' in main
-assert 'LoadDiskResources(\n                            title_id, lazy_cache.get_token(),' in main
+assert 'lazy_cache.request_stop();' not in main
+assert 'LoadDiskResources(\n                            title_id, std::stop_token{},' in main
+assert 'mode=bounded-prewarm8' in main
 assert 'EDEN_VULKAN_SHADER_CACHE title=' in main
 assert 'if shader_source.count(lazy_vulkan_cache_anchor) != 1:' in port
 assert 'if (stop_loading.stop_requested()) {' in port
@@ -26,6 +27,17 @@ v=port.split("lazy_vulkan_cache_replacement = '''",1)[1].split("'''",1)[0]
 assert v.index('LoadVulkanPipelineCache(') < v.index('if (stop_loading.stop_requested())')
 assert v.index('if (stop_loading.stop_requested())') < v.index('    struct {')
 assert 'workers.WaitForRequests' not in v
+# Quota implementation appears AFTER the lazy initialization branch in the
+# pinned generator, so an intentional canceled token stays setup-only.
+for i in range(5):
+    assert f'f07_warm_before_{i}' in port
+    assert f'f07_warm_after_{i}' in port
+assert 'kStartupPrewarmPipelines = 8' in port
+assert 'startup_reader.request_stop();' in port
+assert 'workers.WaitForRequests(stop_loading);' in port
+assert 'const std::stop_token reader_token{startup_reader.get_token()};' in port
+assert 'VideoCommon::LoadPipelines(reader_token' in port
+assert 'workers.WaitForRequests(reader_token)' not in port
 assert 'vulkan_cache_create_anchor' in port
 assert 'vulkan_cache_create_replacement' in port
 assert 'if shader_source.count(vulkan_cache_create_anchor) != 1:' in port
@@ -74,5 +86,5 @@ native = saving.split("#ifdef PS5_NATIVE", 1)[1].split("#else", 1)[0]
 assert 'std::filesystem::remove(filename' not in native
 assert 'Common::FS::RemoveFile(filename)' not in native
 assert 'std::filesystem::remove(staging, cleanup_error)' in native
-print("PASS Vulkan PS5 lazy shader cache lifecycle and non-destructive persistent worker pool")
+print("PASS Vulkan PS5 bounded shader prewarm and non-destructive persistent worker pool")
 print("Driver cache / filesystem correctness on real PS5: NOT TESTED")

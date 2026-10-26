@@ -2529,6 +2529,35 @@ shader_output = output / 'vk_pipeline_cache_cost.cpp'
 if not shader_output.exists() or shader_output.read_text() != shader_source:
     shader_output.write_text(shader_source)
 
+# F07: PS5 restores a strictly bounded prefix of persisted title pipelines.
+# Only the file-reader stop token is cancelled. Never pass that token to
+# ThreadWorker::WaitForRequests: it would stop the persistent shader pool.
+f07_warm_before_0 = "#include <span>\n#include <thread>"
+f07_warm_after_0 = "#include <span>\n#include <stop_token>\n#include <thread>"
+if shader_source.count(f07_warm_before_0) != 1:
+    raise RuntimeError('F07 bounded cache prewarm anchor 0 moved')
+shader_source = shader_source.replace(f07_warm_before_0, f07_warm_after_0)
+f07_warm_before_1 = "    struct {\n        std::mutex mutex;\n        size_t total{};"
+f07_warm_after_1 = "#ifdef PS5_NATIVE\n    // Eight entries at most: restore some persisted pipelines without\n    // rebuilding an unbounded title cache at launch. This token controls only\n    // the disk READER; the persistent Vulkan compiler workers stay alive.\n    constexpr size_t kStartupPrewarmPipelines = 8;\n    std::stop_source startup_reader;\n#endif\n    struct {\n        std::mutex mutex;\n        size_t total{};"
+if shader_source.count(f07_warm_before_1) != 1:
+    raise RuntimeError('F07 bounded cache prewarm anchor 1 moved')
+shader_source = shader_source.replace(f07_warm_before_1, f07_warm_after_1)
+f07_warm_before_2 = "        ++state.total;\n    }};"
+f07_warm_after_2 = "        ++state.total;\n#ifdef PS5_NATIVE\n        if (state.total == kStartupPrewarmPipelines)\n            startup_reader.request_stop();\n#endif\n    }};"
+if shader_source.count(f07_warm_before_2) != 2:
+    raise RuntimeError('F07 bounded cache prewarm anchor 2 moved')
+shader_source = shader_source.replace(f07_warm_before_2, f07_warm_after_2)
+f07_warm_before_3 = "    VideoCommon::LoadPipelines(stop_loading, pipeline_cache_filename, CACHE_VERSION, load_compute,\n                               load_graphics);"
+f07_warm_after_3 = "    // Only the reader observes the quota stop. Passing this token to\n    // workers.WaitForRequests() would permanently request_stop() on the\n    // shader-builder pool, breaking first-use shaders later in gameplay.\n#ifdef PS5_NATIVE\n    const std::stop_token reader_token{startup_reader.get_token()};\n#else\n    const std::stop_token reader_token{stop_loading};\n#endif\n    VideoCommon::LoadPipelines(reader_token, pipeline_cache_filename, CACHE_VERSION, load_compute,\n                               load_graphics);"
+if shader_source.count(f07_warm_before_3) != 1:
+    raise RuntimeError('F07 bounded cache prewarm anchor 3 moved')
+shader_source = shader_source.replace(f07_warm_before_3, f07_warm_after_3)
+f07_warm_before_4 = "    workers.WaitForRequests(stop_loading);\n\n    if (use_vulkan_pipeline_cache) {"
+f07_warm_after_4 = "    workers.WaitForRequests(stop_loading);\n#ifdef PS5_NATIVE\n    LOG_INFO(Render_Vulkan, \"PS5 shader cache bounded prewarm built {}/{} entries\",\n             state.built, state.total);\n#endif\n\n    if (use_vulkan_pipeline_cache) {"
+if shader_source.count(f07_warm_before_4) != 1:
+    raise RuntimeError('F07 bounded cache prewarm anchor 4 moved')
+shader_source = shader_source.replace(f07_warm_before_4, f07_warm_after_4)
+
 # Scope only the existing synchronous operations; never alter their ordering.
 # Report these caller costs separately from the overlapping API totals.
 import re
