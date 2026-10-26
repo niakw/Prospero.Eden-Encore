@@ -15,7 +15,7 @@ on:
         type: boolean
         default: false
       resume_run_id:
-        description: Optional failed run ID whose staged app artifact should be reused
+        description: Optional run ID whose verified internal stage checkpoint should be reused
         required: false
         type: string
         default: ""
@@ -375,12 +375,21 @@ jobs:
         if: ${{ env.RESUME_STAGE_RUN_ID == '' && !inputs.build_only }}
         run: bash tools/ci/package-image.sh --prepare
 
-      - name: Restore staged app from a previous failed run
+      # Resume from an internal GitHub cache instead of an extra public
+      # build artifact. Historical run artifacts remain a read-only fallback.
+      - name: Restore internal stage checkpoint
+        id: restore_stage
         if: ${{ env.RESUME_STAGE_RUN_ID != '' }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/release/
+          key: encore-internal-stage-v1-${{ runner.os }}-${{ env.RESUME_STAGE_RUN_ID }}
+
+      - name: Restore historical staged artifact if no checkpoint exists
+        if: ${{ env.RESUME_STAGE_RUN_ID != '' && steps.restore_stage.outputs.cache-hit != 'true' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: Prospero.Eden-Encore-staged-app
-          # New staged archives include PPSA99008/; download to its parent.
           path: build/release/
           github-token: ${{ github.token }}
           run-id: ${{ env.RESUME_STAGE_RUN_ID }}
@@ -434,38 +443,6 @@ jobs:
             bash tools/build-package.sh release-stage
           fi
 
-      - name: Upload resumable staged app
-        if: ${{ steps.stage.outcome == 'success' && env.EDEN_TEST_ALL_ON != '1' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: Prospero.Eden-Encore-staged-app
-          # Upload the parent, otherwise upload-artifact strips PPSA99008/.
-          path: build/release/
-          retention-days: 7
-          if-no-files-found: error
-
-      - name: Verify downloadable staged ZIP root
-        if: ${{ steps.stage.outcome == 'success' && env.EDEN_TEST_ALL_ON != '1' }}
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: Prospero.Eden-Encore-staged-app
-          path: build/staged-zip-layout-verification
-
-      - name: Reject flattened staged archives
-        if: ${{ steps.stage.outcome == 'success' && env.EDEN_TEST_ALL_ON != '1' }}
-        run: |
-          test -f build/staged-zip-layout-verification/PPSA99008/eboot.bin
-          test -f build/staged-zip-layout-verification/PPSA99008/sce_sys/param.json
-          test ! -f build/staged-zip-layout-verification/eboot.bin
-          test "$(ls -A build/staged-zip-layout-verification)" = PPSA99008
-          python3 - <<'PY_STAGED'
-          import json
-          from pathlib import Path
-          app = Path('build/staged-zip-layout-verification/PPSA99008')
-          assert json.loads((app/'sce_sys/param.json').read_text())['titleId'] == app.name
-          print('STAGED_FTP_ARCHIVE_ROOT_OK PPSA99008/eboot.bin')
-          PY_STAGED
-
       - name: Validate freshly built staged app
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         env:
@@ -479,6 +456,17 @@ jobs:
             # Check the compiled CMake profile, not just source/eboot strings.
             python3 -B tools/ci/check-release-experiments.py "$EDEN_STAGE_DIR"
           fi
+
+      # Save a *validated* stage as a cache checkpoint, not a second PS5 ZIP.
+      # A cache outage must not invalidate an otherwise sound compiled app;
+      # the final FTP artifact is separately uploaded and downloaded below.
+      - name: Save internal stage checkpoint
+        if: ${{ steps.stage.outcome == 'success' && env.EDEN_TEST_ALL_ON != '1' }}
+        continue-on-error: true
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/release/
+          key: encore-internal-stage-v1-${{ runner.os }}-${{ github.run_id }}
 
       - name: Record matching debug ELF and native binary digests
         if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}

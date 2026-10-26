@@ -97,6 +97,23 @@ assert build.index('tools/check-native-source-syntax.py') < build.index('cmake -
 assert workflow.index("Upload validated native development package") < workflow.index("Save build caches after verified artifact uploads")
 assert workflow.index("Upload native development debug symbols") < workflow.index("Save build caches after verified artifact uploads")
 assert workflow.index("Upload compiled release bundle") < workflow.index("Save build caches after verified artifact uploads")
+# Only the verified FTP title archive is presented as the installable package.
+# Preserve resumable failed-job state internally; historical downloads are a
+# restore fallback, never an additional upload in a new run.
+assert "Upload resumable staged app" not in workflow
+assert "Verify downloadable staged ZIP root" not in workflow
+assert "Reject flattened staged archives" not in workflow
+assert workflow.count("name: Prospero.Eden-Encore-staged-app") == 1
+assert "Restore internal stage checkpoint" in workflow
+assert "Restore historical staged artifact if no checkpoint exists" in workflow
+assert "steps.restore_stage.outputs.cache-hit != 'true'" in workflow
+assert "encore-internal-stage-v1-${{ runner.os }}-${{ github.run_id }}" in workflow
+assert "encore-internal-stage-v1-${{ runner.os }}-${{ env.RESUME_STAGE_RUN_ID }}" in workflow
+assert workflow.index("Validate freshly built staged app") < workflow.index("Save internal stage checkpoint")
+assert workflow.index("Save internal stage checkpoint") < workflow.index("Assemble release files")
+assert workflow.index("Upload FTP-ready title folder") < workflow.index("Validate actual downloadable FTP ZIP root")
+assert "name: Eden-Encore-PS5-FTP-PPSA99008" in workflow
+
 cache_block = workflow.split("      - name: Save build caches after verified artifact uploads", 1)[1].split("  release:", 1)[0]
 assert "continue-on-error: true" in cache_block, "optional cache write must not fail artifact delivery"
 print("Encore CI incremental-cache and early syntax gate contract PASS")
