@@ -74,7 +74,6 @@ on:
       - 'tools/ci/check-ftp-archive-root.py'
       - 'tools/analyze-fc27-release-sessions.py'
       - 'tools/check-fc27-f07-blit-pipeline-state-host.py'
-      - 'tools/check-fc27-f07-optimized-pipeline-promotion-host.py'
       - 'tools/check-fc27-f06-native-pad-transition-host.py'
       - 'tools/check-fc27-f06-native-npad-handoff-host.py'
       - 'tools/check-fc27-f06-native-npad-lifo-host.py'
@@ -294,7 +293,6 @@ jobs:
           python3 -B tools/ci/check-ftp-archive-root.py --self-test
           python3 -B tools/analyze-fc27-release-sessions.py --self-test
           python3 -B tools/check-fc27-f07-blit-pipeline-state-host.py
-          python3 -B tools/check-fc27-f07-optimized-pipeline-promotion-host.py
           python3 -B tools/check-vulkan-query-grouping-host.py
           python3 -B tools/check-vulkan-query-copy-plan-host.py
           python3 -B tools/check-vulkan-deferred-copy-ownership-host.py

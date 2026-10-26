@@ -111,7 +111,6 @@ jobs:
           python3 -B tools/check-fc27-f03-native-present-freshness-host.py
           python3 -B tools/ci/check-ftp-archive-root.py --self-test
           python3 -B tools/check-fc27-f07-blit-pipeline-state-host.py
-          python3 -B tools/check-fc27-f07-optimized-pipeline-promotion-host.py
           python3 -B tools/check-fc27-f04-native-dma-alias-bytes-host.py
           python3 -B tools/check-fc27-f04-native-upload-revision-host.py
           python3 -B tools/check-fc27-f04-native-vulkan-upload-barriers-host.py

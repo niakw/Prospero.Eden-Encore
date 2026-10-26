@@ -71,13 +71,6 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
         inc='#include "common/thread_worker.h"'
         assert source.count(old)==source.count(inc)==1, ('pipeline source moved',name)
         modified=source.replace(inc,inc+'\n#include "video_core/renderer_vulkan/striped_wait.h"').replace(old,new)
-        if name == 'include/video_core/renderer_vulkan/vk_graphics_pipeline.h':
-            old_promotion = "    std::atomic_bool optimized_ready{false};"
-            new_promotion = (old_promotion + "\n#ifdef PS5_NATIVE\n"
-                "    // GPU-owner-only: one rebind when an async optimized pipeline becomes ready.\n"
-                "    bool optimized_promotion_bound{};\n#endif")
-            assert modified.count(old_promotion) == 1
-            modified = modified.replace(old_promotion, new_promotion)
         actual[name].write_text(modified)
     # The selected native rasterizer intentionally fails closed on an absent
     # indirect-command/count binding. Mirror ONLY those two reviewed guards
@@ -142,28 +135,6 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     pipeline_text = pipeline_text.replace(sampler_stage, sampler_memo + sampler_stage)
     assert pipeline_text.count('std::array<SamplerMemo, 16> sampler_memo{};') == 1
     assert pipeline_text.count('samplers.push_back(resolve_sampler(handle.second));') == 1
-    # Same optional optimized shader publication handoff as the real selected
-    # native Vulkan source. The complete generated/maintained equality check
-    # must still catch unrelated graphics pipeline drift.
-    old_bind = "    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(this)};"
-    new_bind = '''    const bool scheduler_pipeline_changed{scheduler.UpdateGraphicsPipeline(this)};
-#ifdef PS5_NATIVE
-    // When background optimization finishes without a guest shader switch,
-    // Scheduler still tracks this GraphicsPipeline*. Force one Vulkan rebind:
-    // the VkPipeline handle has changed but the guest shader identity has not.
-    // This flag is owned by the GPU thread; ready is release-published by
-    // the optimizer worker. The release profile never publishes ready=true.
-    const bool optimized_promotion =
-        optimized_ready.load(std::memory_order_acquire) && !optimized_promotion_bound;
-    if (optimized_promotion) {
-        optimized_promotion_bound = true;
-    }
-    const bool bind_pipeline{scheduler_pipeline_changed || optimized_promotion};
-#else
-    const bool bind_pipeline{scheduler_pipeline_changed};
-#endif'''
-    assert pipeline_text.count(old_bind) == 1
-    pipeline_text = pipeline_text.replace(old_bind, new_bind)
     pipeline_src.write_text(pipeline_text)
 
     # AMD logic-op host-state projection: never mutate guest Maxwell regs.

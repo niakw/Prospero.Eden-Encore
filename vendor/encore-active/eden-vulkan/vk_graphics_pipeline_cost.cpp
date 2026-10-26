@@ -851,22 +851,7 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
     }
     const bool is_rescaling{texture_cache.IsRescaling()};
     const bool update_rescaling{scheduler.UpdateRescaling(is_rescaling)};
-    const bool scheduler_pipeline_changed{scheduler.UpdateGraphicsPipeline(this)};
-#ifdef PS5_NATIVE
-    // When background optimization finishes without a guest shader switch,
-    // Scheduler still tracks this GraphicsPipeline*. Force one Vulkan rebind:
-    // the VkPipeline handle has changed but the guest shader identity has not.
-    // This flag is owned by the GPU thread; ready is release-published by
-    // the optimizer worker. The release profile never publishes ready=true.
-    const bool optimized_promotion =
-        optimized_ready.load(std::memory_order_acquire) && !optimized_promotion_bound;
-    if (optimized_promotion) {
-        optimized_promotion_bound = true;
-    }
-    const bool bind_pipeline{scheduler_pipeline_changed || optimized_promotion};
-#else
-    const bool bind_pipeline{scheduler_pipeline_changed};
-#endif
+    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(this)};
     const bool bind_descriptor_buffer{
         descriptor_set_layout && uses_descriptor_buffer &&
         scheduler.UpdateDescriptorBufferChunk(descriptor_buffer_chunk)};

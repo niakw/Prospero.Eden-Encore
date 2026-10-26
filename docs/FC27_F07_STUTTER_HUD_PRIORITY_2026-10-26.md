@@ -87,17 +87,6 @@ requires recovery through the corrected source. No shader cache, guest fences,
 rasterizer cache mutexes, game input or CPU/JIT timing policy is bypassed.
 **This is a specific HUD/2D correctness candidate, not a measured FPS improvement.**
 
-**F07 DEV fast-first optimized pipeline handoff:** a guest shader has one `GraphicsPipeline*`
-identity but can receive a new native `VkPipeline` after asynchronous optimization.
-The previously cached Scheduler guest pointer could skip binding the new Vulkan
-handle indefinitely during consecutive draws with the same shader. The selected
-PS5 native `ConfigureDraw` now forces **exactly one additional bind** after the
-atomic optimized-pipeline publication, with no extra bind on ordinary release
-draws and no descriptor, synchronization or JIT policy changes. An O0/O2
-source-extracted host test checks first use, continuous draws, shader switches
-and command-buffer reset. This is **experimental-profile correctness only**;
-production `fast_first_pipelines=false`, and FC27 performance remains unverified.
-
 **P1: intermittent >300–1000ms pauses.** The Oct 15 long-gap subset was often JIT-heavy even with little cache wait; inspect real A32/A64 compile/retranslate/invalidation and async first-use pipeline blocking separately. Current standard per-core JIT DEV counters do not capture all invalidations in older logs. Do not activate sparse/shared JIT by default without controlled evidence.
 
 **P1: guest progress and input-to-visible-state.** Binder/BufferQueue/NvDisp/Host1x/HLE wake correctness (F05 HOST), physical pad → NPad publications (F06 HOST) and title's own action profile are three distinct properties. The reported frozen menu/match can persist while backend Vulkan produces 30 callbacks/s. Use future evidence only if it pairs guest thread progress and image-content freshness; no guest-save edits or artificial HOME/Plus events.
