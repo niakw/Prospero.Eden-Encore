@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Bind an uploaded unstripped ELF to the *same staged native test app*.
+"""Bind an unstripped ELF to the same PS5 *release* application.
 
 This is build-output bookkeeping only; no SDK, signing or native execution.
 A match in these hashes documents provenance, NOT that the signed SELF's
@@ -56,14 +56,20 @@ def text_size(elf: bytes) -> int:
 
 
 def write_manifest(app: Path, native: Path, output: Path, title_id: str) -> dict:
-    if app.resolve() != (ROOT / "build/dev/PPSA99008").resolve():
-        raise ValueError("not the isolated development title")
+    if app.resolve() != (ROOT / "build/release/PPSA99008").resolve():
+        raise ValueError("not the unique PS5 release title")
     if native.resolve() != (ROOT / "build/headless-native").resolve():
         raise ValueError("not the current native build output directory")
     if output.resolve() != (native / "crash-provenance.json").resolve() or output.exists() or output.is_symlink():
         raise ValueError("output must be a new crash-provenance.json in native build")
-    if len(title_id) != 16 or any(ch not in "0123456789abcdefABCDEF" for ch in title_id):
-        raise ValueError("invalid title ID")
+    if title_id != "PPSA99008":
+        raise ValueError("only the release PS5 title ID PPSA99008 is accepted")
+    try:
+        staged_title = json.loads((app / "sce_sys/param.json").read_text())["titleId"]
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise ValueError(f"invalid staged title metadata: {error}") from error
+    if staged_title != title_id:
+        raise ValueError("staged native app title does not match release ID")
     paths = {"unstripped_elf": native / "llvm-pie.elf",
              "link_map": native / "link.map",
              "staged_eboot": app / "eboot.bin"}
@@ -73,7 +79,7 @@ def write_manifest(app: Path, native: Path, output: Path, title_id: str) -> dict
     manifest = {
         "schema": 1,
         "source": "same-run compiled outputs, not PS5 hardware verification",
-        "test_title_id": title_id.upper(),
+        "app_title_id": title_id,
         "source_commit": os.getenv("GITHUB_SHA", "unknown"),
         "workflow_run": os.getenv("GITHUB_RUN_ID", "local"),
         "elf_text_size_hex": f"0x{text_size(data['unstripped_elf']):x}",
@@ -96,10 +102,10 @@ def main() -> int:
     parser.add_argument("--app", type=Path, required=True)
     parser.add_argument("--native", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--test-title", required=True)
+    parser.add_argument("--app-title", required=True)
     args = parser.parse_args()
     try:
-        receipt = write_manifest(args.app, args.native, args.output, args.test_title)
+        receipt = write_manifest(args.app, args.native, args.output, args.app_title)
         print("EDEN_CRASH_SYMBOL_PROVENANCE " + json.dumps(receipt, sort_keys=True))
         return 0
     except (OSError, ValueError, struct.error) as error:

@@ -36,21 +36,21 @@ assert "if (!safe_launch)" in main
 assert "experimental_sparse_jit = true;" in main
 assert "experimental_logical_cpu = true;" in main
 assert "experimental_frame_probe = true;" in main
-assert 'experimental_sparse_jit = false;' in main  # alias preflight
-assert 'export EDEN_SPARSE_JIT_DEV=ON' in read("tools/build-package.sh")
+assert 'if (!Common::ProbeSparseJitAlias())' in main
+assert 'throw std::runtime_error("PS5 sparse JIT alias preflight failed")' in main
 package=read("tools/build-package.sh")
+assert 'EDEN_SPARSE_JIT_DEV' not in package
+assert '\ndev)\n' not in package
 release=package.split("release|release-stage)\n",1)[1].split("\n    ;;",1)[0]
-development=package.split("\ndev)\n",1)[1].split("\n    ;;",1)[0]
-assert 'export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=OFF' in release
+assert 'export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF' in release
 assert 'export EDEN_GUEST_WRITE_BRIDGE_DEV=OFF EDEN_UNQUALIFIED_FERMI2D_COPY=OFF' in release
-assert 'export EDEN_SPARSE_JIT_DEV=ON' in development
-assert 'export EDEN_SHARED_JIT=ON EDEN_JIT_COMPILE_BATCH=ON' in development
 assert 'EDEN_EXPERIMENT_DEFAULTS sparse=%u logical_cpu=%u frame_probe=%u safe=%u' in main
 experimental_section = main[main.index('bool experimental_sparse_jit = false;'):main.index('Eden::Experimental::ApplyJitMemoryPlan(jit_plan);')]
 assert '#ifdef PS5_NATIVE' in experimental_section
 assert '#if defined(PS5_NATIVE) && defined(EDEN_DEV_PROFILE)' not in experimental_section
-assert '#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)\n        // Native evidence' in experimental_section
-assert '-DEDEN_SPARSE_JIT_DEV="${EDEN_SPARSE_JIT_DEV:-OFF}"' in read("tools/build-headless-native.sh")
+assert 'EDEN_SPARSE_JIT_DEV' not in experimental_section
+assert 'EDEN_SPARSE_JIT_DEV' not in read("tools/build-headless-native.sh")
+assert 'EDEN_SPARSE_JIT_DEV' not in cmake
 assert 'python3 -B tools/ci/check-release-experiments.py "$EDEN_STAGE_DIR"' in read('.github/workflows/build-040-zbic.yml')
 subprocess.run([sys.executable, '-B', str(root / 'tools/ci/check-release-experiments.py'), '--self-test'], check=True)
 assert "EnableExperimentalLogicalPlacement();" in main
