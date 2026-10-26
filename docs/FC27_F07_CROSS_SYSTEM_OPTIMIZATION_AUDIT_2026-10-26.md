@@ -115,3 +115,15 @@ host O0/O2 guards and full native package/build must pass for this exact HEAD.
 A green host or cross-compiled PS5 build is not native firmware qualification;
 an actual console runtime still needs proof of alias mapping, JIT clear
 liveness, recycled physical backing, game frame cadence and HUD correctness.
+
+
+### Source-review register — native sparse JIT single path
+
+| Source | Concrete change / safety contract |
+| --- | --- |
+| `headless/experimental_performance.h` | Removed sparse runtime flag; virtual cache admission remains bounded |
+| `headless/jit-allocator.h` | Native code arena allocates sparse RX/RW aliases only; no dense retry |
+| `headless/jit-sparse-commit.h` | Exact 2 MiB trimming policy and capacity/headroom validation |
+| `headless/main.cpp` | One sparse preflight per game, fail-closed firmware alias validation |
+| `src/memory_pages.cpp` | Physical commit and whole-cache tail decommit with mapping guards and epoch invalidation |
+| `vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_native.cpp` | Native translation precommit and quiesced cache trim, no opt-in dev mode |
