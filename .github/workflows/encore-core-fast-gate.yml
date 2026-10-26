@@ -82,6 +82,8 @@ on:
       - 'tools/check-vulkan-pipeline-ready-publication-host.py'
       - 'tools/check-vulkan-buffer-frame-tick-snapshot-host.py'
       - 'tools/check-ps5-quad-index-initial-fence-host.py'
+      - 'tools/check-launcher-gl-scissor-reuse-host.py'
+      - 'headless/prosperoeden/pe/gfx/gl_batch.cpp'
       - 'tools/check-launcher-release-hotpaths-host.py'
       - 'headless/prosperoeden/pe/ui/textures.hpp'
       - 'headless/prosperoeden/pe/ui/textures.cpp'
@@ -245,6 +247,7 @@ jobs:
           python3 -B tools/check-fc27-f06-native-npad-handoff-host.py
           python3 -B tools/check-fc27-f06-native-npad-lifo-host.py
           python3 -B tools/check-fc27-f06-native-pad-to-lifo-boundary-host.py
+          python3 -B tools/check-launcher-gl-scissor-reuse-host.py
           python3 -B tools/check-launcher-release-hotpaths-host.py
           python3 -B tools/check-ps5-active-texture-descriptor-host.py
           python3 -B tools/check-native-batched-buffer-invalidation-host.py

@@ -497,6 +497,7 @@ void GlBatch::draw(const DrawList &list, const Viewport &viewport, int surface_w
 
     GLuint bound_texture = 0;
     bool scissor = false;
+    Rect last_scissor_clip{};
     glBindVertexArray(vaos_[slot]);
     for (const Run &run : list.runs())
     {
@@ -509,18 +510,30 @@ void GlBatch::draw(const DrawList &list, const Viewport &viewport, int surface_w
         }
         if (run.clipped)
         {
-            const float x0 = std::floor(run.clip.x * viewport.scale + viewport.offset_x);
-            const float y0 = std::floor(run.clip.y * viewport.scale + viewport.offset_y);
-            const float x1 =
-                std::ceil((run.clip.x + run.clip.w) * viewport.scale + viewport.offset_x);
-            const float y1 =
-                std::ceil((run.clip.y + run.clip.h) * viewport.scale + viewport.offset_y);
+            // Runs with different textures often share the same clip. Keep
+            // the actual last GL scissor and avoid recomputing/submitting it
+            // for every image/text run in a clipped library panel.
+            const bool new_scissor =
+                !scissor || run.clip.x != last_scissor_clip.x ||
+                run.clip.y != last_scissor_clip.y ||
+                run.clip.w != last_scissor_clip.w ||
+                run.clip.h != last_scissor_clip.h;
             if (!scissor)
                 glEnable(GL_SCISSOR_TEST);
             scissor = true;
-            glScissor(static_cast<GLint>(x0), surface_height - static_cast<GLint>(y1),
-                      static_cast<GLsizei>(std::max(0.0f, x1 - x0)),
-                      static_cast<GLsizei>(std::max(0.0f, y1 - y0)));
+            if (new_scissor)
+            {
+                const float x0 = std::floor(run.clip.x * viewport.scale + viewport.offset_x);
+                const float y0 = std::floor(run.clip.y * viewport.scale + viewport.offset_y);
+                const float x1 =
+                    std::ceil((run.clip.x + run.clip.w) * viewport.scale + viewport.offset_x);
+                const float y1 =
+                    std::ceil((run.clip.y + run.clip.h) * viewport.scale + viewport.offset_y);
+                glScissor(static_cast<GLint>(x0), surface_height - static_cast<GLint>(y1),
+                          static_cast<GLsizei>(std::max(0.0f, x1 - x0)),
+                          static_cast<GLsizei>(std::max(0.0f, y1 - y0)));
+                last_scissor_clip = run.clip;
+            }
         }
         else if (scissor)
         {
