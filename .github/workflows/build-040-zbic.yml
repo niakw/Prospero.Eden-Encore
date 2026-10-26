@@ -579,7 +579,7 @@ jobs:
       # This is the ready-to-install Actions ZIP. Unlike the release-bundle
       # artifact (which includes dist/ and symbols), its sole top-level folder
       # is PPSA99008/ with eboot.bin immediately inside.
-      - name: Upload PS5 FTP-ready title folder
+      - name: Upload FTP-ready title folder
         if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
