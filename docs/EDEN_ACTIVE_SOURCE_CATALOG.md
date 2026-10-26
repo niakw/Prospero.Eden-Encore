@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **328 fichiers** de code et d'en-têtes enregistrés.
-- **328 fichiers** possèdent une correspondance de chemin *exacte*
+- **329 fichiers** de code et d'en-têtes enregistrés.
+- **329 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -338,6 +338,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/vulkan_hud_shaders.h` | `maintained-override` | V47 |
 | `eden-vulkan/vulkan_instance.cpp` | `maintained-override` | V48 |
 | `eden-vulkan/vulkan_library.cpp` | `maintained-override` | V49 |
+| `eden-vulkan/vulkan_memory_allocator.cpp` | `maintained-override` | V109 |
 | `eden-vulkan/vulkan_present_layer.cpp` | `maintained-override` | V09 |
 | `eden-vulkan/vulkan_present_manager.cpp` | `maintained-override` | V02 |
 | `eden-vulkan/vulkan_query_cache.cpp` | `maintained-override` | V27 |
