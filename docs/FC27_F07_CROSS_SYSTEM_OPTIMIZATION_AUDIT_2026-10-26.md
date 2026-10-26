@@ -1,10 +1,12 @@
 # Eden Encore — performance audit without repeating previous work (26 October 2026)
 
+**Tableau maître à utiliser pour tout prochain bilan :** [FC27_F07_MASTER_TRACKER.md](FC27_F07_MASTER_TRACKER.md). Cet audit contient une chronologie : la section sparse « DEV only » décrit une étape passée, remplacée plus bas par l'unique JIT sparse natif de production. Les preuves sur PS5 13.60 restent nécessaires.
+
 **Branch:** `dev/ps5-sparse-jit`. This is a cross-subsystem execution map, **not** a claim that every emulation source is FPS-optimized. F01–F06 passed host pre-console contracts; F07 remains **OPEN** until same-build console evidence. The 491-source inventory is historical; source-review coverage and measured runtime bottlenecks are different quantities.
 
 | Area / production owner | Already integrated; do not duplicate | Unresolved evidence / next precise investigation |
 | --- | --- | --- |
-| A32/A64 JIT / `headless/experimental_performance.h`, native Dynarmic | Bounded physical admission, code-space checks, alias memo; sparse/shared dev-only | CPU instruction progress and per-core compile/invalidation time during >100 ms frame gaps; no unconditional sparse or cache enlargement |
+| A32/A64 JIT / `headless/experimental_performance.h`, native Dynarmic | Single native **sparse JIT** RX/RW path with 2 MiB demand commit and quiesced full-clear tail trim; code-space checks and alias memo; prior dense/dev-only note superseded | Firmware 13.60 alias/trim/relaunch qualification; CPU instruction progress and per-core compile/invalidation time during >100 ms frame gaps; no unbounded cache enlargement |
 | Shader first-use / `vk_pipeline_cache_cost.cpp` | Asynchronous Vulkan pipeline *build*, release cold-creation timing `graphics_pipeline_create` | Guest IR→SPIR-V preparation remains synchronous in `CreateGraphicsPipeline()`; correlate first-use bursts with waits rather than bypass ordered builds |
 | Vulkan worker / `vk_graphics_pipeline_cost.cpp`, `vulkan_scheduler.cpp` | Completion always wakes waiters; speculative optimizer yields to first-use builds when enabled | `ConfigureDraw` queues a build-condition wait in scheduler worker; attribute time/impact before changing worker lock boundaries |
 | Graphics pipeline transitions / `vk_graphics_pipeline.h` | **This audit:** PS5-only hot transition index on lists >=8; no changes to pointers, keys or draw order | Host O0/O2 regression required; no hardware frametime improvement claimed |
