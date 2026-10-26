@@ -221,6 +221,10 @@ private:
     std::shared_ptr<OptimizeState> optimize_state; // allocated ONLY for active R313 builds
     vk::Pipeline optimized_pipeline;
     std::atomic_bool optimized_ready{false};
+#ifdef PS5_NATIVE
+    // GPU-owner-only: one rebind when an async optimized pipeline becomes ready.
+    bool optimized_promotion_bound{};
+#endif
 
     DescriptorBufferLayout descriptor_buffer_layout;
     std::vector<DescriptorUpdateEntry> last_descriptor_payload;

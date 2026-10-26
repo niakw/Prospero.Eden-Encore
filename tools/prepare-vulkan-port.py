@@ -1688,7 +1688,11 @@ adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
      '    };\n'
      '    std::shared_ptr<OptimizeState> optimize_state; // allocated ONLY for active R313 builds\n'
      '    vk::Pipeline optimized_pipeline;\n'
-     '    std::atomic_bool optimized_ready{false};'),
+     '    std::atomic_bool optimized_ready{false};\n'
+     '#ifdef PS5_NATIVE\n'
+     '    // GPU-owner-only: one rebind when an async optimized pipeline becomes ready.\n'
+     '    bool optimized_promotion_bound{};\n'
+     '#endif'),
     # Guard pre-drain to pipelines that can actually allocate descriptors.
     ('    bool HasDynamicVertexInput() const noexcept { return key.state.dynamic_vertex_input; }',
      '    bool HasDynamicVertexInput() const noexcept { return key.state.dynamic_vertex_input; }\n'
@@ -1814,6 +1818,26 @@ for name in ('vk_graphics_pipeline', 'vk_compute_pipeline'):
             # untouched for empty stages, while bindings still execute.
             ("        stage_infos[stage] = *info;\n        enabled_uniform_buffer_masks[stage] = info->constant_buffer_mask;", "        stage_infos[stage] = *info;\n        // Immutable shader-stage metadata: avoid repeated empty descriptor\n        // walks while both guest buffer/texture caches are locked.\n        stage_has_image_bindings[stage] =\n            !info->texture_buffer_descriptors.empty() ||\n            !info->image_buffer_descriptors.empty() ||\n            !info->texture_descriptors.empty() ||\n            !info->image_descriptors.empty();\n        enabled_uniform_buffer_masks[stage] = info->constant_buffer_mask;"),
             ("        buffer_cache.BindHostStageBuffers(stage);\n        PushImageDescriptors(texture_cache, guest_descriptor_queue, stage_infos[stage], rescaling,\n                             samplers_it, views_it);\n        const auto& info{stage_infos[stage]};", "        buffer_cache.BindHostStageBuffers(stage);\n        const auto& info{stage_infos[stage]};\n        // No image or texture-buffer descriptors: PushImageDescriptors\n        // cannot change view cursors, descriptor queue or rescale constants.\n        // Uniform/storage buffer bindings above must still execute.\n        if (stage_has_image_bindings[stage]) {\n            PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling,\n                                 samplers_it, views_it);\n        }"),
+            # Rebind the SAME guest shader exactly once when its background
+            # Vulkan optimized pipeline becomes available. This is separate
+            # from a guest shader transition and is never active in release.
+            ('    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(this)};',
+             '''    const bool scheduler_pipeline_changed{scheduler.UpdateGraphicsPipeline(this)};
+#ifdef PS5_NATIVE
+    // When background optimization finishes without a guest shader switch,
+    // Scheduler still tracks this GraphicsPipeline*. Force one Vulkan rebind:
+    // the VkPipeline handle has changed but the guest shader identity has not.
+    // This flag is owned by the GPU thread; ready is release-published by
+    // the optimizer worker. The release profile never publishes ready=true.
+    const bool optimized_promotion =
+        optimized_ready.load(std::memory_order_acquire) && !optimized_promotion_bound;
+    if (optimized_promotion) {
+        optimized_promotion_bound = true;
+    }
+    const bool bind_pipeline{scheduler_pipeline_changed || optimized_promotion};
+#else
+    const bool bind_pipeline{scheduler_pipeline_changed};
+#endif'''),
             # R363: async failed pipeline can be dropped by the Vulkan worker
             # even after the earlier GPU-owner IsBuilt() check passed.
             ("        if (bind_pipeline) {\n            if (!pipeline) {\n                return;\n            }", "        if (bind_pipeline) {\n            if (!pipeline) {\n                // An asynchronously-built pipeline can fail after Configure's\n                // earlier IsBuilt()/pipeline check but before this worker\n                // callback executes. Count the actual GPU draw omission.\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }"),
