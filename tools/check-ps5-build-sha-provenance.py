@@ -11,7 +11,10 @@ workflow=(root/'.github/workflows/build-040-zbic.yml').read_text()
 assert 'source_commit=$(git -C "$root" rev-parse --verify HEAD)' in builder
 assert '[[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]' in builder
 assert '-DEDEN_ENCORE_SOURCE_COMMIT="$source_commit"' in builder
-assert 'bash tools/build-package.sh dev "$EDEN_TEST_TITLE_ID"' in workflow
+assert 'bash tools/build-package.sh release-stage' in workflow
+assert 'bash tools/build-package.sh dev' not in workflow
+assert 'EDEN_TEST_ALL_ON' not in workflow
+assert 'build/dev/PPSA99008' not in workflow
 assert 'bash tools/build-headless-native.sh --graphics' in (
     root/'tools/build-package.sh').read_text()
 assert 'EDEN_NATIVE_SOURCE_COMMIT' in cmake
@@ -37,8 +40,11 @@ assert 'if (persist_detailed_logs)' in main
 assert main.index('BootTrace::Begin(') < main.index('BootTrace::Line("source_sha=%s"')
 assert 'Eden::BootTrace::Begin(Eden::kAppVersion, __DATE__ " " __TIME__);' in main
 begin=cmake.index('    if(NOT DEFINED EDEN_ENCORE_SOURCE_COMMIT)')
-end=cmake.index('    if(EDEN_SPARSE_JIT_DEV)',begin)
+# Read only the complete SHA validation stanza; no sparse/dense build switch
+# terminates it because the PS5 now has one native JIT.
+end=cmake.index('    # Native-title libc rejects socket fcntl',begin)
 rules=cmake[begin:end]
+assert 'EDEN_SPARSE_JIT_DEV' not in rules
 assert 'message(FATAL_ERROR' in rules and 'EQUAL 40' in rules
 compiler=shutil.which('cmake')
 assert compiler,'cmake required'
