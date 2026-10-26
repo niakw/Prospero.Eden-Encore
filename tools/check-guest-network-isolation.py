@@ -80,6 +80,13 @@ assert "std::filesystem::last_write_time(retry_marker" not in services
 widgets = (root / "headless/prosperoeden/pe/ui/widgets.cpp").read_text()
 textures = (root / "headless/prosperoeden/pe/ui/textures.cpp").read_text()
 assert "if (image.missing && c.textures.brand() != 0)" not in widgets
-assert 'it->second.age >= retry_after' in textures
+# The release launcher now computes the retry age lazily from a monotonic
+# per-cover timestamp (no per-frame mutation of all cover entries). Retry
+# must retain the failed cover's missing state while decode is requeued.
+assert 'uptime_seconds_ - it->second.loaded_at_seconds' in textures
+assert 'age >= retry_after' in textures
+assert 'it->second.loaded_at_seconds = uptime_seconds_;' in textures
+assert 'it->second.loaded && it->second.texture == 0' in textures
+assert 'it->second.loaded || it->second.failed_loads != 0' in textures
 assert 'retry_after = it->second.failed_loads <= 1 ? 0.45f' in textures
 print("Shared host+guest DNS/NIFM filtered connectivity and launcher HTTPS fallback: PASS")
