@@ -2,7 +2,7 @@
 """Offline PS5 architecture source contracts (does not compile or launch PS5 code).
 
 Run from any directory: python3 tools/check-ps5-architecture.py
-Checks developer-only safety gates, actual lifecycle hooks and generated
+Checks the single native sparse JIT, actual lifecycle hooks and generated
 Vulkan port preparation. Passing is NOT native SDK or hardware qualification.
 """
 from __future__ import annotations
@@ -34,6 +34,7 @@ def main() -> None:
     a32_native = read("vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_interface_native.cpp")
     worker_script = read("tools/prepare-vulkan-port.py")
     jit_policy = read("headless/experimental_performance.h")
+    native_alloc = read("headless/jit-allocator.h")
 
     # Distinguish kernel direct-memory enumeration from the newer JIT-owned
     # memory snapshots. The two diagnostics deliberately use different
@@ -106,7 +107,6 @@ def main() -> None:
             "Sparse JIT committed-page hints must invalidate on create, trim and release")
     require('::Common::SparseJitUsage(&jit_reserved, &jit_committed)' in perf,
             "Physical JIT memory accounting must target global Common")
-    native_alloc = read("headless/jit-allocator.h")
     require('#include <algorithm>' in native, "Sparse constructor bootstrap needs std::min")
     require('const std::size_t bootstrap = std::min<std::size_t>(size, 2 * LargePage)' in native,
             "Dynarmic constant pool requires committed pages before construction")
