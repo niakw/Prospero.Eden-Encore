@@ -26,6 +26,7 @@ fixture=r"""
 #include <chrono>
 #include <cstdio>
 #include <ctime>
+#include "frame_metrics.h"
 namespace Common {
 struct Clock {
  std::chrono::nanoseconds GetTimeNS() const{return std::chrono::nanoseconds{12345678};}
@@ -60,6 +61,6 @@ with tempfile.TemporaryDirectory(prefix="eden-quiet-report-") as tmp:
     file.write_text(fixture)
     subprocess.run([cc,"-std=c++20","-O1","-g","-Wall","-Wextra","-Werror",
                     "-fsanitize=address,undefined","-fno-sanitize-recover=all",
-                    str(file),"-o",str(exe)],check=True,timeout=90)
+                    "-I",str(root/"headless"),str(file),"-o",str(exe)],check=True,timeout=90)
     subprocess.run([str(exe)],check=True,timeout=90)
 print("NATIVE_QUIET_GPU_REPORT_HOST_PASS heartbeat=1 quiet_full_report=OFF dev_full_report=ON")
