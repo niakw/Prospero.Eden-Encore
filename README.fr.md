@@ -21,7 +21,7 @@
 <p align="center"><img src="assets/screenshots/encore-home.png" alt="Accueil réel d'Eden Encore capturé depuis le lanceur C++/OpenGL" width="860"></p>
 
 > [!IMPORTANT]
-> **FC27 — ce qu'il reste vraiment :** [blocages moteur et critères de sortie](docs/FC27_EXIT_GATES_2026-10-22.md). Le nombre de sources examinées ne mesure pas les optimisations restantes.
+> **FC27 — tableau maître :** [priorités F07 P0/P1/P2, sparse JIT et validation matérielle](docs/FC27_F07_MASTER_TRACKER.md). Les [critères F01–F06 validés sur hôte](docs/FC27_EXIT_GATES_2026-10-22.md) ne prouvent pas la jouabilité sur console. Le nombre de sources examinées ne mesure pas les optimisations restantes.
 >
 > **Le firmware 13.60 est notre cible principale testée sur console.** Cela ne garantit ni le fonctionnement de tous les jeux, ni la compatibilité d'autres versions système. Le launcher et certains jeux ont été exécutés sur cette version ; les saccades, la progression en fin de match et certains contrôles personnalisés restent à résoudre.
 >
@@ -120,7 +120,7 @@ Le mapping physique du launcher et la configuration des actions mémorisée **à
 - **Dynarmic reste le JIT de référence.** Le JIT partagé et certaines compilations anticipées ne sont pas activés aveuglément.
 - **Vulkan/RADV et OpenGL** sont deux chemins natifs. Les adaptations GPU sont vérifiées contre les sources et l'archive produite.
 - **Cache shaders :** une taille de cache configurée ne démontre pas que les shaders sont réellement réutilisés.
-- **Mémoire :** déclaration du paquet, mémoire invitée, tables clairsemées et cache JIT ne désignent pas la même ressource. Le JIT à allocation dynamique reste à qualifier.
+- **Mémoire :** déclaration du paquet, mémoire invitée, tables clairsemées et cache JIT ne désignent pas la même ressource. L'unique profil PS5 intègre désormais un JIT sparse RX/RW avec engagement physique à la demande et libération après invalidation complète et quiescente. Ce comportement est testé sur hôte, mais ses économies et sa stabilité sur firmware 13.60 restent à qualifier.
 - **Performances :** les fenêtres de télémétrie, verrous et IPC doivent expliquer les ralentissements et les gels, pas simplement afficher des FPS.
 
 [Architecture](docs/PS5_NATIVE_ARCHITECTURE.md) · [Feuille de route performance](docs/PERFORMANCE_ROADMAP.md) · [Audit des adaptations](docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md)

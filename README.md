@@ -27,7 +27,7 @@
 <p align="center"><img src="assets/screenshots/encore-home.png" alt="Real Eden Encore Home screen captured from the C++/OpenGL launcher" width="860"></p>
 
 > [!IMPORTANT]
-> **FC27 remaining exit gates:** [engine blockers and hardware acceptance tracker](docs/FC27_EXIT_GATES_2026-10-22.md). Source-review totals are not remaining optimization counts.
+> **FC27 performance — live master tracker:** [F07 P0/P1/P2 priorities and sparse-JIT qualification](docs/FC27_F07_MASTER_TRACKER.md). [F01–F06 host exit gates](docs/FC27_EXIT_GATES_2026-10-22.md) are separate from on-console playability. Source-review totals are not remaining optimization counts.
 >
 > **Firmware 13.60 is Encore's primary hardware-tested target, not a universal compatibility guarantee.** The launcher and selected titles have been exercised on this firmware, but game performance, saved control profiles and end-of-match stability still need work. Other firmware versions are **not** qualified. A current development build is **not** automatically a stable release.
 >
@@ -126,7 +126,7 @@ Safe Launch does **not** erase saves or permanently overwrite preferences. **Gam
 - **Dynarmic remains the production JIT.** Experimental cross-core shared JIT and anticipatory compilation remain disabled in stable profiles due to unqualified concurrency/lifetime behavior.
 - **Vulkan/RADV and OpenGL** are independent graphics routes. The native graphics build uses pinned source adaptations, tests, source fingerprints and archive checks rather than treating source presence as proof of compiled integration.
 - **Shader cache** allocation and file size do not prove hit rate. Cold pipeline creation, long CPU waits and shader-cache reuse must be measured separately.
-- **Memory** package declarations, sparse page tables, committed guest backing and JIT code-cache policies are not interchangeable. Sparse JIT remains an experimental scope, not unlimited physical-memory access.
+- **Memory** package declarations, sparse page tables, committed guest backing and JIT code-cache policies are not interchangeable. The single native PS5 release now selects demand-backed sparse RX/RW JIT aliases, with physical backing reclaimed only after a quiesced full-cache invalidation. Host checks exist; runtime memory savings and stability on firmware 13.60 remain unqualified, and physical memory is not unlimited.
 - **Diagnostics** can distinguish a running compositor from actual guest progression; detailed capture has costs and is not automatically enabled in quiet gameplay.
 
 See [Architecture](docs/PS5_NATIVE_ARCHITECTURE.md), [Performance roadmap](docs/PERFORMANCE_ROADMAP.md) and [Integration audit](docs/INTEGRATION_AUDIT_CPU_GPU_JIT_2026-10-14.md).
