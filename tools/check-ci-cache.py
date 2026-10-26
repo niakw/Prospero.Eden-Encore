@@ -91,11 +91,13 @@ assert "-exec touch" not in build
 assert '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON' in build
 assert 'tools/check-native-source-syntax.py' in build
 assert build.index('tools/check-native-source-syntax.py') < build.index('cmake --build "$scratch/native-local"')
-# The R422 all-on compile reached a potentially lengthy cache upload BEFORE
-# GitHub saved the usable PS5 zip. Never sacrifice a successful build artifact
-# to optional cache persistence: publish and verify first, cache last.
-assert workflow.index("Upload validated native development package") < workflow.index("Save build caches after verified artifact uploads")
-assert workflow.index("Upload native development debug symbols") < workflow.index("Save build caches after verified artifact uploads")
+# One release artifact: publish verified FTP and release bundle BEFORE any
+# optional cache upload. Do not restore the obsolete all-on/dev package path.
+assert "EDEN_TEST_ALL_ON" not in workflow
+assert "Upload validated native development package" not in workflow
+assert "Upload native development debug symbols" not in workflow
+assert "bash tools/build-package.sh dev" not in workflow
+assert workflow.index("Upload FTP-ready title folder") < workflow.index("Save build caches after verified artifact uploads")
 assert workflow.index("Upload compiled release bundle") < workflow.index("Save build caches after verified artifact uploads")
 # Only the verified FTP title archive is presented as the installable package.
 # Preserve resumable failed-job state internally; historical downloads are a
