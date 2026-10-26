@@ -46,6 +46,7 @@
 #include <system_error>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <unistd.h>
 
 #ifdef PS5_NATIVE
@@ -466,8 +467,13 @@ std::vector<std::string> LocaleCaseCandidates(
         });
     std::vector<std::string> sorted;
     sorted.reserve(choices.size());
+    // The original linear duplicate scan was quadratic in the size of a
+    // game's LaunchBox case index. Preserve the stable region-first ordering,
+    // but admit each distinct filename in expected constant time.
+    std::unordered_set<std::string> seen;
+    seen.reserve(choices.size());
     for (const auto& candidate : choices)
-        if (std::find(sorted.begin(), sorted.end(), candidate.file) == sorted.end())
+        if (seen.insert(candidate.file).second)
             sorted.push_back(candidate.file);
     return sorted;
 }
