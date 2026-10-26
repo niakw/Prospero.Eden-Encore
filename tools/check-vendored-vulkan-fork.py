@@ -48,11 +48,15 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     subprocess.run([sys.executable,'-B',str(root/'tools/prepare-vulkan-port.py'),str(patched),str(temp/'generated')],check=True,timeout=150,env=env)
     actual={str(p.relative_to(temp/'generated')):p for p in (temp/'generated').rglob('*') if p.is_file()}
     expected={str(p.relative_to(active)):p for p in active.rglob('*') if p.is_file()}
-    # One intentional upstream backport is now a native source override, not
-    # a generator change. Reconstruct precisely the two header edits, leaving
-    # every other generated translation unit byte-identical.
+    # Two intentional native-only sources are not generator outputs:
+    # a synchronization helper and the F07 Vulkan allocator OOM diagnostics.
+    # All generated Vulkan translation units still remain byte-identical.
     helper='include/video_core/renderer_vulkan/striped_wait.h'
-    assert set(actual)==set(expected)-{helper}, (
+    allocator='vulkan_memory_allocator.cpp'
+    subprocess.run([sys.executable, '-B', str(root/'tools/check-ps5-vulkan-oom-source.py')],
+                   check=True, timeout=15, capture_output=True, text=True)
+    assert allocator not in actual, 'generated Vulkan port unexpectedly owns the allocator'
+    assert set(actual)==set(expected)-{helper, allocator}, (
         f'missing: {set(actual)-set(expected)}, extras: {set(expected)-set(actual)}')
     helper_file=expected[helper]
     assert subprocess.check_output(['git','hash-object',str(helper_file)],text=True).strip()==(
