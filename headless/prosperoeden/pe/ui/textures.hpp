@@ -94,7 +94,8 @@ class Textures
     struct Entry
     {
         std::uint32_t texture = 0;
-        float age = 0.0f;
+        // Per-cover timestamp; no per-frame cache-wide age mutation.
+        double loaded_at_seconds = 0.0;
         bool loaded = false; // false: queued or decoding
         std::uint64_t generation = 0;
         unsigned failed_loads = 0; // bounded retry backoff when async Nlib media arrive
@@ -127,6 +128,7 @@ class Textures
     std::deque<std::string> queue_; // O(1) pop_front during frame updates
     std::deque<std::uint32_t> pending_deletes_; // invalidated GPU IDs, amortized in pump()
     std::uint64_t frame_ = 0;
+    double uptime_seconds_ = 0.0; // double precision survives long launcher sessions
     std::uint64_t next_generation_ = 0;
     float output_scale_ = 1.0f;
 };

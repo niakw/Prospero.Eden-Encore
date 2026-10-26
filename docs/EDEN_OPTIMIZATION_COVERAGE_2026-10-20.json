@@ -3902,6 +3902,24 @@
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-ps5-vulkan-oom-source.py",
       "evidence": "PS5-selected full allocator translation unit inspected: first-failure-only VkImage/VMA-heap diagnostics, original within-budget VMA policy and exception retained. The host test pins exact source delta; FC27 OOM and HUD/stutter remain NOT fixed or console-qualified."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/textures.hpp",
+      "disposition": "new_source_issue_corrected",
+      "proof_ref": "tools/check-launcher-release-hotpaths-host.py",
+      "evidence": "Shipping launcher texture lifetime: replace O(all loaded covers) per-frame age update with O(1) double-precision uptime and age derived for requested covers, preserving fade, 0.45/1.5/3s retry, async loading; O0/O2 source host proof; no console FPS claim."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/textures.cpp",
+      "disposition": "new_source_issue_corrected",
+      "proof_ref": "tools/check-launcher-release-hotpaths-host.py",
+      "evidence": "Shipping launcher texture lifetime: replace O(all loaded covers) per-frame age update with O(1) double-precision uptime and age derived for requested covers, preserving fade, 0.45/1.5/3s retry, async loading; O0/O2 source host proof; no console FPS claim."
+    },
+    {
+      "path": "headless/prosperoeden/pe/ui/library.cpp",
+      "disposition": "new_source_issue_corrected",
+      "proof_ref": "tools/check-launcher-release-hotpaths-host.py",
+      "evidence": "Shipping launcher confirmed-missing title check: sorted worker snapshots and sorted set_intersection permit binary search rather than a linear comparison for every game; O0/O2 source host proof; no console FPS claim."
     }
   ],
   "inventoried_including_pinned": 538,

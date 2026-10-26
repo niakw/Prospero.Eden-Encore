@@ -221,15 +221,20 @@ Cover Textures::cover(const std::string &path, float size)
         queue_.push_back(key);
     }
     it->second.used = frame_;
+    // Calculate age only for visible/queried covers, not every cached entry.
+    float age = it->second.loaded
+        ? static_cast<float>(uptime_seconds_ - it->second.loaded_at_seconds)
+        : 0.0f;
     // Nlib downloads arrive by atomic rename. Poll a missing *visible* cover
     // once after 450 ms (instead of freezing its placeholder for three seconds),
     // then back off to 1.5 / 3 s if it is truly absent. No per-frame stat().
     const float retry_after = it->second.failed_loads <= 1 ? 0.45f :
                               it->second.failed_loads == 2 ? 1.5f : 3.0f;
     if (it->second.loaded && it->second.texture == 0 &&
-        it->second.age >= retry_after) {
+        age >= retry_after) {
         it->second.loaded = false;
-        it->second.age = 0.0f;
+        it->second.loaded_at_seconds = uptime_seconds_;
+        age = 0.0f;
         queue_.push_back(key);
     }
     // Preserve a previously confirmed missing state while its next decode
@@ -237,7 +242,7 @@ Cover Textures::cover(const std::string &path, float size)
     // sleeve on every retry, before the eventual successful upload.
     const bool missing = it->second.texture == 0 &&
                          (it->second.loaded || it->second.failed_loads != 0);
-    return {it->second.texture, it->second.age, missing,
+    return {it->second.texture, age, missing,
             it->second.aspect};
 }
 
@@ -259,6 +264,7 @@ void Textures::invalidate(const std::string &path)
 void Textures::pump(float dt, int budget)
 {
     ++frame_;
+    uptime_seconds_ += static_cast<double>(dt);
     // Nlib can replace a banner, icon and three screenshots at once.
     // Invalidation itself performs zero GL calls; retire at most two of
     // their old textures here, spreading driver cleanup across frames.
@@ -269,9 +275,7 @@ void Textures::pump(float dt, int budget)
         pending_deletes_.pop_front();
         ++deleted_this_frame;
     }
-    for (auto &[key, entry] : covers_)
-        if (entry.loaded)
-            entry.age += dt;
+    // Cache-wide age updates removed: elapsed time is computed lazily.
 
     // Decoding a 1920x1080 Nlib JPEG/TGA and generating downsized copies on
     // the UI thread caused visible menu repeat/scroll stalls (>100 ms).
@@ -287,7 +291,7 @@ void Textures::pump(float dt, int budget)
                 it->second.generation == result.generation) {
                 Entry &entry = it->second;
                 entry.loaded = true;
-                entry.age = 0.0f;
+                entry.loaded_at_seconds = uptime_seconds_;
                 const bool retail_case =
                     entry.path.find("/box-front-") != std::string::npos ||
                     entry.path.find("/box-back-") != std::string::npos ||
@@ -360,6 +364,7 @@ void Textures::pump(float dt, int budget)
             } catch (const std::exception& error) {
                 sys::log("cover queue failed: %s", error.what());
                 it->second.loaded = true;
+                it->second.loaded_at_seconds = uptime_seconds_;
                 it->second.failed_loads = std::min(it->second.failed_loads + 1u, 4u);
             }
             break;
