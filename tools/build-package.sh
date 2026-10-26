@@ -3,48 +3,28 @@
 # Builds the PS5 app and its PPSA99008 folder (after make prepare).
 #   tools/build-package.sh release         build + package + validate the shipping app
 #   tools/build-package.sh release-stage   build + package only; validation is a separate resumable CI step
-#   tools/build-package.sh dev ID    build/dev/PPSA99008 (EDEN_DEV_PACKAGE_DIR) with the development switches
-#                                    (profiling counters, dev-settings.txt A/B switches) that
-#                                    boots title ID on launch
 set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 source "$root/tools/host-env.sh"
 eden_host_env "$root"
 cd "$root"
-mode=${1:?usage: tools/build-package.sh release|release-stage|dev TITLE_ID}
+mode=${1:?usage: tools/build-package.sh release|release-stage}
 scratch=$(cat .local/headless-cache)
 export PS5_PAYLOAD_SDK="$scratch/sdk"
 export EDEN_PS5_VULKAN=ON EDEN_VULKAN_DRIVER=RADV
 case $mode in
 release|release-stage)
     export EDEN_DEV_VULKAN=OFF EDEN_DEV_ROM_ID= EDEN_DEV_PROFILE=OFF EDEN_DEV_WAIT_CALLERS=OFF
-    # One final production execution path: no experimental sparse mapper,
-    # cross-core sharing, successor batching or profiling variants.
-    export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF EDEN_SPARSE_JIT_DEV=OFF
+    # One shipping native JIT: the sparse allocator is selected by PS5_NATIVE
+    # in the engine, not an opt-in flag or alternate packaged mode.
+    export EDEN_SHARED_JIT=OFF EDEN_JIT_COMPILE_BATCH=OFF
     export EDEN_FINAL_RELEASE_PROFILE=ON EDEN_DEV_PROFILE_TITLE= EDEN_GPU_PROBE=OFF
     export EDEN_INLINE_EXCLUSIVES=OFF EDEN_DEVICE_FRONTEND=OFF EDEN_HEAP_GUARD=OFF
     export EDEN_GUEST_WRITE_BRIDGE_DEV=OFF EDEN_UNQUALIFIED_FERMI2D_COPY=OFF
     export EDEN_PACKAGE_DIR="$root/build/release/PPSA99008"
     ;;
-dev)
-    title=${2:?a development build boots one title: tools/build-package.sh dev TITLE_ID}
-    [[ $title =~ ^[0-9A-Fa-f]{16}$ ]] || { echo "Invalid title ID: $title" >&2; exit 1; }
-    export EDEN_FINAL_RELEASE_PROFILE=OFF
-    export EDEN_DEV_VULKAN=ON EDEN_DEV_ROM_ID="$title" EDEN_DEV_PROFILE=ON EDEN_DEV_PROFILE_TITLE="$title"
-    # This IS the unified PS5 test build: sparse executable backing is compiled
-    # in without a separate user-facing Experimental toggle or JSON opt-in.
-    # The final release excludes sparse and deferred memory-bridge experiments.
-    export EDEN_SPARSE_JIT_DEV=ON
-    # All-On means the cross-core and bounded successor JIT code is actually
-    # compiled into the PS5 test binary, not silently OFF in CMakeCache.txt.
-    # Keep ordinary release builds on the separately validated per-core path.
-    export EDEN_SHARED_JIT=ON EDEN_JIT_COMPILE_BATCH=ON
-    # The release-configuration source checks do not apply to development instrumentation.
-    export EDEN_SKIP_SOURCE_CHECKS=1
-    export EDEN_PACKAGE_DIR="${EDEN_DEV_PACKAGE_DIR:-$root/build/dev/PPSA99008}"
-    ;;
 *)
-    echo "usage: tools/build-package.sh release|release-stage|dev TITLE_ID" >&2
+    echo "usage: tools/build-package.sh release|release-stage" >&2
     exit 2
     ;;
 esac

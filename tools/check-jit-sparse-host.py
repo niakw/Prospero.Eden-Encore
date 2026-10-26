@@ -273,7 +273,6 @@ int main() {
     // A virtual 64 MiB JIT arena must consume only its 4 MiB bootstrap
     // physical backing until the code emitter explicitly asks for more.
     const int alloc_before_adapter = alloc_calls;
-    Eden::Experimental::sparse_jit_cache.store(true);
     auto* allocator = EdenJitAllocator();
     auto* executable = allocator->alloc(64 * 1024 * 1024);
     assert(executable);
@@ -323,7 +322,6 @@ int main() {
         usage(0, 0);
         fail_at_call = 0;
     }
-    Eden::Experimental::sparse_jit_cache.store(false);
     std::puts("PASS sparse PS5 direct-memory mocks: alias/bootstrap/growth/OOM/partial-map rollback/cleanup");
     std::puts("PASS actual Xbyak JIT adapter: 64MiB virtual / 4MiB physical at boot, uneven 5MiB+4KiB request rounded to 6MiB, zero after free");
 }

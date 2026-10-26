@@ -913,29 +913,19 @@ int main(int argc, char** argv) {
         bool experimental_logical_cpu = false;
         bool experimental_frame_probe = false;
 #ifdef PS5_NATIVE
-        // Default experimental profile for all native console builds,
-        // including the installable launcher release. Never inherit stale
-        // per-title experiments.json. Safe Launch disables these probes;
-        // sparse executable backing also requires verified RW/RX aliases.
+        // One shipping PS5 sparse JIT: a failed firmware alias proof rejects
+        // the title instead of silently selecting a dense code cache.
+        experimental_sparse_jit = true;
+        if (!Common::ProbeSparseJitAlias())
+            throw std::runtime_error("PS5 sparse JIT alias preflight failed");
         if (!safe_launch) {
-#ifdef EDEN_SPARSE_JIT_DEV
-            experimental_sparse_jit = true;
-#endif
 #ifndef EDEN_FINAL_RELEASE_PROFILE
-            // Profiling and topology probes are development-only. Production
-            // uses the ordinary scheduler and no periodic Vulkan frame probes.
             experimental_logical_cpu = true;
             experimental_frame_probe = true;
 #endif
         }
 #endif
-#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)
-        if (experimental_sparse_jit && !Common::ProbeSparseJitAlias()) {
-            std::puts("EDEN_JIT_SPARSE disabled: native alias preflight failed; using dense JIT");
-            experimental_sparse_jit = false;
-        }
-#endif
-#if defined(PS5_NATIVE) && defined(EDEN_SPARSE_JIT_DEV)
+#ifdef PS5_NATIVE
         // Native evidence: four consecutive starts went from 11,824 MiB to
         // 4,128 MiB *largest contiguous block*. The dense allocator must use
         // CURRENT headroom. Sparse only reserves virtual address space, so
@@ -957,7 +947,6 @@ int main(int argc, char** argv) {
         }
 #endif
         Eden::Experimental::ApplyJitMemoryPlan(jit_plan);
-        Eden::Experimental::sparse_jit_cache.store(experimental_sparse_jit, std::memory_order_relaxed);
         Eden::Experimental::vulkan_frame_probe.store(experimental_frame_probe, std::memory_order_relaxed);
 #ifdef PS5_NATIVE
         std::printf("EDEN_EXPERIMENT_DEFAULTS sparse=%u logical_cpu=%u frame_probe=%u safe=%u\n",

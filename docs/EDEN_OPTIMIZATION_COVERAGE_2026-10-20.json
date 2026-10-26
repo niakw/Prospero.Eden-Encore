@@ -276,9 +276,9 @@
       "path": "headless/experimental_performance.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U23",
-      "reviewed_source_git_blob": "3f3fd71a951147a17298118440b544ffcac13e72",
-      "source_review_document": "docs/EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md",
-      "evidence": "Plan de budget JIT calculé avant les threads invités (4 arènes, overhead direct, plafond relatif 1536 MiB). Atomiques de cache figées par titre ; aucun calcul du plan par bloc compilé ; la fragmentation nécessite une mesure matérielle avant rééquilibrage. Ouvrir de nouveau si blob modifié ou cas reproductible."
+      "reviewed_source_git_blob": "225351b84bf4cd004d983ac4ec09fa010a0cf7c7",
+      "source_review_document": "docs/FC27_F07_CROSS_SYSTEM_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Plan de budget JIT calculé avant les threads invités (4 arènes, overhead direct, plafond relatif 1536 MiB). Atomiques de cache figées par titre ; aucun calcul du plan par bloc compilé ; la fragmentation nécessite une mesure matérielle avant rééquilibrage. Ouvrir de nouveau si blob modifié ou cas reproductible. 26 October F07 single-profile follow-up: reviewed native sparse RX/RW allocation, 2MiB demand commits, quiesced full-clear physical trim, lifetime generation invalidation, firmware probe/fail-closed path and release-only source selection. New source-extracted O0/O2 and full native build gates required. Dynamic GPU/CPU arbitration and console FPS not yet proven."
     },
     {
       "path": "headless/fastmem_handler.cpp",
@@ -465,15 +465,16 @@
       "disposition": "code_changed_in_batch",
       "contract_id": "J06",
       "proof_ref": "tools/check-native-jit-alias-lookup-host.py",
-      "evidence": "Real Xbyak allocator writableAddress checked shared mappings unordered_map under mutex for every repeated RX->RW query. Added 8-entry per-thread positive lookup with global generation release on each successful new mapping and retired mapping. Host ASan/UBSan witness exercises production header and real Linux memfd RX/RW, alternating threads, retirement/reuse. Native PS5 FPS and crash qualification separate."
+      "evidence": "Real Xbyak allocator writableAddress checked shared mappings unordered_map under mutex for every repeated RX->RW query. Added 8-entry per-thread positive lookup with global generation release on each successful new mapping and retired mapping. Host ASan/UBSan witness exercises production header and real Linux memfd RX/RW, alternating threads, retirement/reuse. Native PS5 FPS and crash qualification separate. 26 October F07 single-profile follow-up: reviewed native sparse RX/RW allocation, 2MiB demand commits, quiesced full-clear physical trim, lifetime generation invalidation, firmware probe/fail-closed path and release-only source selection. New source-extracted O0/O2 and full native build gates required. Dynamic GPU/CPU arbitration and console FPS not yet proven.",
+      "source_review_document": "docs/FC27_F07_CROSS_SYSTEM_OPTIMIZATION_AUDIT_2026-10-26.md"
     },
     {
       "path": "headless/jit-sparse-commit.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "J05",
-      "reviewed_source_git_blob": "e3edecb51e99239d0976c0255e69f4e1919b7c24",
-      "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
-      "evidence": "Current source inspected: Plan de préengagement physique constexpr, borné par capacité virtuelle et budget restant ; ancien contrat hôte J05 déjà acquis. Ce n’est pas une autorisation d’activer le JIT sparse en production. Rerun this review only on source drift or Mesure native de pages sous-engagées ou dépassées."
+      "reviewed_source_git_blob": "abf0b4965d9f5927954f7c740428cc0cc86f2233",
+      "source_review_document": "docs/FC27_F07_CROSS_SYSTEM_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Current source inspected: Plan de préengagement physique constexpr, borné par capacité virtuelle et budget restant ; ancien contrat hôte J05 déjà acquis. Ce n’est pas une autorisation d’activer le JIT sparse en production. Rerun this review only on source drift or Mesure native de pages sous-engagées ou dépassées. 26 October F07 single-profile follow-up: reviewed native sparse RX/RW allocation, 2MiB demand commits, quiesced full-clear physical trim, lifetime generation invalidation, firmware probe/fail-closed path and release-only source selection. New source-extracted O0/O2 and full native build gates required. Dynamic GPU/CPU arbitration and console FPS not yet proven."
     },
     {
       "path": "headless/jit-startup-retry.h",
@@ -496,7 +497,8 @@
       "disposition": "code_changed_in_batch",
       "contract_id": "U01",
       "proof_ref": "tools/check-native-quiet-shutdown-heap-host.py",
-      "evidence": "Normal native return-to-launcher path unconditionally called the non-destructive per-mspace root report and heap snapshot after freeing TLS allocator cache, adding potentially slow heap walks/logging between sessions. Now the tcache drain always executes but root/heap reports execute only with detailed_gpu_profile ON. Real source-extracted C++20 ASan/UBSan witness verifies drain+quiet bypass+development reporting. Core shutdown, stop/cancel sequencing, JIT list and memory ownership unchanged; no console timing proof."
+      "evidence": "Normal native return-to-launcher path unconditionally called the non-destructive per-mspace root report and heap snapshot after freeing TLS allocator cache, adding potentially slow heap walks/logging between sessions. Now the tcache drain always executes but root/heap reports execute only with detailed_gpu_profile ON. Real source-extracted C++20 ASan/UBSan witness verifies drain+quiet bypass+development reporting. Core shutdown, stop/cancel sequencing, JIT list and memory ownership unchanged; no console timing proof. 26 October F07 single-profile follow-up: reviewed native sparse RX/RW allocation, 2MiB demand commits, quiesced full-clear physical trim, lifetime generation invalidation, firmware probe/fail-closed path and release-only source selection. New source-extracted O0/O2 and full native build gates required. Dynamic GPU/CPU arbitration and console FPS not yet proven.",
+      "source_review_document": "docs/FC27_F07_CROSS_SYSTEM_OPTIMIZATION_AUDIT_2026-10-26.md"
     },
     {
       "path": "headless/memory_check.cpp",
@@ -893,7 +895,8 @@
       "disposition": "code_changed_in_batch",
       "contract_id": "M01",
       "proof_ref": "tools/check-native-quiet-heap-commit-host.py",
-      "evidence": "PS5 CommitMemoryRange heap growth unconditionally sampled CLOCK_MONOTONIC four times, formatted a report, and called kernel Note even in quiet release, adding system calls on synchronous heap expansion. Gated only these diagnostics under EDEN_HEAP_GROWTH_TRACE, compiled for common in DEV; mandatory AllocateDirectOwned/MapDirectMemory, memset, rollback and physical_out untouched. Clang ASan/UBSan test compiles real production function in release/dev with SDK mapping stubs to compare clock/log calls and memory zeroing. No measured PS5 frame-time or heap map performance."
+      "evidence": "PS5 CommitMemoryRange heap growth unconditionally sampled CLOCK_MONOTONIC four times, formatted a report, and called kernel Note even in quiet release, adding system calls on synchronous heap expansion. Gated only these diagnostics under EDEN_HEAP_GROWTH_TRACE, compiled for common in DEV; mandatory AllocateDirectOwned/MapDirectMemory, memset, rollback and physical_out untouched. Clang ASan/UBSan test compiles real production function in release/dev with SDK mapping stubs to compare clock/log calls and memory zeroing. No measured PS5 frame-time or heap map performance. 26 October F07 single-profile follow-up: reviewed native sparse RX/RW allocation, 2MiB demand commits, quiesced full-clear physical trim, lifetime generation invalidation, firmware probe/fail-closed path and release-only source selection. New source-extracted O0/O2 and full native build gates required. Dynamic GPU/CPU arbitration and console FPS not yet proven.",
+      "source_review_document": "docs/FC27_F07_CROSS_SYSTEM_OPTIMIZATION_AUDIT_2026-10-26.md"
     },
     {
       "path": "vendor/encore-active/compiler-rt/emutls.c",
@@ -2803,7 +2806,8 @@
       "disposition": "code_changed_in_batch",
       "contract_id": "J09",
       "proof_ref": "tools/check-native-jit-code-space-bounds-host.py",
-      "evidence": "Native JIT code allocation checked size_+alloc_size against maxSize_ before advancing the cursor or clearing new bytes. Unsigned overflow could bypass that capacity bound, leading to writes outside mapped JIT memory. Now rejects size_>=maxSize_ and alloc_size >= maxSize_-size_ before any arithmetic, preserving exact-fit rejection and successful valid zeroing/commit. C++20 ASan/UBSan test extracts actual allocator method and checks wrap, exact bound, zeroing and no side effects after rejected allocations. W^X/patch ordering unchanged."
+      "evidence": "Native JIT code allocation checked size_+alloc_size against maxSize_ before advancing the cursor or clearing new bytes. Unsigned overflow could bypass that capacity bound, leading to writes outside mapped JIT memory. Now rejects size_>=maxSize_ and alloc_size >= maxSize_-size_ before any arithmetic, preserving exact-fit rejection and successful valid zeroing/commit. C++20 ASan/UBSan test extracts actual allocator method and checks wrap, exact bound, zeroing and no side effects after rejected allocations. W^X/patch ordering unchanged. 26 October F07 single-profile follow-up: reviewed native sparse RX/RW allocation, 2MiB demand commits, quiesced full-clear physical trim, lifetime generation invalidation, firmware probe/fail-closed path and release-only source selection. New source-extracted O0/O2 and full native build gates required. Dynamic GPU/CPU arbitration and console FPS not yet proven.",
+      "source_review_document": "docs/FC27_F07_CROSS_SYSTEM_OPTIMIZATION_AUDIT_2026-10-26.md"
     },
     {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code.h",

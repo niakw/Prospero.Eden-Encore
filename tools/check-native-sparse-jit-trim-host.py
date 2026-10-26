@@ -2,7 +2,7 @@
 """Dev sparse JIT: exercise exact quiesced physical-tail trim and reuse policy.
 
 The native source's guard/unmap/free ordering is compiled under a syscall
-fixture, not rewritten as a Python approximation. Shipping sparse stays OFF.
+fixture, not rewritten as a Python approximation. Shipping sparse is native-only.
 """
 from pathlib import Path
 import shutil
@@ -17,9 +17,9 @@ allocator=(root/"headless/jit-allocator.h").read_text()
 cmake=(root/"headless/CMakeLists.txt").read_text()
 assert "bool TrimSparseJitCode(void*, std::size_t live_code_end) noexcept;" in allocator
 assert "target_include_directories(common PRIVATE \"\u0024{EDEN_PORT_DIR}\")" in cmake
-assert "defined(EDEN_SPARSE_JIT_DEV)" in jit
+assert "#ifdef PS5_NATIVE" in jit and "EDEN_SPARSE_JIT_DEV" not in jit
 assert "setSize(begin);" in jit
-assert jit.index("setSize(begin);") < jit.index("::Common::TrimSparseJitCode(getCode(), begin)")
+assert jit.index("setSize(begin);") < jit.index("::Common::TrimSparseJitCode(const_cast<u8*>(getCode()), begin)")
 assert "sparse_jit_generation.fetch_add(1, std::memory_order_acq_rel);" in native
 start="bool TrimSparseJitCode(void* executable, std::size_t live_code_end) noexcept {"
 end="\n\n// The virtual reservation and every remaining physical chunk have one owner."
