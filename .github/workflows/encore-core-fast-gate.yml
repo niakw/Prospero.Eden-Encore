@@ -28,6 +28,8 @@ on:
       - 'tools/check-native-guest-memory-empty-read-host.py'
       - 'headless/main.cpp'
       - 'tools/check-ps5-release-saved-diagnostics-host.py'
+      - 'tools/check-ps5-f07-cold-stalls-host.py'
+      - 'tools/check-ps5-f07-pipeline-transitions-host.py'
       - 'tools/check-native-quiet-shutdown-heap-host.py'
       - 'tools/check-native-fastmem-signal-install-host.py'
       - 'tools/check-sparse-zero-bounds-host.py'
