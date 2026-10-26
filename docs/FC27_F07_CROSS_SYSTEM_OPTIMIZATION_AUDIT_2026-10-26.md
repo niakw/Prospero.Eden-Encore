@@ -26,3 +26,9 @@
 4. Benchmark FC27 at 1440p / 1×, same scene, logging OFF, fresh vs retained caches controlled separately. Compare late50/late100/worst, missing HUD pixels, gameplay controls and safe shutdown.
 5. Keep F07 open while substantial judder or blank/delayed HUD persists; preserve F01–F06 contracts, no forced 60 FPS or shader skipping.
 6. If a source was already inspected and unchanged, do not restart its entire audit without a new regression signal. Prior evidence maps: `FC27_GPU_SOURCE_TARGETS_2026-10-21.md`, `FC27_F07_STUTTER_HUD_PRIORITY_2026-10-26.md`, `EDEN_OPTIMIZATION_WORKLIST_2026-10-20.md`.
+
+## F07: shader completion publication (source fix after the first cross-system pass)
+
+`GraphicsPipeline` sets `is_built=true` with a **release** store after its Vulkan pipeline handle is constructed. Two readers test the status before accessing that non-atomic handle. `CanExecuteDraw()` already used **acquire**, while `IsBuilt()` still used **relaxed**: the latter did not establish the required publication ordering. The maintained PS5 native header and the pinned Vulkan generator now use **acquire** for `IsBuilt()`.
+
+`check-ps5-f07-pipeline-publication-host.py` compiles both methods extracted from the actual native header, verifies the builder's release store, tests threaded release/acquire publication and failed-pipeline behavior under O0/O2. No shader is skipped, no new GPU wait is inserted, and no FPS claim follows from the memory-order fix.
