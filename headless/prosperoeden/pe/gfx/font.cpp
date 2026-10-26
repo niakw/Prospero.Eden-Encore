@@ -765,10 +765,15 @@ std::string Font::fit(std::string_view text, float size, float max_width, float 
                 break;
             index = next;
         }
-        const std::string candidate = result + std::string(text.substr(start, index - start));
-        if (measure(candidate, size, tracking) > room)
+        // Preserve UTF-8 cluster boundaries while reusing one prefix buffer.
+        // The former temporary candidate allocated/copied at every glyph.
+        const std::size_t previous_size = result.size();
+        result.append(text.substr(start, index - start));
+        if (measure(result, size, tracking) > room)
+        {
+            result.resize(previous_size);
             break;
-        result = candidate;
+        }
     }
     while (!result.empty() && result.back() == ' ')
         result.pop_back();
