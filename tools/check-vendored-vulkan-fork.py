@@ -188,6 +188,32 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
         assert expected["vulkan_window_adapt_pass.cpp"].read_text().count(after) == 1, "native loader delta changed"
         loader_source = loader_source.replace(before, after)
     loader_path.write_text(loader_source)
+    # R01: reconstruct only the exact opt-in graphics telemetry deltas on top
+    # of the formerly validated generator output. The active Vulkan fork and
+    # shader owners remain full checked-in sources; generator only acts as a
+    # BYTE-FOR-BYTE parity oracle, never as production patcher.
+    metrics_deltas = {
+        "vulkan_renderer.cpp": [
+            ("#include \"display_refresh.h\"", "#include \"display_refresh.h\"\n#include \"frame_metrics.h\""),
+            ("    RenderScreenshot(framebuffers);\n    if (::Eden::Display::SkipFrame()) {", "    RenderScreenshot(framebuffers);\n    // Count a source callback separately from submitted or displayed frames.\n    ::Eden::FrameMetrics::OnSourceComposite();\n    if (::Eden::Display::SkipFrame()) {\n        ::Eden::FrameMetrics::OnSourceSkipped();"),
+            ("        present_manager.Present(generated);\n    }\n#endif", "        present_manager.Present(generated);\n        ::Eden::FrameMetrics::OnGeneratedQueued();\n    }\n#endif"),
+            ("    present_manager.Present(frame);\n    scheduler.DispatchWork();", "    present_manager.Present(frame);\n    ::Eden::FrameMetrics::OnRealQueued();\n    scheduler.DispatchWork();"),
+            ("    scheduler.Flush(*frame->render_ready);\n    present_manager.Present(frame);\n}\n\nvoid RendererVulkan::Report() const {", "    scheduler.Flush(*frame->render_ready);\n    present_manager.Present(frame);\n    ::Eden::FrameMetrics::OnLoadingQueued();\n}\n\nvoid RendererVulkan::Report() const {"),
+        ],
+        "vulkan_present_manager.cpp": [
+            ("#include \"common/settings.h\"", "#include \"common/settings.h\"\n#include \"frame_metrics.h\""),
+            ("    // Present\n    swapchain.Present(render_semaphore);\n}", "    // CPU API return only, not proof of HDMI scanout.\n    swapchain.Present(render_semaphore);\n    ::Eden::FrameMetrics::OnSwapchainPresentReturned();\n}"),
+        ],
+    }
+    for file_name, replacements in metrics_deltas.items():
+        path = actual[file_name]
+        contents = path.read_text()
+        for old, updated in replacements:
+            assert contents.count(old) == 1, ("R01 pinned Vulkan site drift", file_name, old[:75])
+            contents = contents.replace(old, updated)
+        assert contents.count('::Eden::FrameMetrics::') == (5 if file_name == 'vulkan_renderer.cpp' else 1), ("telemetry count drift", file_name)
+        path.write_text(contents)
+
     mismatches=[name for name in sorted(actual) if not filecmp.cmp(actual[name],expected[name],shallow=False)]
     if mismatches:
         # Print a tightly bounded exact diff before failing. The generator and

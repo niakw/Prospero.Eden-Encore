@@ -56,6 +56,7 @@ assert "free_queue.push_back(frame);" in methods
 assert "frame_cv.notify_all();" in methods
 
 cpp = r"""
+#include "frame_metrics.h"
 #include <algorithm>
 #include <atomic>
 #include <cassert>
@@ -285,7 +286,7 @@ with tempfile.TemporaryDirectory(prefix="encore-f05-vulkan-present-") as tmp:
     src.write_text(cpp)
     for opt in ("-O0","-O2"):
         exe=Path(tmp)/("present"+opt)
-        built=subprocess.run([compiler,"-std=c++20",opt,"-pthread","-Wall","-Wextra",
+        built=subprocess.run([compiler,"-std=c++20",opt,"-I",str(ROOT/"headless"),"-pthread","-Wall","-Wextra",
                               "-Werror","-fsanitize=undefined","-fno-sanitize-recover=all",
                               str(src),"-o",str(exe)],capture_output=True,text=True,timeout=75)
         assert built.returncode==0,(opt,built.stderr[-5000:])
