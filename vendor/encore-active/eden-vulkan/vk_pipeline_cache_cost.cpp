@@ -823,12 +823,14 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
     // rebuilding an unbounded title cache at launch. This token controls only
     // the disk READER; the persistent Vulkan compiler workers stay alive.
     constexpr size_t kStartupPrewarmPipelines = 8;
+    const auto startup_prewarm_started = std::chrono::steady_clock::now();
     std::stop_source startup_reader;
 #endif
     struct {
         std::mutex mutex;
         size_t total{};
         size_t built{};
+        size_t valid{};
         bool has_loaded{};
         std::unique_ptr<PipelineStatistics> statistics;
     } state;
@@ -847,6 +849,7 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
             // Do not seed a failed Vulkan compute pipeline for future dispatches.
             if (pipeline && pipeline->IsBound()) {
                 compute_cache.emplace(key, std::move(pipeline));
+                ++state.valid;
             }
             ++state.built;
             if (state.has_loaded) {
@@ -912,6 +915,7 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
             if (pipeline) {
 #endif
                 graphics_cache.emplace(key, std::move(pipeline));
+                ++state.valid;
             }
             ++state.built;
             if (state.has_loaded) {
@@ -944,8 +948,13 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
 
     workers.WaitForRequests(stop_loading);
 #ifdef PS5_NATIVE
-    LOG_INFO(Render_Vulkan, "PS5 shader cache bounded prewarm built {}/{} entries",
-             state.built, state.total);
+    // Completed attempts include failed native handles; track valid results.
+    // One startup summary, never a per-frame or per-draw instrumentation cost.
+    const auto startup_prewarm_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - startup_prewarm_started).count();
+    std::printf("EDEN_PS5_SHADER_PREWARM queued=%zu completed=%zu valid=%zu rejected=%zu prebuild_ms=%lld\n",
+                state.total, state.built, state.valid, state.built - state.valid,
+                static_cast<long long>(startup_prewarm_ms));
 #endif
 
     if (use_vulkan_pipeline_cache) {

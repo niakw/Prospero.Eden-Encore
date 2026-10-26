@@ -2578,6 +2578,34 @@ if shader_source.count(f07_preseed_graphics_old) != 1:
     raise RuntimeError('F07 graphics warm cache insertion anchor drift')
 shader_source = shader_source.replace(f07_preseed_graphics_old, f07_preseed_graphics_new, 1)
 
+# F07: report truly usable prewarmed Vulkan pipelines, not merely attempts.
+# No measurements are taken during draw/dispatch; one line at game startup.
+f07_prewarm_metrics_old_0 = "    constexpr size_t kStartupPrewarmPipelines = 8;\n    std::stop_source startup_reader;"
+f07_prewarm_metrics_new_0 = "    constexpr size_t kStartupPrewarmPipelines = 8;\n    const auto startup_prewarm_started = std::chrono::steady_clock::now();\n    std::stop_source startup_reader;"
+if shader_source.count(f07_prewarm_metrics_old_0) != 1:
+    raise RuntimeError('F07 prewarm outcome metric anchor 0 changed')
+shader_source = shader_source.replace(f07_prewarm_metrics_old_0, f07_prewarm_metrics_new_0, 1)
+f07_prewarm_metrics_old_1 = "        size_t built{};\n        bool has_loaded{};"
+f07_prewarm_metrics_new_1 = "        size_t built{};\n        size_t valid{};\n        bool has_loaded{};"
+if shader_source.count(f07_prewarm_metrics_old_1) != 1:
+    raise RuntimeError('F07 prewarm outcome metric anchor 1 changed')
+shader_source = shader_source.replace(f07_prewarm_metrics_old_1, f07_prewarm_metrics_new_1, 1)
+f07_prewarm_metrics_old_2 = "            if (pipeline && pipeline->IsBound()) {\n                compute_cache.emplace(key, std::move(pipeline));\n            }"
+f07_prewarm_metrics_new_2 = "            if (pipeline && pipeline->IsBound()) {\n                compute_cache.emplace(key, std::move(pipeline));\n                ++state.valid;\n            }"
+if shader_source.count(f07_prewarm_metrics_old_2) != 1:
+    raise RuntimeError('F07 prewarm outcome metric anchor 2 changed')
+shader_source = shader_source.replace(f07_prewarm_metrics_old_2, f07_prewarm_metrics_new_2, 1)
+f07_prewarm_metrics_old_3 = "#ifdef PS5_NATIVE\n            if (pipeline && pipeline->CanExecuteDraw()) {\n#else\n            if (pipeline) {\n#endif\n                graphics_cache.emplace(key, std::move(pipeline));\n            }"
+f07_prewarm_metrics_new_3 = "#ifdef PS5_NATIVE\n            if (pipeline && pipeline->CanExecuteDraw()) {\n#else\n            if (pipeline) {\n#endif\n                graphics_cache.emplace(key, std::move(pipeline));\n                ++state.valid;\n            }"
+if shader_source.count(f07_prewarm_metrics_old_3) != 1:
+    raise RuntimeError('F07 prewarm outcome metric anchor 3 changed')
+shader_source = shader_source.replace(f07_prewarm_metrics_old_3, f07_prewarm_metrics_new_3, 1)
+f07_prewarm_metrics_old_4 = "    LOG_INFO(Render_Vulkan, \"PS5 shader cache bounded prewarm built {}/{} entries\",\n             state.built, state.total);"
+f07_prewarm_metrics_new_4 = "    // Completed attempts include failed native handles; track valid results.\n    // One startup summary, never a per-frame or per-draw instrumentation cost.\n    const auto startup_prewarm_ms = std::chrono::duration_cast<std::chrono::milliseconds>(\n        std::chrono::steady_clock::now() - startup_prewarm_started).count();\n    std::printf(\"EDEN_PS5_SHADER_PREWARM queued=%zu completed=%zu valid=%zu rejected=%zu prebuild_ms=%lld\\n\",\n                state.total, state.built, state.valid, state.built - state.valid,\n                static_cast<long long>(startup_prewarm_ms));"
+if shader_source.count(f07_prewarm_metrics_old_4) != 1:
+    raise RuntimeError('F07 prewarm outcome metric anchor 4 changed')
+shader_source = shader_source.replace(f07_prewarm_metrics_old_4, f07_prewarm_metrics_new_4, 1)
+
 shader_output = output / 'vk_pipeline_cache_cost.cpp'
 if not shader_output.exists() or shader_output.read_text() != shader_source:
     shader_output.write_text(shader_source)
