@@ -953,6 +953,15 @@ GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {
     const auto [pair, is_new]{graphics_cache.try_emplace(graphics_key)};
     auto& pipeline{pair->second};
     if (is_new) {
+#ifdef PS5_NATIVE
+        // F07: first-use guest shader translation and SPIR-V generation are
+        // synchronous even when the Vulkan pipeline build is queued.
+        // Count EVERY cold miss with Detailed Logging, not one in 16 draws.
+        // Quiet releases take no clock readings on this path.
+        ::Eden::Performance::CachePhaseTimer first_use_cpu_phase{
+            ::Eden::Performance::CachePhase::GraphicsPipelineCreate,
+            ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
+#endif
         pipeline = CreateGraphicsPipeline();
     }
     if (!pipeline) {

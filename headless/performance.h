@@ -206,7 +206,9 @@ enum class CachePhase : unsigned {
     StageHostBuffers, StageImageDescriptors,
     RefreshRenderTargets, CheckFeedbackLoop, CommitGraphicsDraw, DescriptorRingFinish, DescriptorRingPreflight,
     GuestWriteBufferWait, GuestWriteBufferWork, GuestWriteTextureWait,
-    GuestWriteTextureWork, GuestWriteShaderInvalidate, Count
+    GuestWriteTextureWork, GuestWriteShaderInvalidate,
+    GraphicsPipelineCreate, TextureUploadStaging, TextureUploadContents,
+    TextureUploadBarrier, Count
 };
 struct CachePhaseTotal {
     std::atomic<unsigned long long> samples{}, total_ns{}, max_ns{};

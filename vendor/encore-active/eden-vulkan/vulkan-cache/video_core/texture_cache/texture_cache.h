@@ -1559,9 +1559,29 @@ void TextureCache<P>::RefreshContents(Image& image, ImageId image_id) {
         QueueAsyncUnswizzle(image, image_id);
         return;
     }
+#ifdef PS5_NATIVE
+    // F07: isolate staging allocation, CPU decode/unswizzle and the required
+    // upload barrier within the existing 1-in-16 sampled refresh.
+    // No lock, image flag, command order or guest-visible upload is changed.
+    ::Eden::Performance::CachePhaseTimer staging_phase{
+        ::Eden::Performance::CachePhase::TextureUploadStaging};
+#endif
     auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));
+#ifdef PS5_NATIVE
+    staging_phase.Stop();
+    ::Eden::Performance::CachePhaseTimer contents_phase{
+        ::Eden::Performance::CachePhase::TextureUploadContents};
+#endif
     UploadImageContents(image, staging);
+#ifdef PS5_NATIVE
+    contents_phase.Stop();
+    ::Eden::Performance::CachePhaseTimer barrier_phase{
+        ::Eden::Performance::CachePhase::TextureUploadBarrier};
+#endif
     runtime.InsertUploadMemoryBarrier();
+#ifdef PS5_NATIVE
+    barrier_phase.Stop();
+#endif
 }
 
 template <class P>
