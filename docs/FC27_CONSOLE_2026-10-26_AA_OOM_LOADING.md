@@ -57,3 +57,18 @@ Les nouveaux chemins de production sont :
 - Mode de référence utilisateur : **cache vidé, logs OFF, résolution 1×, sortie 1440p**. Les scénarios de mesure avec logs et configs multiples ne doivent pas écraser ce point de comparaison.
 - Pour l'out-of-memory : auditer les allocations images par tailles/format et la fragmentation, la politique de rétention du cache GPU, la destruction inter-session, et un éventuel repli gracieux en cas d'allocation refusée. Le rapport seul ne prouve ni une fuite inter-session ni un bug de budget VRAM.
 - Les corrections ci-dessus requièrent le fast gate, le rendu launcher et la compilation native PS5 **sur le même SHA** avant de solliciter un nouveau test console.
+
+## F07 — diagnostic de la première allocation GPU refusée
+
+Le chemin de production `vendor/encore-active/eden-vulkan/vulkan_memory_allocator.cpp`
+remplace désormais la traduction originale de l'allocateur au niveau du CMake PS5,
+sans modifier la copie de référence `vendor/sources/eden`.
+Pour un échec `VK_ERROR_OUT_OF_DEVICE_MEMORY` ou `VK_ERROR_OUT_OF_HOST_MEMORY`,
+`EDEN_VULKAN_IMAGE_ALLOC_FAILED` décrit les dimensions, format, mips, layers,
+samples et usages de l'image précise avant l'exception ; `EDEN_VULKAN_IMAGE_HEAP`
+donne l'usage et le budget estimés VMA des heaps locaux. Ces budgets ne sont
+**pas** le plus grand bloc libre obtenu via la console. Aucun nouveau relevé,
+nouvelle allocation, attente GPU ou tentative de dépasser le budget VMA n'est
+ajouté sur le chemin réussi. La cause réelle de l'OOM 4× ne sera confirmée
+qu'avec ce diagnostic du nouveau binaire sur PS5 ; les anciens logs n'ont pas
+les valeurs nécessaires.
