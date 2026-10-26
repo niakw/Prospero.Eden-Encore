@@ -86,6 +86,7 @@ on:
       - 'headless/prosperoeden/pe/gfx/gl_batch.cpp'
       - 'tools/check-launcher-release-hotpaths-host.py'
       - 'tools/check-release-case-index-dedup-host.py'
+      - 'tools/check-release-font-fit-alloc-host.py'
       - 'headless/prosperoeden/pe/ui/textures.hpp'
       - 'headless/prosperoeden/pe/ui/textures.cpp'
       - 'headless/prosperoeden/pe/ui/library.cpp'
@@ -251,6 +252,7 @@ jobs:
           python3 -B tools/check-launcher-gl-scissor-reuse-host.py
           python3 -B tools/check-launcher-release-hotpaths-host.py
           python3 -B tools/check-release-case-index-dedup-host.py
+          python3 -B tools/check-release-font-fit-alloc-host.py
           python3 -B tools/check-ps5-active-texture-descriptor-host.py
           python3 -B tools/check-native-batched-buffer-invalidation-host.py
           python3 -B tools/check-native-single-range-buffer-invalidation-host.py
