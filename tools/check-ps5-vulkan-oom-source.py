@@ -43,7 +43,7 @@ def valid(source: str) -> bool:
 
 # The active fork must differ from upstream ONLY by the reviewed OOM hook.
 # This is a stronger oracle than generic source/token assertions.
-reconstructed = fork.replace("#include <array>\\n#include <cstdio>\\n", "")
+reconstructed = fork.replace("#include <array>\n#include <cstdio>\n", "")
 start = reconstructed.index("    const VkResult result = vmaCreateImage(")
 end = reconstructed.index("    vk::Check(result);", start) + len("    vk::Check(result);")
 upstream_call = "    vk::Check(vmaCreateImage(allocator, &ci, &alloc_ci, &handle, &allocation, &alloc_info));"
