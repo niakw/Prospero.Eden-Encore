@@ -24,16 +24,6 @@ on:
         required: false
         type: boolean
         default: false
-      test_all_on:
-        description: Unified PS5 test app (sparse JIT, CPU placement, frame diagnostics ON; never publish)
-        required: false
-        type: boolean
-        default: false
-      test_title_id:
-        description: Guest title ID for test autoboot (default FC27)
-        required: false
-        type: string
-        default: "0100C49025D3E000"
 
 permissions:
   contents: read
@@ -51,7 +41,7 @@ jobs:
   build:
     if: >-
       ${{ !contains(github.event.head_commit.message || '', '[publish-existing]') &&
-          (github.ref == 'refs/heads/fix/0.40-zbic-13.60' ||
+          (github.ref == 'refs/heads/dev/ps5-sparse-jit' &&
            github.event_name == 'workflow_dispatch' ||
            contains(github.event.head_commit.message || '', '[full-build]') ||
            contains(github.event.head_commit.message || '', '[resume-stage:37728435816]')) }}
@@ -60,24 +50,11 @@ jobs:
     env:
       PROSPEROEDEN_GIT_DEPS_ROOT: .deps/repos
       PROSPEROEDEN_DEPS_OFFLINE: '1' # source dependency pulls must never contact upstream
-      EDEN_TEST_ALL_ON: ${{ (inputs.test_all_on || (github.ref == 'refs/heads/dev/ps5-sparse-jit' && contains(github.event.head_commit.message || '', '[test-all-on]'))) && '1' || '0' }}
-      EDEN_TEST_TITLE_ID: ${{ inputs.test_title_id || '0100C49025D3E000' }}
-      EDEN_STAGE_DIR: ${{ (inputs.test_all_on || (github.ref == 'refs/heads/dev/ps5-sparse-jit' && contains(github.event.head_commit.message || '', '[test-all-on]'))) && 'build/dev/PPSA99008' || 'build/release/PPSA99008' }}
+      EDEN_STAGE_DIR: build/release/PPSA99008
       # GitHub-only push resume for an already compiled staged app. This marker
       # is one-shot and cannot alter the downloaded binary or publish a release.
       RESUME_STAGE_RUN_ID: ${{ contains(github.event.head_commit.message || '', '[resume-stage:37728435816]') && '37728435816' || inputs.resume_run_id || '' }}
     steps:
-      - name: Refuse test profile on release branch or unsafe bypass
-        if: ${{ (inputs.test_all_on || (github.ref == 'refs/heads/dev/ps5-sparse-jit' && contains(github.event.head_commit.message || '', '[test-all-on]'))) }}
-        run: |
-          set -euo pipefail
-          test "$GITHUB_REF" = refs/heads/dev/ps5-sparse-jit
-          test "$EDEN_TEST_ALL_ON" = 1
-          [[ "$EDEN_TEST_TITLE_ID" =~ ^[0-9A-Fa-f]{16}$ ]]
-          test "${{ inputs.build_only }}" != true
-          test -z "${{ inputs.resume_run_id }}"
-          test "${{ inputs.publish }}" != true
-
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -298,7 +275,8 @@ jobs:
           python3 -B tools/check-jit-startup-retry.py
           python3 -B tools/check-vulkan-pipeline-persistence.py
           python3 -B tools/check-vulkan-cache-atomic.py
-          python3 -B tools/check-jit-dense-alias-host.py
+          # The dense JIT is no longer a valid PS5 execution path.
+          python3 -B tools/check-native-sparse-jit-release-selector-host.py
           python3 -B tools/check-jit-sparse-host.py
           python3 -B tools/check-ps5-sparse-jit-va-lifetime.py
           python3 -B tools/check-ps5-direct-limit-host.py
@@ -430,18 +408,14 @@ jobs:
             echo "::warning::Optional case index unavailable; cached/user-provided artwork remains supported"
           fi
 
-      - name: Build and stage native app (release or development)
+      - name: Build and stage the only native PS5 release
         id: stage
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
         env:
           EDEN_SKIP_PREBUILD_SOURCE_CHECKS: ${{ inputs.build_only && '1' || '0' }}
         run: |
           set -euo pipefail
-          if [[ "$EDEN_TEST_ALL_ON" == 1 ]]; then
-            bash tools/build-package.sh dev "$EDEN_TEST_TITLE_ID"
-          else
-            bash tools/build-package.sh release-stage
-          fi
+          bash tools/build-package.sh release-stage
 
       - name: Validate freshly built staged app
         if: ${{ env.RESUME_STAGE_RUN_ID == '' }}
@@ -450,115 +424,33 @@ jobs:
         run: |
           python3 -B headless/check_package.py --check
           python3 -B tools/ci/check-staged-app.py "$EDEN_STAGE_DIR"
-          if [[ "$EDEN_TEST_ALL_ON" == 1 ]]; then
-            python3 -B tools/ci/check-all-on-test-binary.py "$EDEN_STAGE_DIR" "$EDEN_TEST_TITLE_ID"
-          else
-            # Check the compiled CMake profile, not just source/eboot strings.
-            python3 -B tools/ci/check-release-experiments.py "$EDEN_STAGE_DIR"
-          fi
+          # Check the actual compiled sparse-only CMake profile and binary.
+          python3 -B tools/ci/check-release-experiments.py "$EDEN_STAGE_DIR"
 
       # Save a *validated* stage as a cache checkpoint, not a second PS5 ZIP.
       # A cache outage must not invalidate an otherwise sound compiled app;
       # the final FTP artifact is separately uploaded and downloaded below.
       - name: Save internal stage checkpoint
-        if: ${{ steps.stage.outcome == 'success' && env.EDEN_TEST_ALL_ON != '1' }}
+        if: ${{ steps.stage.outcome == 'success' }}
         continue-on-error: true
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: build/release/
           key: encore-internal-stage-v1-${{ runner.os }}-${{ github.run_id }}
 
-      - name: Record matching debug ELF and native binary digests
-        if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
-        run: |
-          python3 -B tools/ci/write-crash-provenance.py \
-            --app build/dev/PPSA99008 \
-            --native build/headless-native \
-            --output build/headless-native/crash-provenance.json \
-            --test-title "$EDEN_TEST_TITLE_ID"
-
-      # Upload the title DIRECTORY, not just its contents. Installing an
-      # extracted ZIP must yield /data/homebrew/PPSA99008/eboot.bin directly.
-      # The compiled game's 16-hex Switch Title ID is for autoboot, never the
-      # PS5 homebrew's own folder or sce_sys/param.json titleId.
-      - name: Validate self-contained development package root
-        if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
-        run: |
-          test -d build/dev/PPSA99008
-          test -f build/dev/PPSA99008/eboot.bin
-          test -f build/dev/PPSA99008/sce_sys/param.json
-          test "$(ls -A build/dev)" = PPSA99008
-          python3 - <<'PY'
-          from pathlib import Path
-          import json
-          app = Path('build/dev/PPSA99008')
-          assert json.loads((app / 'sce_sys/param.json').read_text())['titleId'] == app.name
-          print('PS5_TEST_ARCHIVE_ROOT_OK PPSA99008/eboot.bin')
-          PY
-
-      - name: Upload validated native development package
-        if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: Prospero.Eden-Encore-PS5-all-on-test
-          # upload-artifact strips the chosen root directory. Upload its PARENT
-          # to preserve PPSA99008/ as the archive's top-level directory.
-          path: build/dev/
-          retention-days: 14
-          if-no-files-found: error
-
-      # Verify the *uploaded* archive after extraction, not only the staging
-      # tree. This catches upload-artifact flattening PPSA99008 by mistake.
-      - name: Verify downloadable application archive layout
-        if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v4.1.8
-        with:
-          name: Prospero.Eden-Encore-PS5-all-on-test
-          path: build/zip-layout-verification
-
-      - name: Verify extracted title directory and runtime metadata
-        if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
-        run: |
-          test -f build/zip-layout-verification/PPSA99008/eboot.bin
-          test -f build/zip-layout-verification/PPSA99008/sce_sys/param.json
-          test -f build/zip-layout-verification/PPSA99008/network-hosts.txt
-          test -d build/zip-layout-verification/PPSA99008/ui
-          test ! -f build/zip-layout-verification/eboot.bin
-          python3 - <<'PY'
-          from pathlib import Path
-          import json
-          app = Path('build/zip-layout-verification/PPSA99008')
-          value = json.loads((app / 'sce_sys/param.json').read_text())
-          assert value['titleId'] == 'PPSA99008', value
-          print('EXTRACTED_PS5_TEST_ZIP PASS: PPSA99008/eboot.bin + matching titleId')
-          PY
-
-      - name: Upload native development debug symbols
-        if: ${{ success() && env.EDEN_TEST_ALL_ON == '1' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: Prospero.Eden-Encore-PS5-all-on-symbols
-          path: |
-            build/headless-native/llvm-pie.elf
-            build/headless-native/link.map
-            build/headless-native/crash-provenance.json
-          retention-days: 14
-          if-no-files-found: error
-
       - name: Validate resumed staged app
         if: ${{ env.RESUME_STAGE_RUN_ID != '' }}
         run: python3 -B tools/ci/check-staged-app.py build/release/PPSA99008
 
       - name: Assemble release files
-        if: ${{ env.EDEN_TEST_ALL_ON != '1' }}
         run: python3 -B tools/ci/make-dist.py build/release/PPSA99008
 
       - name: Verify release ZIP content paths
-        if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
+        if: ${{ success() }}
         run: python3 -B tools/ci/check-ftp-archive-root.py dist
 
       - name: Reject release folder wrappers or extra staged files
-        if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
+        if: ${{ success() }}
         run: |
           test "$(ls -A build/release)" = PPSA99008
           test -f build/release/PPSA99008/eboot.bin
@@ -568,7 +460,7 @@ jobs:
       # artifact (which includes dist/ and symbols), its sole top-level folder
       # is PPSA99008/ with eboot.bin immediately inside.
       - name: Upload FTP-ready title folder
-        if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
+        if: ${{ success() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Eden-Encore-PS5-FTP-PPSA99008
@@ -577,14 +469,14 @@ jobs:
           if-no-files-found: error
 
       - name: Retrieve FTP-ready archive and verify exact folder
-        if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
+        if: ${{ success() }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: Eden-Encore-PS5-FTP-PPSA99008
           path: build/release-zip-layout-verification
 
       - name: Validate actual downloadable FTP ZIP root
-        if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
+        if: ${{ success() }}
         run: |
           test "$(ls -A build/release-zip-layout-verification)" = PPSA99008
           test -s build/release-zip-layout-verification/PPSA99008/eboot.bin
@@ -599,7 +491,7 @@ jobs:
           PY_FTP
 
       - name: Upload compiled release bundle
-        if: ${{ success() && env.EDEN_TEST_ALL_ON != '1' }}
+        if: ${{ success() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Prospero.Eden-Encore-release
@@ -625,8 +517,8 @@ jobs:
   release:
     needs: build
     if: >-
-      ${{ needs.build.result == 'success' && !inputs.test_all_on &&
-          github.ref == 'refs/heads/fix/0.40-zbic-13.60' &&
+      ${{ needs.build.result == 'success' &&
+          github.ref == 'refs/heads/dev/ps5-sparse-jit' &&
           ((github.event_name == 'push' && contains(github.event.head_commit.message, '[release]')) ||
            (github.event_name == 'workflow_dispatch' && inputs.publish)) }}
     runs-on: ubuntu-24.04
@@ -666,51 +558,3 @@ jobs:
             --title "Prospero.Eden Encore R1 (${short})" \
             --notes-file "$notes" \
             --latest
-
-  # Publish the immutable archive FROM an already-green run. This MUST NOT
-  # rebuild at the current (possibly newer) dev branch or claim unshipped
-  # experiments are present. The download is pinned to source SHA and run ID.
-  publish_green_test_build:
-    if: ${{ github.ref == 'refs/heads/dev/ps5-sparse-jit' && github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-existing:38743260411]') }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    permissions:
-      contents: write
-      actions: read
-    steps:
-      - name: Download immutable successful test artifact
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: Prospero.Eden-Encore-PS5-all-on-test
-          run-id: 38743260411
-          github-token: ${{ github.token }}
-          path: pinned-app
-      - name: Package validated test app as a GitHub pre-release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          test -s pinned-app/PPSA99008/eboot.bin
-          test -s pinned-app/PPSA99008/sce_sys/param.json
-          test -d pinned-app/PPSA99008/ui
-          test "$(find pinned-app -mindepth 1 -maxdepth 1 | wc -l)" -eq 1
-          mkdir -p release-dist
-          (cd pinned-app && zip -qr ../release-dist/Eden-Encore-5edc677b-PPSA99008.zip PPSA99008)
-          (cd release-dist && sha256sum Eden-Encore-5edc677b-PPSA99008.zip > SHA256SUMS && sha256sum -c SHA256SUMS)
-          cat > release-dist/RELEASE-NOTES.md <<'NOTES'
-          # Eden Encore — validated PS5 test build (5edc677b)
-
-          Source SHA: `5edc677b6dbe5f74fac558e92f35b421b7ba72b6`
-
-          Native Actions run: https://github.com/niakw/Prospero.Eden-Encore/actions/runs/38743260411
-
-          The tested All-On profile includes diagnostic tools but DOES NOT
-          include the separately quarantined Dynarmic I-cache, dummy-thread
-          or service-manager host-wait backports, nor shared JIT or batching.
-          This version has not been demonstrated to fix game freezes, HUD
-          delays, or cold-start stutter.
-
-          Install contents of the ZIP under the intended PPSA99008 app folder.
-          This is a development **pre-release**, not a new stable R1.
-          NOTES
-          gh release create encore-test-5edc677b             release-dist/Eden-Encore-5edc677b-PPSA99008.zip             release-dist/SHA256SUMS             --repo "$GITHUB_REPOSITORY"             --target 5edc677b6dbe5f74fac558e92f35b421b7ba72b6             --title "Eden Encore PS5 test build (5edc677b)"             --notes-file release-dist/RELEASE-NOTES.md             --prerelease --latest=false
