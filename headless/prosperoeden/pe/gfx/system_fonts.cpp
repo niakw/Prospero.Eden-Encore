@@ -144,10 +144,23 @@ void transform(const float *f, int count, float *d, int *v, float *z)
 void distances(std::vector<float> &grid, int width, int height)
 {
     const int longest = std::max(width, height);
-    std::vector<float> f(static_cast<std::size_t>(longest));
-    std::vector<float> d(static_cast<std::size_t>(longest));
-    std::vector<int> v(static_cast<std::size_t>(longest));
-    std::vector<float> z(static_cast<std::size_t>(longest) + 1);
+    // A new glyph can invoke distances twice (inside/outside). Keep its four
+    // temporary arrays on the owning thread and reuse capacity for subsequent
+    // glyphs, rather than allocating eight vectors per uncached character.
+    // Each UI/worker thread owns separate scratch; the transform is nonrecursive.
+    struct DistanceScratch {
+        std::vector<float> f, d, z;
+        std::vector<int> v;
+    };
+    thread_local DistanceScratch scratch;
+    auto& f = scratch.f;
+    auto& d = scratch.d;
+    auto& v = scratch.v;
+    auto& z = scratch.z;
+    f.resize(static_cast<std::size_t>(longest));
+    d.resize(static_cast<std::size_t>(longest));
+    v.resize(static_cast<std::size_t>(longest));
+    z.resize(static_cast<std::size_t>(longest) + 1);
     for (int x = 0; x < width; ++x)
     {
         for (int y = 0; y < height; ++y)
