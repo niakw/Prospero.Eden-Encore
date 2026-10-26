@@ -31,8 +31,9 @@ code=r"""
 #include <stdexcept>
 #include <string>
 #include <utility>
-#define LOG_WARNING(...) ((void)0)
 #define Render_Vulkan 1
+template<class... Ts> void fake_log(Ts&&...) {}
+#define LOG_WARNING(...) fake_log(__VA_ARGS__)
 constexpr unsigned CACHE_VERSION=18;
 constexpr size_t VULKAN_CACHE_FLUSH_PIPELINES=128;
 constexpr size_t VULKAN_CACHE_FLUSH_MIN_SECONDS=30;
@@ -85,8 +86,7 @@ int main() {
     assert(!save.flush_in_flight.load());
     PipelineCache queue;
     queue.serialization_thread.throw_enqueue=true;
-    try { queue.QueueVulkanPipelineCacheFlush(); assert(false); }
-    catch(const std::runtime_error&) {}
+    queue.QueueVulkanPipelineCacheFlush();
     assert(!queue.flush_in_flight.load());
 }
 """

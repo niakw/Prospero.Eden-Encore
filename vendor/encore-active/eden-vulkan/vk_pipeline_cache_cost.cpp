@@ -960,9 +960,12 @@ void PipelineCache::QueueVulkanPipelineCacheFlush() {
                 LOG_WARNING(Render_Vulkan, "Deferred driver cache flush failed: unknown exception");
             }
         });
+    } catch (const std::exception& error) {
+        flush_in_flight.store(false, std::memory_order_release);
+        LOG_WARNING(Render_Vulkan, "Deferred cache flush queue rejected: {}", error.what());
     } catch (...) {
         flush_in_flight.store(false, std::memory_order_release);
-        throw;
+        LOG_WARNING(Render_Vulkan, "Deferred cache flush queue rejected: unknown exception");
     }
 }
 
