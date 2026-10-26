@@ -220,8 +220,10 @@ The GitHub Actions **native build and package** run additionally provides an
 `PPSA99008/` folder to `/data/homebrew/`. The `Prospero.Eden-Encore-release`
 Actions artifact is instead a **distribution bundle** containing `dist/`
 archives and debug symbols; do not copy that wrapper folder to the console.
-Older `Prospero.Eden-Encore-staged-app` archives could be flattened and are
-not the recommended installer.
+The in-progress native build checkpoint is now stored in an internal GitHub
+Actions cache, not a duplicate downloadable `staged-app` artifact. Historical
+runs may still display `Prospero.Eden-Encore-staged-app`; these are not
+separate emulator versions and should never be installed.
 
 For a **manual FTP install**, the release also provides:
 
