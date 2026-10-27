@@ -1217,6 +1217,15 @@ std::pair<typename P::ImageView*, bool> TextureCache<P>::TryFindFramebufferImage
         if (image.cpu_addr != cpu_addr) {
             continue;
         }
+#ifdef PS5_NATIVE
+        // A remapped image or one dirtied by guest CPU writes cannot be
+        // sampled as an unchanged accelerated display framebuffer. Fall back
+        // to the guest-memory upload until its Vulkan image is refreshed.
+        // Clean GPU-authored images keep the zero-copy presentation path.
+        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {
+            continue;
+        }
+#endif
         if (image.image_view_ids.empty()) {
             continue;
         }
