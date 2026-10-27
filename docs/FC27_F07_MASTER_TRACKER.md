@@ -50,6 +50,10 @@ Dans `TryFindFramebufferImageView`, ces candidats sont désormais exclus
 `RasterizerVulkan::AccelerateDisplay` laisse `Layer::ConfigureDraw`
 utiliser `UpdateRawImage`, qui lit et charge le framebuffer invité actuel.
 Les vues GPU propres continuent d'utiliser le chemin zéro-copie habituel.
+En complément, `RasterizerVulkan::AccelerateDisplay` exécute maintenant
+`gpu_memory->FlushCaching()` **avant** la prise du mutex texture ;
+ainsi un remappage invité en attente ne peut pas faire sélectionner
+un ancien framebuffer accéléré après le changement de mapping.
 La source active, le générateur d'archives pinnées et le témoin C++ -O0/-O2
 sont modifiés ensemble. Cela ferme un chemin de réutilisation périmée,
 **pas** la validation finale des pixels/HUD sur l'écran de la console.

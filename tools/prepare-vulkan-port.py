@@ -2962,6 +2962,16 @@ apply_reviewed_delta(
     "        if (image.cpu_addr != cpu_addr) {\n            continue;\n        }\n#ifdef PS5_NATIVE\n        // A remapped image or one dirtied by guest CPU writes cannot be\n        // sampled as an unchanged accelerated display framebuffer. Fall back\n        // to the guest-memory upload until its Vulkan image is refreshed.\n        // Clean GPU-authored images keep the zero-copy presentation path.\n        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {\n            continue;\n        }\n#endif\n        if (image.image_view_ids.empty()) {",
     'F07 P0.4 accelerated present rejects remapped or CPU-dirty framebuffer')
 
+# F07 P0.4: composite can be the first GPU consumer after a guest
+# memory remap. Flush queued mapping invalidations ahead of the texture
+# mutex, matching DrawTexture's lock ordering. This keeps the newly selected
+# clean display-image fast path coherent with pending remap flags.
+apply_reviewed_delta(
+    'vulkan_rasterizer.cpp',
+    "    if (!framebuffer_addr) {\n        return {};\n    }\n    std::scoped_lock lock{texture_cache.mutex};\n    const auto [image_view, scaled] =\n        texture_cache.TryFindFramebufferImageView(config, framebuffer_addr);",
+    "    if (!framebuffer_addr) {\n        return {};\n    }\n#ifdef PS5_NATIVE\n    // Present may run after a guest page remap without another draw.\n    // Commit queued guest-memory invalidations before reading cached image\n    // flags, never while holding texture_cache.mutex (invalidation takes it).\n    gpu_memory->FlushCaching();\n#endif\n    std::scoped_lock lock{texture_cache.mutex};\n    const auto [image_view, scaled] =\n        texture_cache.TryFindFramebufferImageView(config, framebuffer_addr);",
+    'F07 P0.4 present flushes remaps before inspecting image cache')
+
 # Reviewed F04 scissor source body: reconstruct the exact overflow-safe
 # method from the pinned upstream method, WITHOUT consulting active code or
 # weakening the generated-versus-maintained source checker at runtime.
