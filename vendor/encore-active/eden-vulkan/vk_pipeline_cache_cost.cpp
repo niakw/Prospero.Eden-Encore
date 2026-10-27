@@ -961,6 +961,18 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
     const std::stop_token reader_token{stop_loading};
 #endif
 #ifdef PS5_NATIVE
+    // The progress callback below also runs before the normal drain and can
+    // throw. Keep locally borrowed prewarm state alive on EVERY exceptional
+    // exit, not only failures of the disk reader. No extra wait on success.
+    struct PrewarmDrain {
+        Common::ThreadWorker& compiler;
+        bool joined{};
+        ~PrewarmDrain() {
+            if (!joined) compiler.WaitForRequests();
+        }
+    } prewarm_drain{workers};
+#endif
+#ifdef PS5_NATIVE
     // A damaged disk cache or an enqueue failure can interrupt the reader
     // after jobs borrowed local state. Always reach the non-cancelling drain.
     try {
@@ -989,6 +1001,7 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
     // Only the disk reader observes cancellation. The queued <=8 jobs
     // must complete before their borrowed stack state can be destroyed.
     workers.WaitForRequests();
+    prewarm_drain.joined = true;
 #else
     workers.WaitForRequests(stop_loading);
 #endif
