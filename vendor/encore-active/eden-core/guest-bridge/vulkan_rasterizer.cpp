@@ -908,11 +908,28 @@ void RasterizerVulkan::DispatchCompute() {
     pipeline->PreflightDescriptorScratch();
 #endif
     SCOPE_EXIT { SyncProbe(scheduler, "dispatch", pipeline); };
+#ifdef PS5_NATIVE
+    // P0.3: sampled compute lock wait versus time spent holding both guest
+    // caches. No fence, shader, descriptor or lock ordering change.
+    const bool compute_sample = ::Eden::Performance::ShouldSampleCacheDraw();
+    ::Eden::Performance::CachePhaseTimer compute_pair_wait{
+        ::Eden::Performance::CachePhase::ComputePairWait, compute_sample};
+#endif
     std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};
+#ifdef PS5_NATIVE
+    compute_pair_wait.Stop();
+    ::Eden::Performance::CachePhaseTimer compute_pair_held{
+        ::Eden::Performance::CachePhase::ComputePairHeld, compute_sample};
+    ::Eden::Performance::CachePhaseTimer compute_configure{
+        ::Eden::Performance::CachePhase::ComputeConfigure, compute_sample};
+#endif
     if (!pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache,
                              texture_cache)) {
         return;
     }
+#ifdef PS5_NATIVE
+    compute_configure.Stop();
+#endif
 
     const auto& qmd{kepler_compute->launch_description};
     auto indirect_address = kepler_compute->GetIndirectComputeAddress();
