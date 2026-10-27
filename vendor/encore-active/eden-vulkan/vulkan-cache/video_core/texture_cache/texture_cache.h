@@ -2009,7 +2009,9 @@ void TextureCache<P>::TickAsyncUnswizzle() {
 
     if (!task.initialized) {
         task.total_size = MapSizeBytes(image);
+#ifndef PS5_NATIVE
         task.staging_buffer = runtime.UploadStagingBuffer(task.total_size, true);
+#endif
 
         const auto& info = image.info;
         const u32 bytes_per_block = BytesPerBlock(info.format);
@@ -2034,9 +2036,13 @@ void TextureCache<P>::TickAsyncUnswizzle() {
         const bool invalid_slices =
             task.bytes_per_slice == 0 || task.bytes_per_slice > task.total_size ||
             task.total_size % task.bytes_per_slice != 0 ||
-            task.total_size / task.bytes_per_slice < static_cast<size_t>(info.size.depth);
+            // This accelerated path admits one layer/level of 3D BCn;
+            // extra slices are as invalid as missing ones. Otherwise
+            // depth - z_start can underflow in the last upload batch.
+            task.total_size / task.bytes_per_slice != static_cast<size_t>(info.size.depth);
         if (invalid_slices) {
-            runtime.FreeDeferredStagingBuffer(task.staging_buffer);
+            // No GPU staging exists yet; reject invalid geometry without
+            // reserving a potentially huge upload buffer.
             image.flags |= ImageFlagBits::CpuModified;
             if (True(image.flags & ImageFlagBits::Tracked)) {
                 UntrackImage(image, task.image_id);
@@ -2048,6 +2054,9 @@ void TextureCache<P>::TickAsyncUnswizzle() {
         }
 #else
         task.bytes_per_slice = static_cast<size_t>(stride) * aligned_height;
+#endif
+#ifdef PS5_NATIVE
+        task.staging_buffer = runtime.UploadStagingBuffer(task.total_size, true);
 #endif
         task.last_submitted_offset = 0;
         task.initialized = true;
