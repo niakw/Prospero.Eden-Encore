@@ -3465,6 +3465,12 @@ apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
 # F07: bounded cold-shader retry. Preserve pinned Vulkan header verbatim;
 # apply the native-only retry bookkeeping to its staged build copy. The
 # normal successful pipeline hot path performs no retry lookup or clock read.
+# The normal pinned cache header was not previously copied to the active
+# Vulkan include tree. F07 failed-key retries add private PS5 cache state,
+# so reproduce the complete header before applying its reviewed native delta.
+adapt('src/video_core/renderer_vulkan/vk_pipeline_cache.h',
+      'include/video_core/renderer_vulkan/vk_pipeline_cache.h', [])
+
 apply_reviewed_delta("include/video_core/renderer_vulkan/vk_pipeline_cache.h",
     "    ::Common::unordered_map<GraphicsPipelineCacheKey, std::unique_ptr<GraphicsPipeline>> graphics_cache;\n\n    ShaderPools main_pools;",
     "    ::Common::unordered_map<GraphicsPipelineCacheKey, std::unique_ptr<GraphicsPipeline>> graphics_cache;\n#ifdef PS5_NATIVE\n    // Graphics cache entries with failed shader translation remain null.\n    // Allow one delayed recovery per failed key, never a retry per guest draw.\n    // Bounded to 64 keys so invalid shaders cannot consume unlimited metadata.\n    struct GraphicsRetryState {\n        std::chrono::steady_clock::time_point eligible_at{};\n        bool attempted{};\n    };\n    ::Common::unordered_map<GraphicsPipelineCacheKey, GraphicsRetryState> failed_graphics_retries;\n#endif\n\n    ShaderPools main_pools;",
