@@ -496,3 +496,17 @@ attachments clairsemés, la profondeur, les clears, la répétition des draws
 et le passage par la branche dirty aux optimisations `-O0` et `-O2`.
 **Cette réduction de travail sous mutex ne démontre pas encore un gain FPS
 réel sur PS5.**
+
+## F07 P0.3 — copie buffer Vulkan vide sans barrière (27 octobre)
+
+`BufferCacheRuntime::CopyBuffer` continuait à construire le vecteur de
+`VkBufferCopy` et à appeler le scheduler lorsqu'il recevait **0 copie** et
+`barrier == false`. Le chemin natif PS5 retourne désormais avant ces
+opérations : aucun transfert, aucune barrière et aucune soumission ne sont
+requis dans ce cas. Les handles nuls conservent leur garde initiale, les
+copies réelles et les demandes de barrière conservent exactement leur voie
+et le desktop n'est pas modifié. Le harnais source-extrait l'amorce C++
+réelle et teste handles invalides, copies nulles, barrière seule, 1 et
+plusieurs copies, en modes natif/desktop et `-O0`/`-O2`.
+**Ce raccourci évite des soumissions inutiles mais n'est pas une mesure
+réelle des FPS console.**

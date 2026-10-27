@@ -461,6 +461,14 @@ void BufferCacheRuntime::CopyBuffer(VkBuffer dst_buffer, VkBuffer src_buffer,
     if (dst_buffer == VK_NULL_HANDLE || src_buffer == VK_NULL_HANDLE) {
         return;
     }
+#ifdef PS5_NATIVE
+    // No GPU copy and no requested barriers: do not allocate a copy vector
+    // or submit an empty scheduler callback under the guest cache locks.
+    // Keep the original barrier-bearing and desktop paths intact.
+    if (copies.empty() && !barrier) {
+        return;
+    }
+#endif
     static constexpr VkMemoryBarrier READ_BARRIER{
         .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
         .pNext = nullptr,
