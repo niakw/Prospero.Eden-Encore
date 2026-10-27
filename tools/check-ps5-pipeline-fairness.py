@@ -30,8 +30,16 @@ assert gate.count('std::scoped_lock lock{state->mutex}') == 1
 assert gate.count('if (state->cancelled) return;') == 1
 assert gate.count('sleep_for') == 1
 assert gate in generator
+# The queued lifetime flag is now published BEFORE QueueWork, rather than
+# when the worker starts. The fairness gate still checks cancellation before
+# touching the owning pipeline, but must not assume the old flag placement.
+queue_start = vulkan.index('void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass)')
+queue_publish = vulkan.index('state->running = true;', queue_start)
+queue_admit = vulkan.index('OptimizeWorker().QueueWork(', queue_start)
+assert queue_publish < queue_admit < start
+assert 'state->running = true;' not in gate
 assert vulkan.index('if (state->cancelled) return;', start) < vulkan.index(
-    'state->running = true;', start)
+    'MakePipeline(render_pass, 0, &optimized_pipeline);', start)
 cpp = """
 #include <atomic>
 #include <chrono>
