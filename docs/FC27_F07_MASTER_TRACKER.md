@@ -241,3 +241,18 @@ l'insertion effective de sa tâche. Témoins C++ `-O0`/`-O2` avec
 refus d'enqueue, préparation interrompue et décodage antérieur.
 **CI complète et comportement console encore à confirmer ; pas de preuve
 de gain FPS.**
+
+## F07 P0.4 — durée de vie des contextes de décodage asynchrone (27 octobre)
+
+Le chemin de consommation des décodages terminés détenait un
+`std::unique_lock` sur le mutex du contexte pendant
+`async_decodes.erase(i)`. Cet effacement détruit le contexte et son
+mutex **avant** que le verrou soit détruit : durée de vie invalide.
+Le port natif déverrouille explicitement avant les deux effacements.
+Il vérifie également que la longueur décodée correspond à la taille
+**actuelle** de l'image avant copie vers le staging. En cas de révision
+obsolète, aucun octet n'est copié : l'image est requalifiée
+`CpuModified`, désenregistrée si suivie, puis éligible à un nouvel
+upload. Le témoin C++ reproduit exactement le `TickAsyncDecode`
+actif en `-O0` et `-O2`, avec mutex instrumenté et contrôle de taille.
+**Source et témoin intégrés, CI/native/console à qualifier.**

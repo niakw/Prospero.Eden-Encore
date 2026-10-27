@@ -1916,12 +1916,32 @@ void TextureCache<P>::TickAsyncDecode() {
             continue;
         }
         Image& image = slot_images[async_decode->image_id];
+#ifdef PS5_NATIVE
+        // A texture may have been remapped or resized while decode was queued.
+        // Do not copy the old revision beyond its current staging allocation.
+        const size_t expected_size = MapSizeBytes(image);
+        if (async_decode->decoded_data.size() != expected_size) {
+            image.flags &= ~ImageFlagBits::IsDecoding;
+            image.flags |= ImageFlagBits::CpuModified;
+            if (True(image.flags & ImageFlagBits::Tracked)) {
+                UntrackImage(image, async_decode->image_id);
+            }
+            // Erasing the context destroys its mutex. Drop our lock first.
+            lock.unlock();
+            i = async_decodes.erase(i);
+            continue;
+        }
+        auto staging = runtime.UploadStagingBuffer(expected_size);
+#else
         auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));
+#endif
         std::memcpy(staging.mapped_span.data(), async_decode->decoded_data.data(),
                     async_decode->decoded_data.size());
         image.UploadMemory(staging, FixSmallVectorADL(async_decode->copies));
         image.flags &= ~ImageFlagBits::IsDecoding;
         has_uploads = true;
+        // The context owns async_decode->mutex. Unlock before destroying it.
+        lock.unlock();
         i = async_decodes.erase(i);
     }
     if (has_uploads) {
