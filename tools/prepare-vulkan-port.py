@@ -3688,3 +3688,22 @@ apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
     "std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(\n    const ComputePipelineCacheKey& key, const ShaderInfo* shader) {\n    auto timer = Eden::Performance::VulkanTimer(17);\n    const GPUVAddr program_base{kepler_compute->regs.code_loc.Address()};",
     "std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(\n    const ComputePipelineCacheKey& key, const ShaderInfo* shader) {\n    auto timer = Eden::Performance::VulkanTimer(17);\n#ifdef PS5_NATIVE\n    // Count compute environment setup and shader pool reset as foreground\n    // work, not only the downstream CFG/IR/SPIR-V translation.\n    ComputeTranslationPriorityScope first_use_preparation_priority{true};\n#endif\n    const GPUVAddr program_base{kepler_compute->regs.code_loc.Address()};",
     "F07 compute environment first-use priority before shader translation")
+
+# F07 P0.2: cap queued/running OPTIONAL graphics rebuilds, never first-use
+# pipelines. The worker owns a slot only after QueueWork admission succeeds.
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "namespace {\nCommon::ThreadWorker& OptimizeWorker() {",
+    "namespace {\n#ifdef PS5_NATIVE\n// Only first-use pipelines are mandatory. Cap queued + running speculative\n// driver rebuilds so HUD shader bursts cannot accumulate unbounded work.\nconstexpr unsigned kMaxQueuedOptionalOptimizations = 16;\nstd::atomic<unsigned> pending_optional_optimizations{0};\n\nbool ReserveOptionalOptimizationSlot() noexcept {\n    unsigned pending = pending_optional_optimizations.load(std::memory_order_relaxed);\n    while (pending < kMaxQueuedOptionalOptimizations) {\n        if (pending_optional_optimizations.compare_exchange_weak(\n                pending, pending + 1, std::memory_order_acq_rel,\n                std::memory_order_relaxed)) {\n            return true;\n        }\n    }\n    return false;\n}\n#endif\nCommon::ThreadWorker& OptimizeWorker() {",
+    "F07 bound optional Vulkan optimizer queue helper")
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {\n    optimize_state = std::make_shared<OptimizeState>();",
+    "void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {\n#ifdef PS5_NATIVE\n    // A skipped OPTIONAL rebuild keeps the already-built first-use pipeline.\n    // Reserve before allocations so an overloaded worker uses no extra memory.\n    if (!ReserveOptionalOptimizationSlot()) return;\n    bool optional_slot_handed_off = false;\n    SCOPE_EXIT {\n        if (!optional_slot_handed_off) {\n            pending_optional_optimizations.fetch_sub(1, std::memory_order_release);\n        }\n    };\n#endif\n    optimize_state = std::make_shared<OptimizeState>();",
+    "F07 skip overloaded optional pipeline builds before allocation")
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "                state->done.notify_all();\n            }\n        } completion{state};",
+    "                state->done.notify_all();\n#ifdef PS5_NATIVE\n                // Every accepted job releases its slot, including cancellation.\n                pending_optional_optimizations.fetch_sub(1, std::memory_order_release);\n#endif\n            }\n        } completion{state};",
+    "F07 release optional pipeline slot on completion or cancellation")
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "        });\n    } catch (...) {\n        // QueueWork failed before the worker accepted ownership. Do not strand",
+    "        });\n#ifdef PS5_NATIVE\n        // The queued worker now owns the slot. The caller's failure guard\n        // handles allocation/admission exceptions before this handoff.\n        optional_slot_handed_off = true;\n#endif\n    } catch (...) {\n        // QueueWork failed before the worker accepted ownership. Do not strand",
+    "F07 hand off optional pipeline slot after successful queue admission")
