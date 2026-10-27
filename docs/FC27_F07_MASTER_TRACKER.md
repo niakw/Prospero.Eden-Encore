@@ -471,16 +471,16 @@ les alias et mettre à jour le LRU. De plus, un view `Remapped` déclenche
 A et A peut avoir invalidé l'adresse GPU de la première vue. Le témoin
 C++ vérifie les deux scénarios A–B–A (alias devenu dirty et remappage).
 
-## F07 P0.3 — compute sans images : éviter la recherche de vues inutile
+## F07 P0.3 — compute sans images : optimisation retirée après audit
 
-Sur les dispatches compute ne possédant **aucune vue image**, le chemin
-PS5 évite maintenant `FillImageViews` tant que la liste descripteurs est
-vide. L'appel originel subsiste quand des images sont liées, et le chemin
-desktop reste inchangé. Le test C++ extrait exactement le nouveau site
-d'appel et couvre PS5/desktop en `-O0` et `-O2`. Le buffer cache continue
-à exécuter `UnbindComputeTextureBuffers` et les autres opérations de
-configuration. **Ce raccourci évite un passage sous verrous, mais ne prouve
-pas de changement perceptible dans FC 27.**
+La tentative d'éviter `FillImageViews` pour une liste vide a été **retirée** :
+même sans vue, cette fonction remet `has_deleted_images` à zéro avant de
+poursuivre. Sauter cet appel laissait un indicateur de suppression/retry
+potentiellement ancien après des changements de textures. Le coût d'un
+passage vide est négligeable devant le risque de manquer une mise à jour.
+L'appel inconditionnel d'origine a été restauré en natif PS5 et dans le
+générateur. Le test de la vraie fonction C++ démontre que les listes vides,
+y compris en mode blacklist, effacent le latch au lieu de le conserver.
 
 ## F07 P0.3 — parcours des render targets propres limité aux images présentes
 
