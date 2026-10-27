@@ -41,12 +41,14 @@ assert "scheduler.InvalidateState();" in ordinary
 assert "PORT_BUILD_DIR" in cmake and "vulkan_rasterizer.cpp" in cmake
 assert '"    scheduler.InvalidateState();\\n"' in gen
 
-update = fragment(sched, "bool Scheduler::UpdateGraphicsPipeline(GraphicsPipeline* pipeline) {",
+update = fragment(sched, "bool Scheduler::UpdateGraphicsPipeline(GraphicsPipeline* pipeline, bool optimized) {",
                   "\nbool Scheduler::UpdateRescaling(")
 invalidate = fragment(sched, "void Scheduler::InvalidateState() {",
                       "\nvoid Scheduler::EndPendingOperations(")
 assert "if (state.graphics_pipeline == pipeline)" in update
 assert "state.graphics_pipeline = nullptr;" in invalidate
+assert "state.graphics_pipeline_optimized = false;" in invalidate
+assert "state.graphics_pipeline_optimized = optimized;" in update
 
 # Compile the ACTUAL maintained Scheduler methods at O0/O2 with minimal host
 # mocks for the Vulkan-independent state tracker and guest pipeline object.
@@ -64,12 +66,13 @@ class Scheduler {
 public:
     struct State {
         GraphicsPipeline* graphics_pipeline = nullptr;
+        bool graphics_pipeline_optimized = false;
         bool needs_state_enable_refresh = false;
         bool rescaling_defined = true;
         bool descriptor_buffer_bound = true;
     } state;
     StateTracker state_tracker;
-    bool UpdateGraphicsPipeline(GraphicsPipeline* pipeline);
+    bool UpdateGraphicsPipeline(GraphicsPipeline* pipeline, bool optimized = false);
     void InvalidateState();
 };
 """ + update + "\n" + invalidate + r"""
@@ -82,13 +85,18 @@ int main() {
     // Scheduler::state.graphics_pipeline referring to this guest pipeline.
     // Without invalidate, the following same guest shader skips rebinding.
     assert(!scheduler.UpdateGraphicsPipeline(&guest));
+    // The same logical pipeline can publish its optimized handle mid-frame.
+    // The new API must detect this even before the raw blit invalidation.
+    assert(scheduler.UpdateGraphicsPipeline(&guest, true));
+    assert(!scheduler.UpdateGraphicsPipeline(&guest, true));
     scheduler.InvalidateState();
     assert(scheduler.state.graphics_pipeline == nullptr);
+    assert(!scheduler.state.graphics_pipeline_optimized);
     assert(!scheduler.state.rescaling_defined);
     assert(!scheduler.state.descriptor_buffer_bound);
     assert(scheduler.state_tracker.invalidations == 1);
-    assert(scheduler.UpdateGraphicsPipeline(&guest));
-    assert(!scheduler.UpdateGraphicsPipeline(&guest));
+    assert(scheduler.UpdateGraphicsPipeline(&guest, true));
+    assert(!scheduler.UpdateGraphicsPipeline(&guest, true));
 }
 """
 with tempfile.TemporaryDirectory(prefix="fc27-f07-raw-blit-") as td:
