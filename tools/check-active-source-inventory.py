@@ -302,7 +302,7 @@ print("ENCORE_ACTIVE_CATALOG_SUMMARY_PASS",
 # configure-time copy has an exact source ownership record. This guards
 # coverage, not GPU forward progress or successful native device tests.
 vulkan_family = [p for p in physical if p.startswith("eden-vulkan/")]
-assert len(vulkan_family) == 41, ("Vulkan maintained footprint changed", len(vulkan_family))
+assert len(vulkan_family) == 42, ("Vulkan maintained footprint changed", len(vulkan_family))
 assert all(p in graph for p in vulkan_family), (
     "Vulkan maintained source lacks owner", [p for p in vulkan_family if p not in graph],
 )
