@@ -438,3 +438,21 @@ DMA antérieure à son existence n'a pas d'ancienne version GPU à invalider.
 Un harnais extrait le vrai C++ et vérifie cas connus, jamais possédés,
 textures seules, chevauchements, grandes plages et adresses sans mapping.
 **Effet FPS/HUD et tests console non prouvés.**
+
+## F07 P0.3 — même TIC répété dans plusieurs stages, sous verrou cache
+
+Le précédent raccourci `FillImageViews` ne réutilisait que le TIC
+immédiatement précédent. Dans un draw, la séquence A–B–A refaisait donc la
+résolution complète de A tout en tenant les mutex textures/buffers. Le
+correctif natif PS5 utilise 16 entrées directes **locales à chaque passe**,
+sans allocation et sans cache persistant. Les collisions remplacent une
+entrée, les identifiants NULL sont relus, et la réutilisation est désactivée
+durant suppression/retry ou blacklist/rescale. La méthode épinglée hors PS5
+reste inchangée. Le générateur reproduit désormais ce chemin, qui était
+auparavant présent uniquement dans les sources intégrées.
+
+La prévalidation du SHA précédent a échoué sur un **ancien test inline DMA**
+qui n'incluait pas `buffer_pages.h` et supposait toujours une entrée dans le
+cache buffer. Le témoin est ajusté pour les pages vraiment jamais enregistrées
+et pour les buffers enregistrés, sans toucher au contrat runtime.
+**Preuves C++ / CI et amélioration FC 27 console restent à valider.**

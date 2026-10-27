@@ -2,7 +2,7 @@
 """Native-source-extracted inline GPU upload texture lock regression.
 
 The CPU buffer tracker, guest memory write, query and shader invalidation
-must NEVER be bypassed by a negative texture-page occupancy witness.
+must follow the conservative texture and buffer ownership witnesses.
 """
 from pathlib import Path
 import shutil
@@ -51,6 +51,7 @@ program = r"""
 #include <span>
 #include <vector>
 #include "image_pages.h"
+#include "buffer_pages.h"
 using u8 = std::uint8_t;
 using DAddr = std::uint64_t;
 using GPUVAddr = std::uint64_t;
@@ -103,20 +104,21 @@ int main() {
     constexpr DAddr page = 4096;
     std::array<u8, 16> small{};
     x.backing.cpu = 10*page;
-    // A never-image page only bypasses texture, NOT guest memory/buffer/shader/query.
+    // No prior texture OR buffer ownership: only guest RAM/shader/query update.
     x.AccelerateInlineToMemory(42, small.size(), small);
-    assert(x.backing.unsafe_writes == 1 && x.buffer_cache.inlines == 1);
-    assert(x.buffer_cache.writes == 1 && x.texture_cache.writes == 0);
+    assert(x.backing.unsafe_writes == 1 && x.buffer_cache.inlines == 0);
+    assert(x.buffer_cache.writes == 0 && x.texture_cache.writes == 0);
     assert(x.texture_cache.mutex.calls == 0);
     assert(x.pipeline_cache.calls == 1 && x.query_cache.calls == 1);
 
     // An inline buffer upload returning handled still invalidates texture
     // and shader/query if a texture was ever registered.
     Eden::ImagePages::Mark(20*page, page);
+    Eden::BufferPages::Mark(20*page, page);
     x.backing.cpu = 20*page;
     x.buffer_cache.handled = true;
     x.AccelerateInlineToMemory(42, small.size(), small);
-    assert(x.buffer_cache.writes == 1 && x.buffer_cache.inlines == 2);
+    assert(x.buffer_cache.writes == 0 && x.buffer_cache.inlines == 1);
     assert(x.texture_cache.writes == 1 && x.texture_cache.mutex.calls == 1);
     assert(x.pipeline_cache.calls == 2 && x.query_cache.calls == 2);
 
@@ -125,26 +127,26 @@ int main() {
     x.buffer_cache.handled = false;
     x.AccelerateInlineToMemory(42, small.size(), small);
     assert(x.texture_cache.writes == 2 && x.texture_cache.mutex.calls == 2);
-    assert(x.buffer_cache.writes == 2);
+    assert(x.buffer_cache.writes == 1);
 
     // Large requests fail closed even when no pages were registered.
     std::vector<u8> large(256*1024+1);
     x.backing.cpu = 100*page;
     x.AccelerateInlineToMemory(42, large.size(), large);
     assert(x.texture_cache.writes == 3 && x.texture_cache.mutex.calls == 3);
-    assert(x.buffer_cache.writes == 3);
+    assert(x.buffer_cache.writes == 2);
 
     // Unknown/out-of-range CPU spans conservatively lock.
     x.backing.cpu = Eden::ImagePages::kSpace-4;
     x.AccelerateInlineToMemory(42, small.size(), small);
     assert(x.texture_cache.writes == 4 && x.texture_cache.mutex.calls == 4);
-    assert(x.buffer_cache.writes == 4);
+    assert(x.buffer_cache.writes == 3);
 
     // Translation failure still uses original safe guest block, then returns.
     x.backing.cpu = std::nullopt;
     x.AccelerateInlineToMemory(42, small.size(), small);
     assert(x.backing.safe_writes == 1 && x.backing.unsafe_writes == 5);
-    assert(x.buffer_cache.inlines == 5 && x.buffer_cache.writes == 4);
+    assert(x.buffer_cache.inlines == 4 && x.buffer_cache.writes == 3);
     assert(x.texture_cache.writes == 4);
     assert(x.pipeline_cache.calls == 5 && x.query_cache.calls == 5);
 }
