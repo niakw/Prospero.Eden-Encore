@@ -36,8 +36,8 @@ for kind, start, finish in (
     ("Compute", "std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(\\n    const ComputePipelineCacheKey",
      "std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(\\n    ShaderPools&"),
 ):
-    start = start.replace("\\\\n", "\\n")
-    finish = finish.replace("\\\\n", "\\n")
+    start = start.replace("\\n", "\n")
+    finish = finish.replace("\\n", "\n")
     assert shader.count(start) == 1 and finish in shader, (kind, "source anchors")
     body = shader.split(start, 1)[1].split(finish, 1)[0]
     assert body.count("serialization_thread.QueueWork(") == 1, kind
