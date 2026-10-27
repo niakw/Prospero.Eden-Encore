@@ -537,3 +537,16 @@ transformations dans l'ordre inverse directement depuis les ancrages stricts
 du générateur, puis conserve la comparaison avec **l'empreinte historique
 inchangée**. Un déplacement ou une divergence des blocs natifs fait échouer
 le témoin, plutôt que d'actualiser artificiellement le SHA.
+
+## F07 P0.3 — éviter les handles vertex exclus par le plafond Vulkan (27 octobre)
+
+Après validation précoce des plages, `BindVertexBuffers` continuait à
+résoudre les handles de toutes les entrées invitées, même lorsque la limite
+`GetMaxVertexInputBindings()` tronquait une plage par ailleurs valide.
+La branche PS5 prépare désormais seulement les `binding_count` handles
+transmis à Vulkan ; les tableaux hôtes trop courts sont rejetés avant
+tout accès ou enregistrement différé. Le chemin desktop et l'ordre des
+bindings admis restent inchangés. La reproduction strictement épinglée
+et les témoins O0/O2 sont mis à jour, y compris la reconstruction de
+l'empreinte historique des copies différées. Ce changement ne prouve
+aucun gain de FPS ou de fraîcheur HUD sur console.

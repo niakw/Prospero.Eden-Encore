@@ -681,8 +681,22 @@ void BufferCacheRuntime::BindVertexBuffers(VideoCommon::HostBindings<Buffer>& bi
         return;
     }
     const u32 binding_count = max_binding - min_binding;
-    boost::container::static_vector<VkBuffer, VideoCommon::NUM_VERTEX_BUFFERS> buffer_handles(bindings.buffers.size());
-    for (u32 i = 0; i < bindings.buffers.size(); ++i) {
+#ifdef PS5_NATIVE
+    // Do not resolve or allocate handles for indices the device cannot bind.
+    // Both buffer-cache producers keep all host vectors aligned to the range.
+    // Reject malformed input before a deferred Vulkan command can read it.
+    if (bindings.buffers.size() < binding_count ||
+        bindings.offsets.size() < binding_count ||
+        bindings.sizes.size() < binding_count ||
+        bindings.strides.size() < binding_count) {
+        return;
+    }
+    const u32 handle_count = binding_count;
+#else
+    const u32 handle_count = static_cast<u32>(bindings.buffers.size());
+#endif
+    boost::container::static_vector<VkBuffer, VideoCommon::NUM_VERTEX_BUFFERS> buffer_handles(handle_count);
+    for (u32 i = 0; i < handle_count; ++i) {
         auto handle = bindings.buffers[i]->Handle();
         if (handle == VK_NULL_HANDLE) {
             bindings.offsets[i] = 0;
