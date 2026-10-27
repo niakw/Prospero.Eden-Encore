@@ -3528,6 +3528,25 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "F07 completed texture upload marker")
 
 
+# F07 P0.4: keep async-decoding state recoverable if preparation or
+# queue admission fails. These are native-only state changes; no GPU waits.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    image.flags |= ImageFlagBits::IsDecoding;\n    auto decode = std::make_unique<AsyncDecodeContext>();",
+    "#ifdef PS5_NATIVE\n    // Never strand IsDecoding or a pending decode entry if preparation or\n    // worker queue admission throws. Preserve an already active decode.\n    const bool was_decoding = True(image.flags & ImageFlagBits::IsDecoding);\n    AsyncDecodeContext* incomplete_decode{};\n    bool decode_admitted = false;\n    SCOPE_EXIT {\n        if (!decode_admitted) {\n            if (!was_decoding) {\n                image.flags &= ~ImageFlagBits::IsDecoding;\n            }\n            if (incomplete_decode && !async_decodes.empty() &&\n                async_decodes.back().get() == incomplete_decode) {\n                async_decodes.pop_back();\n            }\n        }\n    };\n#endif\n    image.flags |= ImageFlagBits::IsDecoding;\n    auto decode = std::make_unique<AsyncDecodeContext>();",
+    "F07 decode rollback on admission")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    auto* decode_ptr = decode.get();\n    decode->image_id = image_id;",
+    "    auto* decode_ptr = decode.get();\n#ifdef PS5_NATIVE\n    incomplete_decode = decode_ptr;\n#endif\n    decode->image_id = image_id;",
+    "F07 decode rollback pointer")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    texture_decode_worker.QueueWork(std::move(func));\n}",
+    "    texture_decode_worker.QueueWork(std::move(func));\n#ifdef PS5_NATIVE\n    decode_admitted = true;\n#endif\n}",
+    "F07 decode successful admission marker")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    image.flags |= ImageFlagBits::IsDecoding;\n\n    unswizzle_queue.push_back({\n        .image_id = image_id,\n        .info = image.info\n    });\n}",
+    "#ifndef PS5_NATIVE\n    image.flags |= ImageFlagBits::IsDecoding;\n#endif\n    // Native: commit IsDecoding only after successful queue admission.\n    // A throwing allocation must not leave a permanently pending image.\n    unswizzle_queue.push_back({\n        .image_id = image_id,\n        .info = image.info\n    });\n#ifdef PS5_NATIVE\n    image.flags |= ImageFlagBits::IsDecoding;\n#endif\n}",
+    "F07 unswizzle queue before pending flag")
+
 # F07 P0.3: compute dispatch currently holds both guest cache mutexes but
 # does not distinguish contention from descriptor/texture Configure work.
 # Sample only Detailed Logging, mirroring the graphics paired-lock timer.
