@@ -25,7 +25,11 @@ assert "bool graphics_pipeline_optimized = false;" in header
 assert "UpdateGraphicsPipeline(GraphicsPipeline* pipeline, bool optimized = false)" in header
 assert "this, optimized_ready.load(std::memory_order_acquire))" in graphics
 assert "optimized_ready.store(true, std::memory_order_release);" in graphics
-assert "optimized_ready.load(std::memory_order_acquire) ? *optimized_pipeline : *pipeline" in graphics
+# F07 recovery now snapshots the published handle before its null check.
+# Rebinding and recovery share the same release/acquire publication contract.
+assert "const bool use_optimized = optimized_ready.load(std::memory_order_acquire);" in graphics
+assert "if (!pipeline && !use_optimized)" in graphics
+assert "use_optimized ? *optimized_pipeline : *pipeline" in graphics
 assert "F07 scheduler variant change rebind" in generator
 assert "F07 graphics optimize publication handoff" in generator
 
