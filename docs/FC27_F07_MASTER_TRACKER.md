@@ -333,3 +333,18 @@ une copie de tranche au-delà de l'allocation GPU. Sur PS5, le stride est
 incohérentes annulent le lot avant tout transfert, en libérant le staging
 de manière différée et en conservant `CpuModified`. Le chemin desktop
 n'est pas modifié. Qualification CI/native et résultat console à confirmer.
+
+### F07 P0.4 — tranches excédentaires et profondeur nulle
+
+La validation des uploads GPU BCn 3D exige désormais **exactement** autant
+de tranches complètes que la profondeur de la texture (voie accélérée mono-
+niveau et mono-couche). Une profondeur nulle ou des tranches excédentaires
+sont rejetées avec libération différée du staging. Sans cela,
+`image.info.size.depth - z_start` pouvait sous-déborder pendant les lots
+suivants malgré le premier contrôle de taille. Tests hôte élargis ;
+CI et console encore à qualifier.
+
+Le staging PS5 de ce chemin est désormais demandé **après** la validation
+des tranches : les dimensions invalides sont rejetées avant toute
+allocation GPU différée, évitant des réservations lourdes inutiles. Le
+chemin desktop garde l'ordre historique de ses allocations.
