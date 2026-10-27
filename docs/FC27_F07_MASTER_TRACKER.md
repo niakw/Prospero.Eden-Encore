@@ -394,3 +394,14 @@ restaure `CpuModified`, retire le suivi obsolète et évite de republier les
 pixels de l'ancienne adresse. Le comportement hors PS5 n'est pas modifié.
 Le test C++ source-extrait couvre désormais un remappage de même taille.
 **CI/native et effet FC27 sur console restent à confirmer.**
+
+## F07 P0.1/P0.2 — priorité shader dès l'environnement invité (27 octobre)
+
+La réservation de premier usage débutait dans les surcharges de traduction
+`CreateGraphicsPipeline(pools, …)` / `CreateComputePipeline(pools, …)` :
+l'acquisition synchrone de l'environnement et le recyclage des pools étaient
+encore exposés au worker Vulkan d'optimisation facultative. Les deux entrées
+runtime réservent désormais la priorité **avant** ces opérations. Les scopes
+RAII imbriqués maintiennent la réservation jusqu'au build Vulkan, sans délai
+sur le thread propriétaire et sans changer le préchauffage disque.
+**Le coût synchrone reste présent ; gain FPS console non prouvé.**

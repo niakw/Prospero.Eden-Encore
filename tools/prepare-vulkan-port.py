@@ -3677,3 +3677,14 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        if (async_decode->decoded_data.size() != expected_size ||\n            True(image.flags & ImageFlagBits::CpuModified)) {\n            // A newer guest CPU write invalidates the queued result even\n            // when dimensions have not changed (typical dynamic HUD).\n            // Keep CpuModified set so the newer content is re-uploaded.",
     "        if (async_decode->decoded_data.size() != expected_size ||\n            True(image.flags & ImageFlagBits::CpuModified) ||\n            True(image.flags & ImageFlagBits::Remapped)) {\n            // A guest CPU revision OR remapping invalidates decoded bytes,\n            // even when dimensions have not changed (dynamic HUD).\n            // Retain CpuModified so the current mapping can be refreshed.",
     "F07 discard same-size async texture after guest remap")
+
+# F07 P0.1/P0.2: foreground shader priority starts BEFORE environment
+# acquisition/pool reset, not after that synchronous GPU owner-thread work.
+apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
+    "std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {\n    auto timer = Eden::Performance::VulkanTimer(17);\n    GraphicsEnvironments environments;",
+    "std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {\n    auto timer = Eden::Performance::VulkanTimer(17);\n#ifdef PS5_NATIVE\n    // Reserve priority before guest shader environment reads and pool reset.\n    // The inner translation scope overlaps this reservation, so there is no\n    // idle gap for speculative Vulkan optimization before the first-use build.\n    GraphicsTranslationPriorityScope first_use_preparation_priority{\n        ::Eden::DevVulkan::fast_first_pipelines};\n#endif\n    GraphicsEnvironments environments;",
+    "F07 graphics environment first-use priority before shader translation")
+apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
+    "std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(\n    const ComputePipelineCacheKey& key, const ShaderInfo* shader) {\n    auto timer = Eden::Performance::VulkanTimer(17);\n    const GPUVAddr program_base{kepler_compute->regs.code_loc.Address()};",
+    "std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(\n    const ComputePipelineCacheKey& key, const ShaderInfo* shader) {\n    auto timer = Eden::Performance::VulkanTimer(17);\n#ifdef PS5_NATIVE\n    // Count compute environment setup and shader pool reset as foreground\n    // work, not only the downstream CFG/IR/SPIR-V translation.\n    ComputeTranslationPriorityScope first_use_preparation_priority{true};\n#endif\n    const GPUVAddr program_base{kepler_compute->regs.code_loc.Address()};",
+    "F07 compute environment first-use priority before shader translation")

@@ -1357,6 +1357,13 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
 
 std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {
     auto timer = Eden::Performance::VulkanTimer(17);
+#ifdef PS5_NATIVE
+    // Reserve priority before guest shader environment reads and pool reset.
+    // The inner translation scope overlaps this reservation, so there is no
+    // idle gap for speculative Vulkan optimization before the first-use build.
+    GraphicsTranslationPriorityScope first_use_preparation_priority{
+        ::Eden::DevVulkan::fast_first_pipelines};
+#endif
     GraphicsEnvironments environments;
     // Preparing guest shader environments is distinct from CFG/IR/SPIR-V
     // translation. Keep GPU-thread ownership and source read order unchanged.
@@ -1403,6 +1410,11 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {
 std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
     const ComputePipelineCacheKey& key, const ShaderInfo* shader) {
     auto timer = Eden::Performance::VulkanTimer(17);
+#ifdef PS5_NATIVE
+    // Count compute environment setup and shader pool reset as foreground
+    // work, not only the downstream CFG/IR/SPIR-V translation.
+    ComputeTranslationPriorityScope first_use_preparation_priority{true};
+#endif
     const GPUVAddr program_base{kepler_compute->regs.code_loc.Address()};
     const auto& qmd{kepler_compute->launch_description};
     ComputeEnvironment env{*kepler_compute, *gpu_memory, program_base, qmd.program_start};
