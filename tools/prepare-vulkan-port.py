@@ -3547,6 +3547,18 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "#ifndef PS5_NATIVE\n    image.flags |= ImageFlagBits::IsDecoding;\n#endif\n    // Native: commit IsDecoding only after successful queue admission.\n    // A throwing allocation must not leave a permanently pending image.\n    unswizzle_queue.push_back({\n        .image_id = image_id,\n        .info = image.info\n    });\n#ifdef PS5_NATIVE\n    image.flags |= ImageFlagBits::IsDecoding;\n#endif\n}",
     "F07 unswizzle queue before pending flag")
 
+# F07 P0.4: asynchronous decoded images must fit their CURRENT staging
+# size, and the decode mutex must be unlocked before its owner is erased.
+# Never mutate the pinned source; keep this reviewed native fork delta exact.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        Image& image = slot_images[async_decode->image_id];\n        auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));\n        std::memcpy(staging.mapped_span.data(), async_decode->decoded_data.data(),\n                    async_decode->decoded_data.size());",
+    "        Image& image = slot_images[async_decode->image_id];\n#ifdef PS5_NATIVE\n        // A texture may have been remapped or resized while decode was queued.\n        // Do not copy the old revision beyond its current staging allocation.\n        const size_t expected_size = MapSizeBytes(image);\n        if (async_decode->decoded_data.size() != expected_size) {\n            image.flags &= ~ImageFlagBits::IsDecoding;\n            image.flags |= ImageFlagBits::CpuModified;\n            if (True(image.flags & ImageFlagBits::Tracked)) {\n                UntrackImage(image, async_decode->image_id);\n            }\n            // Erasing the context destroys its mutex. Drop our lock first.\n            lock.unlock();\n            i = async_decodes.erase(i);\n            continue;\n        }\n        auto staging = runtime.UploadStagingBuffer(expected_size);\n#else\n        auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));\n#endif\n        std::memcpy(staging.mapped_span.data(), async_decode->decoded_data.data(),\n                    async_decode->decoded_data.size());",
+    "F07 async texture revision length guard")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        has_uploads = true;\n        i = async_decodes.erase(i);",
+    "        has_uploads = true;\n        // The context owns async_decode->mutex. Unlock before destroying it.\n        lock.unlock();\n        i = async_decodes.erase(i);",
+    "F07 async decode unlock before context erase")
+
 # F07 P0.3: compute dispatch currently holds both guest cache mutexes but
 # does not distinguish contention from descriptor/texture Configure work.
 # Sample only Detailed Logging, mirroring the graphics paired-lock timer.

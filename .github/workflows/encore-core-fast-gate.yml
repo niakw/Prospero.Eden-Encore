@@ -406,6 +406,7 @@ jobs:
           python3 -B tools/check-ps5-release-saved-diagnostics-host.py
           python3 -B tools/check-ps5-f07-cold-stalls-host.py
           python3 -B tools/check-ps5-f07-texture-upload-rollback-host.py
+          python3 -B tools/check-ps5-f07-async-decode-lifetime-host.py
           python3 -B tools/check-ps5-f07-pipeline-transitions-host.py
           python3 -B tools/check-ps5-f07-pipeline-publication-host.py
           python3 -B tools/check-ps5-f07-compute-ready-callback-host.py
