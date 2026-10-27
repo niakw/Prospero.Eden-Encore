@@ -25,6 +25,7 @@ on:
       - 'docs/EDEN_CORE_AUDIT_DEPENDENCIES.md'
       - 'docs/EDEN_ACTIVE_SOURCE_CATALOG.md'
       - 'docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md'
+      - '.github/workflows/encore-core-fast-gate.yml'
       - '.github/workflows/encore-core-preflight.yml'
       # The preflight audits neutral step descriptions across ALL workflows,
       # including this authentic-readme screenshot producer.
