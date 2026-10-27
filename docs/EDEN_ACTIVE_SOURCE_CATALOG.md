@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **329 fichiers** de code et d'en-têtes enregistrés.
-- **329 fichiers** possèdent une correspondance de chemin *exacte*
+- **330 fichiers** de code et d'en-têtes enregistrés.
+- **330 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -317,7 +317,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h` | `maintained-override` | V41 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h` | `maintained-override` | V33 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h` | `maintained-override` | V10 |
-| `eden-vulkan/include/video_core/renderer_vulkan/vk_pipeline_cache.h` | `maintained-override` | — |
+| `eden-vulkan/include/video_core/renderer_vulkan/vk_pipeline_cache.h` | `maintained-override` | V110 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_present_manager.h` | `maintained-override` | V32 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_scheduler.h` | `maintained-override` | V31 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h` | `maintained-override` | V42 |

@@ -14,9 +14,9 @@ une autre source de vérité. Les scripts d'installation peuvent copier les
 fichiers maintenus et refuser toute dérive SHA, mais pas inventer de
 nouveaux corps C++ destinés à la console.
 
-## État concret au 25 octobre 2026
+## État concret au 27 octobre 2026
 
-- `vendor/encore-active` : **329 sources et en-têtes suivis**, tous avec
+- `vendor/encore-active` : **330 sources et en-têtes suivis**, tous avec
   un propriétaire de chemin dans le graphe. Couverture documentaire,
   **pas** validation console.
 - `headless/CMakeLists.txt` : **1 générateur** `write_derived`.
