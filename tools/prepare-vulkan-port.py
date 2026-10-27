@@ -3671,3 +3671,9 @@ apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
     "constexpr size_t NUM_STAGES = Maxwell::MaxShaderStage;\n#ifdef PS5_NATIVE\n// Counts cold first-use Vulkan graphics builds, not draws or cached pipelines.\n// Only the optional fast-first dev profile updates it; normal gameplay pays nothing.\nstd::atomic<unsigned> pending_first_use_graphics_builds{0};\n#endif",
     "constexpr size_t NUM_STAGES = Maxwell::MaxShaderStage;\n// The shared first-use graphics counter is defined at Vulkan namespace scope.",
     "F07 remove anonymous graphics counter shadow")
+
+# F07 P0.4: reject decoded bytes from the old guest mapping before staging.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        if (async_decode->decoded_data.size() != expected_size ||\n            True(image.flags & ImageFlagBits::CpuModified)) {\n            // A newer guest CPU write invalidates the queued result even\n            // when dimensions have not changed (typical dynamic HUD).\n            // Keep CpuModified set so the newer content is re-uploaded.",
+    "        if (async_decode->decoded_data.size() != expected_size ||\n            True(image.flags & ImageFlagBits::CpuModified) ||\n            True(image.flags & ImageFlagBits::Remapped)) {\n            // A guest CPU revision OR remapping invalidates decoded bytes,\n            // even when dimensions have not changed (dynamic HUD).\n            // Retain CpuModified so the current mapping can be refreshed.",
+    "F07 discard same-size async texture after guest remap")

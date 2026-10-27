@@ -384,3 +384,13 @@ le symbole externe `Vulkan::`. Sa définition unique est déplacée au bon
 niveau ; les réservations, shaders et fences ne changent pas. La source,
 le générateur et le témoin hôte sont corrigés de concert.
 **À confirmer :** build natif du nouveau SHA puis résultats console.
+
+## F07 P0.4 — rejet des décodages obsolètes après remappage (27 octobre)
+
+Le rejet des décodages asynchrones périmés couvrait `CpuModified` et les
+changements de taille, mais pas `Remapped` à taille identique. Sur PS5, le
+remappage invalide maintenant aussi l'ancien résultat **avant le staging**,
+restaure `CpuModified`, retire le suivi obsolète et évite de republier les
+pixels de l'ancienne adresse. Le comportement hors PS5 n'est pas modifié.
+Le test C++ source-extrait couvre désormais un remappage de même taille.
+**CI/native et effet FC27 sur console restent à confirmer.**
