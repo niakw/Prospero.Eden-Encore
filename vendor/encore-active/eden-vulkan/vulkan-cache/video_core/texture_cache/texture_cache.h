@@ -448,6 +448,7 @@ void TextureCache<P>::FillImageViews(std::span<ImageViewInOut> views, bool compu
         }
     } while (has_deleted_images || (blacklist && has_blacklisted));
 }
+
 template <class P>
 void TextureCache<P>::CheckFeedbackLoop(std::span<const ImageViewInOut> views) {
     if (!Settings::values.barrier_feedback_loops.GetValue()) {
