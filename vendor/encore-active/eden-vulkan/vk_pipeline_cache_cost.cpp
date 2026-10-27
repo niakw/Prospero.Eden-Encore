@@ -1233,7 +1233,15 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
 std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {
     auto timer = Eden::Performance::VulkanTimer(17);
     GraphicsEnvironments environments;
-    GetGraphicsEnvironments(environments, graphics_key.unique_hashes);
+    // Preparing guest shader environments is distinct from CFG/IR/SPIR-V
+    // translation. Keep GPU-thread ownership and source read order unchanged.
+    // Quiet release does not read a clock or update counters.
+    {
+        ::Eden::Performance::CachePhaseTimer environment_cost{
+            ::Eden::Performance::CachePhase::GraphicsShaderEnvironment,
+            ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
+        GetGraphicsEnvironments(environments, graphics_key.unique_hashes);
+    }
 
     ([&] { auto cost = Eden::Performance::VulkanTimer(19); ::Eden::Performance::CachePhaseTimer stage_cost{::Eden::Performance::CachePhase::ShaderPoolReset, ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)}; return main_pools.ReleaseContents(); }());
     auto pipeline{

@@ -21,6 +21,7 @@ report = (root / "headless/performance.cpp").read_text()
 
 names = (
     ("GraphicsPipelineCreate", "graphics_pipeline_create"),
+    ("GraphicsShaderEnvironment", "graphics_shader_environment"),
     ("ShaderPoolReset", "shader_pool_reset"),
     ("ShaderCfg", "shader_cfg"),
     ("ShaderIr", "shader_ir"),
@@ -40,6 +41,16 @@ for stage, expected in (("ShaderPoolReset",2), ("ShaderCfg",3),
                         ("ShaderIr",3), ("ShaderSpirv",2), ("ShaderModule",2)):
     assert pipeline.count("CachePhase::"+stage) == expected, stage
     assert stage in gen, stage
+assert pipeline.count("CachePhase::GraphicsShaderEnvironment") == 1
+# This interval must surround only the graphics GPU-owner preparation, not a
+# worker or a widened guest buffer/texture lock.
+environment_start = pipeline.index("CachePhase::GraphicsShaderEnvironment")
+assert "GetGraphicsEnvironments(environments, graphics_key.unique_hashes);" in pipeline[
+    environment_start:environment_start+400]
+assert "detailed_gpu_profile.load(std::memory_order_relaxed)" in pipeline[
+    environment_start:environment_start+210]
+assert "shader_source.count(f07_environment_old) != 1" in gen
+assert "shader_source.replace(f07_environment_old, f07_environment_new, 1)" in gen
 assert pipeline.count("cfg_stage_cost.Stop();") == 3
 assert "if len(re.findall(cfg_match, shader_source)) != 3:" in gen
 assert 'if shader_source.count(f07_pipeline_old) != 1:' in gen

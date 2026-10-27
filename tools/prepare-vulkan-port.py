@@ -2694,6 +2694,15 @@ for name, old, new in (
         raise RuntimeError(f"F07 {name} shader-cache queue admission anchor drift")
     shader_source = shader_source.replace(old, new, 1)
 
+# F07 P0.1: isolate the synchronous guest-environment preparation from
+# shader CFG, IR and SPIR-V translation. This adds a clock only in Detailed
+# Logging and never changes guest reads, pipeline order or worker ownership.
+f07_environment_old = "    GetGraphicsEnvironments(environments, graphics_key.unique_hashes);"
+f07_environment_new = "    // Preparing guest shader environments is distinct from CFG/IR/SPIR-V\n    // translation. Keep GPU-thread ownership and source read order unchanged.\n    // Quiet release does not read a clock or update counters.\n    {\n        ::Eden::Performance::CachePhaseTimer environment_cost{\n            ::Eden::Performance::CachePhase::GraphicsShaderEnvironment,\n            ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};\n        GetGraphicsEnvironments(environments, graphics_key.unique_hashes);\n    }"
+if shader_source.count(f07_environment_old) != 1:
+    raise RuntimeError("F07 graphics shader environment timing anchor drift")
+shader_source = shader_source.replace(f07_environment_old, f07_environment_new, 1)
+
 shader_output = output / 'vk_pipeline_cache_cost.cpp'
 if not shader_output.exists() or shader_output.read_text() != shader_source:
     shader_output.write_text(shader_source)
