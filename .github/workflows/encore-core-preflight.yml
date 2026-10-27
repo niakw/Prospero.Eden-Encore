@@ -412,6 +412,7 @@ jobs:
           python3 -B tools/check-native-vulkan-completed-build-wait-host.py
           python3 -B tools/check-vulkan-pipeline-ready-publication-host.py
           python3 -B tools/check-ps5-f07-fast-pipeline-rebind-host.py
+          python3 -B tools/check-ps5-f07-optimized-pipeline-recovery-host.py
           python3 -B tools/check-ps5-vertex-identity-host.py
           python3 -B tools/check-ps5-late-descriptor-preflight-host.py
           python3 -B tools/check-active-cmake-source-boundary.py

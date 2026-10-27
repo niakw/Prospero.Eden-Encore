@@ -904,16 +904,18 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
             cmdbuf.BindDescriptorBuffersEXT(binding_info);
         }
         if (bind_pipeline) {
-            if (!pipeline) {
-                // An asynchronously-built pipeline can fail after Configure's
-                // earlier IsBuilt()/pipeline check but before this worker
-                // callback executes. Count the actual GPU draw omission.
+            // An initial fast-first Vulkan creation can return a null handle
+            // without throwing. Its subsequent optimized rebuild may still
+            // succeed. Acquire the published optimized handle before deciding
+            // whether this ordered draw must be discarded.
+            const bool use_optimized = optimized_ready.load(std::memory_order_acquire);
+            if (!pipeline && !use_optimized) {
                 ::Eden::Performance::RecordGraphicsDrawDrop(
                     ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
                 return;
             }
             cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
-    optimized_ready.load(std::memory_order_acquire) ? *optimized_pipeline : *pipeline);
+                                use_optimized ? *optimized_pipeline : *pipeline);
         }
         cmdbuf.PushConstants(*pipeline_layout, VK_SHADER_STAGE_ALL_GRAPHICS,
                              RESCALING_LAYOUT_WORDS_OFFSET, sizeof(rescaling_data),

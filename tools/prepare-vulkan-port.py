@@ -3420,3 +3420,12 @@ apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
     "    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(this)};",
     "    // Publish a ready optimized variant at the next draw even if this\n    // logical pipeline stays selected across multiple command buffers.\n    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(\n        this, optimized_ready.load(std::memory_order_acquire))};",
     "F07 graphics optimize publication handoff")
+
+# F07: the initial non-optimized first-use VkPipeline can be null while its
+# separately rebuilt optimized handle has succeeded. Do not discard those
+# draws: acquire the optimized publication before the worker failure branch.
+# This replacement is deliberately after all pinned graphics source patches.
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "        if (bind_pipeline) {\n            if (!pipeline) {\n                // An asynchronously-built pipeline can fail after Configure's\n                // earlier IsBuilt()/pipeline check but before this worker\n                // callback executes. Count the actual GPU draw omission.\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,\n    optimized_ready.load(std::memory_order_acquire) ? *optimized_pipeline : *pipeline);\n        }",
+    "        if (bind_pipeline) {\n            // An initial fast-first Vulkan creation can return a null handle\n            // without throwing. Its subsequent optimized rebuild may still\n            // succeed. Acquire the published optimized handle before deciding\n            // whether this ordered draw must be discarded.\n            const bool use_optimized = optimized_ready.load(std::memory_order_acquire);\n            if (!pipeline && !use_optimized) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,\n                                use_optimized ? *optimized_pipeline : *pipeline);\n        }",
+    "F07 recovered optimized draw handle after initial fast-first failure")
