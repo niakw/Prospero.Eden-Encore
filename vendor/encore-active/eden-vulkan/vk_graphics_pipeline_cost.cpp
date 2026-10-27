@@ -49,8 +49,10 @@
 
 namespace Vulkan {
 #ifdef PS5_NATIVE
-// The optional graphics optimizer also yields to cold compute builds.
+// Graphics first-use builds and cold shader translation share this counter.
+// Export it from Vulkan, not the anonymous namespace, for native LTO.
 extern std::atomic<unsigned> pending_first_use_compute_builds;
+std::atomic<unsigned> pending_first_use_graphics_builds{0};
 #endif
 namespace {
 using boost::container::small_vector;
@@ -65,11 +67,6 @@ using VideoCore::Surface::PixelFormatFromDepthFormat;
 using VideoCore::Surface::PixelFormatFromRenderTargetFormat;
 
 constexpr size_t NUM_STAGES = Maxwell::MaxShaderStage;
-#ifdef PS5_NATIVE
-// Counts cold first-use Vulkan graphics builds, not draws or cached pipelines.
-// Only the optional fast-first dev profile updates it; normal gameplay pays nothing.
-std::atomic<unsigned> pending_first_use_graphics_builds{0};
-#endif
 
 // Descriptor-heavy titles can exceed small_vector's inline capacity on
 // thousands of draws per second. Keep the spare heap capacity on the GPU

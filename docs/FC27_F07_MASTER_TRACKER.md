@@ -374,3 +374,13 @@ verrou ni délai sur le thread GPU, et les pipelines de premier usage ne
 sont pas ralentis par ce garde-fou. Témoin hôte R444 étendu aux vagues
 de travail compute qui démarrent après une première période vide.
 **CI et effets console à confirmer ; aucune promesse de FPS.**
+
+## F07 P0.1 — correction du lien natif du compteur de compilation (27 octobre)
+
+Le build PS5 du commit `5245190` a échoué à l'édition de liens :
+`undefined symbol: Vulkan::pending_first_use_graphics_builds`. La variable
+était dans un namespace anonyme, tandis que le cache de shaders cherchait
+le symbole externe `Vulkan::`. Sa définition unique est déplacée au bon
+niveau ; les réservations, shaders et fences ne changent pas. La source,
+le générateur et le témoin hôte sont corrigés de concert.
+**À confirmer :** build natif du nouveau SHA puis résultats console.
