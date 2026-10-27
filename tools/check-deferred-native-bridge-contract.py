@@ -306,6 +306,18 @@ expected_m07 = ('#include "gpu_deferred_replay.h"\n'
                 original_m07.replace(m07_entry, m07_entry_with_guard).replace(
                     m07_buffer_lock, m07_lock_with_fallback))
 assert maintained_m07.read_text() == expected_m07, "M07 maintained Vulkan variant parity drift"
+# The inactive deferred-write bridge shares the *entire* maintained rasterizer
+# except its two historic DEV write-interception substitutions. Keep the F07
+# present remap drain as well, ahead of the texture-cache mutex: losing this
+# in the variant could silently regress the HUD if DEV were enabled later.
+display_tag = "RasterizerVulkan::AccelerateDisplay("
+for selection in (original_m07, maintained_m07.read_text(), expected_m07):
+    assert selection.count(display_tag) == 1
+    display = selection.split(display_tag, 1)[1].split(
+        "return info;", 1)[0]
+    assert display.count("gpu_memory->FlushCaching();") == 1
+    assert display.index("gpu_memory->FlushCaching();") < display.index(
+        "std::scoped_lock lock{texture_cache.mutex};")
 assert 'configure_file("${EDEN_DEFERRED_VULKAN_SOURCE}"' in code
 assert 'write_derived("${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp"' not in code
 assert 'target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")' in base

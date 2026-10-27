@@ -1404,6 +1404,12 @@ std::optional<FramebufferTextureInfo> RasterizerVulkan::AccelerateDisplay(
     if (!framebuffer_addr) {
         return {};
     }
+#ifdef PS5_NATIVE
+    // Present may run after a guest page remap without another draw.
+    // Commit queued guest-memory invalidations before reading cached image
+    // flags, never while holding texture_cache.mutex (invalidation takes it).
+    gpu_memory->FlushCaching();
+#endif
     std::scoped_lock lock{texture_cache.mutex};
     const auto [image_view, scaled] =
         texture_cache.TryFindFramebufferImageView(config, framebuffer_addr);
