@@ -171,3 +171,15 @@ Sur `d76fc53a9ae553eef61e0898195d5ea374b1b2b0`, les quatre jobs
 (native build, fast gate, preflight complet, analyse de sécurité) sont
 `SUCCESS`. Toute modification après ce commit doit faire ses propres
 contrôles CI au même SHA ; un résultat antérieur n'est pas transférable.
+
+## P0.1 — rattrapage borné des shaders compute (27/10)
+
+Une traduction compute retournant un pointeur nul demeurait en cache sans
+nouvelle tentative. Le chemin natif PS5 permet maintenant **une seule reprise
+après deux secondes**, bornée à **32 clés échouées**, sans lecture d'horloge ni
+compilation supplémentaire pour les compute pipelines déjà valides. Un échec
+persistant ne provoque aucune boucle. La source native et sa reproduction
+Vulkan sont synchronisées ; un test C++ extrait la vraie politique et couvre
+O0/O2 et le budget de retries. Le défaut distinct d'un handle Vulkan qui
+échoue après création asynchrone n'est pas traité ici. **F07 et la preuve
+HUD/FPS console restent ouverts.**
