@@ -93,6 +93,16 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
     if (shader_notify) {
         shader_notify->MarkShaderBuilding();
     }
+#ifdef PS5_NATIVE
+    // Layout setup and worker queue admission may throw. Return the shader
+    // notification unless ownership has passed to the worker or inline build.
+    bool build_handed_off = false;
+    SCOPE_EXIT {
+        if (!build_handed_off && shader_notify) {
+            shader_notify->MarkShaderComplete();
+        }
+    };
+#endif
     std::copy_n(info.constant_buffer_used_sizes.begin(), uniform_buffer_sizes.size(),
                 uniform_buffer_sizes.begin());
     num_descriptor_entries = NumDescriptorEntries(info);
@@ -202,7 +212,14 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
     }};
     if (thread_worker) {
         thread_worker->QueueWork(std::move(func));
+#ifdef PS5_NATIVE
+        build_handed_off = true;
+#endif
     } else {
+#ifdef PS5_NATIVE
+        // Inline func() has its own completion guard.
+        build_handed_off = true;
+#endif
         func();
     }
 }

@@ -280,6 +280,7 @@ jobs:
           python3 -B tools/check-ps5-f07-pipeline-transitions-host.py
           python3 -B tools/check-ps5-f07-pipeline-publication-host.py
           python3 -B tools/check-ps5-f07-compute-ready-callback-host.py
+          python3 -B tools/check-ps5-compute-shader-handoff-host.py
           python3 -B tools/check-ps5-f07-driver-cache-flush-host.py
           python3 -B tools/check-ps5-f07-bounded-prewarm-host.py
           python3 -B tools/check-ps5-f07-shader-cache-drain-host.py
