@@ -411,25 +411,31 @@ void TextureCache<P>::FillImageViews(std::span<ImageViewInOut> views, bool compu
             has_blacklisted = false;
         }
 #ifdef PS5_NATIVE
-        // Reuse only the immediately preceding successful TIC binding in a
-        // read-only pass. Deletion, NULL recovery and blacklist effects must
-        // still visit every descriptor.
-        u32 previous_image_index{};
-        ImageViewId previous_view_id = NULL_IMAGE_VIEW_ID;
+        // P0.3: reuse nonadjacent TIC descriptors only in this stable draw pass.
+        // Never bypass NULL recovery, deletion-driven retry or blacklist work.
+        struct ViewMemo {
+            u32 index{};
+            ImageViewId id{NULL_IMAGE_VIEW_ID};
+        };
+        std::array<ViewMemo, 16> view_memo{};
 #endif
         for (ImageViewInOut& view : views) {
 #ifdef PS5_NATIVE
-            if (!blacklist && !has_deleted_images &&
-                previous_view_id != NULL_IMAGE_VIEW_ID &&
-                previous_image_index == view.index) {
-                view.id = previous_view_id;
-                continue;
+            if (!blacklist && !has_deleted_images) {
+                const auto& cached = view_memo[view.index & 15U];
+                if (cached.id != NULL_IMAGE_VIEW_ID && cached.index == view.index) {
+                    view.id = cached.id;
+                    continue;
+                }
             }
 #endif
             view.id = VisitImageView(view.index, compute);
 #ifdef PS5_NATIVE
-            previous_image_index = view.index;
-            previous_view_id = view.id;
+            if (!blacklist && !has_deleted_images) {
+                auto& cached = view_memo[view.index & 15U];
+                cached.index = view.index;
+                cached.id = view.id;
+            }
 #endif
             if (blacklist) {
                 if (view.blacklist && view.id != NULL_IMAGE_VIEW_ID) {
@@ -442,7 +448,6 @@ void TextureCache<P>::FillImageViews(std::span<ImageViewInOut> views, bool compu
         }
     } while (has_deleted_images || (blacklist && has_blacklisted));
 }
-
 template <class P>
 void TextureCache<P>::CheckFeedbackLoop(std::span<const ImageViewInOut> views) {
     if (!Settings::values.barrier_feedback_loops.GetValue()) {
