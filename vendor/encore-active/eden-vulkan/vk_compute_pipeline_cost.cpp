@@ -378,7 +378,16 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
     for (const auto& desc : info.image_descriptors) {
         add_image(desc, desc.is_written);
     }
-    texture_cache.FillImageViews(std::span(views.data(), views.size()), true);
+#ifdef PS5_NATIVE
+    // The empty view list cannot resolve/revive any TIC, allocate textures or
+    // update cache residency. Skip the redundant pass under both guest-cache
+    // mutexes; preserve the backport's unconditional desktop path.
+    if (!views.empty()) {
+#endif
+        texture_cache.FillImageViews(std::span(views.data(), views.size()), true);
+#ifdef PS5_NATIVE
+    }
+#endif
 
     buffer_cache.UnbindComputeTextureBuffers();
     size_t index{};
