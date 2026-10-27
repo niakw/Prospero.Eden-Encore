@@ -117,4 +117,87 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-prewarm-") as d:
         subprocess.run([compiler,"-std=c++20",optimization,"-Wall","-Wextra","-Werror",
                         str(p),"-o",str(exe)],check=True,capture_output=True,text=True,timeout=35)
         subprocess.run([str(exe)],check=True,timeout=15)
+# Compile the exact PS5 reader exception handler and non-cancelling drain.
+# A queued job can still reference the reader's local state when LoadPipelines
+# aborts. Preserve that state until every admitted worker has joined.
+start='#ifdef PS5_NATIVE\n    // A damaged disk cache or an enqueue failure'
+finish='#ifdef PS5_NATIVE\n    // Completed attempts'
+assert method.count(start)==1 and method.count(finish)==1
+# Exclude the unrelated progress callback; it is not part of the
+# exceptional reader handoff, and the fixture mocks only the worker drain.
+fragment=(method[method.index(start):method.index('    LOG_INFO(Render_Vulkan, "Total Pipeline Count:')]
+          + method[method.index('#ifdef PS5_NATIVE\n    // A cancelled title-cache load'):method.index(finish)])
+assert "PS5 shader prewarm aborted" in fragment
+assert "PS5 shader prewarm aborted" in gen
+assert fragment.index("catch (const std::exception& error)") < fragment.index("workers.WaitForRequests();")
+assert "workers.WaitForRequests(reader_token)" not in fragment
+
+reader_harness=r"""
+#include <cassert>
+#include <cstddef>
+#include <functional>
+#include <stdexcept>
+#include <stop_token>
+#include <string>
+#include <utility>
+#include <vector>
+#define PS5_NATIVE 1
+#define Render_Vulkan 0
+template<class... T> void mock_log(const char*, T&&...) {}
+#define LOG_WARNING(tag, fmt, ...) mock_log(fmt, ##__VA_ARGS__)
+struct Worker {
+    bool live=true;
+    unsigned drained=0;
+    std::vector<std::function<void()>> pending;
+    void QueueWork(std::function<void()> job) {
+        assert(live);
+        pending.push_back(std::move(job));
+    }
+    void WaitForRequests(std::stop_token token={}) {
+        if (token.stop_requested()) live=false;
+        auto jobs=std::move(pending);
+        for(auto& job:jobs) { job(); ++drained; }
+        pending.clear();
+    }
+};
+static bool reader_failure=false;
+namespace VideoCommon {
+template<class A,class B>
+void LoadPipelines(std::stop_token, const std::string&, int, A&& compute, B&& graphics) {
+    compute();
+    if(reader_failure) throw std::runtime_error("interrupted shader cache");
+    graphics();
+}
+}
+void RunReader(bool fail) {
+    reader_failure=fail;
+    Worker workers;
+    bool state_alive=true;
+    unsigned built=0;
+    std::stop_source startup_reader;
+    const std::stop_token reader_token{startup_reader.get_token()};
+    std::string pipeline_cache_filename{"cache.bin"};
+    constexpr int CACHE_VERSION=1;
+    auto load_compute=[&] { workers.QueueWork([&] {assert(state_alive); ++built;}); };
+    auto load_graphics=[&] { workers.QueueWork([&] {assert(state_alive); ++built;}); };
+""" + fragment + r"""
+    state_alive=false;
+    assert(workers.pending.empty());
+    assert(workers.live);
+    assert(built==(fail ? 1u : 2u));
+    workers.QueueWork([]{}); // first-use jobs remain admissible
+    workers.WaitForRequests();
+    assert(workers.drained==(fail ? 2u : 3u));
+}
+int main(){ RunReader(false); RunReader(true); }
+"""
+with tempfile.TemporaryDirectory(prefix="eden-f07-prewarm-abort-") as d:
+    p=Path(d)/"reader.cpp";p.write_text(reader_harness)
+    for optimization in ("-O0","-O2"):
+        exe=Path(d)/("reader"+optimization[1:])
+        subprocess.run([compiler,"-std=c++20",optimization,"-Wall","-Wextra","-Werror",
+                        str(p),"-o",str(exe)],check=True,capture_output=True,text=True,timeout=35)
+        subprocess.run([str(exe)],check=True,timeout=15)
+print("F07_PREWARM_ABORT_DRAIN_PASS clean=1 thrown=1 borrowed_state=1 workers_persist=1 O0=1 O2=1")
+
 print("F07_BOUND_PREWARM_HOST_PASS cap=8 reader_only_cancel=1 workers_persist=1 O0=1 O2=1")
