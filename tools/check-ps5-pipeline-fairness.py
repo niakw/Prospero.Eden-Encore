@@ -38,6 +38,10 @@ assert compute.index('pending_first_use_compute_builds.fetch_add(1, std::memory_
 assert gate.count('std::scoped_lock lock{state->mutex}') == 1
 assert gate.count('if (state->cancelled) return;') == 1
 assert gate.count('sleep_for') == 1
+assert 'constexpr auto quiet_window = std::chrono::milliseconds(16);' in gate
+assert 'quiet_since = std::chrono::steady_clock::now();' in gate
+assert 'if (cold_build_pending)' in gate
+assert 'F07 quiet-window priority between cold pipeline bursts' in generator
 assert "F07 optimized graphics yields to compute builds" in generator
 assert "pending_first_use_compute_builds.load(std::memory_order_acquire)" in generator
 # The queued lifetime flag is now published BEFORE QueueWork, rather than
@@ -131,7 +135,21 @@ int main() {
     pending_first_use_graphics_builds.store(0);
     before = steady_clock::now();
     defer_optimizer(std::make_shared<State>());
-    assert(duration_cast<milliseconds>(steady_clock::now() - before).count() < 80);
+    elapsed = duration_cast<milliseconds>(steady_clock::now() - before).count();
+    assert(elapsed >= 12 && elapsed < 120);
+    // Reset the idle countdown when a burst of compute first-use begins
+    // AFTER the optional graphics worker observed empty queues.
+    std::thread transient([] {
+        std::this_thread::sleep_for(7ms);
+        pending_first_use_compute_builds.store(1, std::memory_order_release);
+        std::this_thread::sleep_for(24ms);
+        pending_first_use_compute_builds.store(0, std::memory_order_release);
+    });
+    before = steady_clock::now();
+    defer_optimizer(std::make_shared<State>());
+    elapsed = duration_cast<milliseconds>(steady_clock::now() - before).count();
+    transient.join();
+    assert(elapsed >= 38 && elapsed < 200);
 }
 """
 compiler = shutil.which("c++") or shutil.which("g++") or shutil.which("clang++")

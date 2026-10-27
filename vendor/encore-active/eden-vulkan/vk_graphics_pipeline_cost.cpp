@@ -1018,8 +1018,21 @@ void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {
         // moment. This background-only wait takes no GPU/guest locks.
         // Checking cancellation on each cycle guarantees prompt title teardown
         // even when a first-use shader worker remains stuck.
-        while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 ||
-               pending_first_use_compute_builds.load(std::memory_order_acquire) != 0) {
+        // A momentarily empty builder queue is not an idle GPU frame.
+        // Require a brief QUIET period before any OPTIONAL driver rebuild:
+        // new HUD shaders appearing in a burst reset the countdown. This
+        // sleep is confined to the optimizer worker, never the GPU owner.
+        constexpr auto quiet_window = std::chrono::milliseconds(16);
+        auto quiet_since = std::chrono::steady_clock::now();
+        for (;;) {
+            const bool cold_build_pending =
+                pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 ||
+                pending_first_use_compute_builds.load(std::memory_order_acquire) != 0;
+            if (cold_build_pending) {
+                quiet_since = std::chrono::steady_clock::now();
+            } else if (std::chrono::steady_clock::now() - quiet_since >= quiet_window) {
+                break;
+            }
             {
                 std::scoped_lock lock{state->mutex};
                 if (state->cancelled) return;

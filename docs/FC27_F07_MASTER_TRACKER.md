@@ -360,3 +360,17 @@ puis celle du build Vulkan réel. L'ajout PS5 est activé uniquement quand
 synchrone des caches disque n'est pas compté. La garde RAII libère la
 réservation après succès, retour anticipé ou exception, sans bloquer le GPU.
 Pas de preuve de réduction des stutters FC27 sans mesures console.
+
+## F07 P0.2 — période de repos du worker d'optimisation (27 octobre)
+
+Le worker facultatif `VkPipelineOptimize` attendait la fin des travaux
+graphiques/compute froids mais pouvait reprendre entre deux vagues de
+compilations à quelques millisecondes d'intervalle. Il attend maintenant
+**16 ms continus sans traduction ni build de premier usage** avant de
+lancer `MakePipeline`. Chaque travail froid nouvellement observé réinitialise
+le délai. La vérification de `cancelled` reste effectuée toutes les 2 ms :
+la fermeture du jeu n'attend pas la fin de ce repos. Il n'y a ni nouveau
+verrou ni délai sur le thread GPU, et les pipelines de premier usage ne
+sont pas ralentis par ce garde-fou. Témoin hôte R444 étendu aux vagues
+de travail compute qui démarrent après une première période vide.
+**CI et effets console à confirmer ; aucune promesse de FPS.**
