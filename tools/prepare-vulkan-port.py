@@ -3502,3 +3502,14 @@ apply_reviewed_delta("vk_compute_pipeline_cost.cpp",
     "    if (thread_worker) {\n        thread_worker->QueueWork(std::move(func));\n    } else {\n        func();\n    }\n",
     "    if (thread_worker) {\n        thread_worker->QueueWork(std::move(func));\n#ifdef PS5_NATIVE\n        build_handed_off = true;\n#endif\n    } else {\n#ifdef PS5_NATIVE\n        // Inline func() has its own completion guard.\n        build_handed_off = true;\n#endif\n        func();\n    }\n",
     "F07 compute worker completion ownership transfer")
+
+
+# F07: prevent falsely clean CPU images after a failed synchronous upload.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "#ifdef PS5_NATIVE\n    // F07: isolate staging allocation, CPU decode/unswizzle and the required",
+    "#ifdef PS5_NATIVE\n    // Synchronous upload failure must not leave the CPU image incorrectly clean.\n    bool upload_completed = false;\n    SCOPE_EXIT {\n        if (!upload_completed) {\n            if (True(image.flags & ImageFlagBits::Tracked)) {\n                UntrackImage(image, image_id);\n            }\n            image.flags |= ImageFlagBits::CpuModified;\n        }\n    };\n#endif\n#ifdef PS5_NATIVE\n    // F07: isolate staging allocation, CPU decode/unswizzle and the required",
+    "F07 restore failed texture upload dirty state")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    runtime.InsertUploadMemoryBarrier();\n#ifdef PS5_NATIVE\n    barrier_phase.Stop();\n#endif\n}",
+    "    runtime.InsertUploadMemoryBarrier();\n#ifdef PS5_NATIVE\n    barrier_phase.Stop();\n    upload_completed = true;\n#endif\n}",
+    "F07 completed texture upload marker")
