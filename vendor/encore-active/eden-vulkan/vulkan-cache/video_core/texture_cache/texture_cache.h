@@ -870,9 +870,11 @@ ImageViewId TextureCache<P>::VisitImageView(u32 index, bool compute) {
             is_remapped_view(pair->second))
             pair->second = CreateImageView(descriptor);
         PrepareImageView(pair->second, false, false);
-        // CheckFeedbackLoop caches barrier decisions by this serial. Reviving
-        // an image without rewriting its TIC must invalidate that decision.
-        if (pair->second != NULL_IMAGE_VIEW_ID)
+        // A remapped cached view can rebuild to NULL even when the TIC bytes
+        // remain valid. Publish both valid->NULL and NULL->valid generation
+        // transitions so feedback/descriptor consumers never retain stale
+        // binding decisions after a failed or successful reconstruction.
+        if (pair->second != NULL_IMAGE_VIEW_ID || remapped_cached_view)
             ++texture_bindings_serial;
         channel_state->image_view_ids.insert_or_assign(map_index, pair->second);
         return pair->second;

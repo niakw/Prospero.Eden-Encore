@@ -2943,6 +2943,15 @@ apply_reviewed_delta(texture,
     'F03/F04 empty-sampler feedback loop fast path', allow_preapplied=True)
 
 
+# F07 P0.4: a remapped view rebuilt as NULL still changes texture
+# binding identity. Do not let a cached feedback/descriptor decision outlive
+# that transition. The normal resident-view path stays unchanged.
+apply_reviewed_delta(
+    'vulkan-cache/video_core/texture_cache/texture_cache.h',
+    "        // CheckFeedbackLoop caches barrier decisions by this serial. Reviving\n        // an image without rewriting its TIC must invalidate that decision.\n        if (pair->second != NULL_IMAGE_VIEW_ID)\n            ++texture_bindings_serial;",
+    "        // A remapped cached view can rebuild to NULL even when the TIC bytes\n        // remain valid. Publish both valid->NULL and NULL->valid generation\n        // transitions so feedback/descriptor consumers never retain stale\n        // binding decisions after a failed or successful reconstruction.\n        if (pair->second != NULL_IMAGE_VIEW_ID || remapped_cached_view)\n            ++texture_bindings_serial;",
+    'F07 P0.4 remap-to-NULL view binding generation')
+
 # Reviewed F04 scissor source body: reconstruct the exact overflow-safe
 # method from the pinned upstream method, WITHOUT consulting active code or
 # weakening the generated-versus-maintained source checker at runtime.
