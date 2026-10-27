@@ -36,7 +36,16 @@ for expected in (
 assert "VulkanTimer(24)" not in worker
 assert worker.index("build_condvar.wait(build_lock") < worker.index("const auto state = optimize_state;")
 assert "is_built.load(std::memory_order_acquire)" in worker
-assert worker in (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()  # performance.h uses std::array<Totals,24>, 0..23
+# The generated optimizer body receives one reviewed late delta: it
+# observes both graphics and compute cold-build backlogs. Compare the
+# post-delta implementation instead of the original generator literal.
+old_gate = "while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0) {"
+new_gate = ("while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 ||\n"
+            "               pending_first_use_compute_builds.load(std::memory_order_acquire) != 0) {")
+assert worker.count(old_gate) == 1
+assert worker.replace(old_gate, new_gate) in (
+    root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
+assert "F07 optimized graphics yields to compute builds" in generator
 assert "std::make_shared<OptimizeState>()" in worker
 assert worker.index("state->running = true;") < worker.index("OptimizeWorker().QueueWork")
 assert worker.count("state->running = true;") == 1
