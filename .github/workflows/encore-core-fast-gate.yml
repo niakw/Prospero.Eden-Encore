@@ -153,6 +153,7 @@ on:
       - 'tools/check-ps5-graphics-stage-view-cursors-host.py'
       - 'tools/check-ps5-graphics-pipeline-aware-preflight-host.py'
       - 'tools/check-ps5-empty-image-view-retirement-host.py'
+      - 'tools/check-ps5-present-framebuffer-freshness-host.py'
       - 'tools/check-ps5-texture-channel-missing-mapping-host.py'
       - 'tools/check-fc27-f03-native-texture-feedback-chain-host.py'
       - 'tools/check-fc27-f03-native-present-freshness-host.py'
@@ -310,6 +311,7 @@ jobs:
           python3 -B tools/check-ps5-graphics-stage-view-cursors-host.py
           python3 -B tools/check-ps5-graphics-pipeline-aware-preflight-host.py
           python3 -B tools/check-ps5-empty-image-view-retirement-host.py
+          python3 -B tools/check-ps5-present-framebuffer-freshness-host.py
           python3 -B tools/check-ps5-texture-channel-missing-mapping-host.py
           python3 -B tools/check-fc27-f03-native-texture-feedback-chain-host.py
           python3 -B tools/check-fc27-f03-native-present-freshness-host.py

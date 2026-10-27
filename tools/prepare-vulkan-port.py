@@ -2952,6 +2952,16 @@ apply_reviewed_delta(
     "        // A remapped cached view can rebuild to NULL even when the TIC bytes\n        // remain valid. Publish both valid->NULL and NULL->valid generation\n        // transitions so feedback/descriptor consumers never retain stale\n        // binding decisions after a failed or successful reconstruction.\n        if (pair->second != NULL_IMAGE_VIEW_ID || remapped_cached_view)\n            ++texture_bindings_serial;",
     'F07 P0.4 remap-to-NULL view binding generation')
 
+# F07 P0.4: compositor must not reuse retired/CPU-dirty Vulkan
+# framebuffer pixels. Reject stale candidates before selecting a view:
+# the existing absent-view route uploads guest bytes instead. Unmodified
+# GPU-owned framebuffer views retain accelerated display without readback.
+apply_reviewed_delta(
+    'vulkan-cache/video_core/texture_cache/texture_cache.h',
+    "        if (image.cpu_addr != cpu_addr) {\n            continue;\n        }\n        if (image.image_view_ids.empty()) {",
+    "        if (image.cpu_addr != cpu_addr) {\n            continue;\n        }\n#ifdef PS5_NATIVE\n        // A remapped image or one dirtied by guest CPU writes cannot be\n        // sampled as an unchanged accelerated display framebuffer. Fall back\n        // to the guest-memory upload until its Vulkan image is refreshed.\n        // Clean GPU-authored images keep the zero-copy presentation path.\n        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {\n            continue;\n        }\n#endif\n        if (image.image_view_ids.empty()) {",
+    'F07 P0.4 accelerated present rejects remapped or CPU-dirty framebuffer')
+
 # Reviewed F04 scissor source body: reconstruct the exact overflow-safe
 # method from the pinned upstream method, WITHOUT consulting active code or
 # weakening the generated-versus-maintained source checker at runtime.

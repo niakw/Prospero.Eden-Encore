@@ -40,6 +40,20 @@
 
 **Attention :** « sparse JIT intégré » ne signifie **ni** « JIT terminé », **ni** « GPU/CPU utilisés au maximum », **ni** « FC27 jouable sans saccades ». La console réserve des ressources au système et les temps de synchronisation réels comptent davantage que la saturation CPU/GPU. Les anciennes notes « sparse DEV seulement » de documents historiques ne décrivent plus la sélection `PS5_NATIVE` actuelle.
 
+## P0.4 — sélection d'une image réellement fraîche à la présentation
+
+Correctif du 27/10 : le framebuffer accéléré ne doit pas sélectionner un
+`ImageView` dont le backing est `Remapped` ou dont les pixels invités ont
+été modifiés (`CpuModified`) sans rafraîchissement de l'image Vulkan.
+Dans `TryFindFramebufferImageView`, ces candidats sont désormais exclus
+**uniquement sur PS5**. Sans vue accélérée admissible,
+`RasterizerVulkan::AccelerateDisplay` laisse `Layer::ConfigureDraw`
+utiliser `UpdateRawImage`, qui lit et charge le framebuffer invité actuel.
+Les vues GPU propres continuent d'utiliser le chemin zéro-copie habituel.
+La source active, le générateur d'archives pinnées et le témoin C++ -O0/-O2
+sont modifiés ensemble. Cela ferme un chemin de réutilisation périmée,
+**pas** la validation finale des pixels/HUD sur l'écran de la console.
+
 ## Référence console et critères d'acceptation
 
 - Baseline réellement observée et **non remplacée par des hypothèses** : `cd4857c8` (25/10), à 1440p/1× : 204 fenêtres de 5 s, FPS médian 29,56, minimum 14,48, frame la plus lente 689,834 ms et 142 retards >100 ms ; à 2160p/1,25×, pire frame 977,578 ms. Ces sessions **ne sont pas** des A/B contrôlés. Les latences des menus et le HUD tardif subsistent.
