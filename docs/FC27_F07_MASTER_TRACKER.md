@@ -278,3 +278,14 @@ après une nouvelle écriture ; la révision CPU reste sale et sera reprise.
 Témoin source-extrait étendu avec texture de même taille, décodage
 terminé, écriture CPU concurrente et contrôle de l'absence d'upload.
 Qualification CI/native/console toujours requise.
+
+## F07 P0.2 — laisser les pipelines compute de premier usage prioritaires
+
+Le worker facultatif d'optimisation graphique attendait les builds graphiques
+froids, mais ignorait les compilations compute en attente. Un nouveau
+`DispatchCompute` pouvait donc subir la concurrence du compilateur
+spéculatif. Le port natif compte maintenant les builds compute acceptés
+dès l'admission en file, puis libère ce compteur sur achèvement et refus.
+`VkPipelineOptimize` patiente tant que graphics **ou** compute reste en cours,
+sans attente additionnelle sur le thread GPU. La sortie anticipée lors de
+l'arrêt du jeu reste active. Qualification CI et résultat console à confirmer.

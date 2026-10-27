@@ -17,23 +17,28 @@ assert ctor.count(mark) == 1
 a = ctor.index("#ifdef PS5_NATIVE\n    // Layout setup and worker queue admission")
 b = ctor.index("#endif\n", a) + len("#endif\n")
 guard = ctor[a:b]
-start = "    if (thread_worker) {\n        thread_worker->QueueWork(std::move(func));"
+start = "    if (thread_worker) {\n#ifdef PS5_NATIVE\n        // Reserve a slot BEFORE QueueWork:"
 i = ctor.index(start)
 j = ctor.index("\n}", i)
 handoff = ctor[i:j]
 assert "if (!build_handed_off && shader_notify)" in guard
 assert handoff.count("build_handed_off = true;") == 2
-assert handoff.index("thread_worker->QueueWork(std::move(func));") < handoff.index("build_handed_off = true;")
+assert handoff.index("pending_first_use_compute_builds.fetch_add(1, std::memory_order_release);") < handoff.index("thread_worker->QueueWork([build = std::move(func)]")
+assert handoff.index("thread_worker->QueueWork([build = std::move(func)]") < handoff.index("build_handed_off = true;")
+assert handoff.count("pending_first_use_compute_builds.fetch_sub(1, std::memory_order_release);") == 2
+assert "F07 counted compute worker handoff" in gen
 assert "F07 compute shader build notification unwind" in gen
 assert "F07 compute worker completion ownership transfer" in gen
 
 test = r"""
+#include <atomic>
 #include <cassert>
 #include <cstdio>
 #include <functional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+std::atomic<unsigned> pending_first_use_compute_builds{0};
 struct Maker {};
 template<class F> struct ScopeGuard { F f; ~ScopeGuard() { f(); } };
 template<class F> ScopeGuard<std::decay_t<F>> operator+(Maker, F&& f) {
@@ -87,16 +92,20 @@ int main() {
     Notify c;
     Try(&c, &bad, false);
     assert(c.start == 1 && c.done == 1 && c.pending == 0 && !bad.job);
+    assert(pending_first_use_compute_builds.load() == 0);
     Worker good;
     Notify d;
     Try(&d, &good, false);
     assert(d.start == 1 && d.done == 0 && d.pending == 1 && good.job);
+    assert(pending_first_use_compute_builds.load() == 1);
     good.job();
     assert(d.done == 1 && d.pending == 0);
+    assert(pending_first_use_compute_builds.load() == 0);
     Worker empty;
     Try(nullptr, &empty, false);
     assert(empty.job);
     empty.job();
+    assert(pending_first_use_compute_builds.load() == 0);
     std::puts("COMPUTE_NOTIFY_HANDOFF_PASS");
 #endif
 }

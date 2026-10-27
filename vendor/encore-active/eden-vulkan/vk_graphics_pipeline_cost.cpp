@@ -48,6 +48,10 @@
 #endif
 
 namespace Vulkan {
+#ifdef PS5_NATIVE
+// The optional graphics optimizer also yields to cold compute builds.
+extern std::atomic<unsigned> pending_first_use_compute_builds;
+#endif
 namespace {
 using boost::container::small_vector;
 using boost::container::static_vector;
@@ -1014,7 +1018,8 @@ void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {
         // moment. This background-only wait takes no GPU/guest locks.
         // Checking cancellation on each cycle guarantees prompt title teardown
         // even when a first-use shader worker remains stuck.
-        while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0) {
+        while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 ||
+               pending_first_use_compute_builds.load(std::memory_order_acquire) != 0) {
             {
                 std::scoped_lock lock{state->mutex};
                 if (state->cancelled) return;

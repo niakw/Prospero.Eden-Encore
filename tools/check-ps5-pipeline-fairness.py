@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 vulkan = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
+compute = (root / "vendor/encore-active/eden-vulkan/vk_compute_pipeline_cost.cpp").read_text()
 generator = (root / "tools/prepare-vulkan-port.py").read_text()
 ast.parse(generator)
 assert '#include <atomic>' in vulkan
@@ -26,10 +27,19 @@ start = vulkan.index('        // R444: Speculative rebuilds must not compete')
 end = vulkan.index('\n#endif', start)
 gate = vulkan[start:end]
 assert gate.count('pending_first_use_graphics_builds.load') == 1
+assert gate.count('pending_first_use_compute_builds.load') == 1
+assert 'extern std::atomic<unsigned> pending_first_use_compute_builds;' in vulkan
+assert 'std::atomic<unsigned> pending_first_use_compute_builds{0};' in compute
+assert 'F07 shared compute first-use backlog' in generator
+assert 'F07 optimized graphics yields to compute builds' in generator
+assert compute.count('pending_first_use_compute_builds.fetch_add(1, std::memory_order_release);') == 1
+assert compute.count('pending_first_use_compute_builds.fetch_sub(1, std::memory_order_release);') == 2
+assert compute.index('pending_first_use_compute_builds.fetch_add(1, std::memory_order_release);') < compute.index('thread_worker->QueueWork([build = std::move(func)]() mutable {')
 assert gate.count('std::scoped_lock lock{state->mutex}') == 1
 assert gate.count('if (state->cancelled) return;') == 1
 assert gate.count('sleep_for') == 1
-assert gate in generator
+assert "F07 optimized graphics yields to compute builds" in generator
+assert "pending_first_use_compute_builds.load(std::memory_order_acquire)" in generator
 # The queued lifetime flag is now published BEFORE QueueWork, rather than
 # when the worker starts. The fairness gate still checks cancellation before
 # touching the owning pipeline, but must not assume the old flag placement.
@@ -49,6 +59,7 @@ cpp = """
 #include <memory>
 using namespace std::chrono;
 std::atomic<unsigned> pending_first_use_graphics_builds{0};
+std::atomic<unsigned> pending_first_use_compute_builds{0};
 struct State { std::mutex mutex; bool cancelled{false}; };
 void defer_optimizer(std::shared_ptr<State> state) {
 """ + gate + """
@@ -90,6 +101,33 @@ int main() {
     elapsed = duration_cast<milliseconds>(steady_clock::now() - before).count();
     cancel.join();
     assert(elapsed >= 8 && elapsed < 150);
+    // A cold compute build must delay speculative graphics just as a cold
+    // graphics build does; foreground work has priority over background jobs.
+    pending_first_use_graphics_builds.store(0);
+    pending_first_use_compute_builds.store(1);
+    std::thread release_compute([] {
+        std::this_thread::sleep_for(65ms);
+        pending_first_use_compute_builds.store(0, std::memory_order_release);
+    });
+    before = steady_clock::now();
+    defer_optimizer(std::make_shared<State>());
+    elapsed = duration_cast<milliseconds>(steady_clock::now() - before).count();
+    release_compute.join();
+    assert(elapsed >= 45 && elapsed < 260);
+    // Cancellation must also free teardown when a compute compiler stalls.
+    auto blocked = std::make_shared<State>();
+    pending_first_use_compute_builds.store(1);
+    std::thread cancel_compute([blocked] {
+        std::this_thread::sleep_for(15ms);
+        std::scoped_lock lock{blocked->mutex};
+        blocked->cancelled = true;
+    });
+    before = steady_clock::now();
+    defer_optimizer(blocked);
+    elapsed = duration_cast<milliseconds>(steady_clock::now() - before).count();
+    cancel_compute.join();
+    assert(elapsed >= 8 && elapsed < 150);
+    pending_first_use_compute_builds.store(0);
     pending_first_use_graphics_builds.store(0);
     before = steady_clock::now();
     defer_optimizer(std::make_shared<State>());

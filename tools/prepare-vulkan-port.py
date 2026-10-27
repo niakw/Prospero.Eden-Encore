@@ -3504,6 +3504,24 @@ apply_reviewed_delta("vk_compute_pipeline_cost.cpp",
     "F07 compute worker completion ownership transfer")
 
 
+# F07 P0.2: cold compute driver builds must take priority over
+# optional optimized graphics rebuilds, including builds still in queue.
+apply_reviewed_delta("vk_compute_pipeline_cost.cpp",
+    "#include <algorithm>", "#include <algorithm>\n#include <atomic>",
+    "F07 compute fairness atomic include")
+apply_reviewed_delta("vk_compute_pipeline_cost.cpp",
+    "namespace Vulkan {\n\nusing Shader::ImageBufferDescriptor;", "namespace Vulkan {\n\n#ifdef PS5_NATIVE\n// Tracks queued and active first-use compute builds, not guest dispatches.\nstd::atomic<unsigned> pending_first_use_compute_builds{0};\n#endif\n\nusing Shader::ImageBufferDescriptor;",
+    "F07 shared compute first-use backlog")
+apply_reviewed_delta("vk_compute_pipeline_cost.cpp",
+    "    if (thread_worker) {\n        thread_worker->QueueWork(std::move(func));\n#ifdef PS5_NATIVE\n        build_handed_off = true;\n#endif\n    } else {", "    if (thread_worker) {\n#ifdef PS5_NATIVE\n        // Reserve a slot BEFORE QueueWork: a pending compute shader has\n        // priority over a speculative optimized graphics rebuild.\n        pending_first_use_compute_builds.fetch_add(1, std::memory_order_release);\n        try {\n            thread_worker->QueueWork([build = std::move(func)]() mutable {\n                SCOPE_EXIT {\n                    pending_first_use_compute_builds.fetch_sub(1, std::memory_order_release);\n                };\n                build();\n            });\n        } catch (...) {\n            pending_first_use_compute_builds.fetch_sub(1, std::memory_order_release);\n            throw;\n        }\n        build_handed_off = true;\n#else\n        thread_worker->QueueWork(std::move(func));\n#endif\n    } else {",
+    "F07 counted compute worker handoff")
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "namespace Vulkan {\nnamespace {\nusing boost::container::small_vector;", "namespace Vulkan {\n#ifdef PS5_NATIVE\n// The optional graphics optimizer also yields to cold compute builds.\nextern std::atomic<unsigned> pending_first_use_compute_builds;\n#endif\nnamespace {\nusing boost::container::small_vector;",
+    "F07 graphics optimizer observes compute backlog")
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0) {", "while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 ||\n               pending_first_use_compute_builds.load(std::memory_order_acquire) != 0) {",
+    "F07 optimized graphics yields to compute builds")
+
 # F07 P0.4: protect the image BEFORE Tracked registration can throw.
 # Successful async/MSAA exits explicitly commit their accepted handoff.
 apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",

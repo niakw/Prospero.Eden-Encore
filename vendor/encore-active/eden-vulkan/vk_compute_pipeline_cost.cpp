@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
+#include <atomic>
 #include <array>
 #include "common/scope_exit.h"
 #include "performance.h"
@@ -30,6 +31,11 @@
 #include "common/settings.h"
 
 namespace Vulkan {
+
+#ifdef PS5_NATIVE
+// Tracks queued and active first-use compute builds, not guest dispatches.
+std::atomic<unsigned> pending_first_use_compute_builds{0};
+#endif
 
 using Shader::ImageBufferDescriptor;
 using Shader::Backend::SPIRV::RESCALING_LAYOUT_WORDS_OFFSET;
@@ -211,9 +217,24 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
         }
     }};
     if (thread_worker) {
-        thread_worker->QueueWork(std::move(func));
 #ifdef PS5_NATIVE
+        // Reserve a slot BEFORE QueueWork: a pending compute shader has
+        // priority over a speculative optimized graphics rebuild.
+        pending_first_use_compute_builds.fetch_add(1, std::memory_order_release);
+        try {
+            thread_worker->QueueWork([build = std::move(func)]() mutable {
+                SCOPE_EXIT {
+                    pending_first_use_compute_builds.fetch_sub(1, std::memory_order_release);
+                };
+                build();
+            });
+        } catch (...) {
+            pending_first_use_compute_builds.fetch_sub(1, std::memory_order_release);
+            throw;
+        }
         build_handed_off = true;
+#else
+        thread_worker->QueueWork(std::move(func));
 #endif
     } else {
 #ifdef PS5_NATIVE
