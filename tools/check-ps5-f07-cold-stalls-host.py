@@ -60,8 +60,12 @@ assert "return (++sequence & 15u) == 0u;" in perf
 assert "explicit CachePhaseTimer(CachePhase phase, bool enabled = cache_draw_sample_active)" in perf
 
 start = pipeline.index("    if (is_new) {\n#ifdef PS5_NATIVE\n        // F07:")
-end = pipeline.index("\n    if (!pipeline)", start)
-block = pipeline[start:end]
+# The slow path now has a separate, bounded failed-key recovery branch.
+# This older harness tests ONLY the original cold-miss timer contract;
+# the full retry block is source-extracted in its dedicated host test.
+first_create = "        pipeline = CreateGraphicsPipeline();"
+end = pipeline.index(first_create, start) + len(first_create)
+block = pipeline[start:end] + "\n    }"
 assert block.count("pipeline = CreateGraphicsPipeline();") == 1
 assert block.index("CachePhase::GraphicsPipelineCreate") < block.index(
     "pipeline = CreateGraphicsPipeline();")
