@@ -56,7 +56,9 @@
     # including one-past-end of the guest page table. Apply only to the
     # already-derived native memory translation unit.
     set(eden_span_original [=[        return (current_page_table->entries[addr >> YUZU_PAGEBITS].Block() == current_page_table->entries[(addr + size) >> YUZU_PAGEBITS].Block()) ? GetPointerSilent(addr) : nullptr;]=])
-    string(REGEX MATCHALL "GetPointerSilent\\(addr\\) : nullptr;" eden_span_calls "${eden_cpu_memory}")
+    # Exclude the terminal C++ semicolon: under CMP0007 NEW it also acts
+    # as a CMake list separator and doubles the reported match count.
+    string(REGEX MATCHALL "GetPointerSilent\\(addr\\) : nullptr" eden_span_calls "${eden_cpu_memory}")
     list(LENGTH eden_span_calls eden_span_count)
     if(NOT eden_span_count EQUAL 2)
         message(FATAL_ERROR "Pinned native guest span page-boundary contract changed")

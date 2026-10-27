@@ -11,7 +11,9 @@ string(FIND "${eden_cpu_memory}" "bool Memory::IsValidVirtualAddressRange(Common
 if(eden_va_range_start LESS 0)
     message(FATAL_ERROR "Pinned native guest VA range implementation changed")
 endif()
-string(REGEX MATCHALL "Common::ProcessAddress end = base \\+ size;" eden_va_range_matches "${eden_cpu_memory}")
+# Do not include the trailing semicolon in a REGEX MATCHALL list entry:
+# CMP0007 NEW counts the empty entries introduced by that delimiter.
+string(REGEX MATCHALL "Common::ProcessAddress end = base \\+ size" eden_va_range_matches "${eden_cpu_memory}")
 list(LENGTH eden_va_range_matches eden_va_range_count)
 if(NOT eden_va_range_count EQUAL 1)
     message(FATAL_ERROR "Expected exactly one guest VA range endpoint")
