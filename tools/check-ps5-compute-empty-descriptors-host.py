@@ -35,10 +35,8 @@ for name in ("texture_buffer_descriptors", "image_buffer_descriptors",
     assert f"info.{name}.empty()" in sync
 # PS5-only no-view path mirrors graphics: all compute descriptors are still
 # synchronized/bound normally when images exist. Keep desktop unchanged.
-zero_view_begin = "#ifdef PS5_NATIVE\\n    // The empty view list cannot resolve/revive any TIC"
-zero_view_end = "\\n\\n    buffer_cache.UnbindComputeTextureBuffers();"
-zero_view_anchor = zero_view_begin.replace("\\\\n", "\\n")
-zero_view_end_anchor = zero_view_end.replace("\\\\n", "\\n")
+zero_view_anchor = "#ifdef PS5_NATIVE\n    // The empty view list cannot resolve/revive any TIC"
+zero_view_end_anchor = "\n\n    buffer_cache.UnbindComputeTextureBuffers();"
 assert compute.count(zero_view_anchor) == 1
 zero_view = compute[compute.index(zero_view_anchor):
                     compute.index(zero_view_end_anchor,compute.index(zero_view_anchor))]
