@@ -23,7 +23,9 @@ assert "const bool variant_changed = state.graphics_pipeline_optimized != optimi
 assert "state.graphics_pipeline_optimized = false;" in invalidate
 assert "bool graphics_pipeline_optimized = false;" in header
 assert "UpdateGraphicsPipeline(GraphicsPipeline* pipeline, bool optimized = false)" in header
-assert "this, optimized_ready.load(std::memory_order_acquire))" in graphics
+assert "const bool optimized_at_record = optimized_ready.load(std::memory_order_acquire);" in graphics
+assert "scheduler.UpdateGraphicsPipeline(this, optimized_at_record)" in graphics
+assert "bind_pipeline, optimized_at_record, update_descriptors" in graphics
 assert "optimized_ready.store(true, std::memory_order_release);" in graphics
 # F07 recovery now snapshots the published handle before its null check.
 # Rebinding and recovery share the same release/acquire publication contract.

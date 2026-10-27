@@ -788,7 +788,9 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
         texture_cache.CheckFeedbackLoop(std::span<const VideoCommon::ImageViewInOut>{views.data(),
                                                                                      views.size()});
     }
-    if (IsBuilt() && !pipeline) {
+    // The first-use VkPipeline may fail while a separately rebuilt optimized
+    // variant succeeds. Keep that recovered handle eligible for guest draws.
+    if (IsBuilt() && !pipeline && !optimized_ready.load(std::memory_order_acquire)) {
         ::Eden::Performance::RecordGraphicsDrawDrop(
             ::Eden::Performance::GraphicsDrawDrop::BuiltPipelineFailed);
         return false;
@@ -864,8 +866,8 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
     const bool update_rescaling{scheduler.UpdateRescaling(is_rescaling)};
     // Publish a ready optimized variant at the next draw even if this
     // logical pipeline stays selected across multiple command buffers.
-    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(
-        this, optimized_ready.load(std::memory_order_acquire))};
+    const bool optimized_at_record = optimized_ready.load(std::memory_order_acquire);
+    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(this, optimized_at_record)};
     const bool bind_descriptor_buffer{
         descriptor_set_layout && uses_descriptor_buffer &&
         scheduler.UpdateDescriptorBufferChunk(descriptor_buffer_chunk)};
@@ -893,7 +895,7 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
             }
         }
     }
-    scheduler.Record([this, descriptor_data, bind_pipeline, update_descriptors,
+    scheduler.Record([this, descriptor_data, bind_pipeline, optimized_at_record, update_descriptors,
                       descriptor_buffer_offset, descriptor_buffer_chunk, bind_descriptor_buffer,
                       rescaling_data = rescaling.Data(), is_rescaling, update_rescaling,
                       uses_render_area = render_area.uses_render_area,
@@ -903,17 +905,20 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
                 descriptor_buffer_ring.BindingInfo(descriptor_buffer_chunk)};
             cmdbuf.BindDescriptorBuffersEXT(binding_info);
         }
-        if (bind_pipeline) {
-            // An initial fast-first Vulkan creation can return a null handle
-            // without throwing. Its subsequent optimized rebuild may still
-            // succeed. Acquire the published optimized handle before deciding
-            // whether this ordered draw must be discarded.
-            const bool use_optimized = optimized_ready.load(std::memory_order_acquire);
-            if (!pipeline && !use_optimized) {
-                ::Eden::Performance::RecordGraphicsDrawDrop(
-                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
-                return;
-            }
+        // The worker must verify validity on EVERY draw: a failed pipeline
+        // remains selected by the guest scheduler after the first attempted
+        // bind. Otherwise subsequent draws can accidentally reuse a previous
+        // shader while the optimized rebuild is still missing.
+        const bool use_optimized = optimized_ready.load(std::memory_order_acquire);
+        if (!pipeline && !use_optimized) {
+            ::Eden::Performance::RecordGraphicsDrawDrop(
+                ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
+            return;
+        }
+        // Optimization may publish between GPU-owner recording and ordered
+        // Vulkan-worker execution. Rebind the newly published handle in this
+        // callback even when the owner recorded no pipeline-key transition.
+        if (bind_pipeline || (use_optimized != optimized_at_record)) {
             cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 use_optimized ? *optimized_pipeline : *pipeline);
         }
