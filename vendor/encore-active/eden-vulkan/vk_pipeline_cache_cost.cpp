@@ -74,6 +74,7 @@ namespace Vulkan {
 #ifdef PS5_NATIVE
 // The compute pipeline builder exposes this Vulkan-namespace atomic counter.
 extern std::atomic<unsigned> pending_first_use_compute_builds;
+extern std::atomic<unsigned> pending_first_use_graphics_builds;
 #endif
 
 namespace {
@@ -92,6 +93,24 @@ struct ComputeTranslationPriorityScope {
             pending_first_use_compute_builds.fetch_sub(1, std::memory_order_release);
         }
     }
+    bool foreground;
+};
+// This foreground reservation is published BEFORE the renderer translates
+// cold graphics CFG/IR/SPIR-V and constructs shader modules. The normal
+// graphics builder owns a second reservation from QueueWork to completion.
+struct GraphicsTranslationPriorityScope {
+    explicit GraphicsTranslationPriorityScope(bool foreground_) : foreground{foreground_} {
+        if (foreground) {
+            pending_first_use_graphics_builds.fetch_add(1, std::memory_order_release);
+        }
+    }
+    ~GraphicsTranslationPriorityScope() {
+        if (foreground) {
+            pending_first_use_graphics_builds.fetch_sub(1, std::memory_order_release);
+        }
+    }
+    GraphicsTranslationPriorityScope(const GraphicsTranslationPriorityScope&) = delete;
+    GraphicsTranslationPriorityScope& operator=(const GraphicsTranslationPriorityScope&) = delete;
     bool foreground;
 };
 #endif
@@ -1197,6 +1216,13 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
     ShaderPools& pools, const GraphicsPipelineCacheKey& key,
     std::span<Shader::Environment* const> envs, PipelineStatistics* statistics,
     bool build_in_parallel) try {
+#ifdef PS5_NATIVE
+    // The optional optimizer must yield to foreground graphics translation
+    // even before the first-use Vulkan pipeline reaches the worker queue.
+    // Disk prewarm passes build_in_parallel=false and remains uncounted.
+    GraphicsTranslationPriorityScope translation_priority{
+        build_in_parallel && ::Eden::DevVulkan::fast_first_pipelines};
+#endif
     auto hash = key.Hash();
     LOG_DEBUG(Render_Vulkan, "{:#016x}", hash);
     size_t env_index{0};

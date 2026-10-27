@@ -3515,6 +3515,19 @@ apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
     "    PipelineStatistics* statistics, bool build_in_parallel) try {\n#ifdef PS5_NATIVE\n    // Count cold shader translation as foreground work. The pipeline\n    // constructor separately counts the queued driver build; both stages\n    // now prevent speculative graphics optimization from competing.\n    ComputeTranslationPriorityScope translation_priority{build_in_parallel};\n#endif\n    auto hash = key.Hash();\n    if (device.HasBrokenCompute()) {",
     "F07 compute CFG IR SPIRV fairness before driver queue")
 
+# F07 P0.1/P0.2: cold GRAPHICS CFG/IR/SPIR-V translation also
+# precedes worker queue admission. Reserve the same foreground counter used
+# by the first-use pipeline builder so optional optimization yields throughout.
+apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
+    "extern std::atomic<unsigned> pending_first_use_compute_builds;\n#endif\n\nnamespace {", "extern std::atomic<unsigned> pending_first_use_compute_builds;\nextern std::atomic<unsigned> pending_first_use_graphics_builds;\n#endif\n\nnamespace {",
+    "F07 graphics translation observes first-use worker counter")
+apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
+    "    bool foreground;\n};\n#endif\nusing Shader::Backend::SPIRV::EmitSPIRV;", "    bool foreground;\n};\n// This foreground reservation is published BEFORE the renderer translates\n// cold graphics CFG/IR/SPIR-V and constructs shader modules. The normal\n// graphics builder owns a second reservation from QueueWork to completion.\nstruct GraphicsTranslationPriorityScope {\n    explicit GraphicsTranslationPriorityScope(bool foreground_) : foreground{foreground_} {\n        if (foreground) {\n            pending_first_use_graphics_builds.fetch_add(1, std::memory_order_release);\n        }\n    }\n    ~GraphicsTranslationPriorityScope() {\n        if (foreground) {\n            pending_first_use_graphics_builds.fetch_sub(1, std::memory_order_release);\n        }\n    }\n    GraphicsTranslationPriorityScope(const GraphicsTranslationPriorityScope&) = delete;\n    GraphicsTranslationPriorityScope& operator=(const GraphicsTranslationPriorityScope&) = delete;\n    bool foreground;\n};\n#endif\nusing Shader::Backend::SPIRV::EmitSPIRV;",
+    "F07 graphics shader translation priority scope")
+apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
+    "    bool build_in_parallel) try {\n    auto hash = key.Hash();\n    LOG_DEBUG(Render_Vulkan, \"{:#016x}\", hash);", "    bool build_in_parallel) try {\n#ifdef PS5_NATIVE\n    // The optional optimizer must yield to foreground graphics translation\n    // even before the first-use Vulkan pipeline reaches the worker queue.\n    // Disk prewarm passes build_in_parallel=false and remains uncounted.\n    GraphicsTranslationPriorityScope translation_priority{\n        build_in_parallel && ::Eden::DevVulkan::fast_first_pipelines};\n#endif\n    auto hash = key.Hash();\n    LOG_DEBUG(Render_Vulkan, \"{:#016x}\", hash);",
+    "F07 reserve graphics translation before CFG IR SPIRV")
+
 # F07 P0.4: stale multi-frame unswizzle uploads must be cancelled
 # BEFORE the native frame throttle, but keep the pinned desktop ordering.
 apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
