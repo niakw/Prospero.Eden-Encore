@@ -2679,6 +2679,21 @@ if shader_source.count(f07_prewarm_metrics_old_4) != 1:
     raise RuntimeError('F07 prewarm outcome metric anchor 4 changed')
 shader_source = shader_source.replace(f07_prewarm_metrics_old_4, f07_prewarm_metrics_new_4, 1)
 
+# F07: shader-cache metadata is optional persistence, not admission of the
+# already-compiled live graphics/compute pipeline. A serializer queue error
+# must not permanently null-cache a valid shader after its first use.
+f07_serializer_graphics_old = "    serialization_thread.QueueWork([this, key = graphics_key, envs = std::move(environments.envs)] {\n        boost::container::static_vector<const GenericEnvironment*, Maxwell::MaxShaderProgram>\n            env_ptrs;\n        for (size_t index = 0; index < Maxwell::MaxShaderProgram; ++index) {\n            if (key.unique_hashes[index] != 0) {\n                env_ptrs.push_back(&envs[index]);\n            }\n        }\n        SerializePipeline(key, env_ptrs, pipeline_cache_filename, CACHE_VERSION);\n    });"
+f07_serializer_graphics_new = "#ifdef PS5_NATIVE\n    // Cache persistence is optional to running this shader. A rejected\n    // serializer job must not discard an otherwise usable Vulkan pipeline.\n    try {\n#endif\n    serialization_thread.QueueWork([this, key = graphics_key, envs = std::move(environments.envs)] {\n        boost::container::static_vector<const GenericEnvironment*, Maxwell::MaxShaderProgram>\n            env_ptrs;\n        for (size_t index = 0; index < Maxwell::MaxShaderProgram; ++index) {\n            if (key.unique_hashes[index] != 0) {\n                env_ptrs.push_back(&envs[index]);\n            }\n        }\n        SerializePipeline(key, env_ptrs, pipeline_cache_filename, CACHE_VERSION);\n    });\n#ifdef PS5_NATIVE\n    } catch (const std::exception& error) {\n        LOG_WARNING(Render_Vulkan, \"Graphics shader cache write not queued: {}\", error.what());\n    } catch (...) {\n        LOG_WARNING(Render_Vulkan, \"Graphics shader cache write not queued: unknown exception\");\n    }\n#endif"
+f07_serializer_compute_old = "    serialization_thread.QueueWork([this, key, env_ = std::move(env)] {\n        SerializePipeline(key, std::array<const GenericEnvironment*, 1>{&env_},\n                          pipeline_cache_filename, CACHE_VERSION);\n    });"
+f07_serializer_compute_new = "#ifdef PS5_NATIVE\n    // Cache persistence is optional to running this shader. A rejected\n    // serializer job must not discard an otherwise usable Vulkan pipeline.\n    try {\n#endif\n    serialization_thread.QueueWork([this, key, env_ = std::move(env)] {\n        SerializePipeline(key, std::array<const GenericEnvironment*, 1>{&env_},\n                          pipeline_cache_filename, CACHE_VERSION);\n    });\n#ifdef PS5_NATIVE\n    } catch (const std::exception& error) {\n        LOG_WARNING(Render_Vulkan, \"Compute shader cache write not queued: {}\", error.what());\n    } catch (...) {\n        LOG_WARNING(Render_Vulkan, \"Compute shader cache write not queued: unknown exception\");\n    }\n#endif"
+for name, old, new in (
+    ("graphics", f07_serializer_graphics_old, f07_serializer_graphics_new),
+    ("compute", f07_serializer_compute_old, f07_serializer_compute_new),
+):
+    if shader_source.count(old) != 1:
+        raise RuntimeError(f"F07 {name} shader-cache queue admission anchor drift")
+    shader_source = shader_source.replace(old, new, 1)
+
 shader_output = output / 'vk_pipeline_cache_cost.cpp'
 if not shader_output.exists() or shader_output.read_text() != shader_source:
     shader_output.write_text(shader_source)

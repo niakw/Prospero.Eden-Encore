@@ -27,6 +27,30 @@ assert "thread.request_stop();" in worker
 assert "work_done >= work_scheduled" in worker
 assert "requests.emplace(std::move(work));" in worker
 
+# P0.1: a metadata serialization queue failure must not prevent the
+# graphics/compute pipeline already compiled by Create*Pipeline from returning.
+# Keep both native wrappers reproducible by the pinned source generator.
+for kind, start, finish in (
+    ("Graphics", "std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {",
+     "std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline("),
+    ("Compute", "std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(\\n    const ComputePipelineCacheKey",
+     "std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(\\n    ShaderPools&"),
+):
+    start = start.replace("\\\\n", "\\n")
+    finish = finish.replace("\\\\n", "\\n")
+    assert shader.count(start) == 1 and finish in shader, (kind, "source anchors")
+    body = shader.split(start, 1)[1].split(finish, 1)[0]
+    assert body.count("serialization_thread.QueueWork(") == 1, kind
+    assert body.count("catch (const std::exception& error)") == 1, kind
+    assert body.count("catch (...)") == 1, kind
+    assert body.index("try {") < body.index("serialization_thread.QueueWork(") < body.index(
+        "catch (const std::exception& error)") < body.index("QueueVulkanPipelineCacheFlush()"), kind
+    assert "return pipeline;" in body, kind
+    assert "shader cache write not queued" in body, kind
+    assert ("f07_serializer_" + kind.lower() + "_old") in gen, kind
+    assert ("f07_serializer_" + kind.lower() + "_new") in gen, kind
+
+
 cpp=r"""
 #include <cassert>
 #include <cstddef>

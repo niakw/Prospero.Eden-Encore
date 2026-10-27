@@ -1241,6 +1241,11 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {
     if (!pipeline || pipeline_cache_filename.empty()) {
         return pipeline;
     }
+#ifdef PS5_NATIVE
+    // Cache persistence is optional to running this shader. A rejected
+    // serializer job must not discard an otherwise usable Vulkan pipeline.
+    try {
+#endif
     serialization_thread.QueueWork([this, key = graphics_key, envs = std::move(environments.envs)] {
         boost::container::static_vector<const GenericEnvironment*, Maxwell::MaxShaderProgram>
             env_ptrs;
@@ -1251,6 +1256,13 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {
         }
         SerializePipeline(key, env_ptrs, pipeline_cache_filename, CACHE_VERSION);
     });
+#ifdef PS5_NATIVE
+    } catch (const std::exception& error) {
+        LOG_WARNING(Render_Vulkan, "Graphics shader cache write not queued: {}", error.what());
+    } catch (...) {
+        LOG_WARNING(Render_Vulkan, "Graphics shader cache write not queued: unknown exception");
+    }
+#endif
     QueueVulkanPipelineCacheFlush();
     return pipeline;
 }
@@ -1268,10 +1280,22 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
     if (!pipeline || pipeline_cache_filename.empty()) {
         return pipeline;
     }
+#ifdef PS5_NATIVE
+    // Cache persistence is optional to running this shader. A rejected
+    // serializer job must not discard an otherwise usable Vulkan pipeline.
+    try {
+#endif
     serialization_thread.QueueWork([this, key, env_ = std::move(env)] {
         SerializePipeline(key, std::array<const GenericEnvironment*, 1>{&env_},
                           pipeline_cache_filename, CACHE_VERSION);
     });
+#ifdef PS5_NATIVE
+    } catch (const std::exception& error) {
+        LOG_WARNING(Render_Vulkan, "Compute shader cache write not queued: {}", error.what());
+    } catch (...) {
+        LOG_WARNING(Render_Vulkan, "Compute shader cache write not queued: unknown exception");
+    }
+#endif
     QueueVulkanPipelineCacheFlush();
     return pipeline;
 }
