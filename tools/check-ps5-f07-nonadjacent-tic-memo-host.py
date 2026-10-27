@@ -42,6 +42,9 @@ using u32=std::uint32_t; using ImageViewId=std::size_t;
 constexpr ImageViewId NULL_IMAGE_VIEW_ID=0;
 struct ImageViewInOut {u32 index{};bool blacklist{};ImageViewId id{};};
 enum class ImageFlagBits:unsigned {None=0,Remapped=1};
+constexpr ImageFlagBits operator&(ImageFlagBits a,ImageFlagBits b){
+ return static_cast<ImageFlagBits>(static_cast<unsigned>(a)&static_cast<unsigned>(b));
+}
 constexpr bool True(ImageFlagBits value){return value!=ImageFlagBits::None;}
 struct ImageViewBase {std::size_t image_id{};bool IsBuffer()const{return false;}};
 struct Image {bool down{};u32 scale_rating{3};ImageFlagBits flags{ImageFlagBits::None};};
