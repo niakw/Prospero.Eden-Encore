@@ -35,6 +35,9 @@ on:
       - 'tools/check-ps5-f07-cold-stalls-host.py'
       - 'tools/check-ps5-f07-pipeline-transitions-host.py'
       - 'tools/check-ps5-f07-*.py'
+      # The first-use/optimization lifetime harnesses also gate source changes.
+      - 'tools/check-ps5-fast-first-pipelines.py'
+      - 'tools/check-ps5-pipeline-fairness.py'
       - '.github/workflows/encore-core-preflight.yml'
       - 'vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp'
       - 'tools/check-deferred-native-bridge-contract.py'

@@ -1763,6 +1763,16 @@ Common::ThreadWorker& OptimizeWorker() {
 } // namespace
 
 GraphicsPipeline::~GraphicsPipeline() {
+    // The initial Vulkan builder also captures 'this'. It can still be in
+    // the first-use queue when the pipeline cache evicts this object.
+    // Join its completion BEFORE reading optimize_state, which the builder
+    // may create when it schedules an optional optimized rebuild.
+    if (!is_built.load(std::memory_order_acquire)) {
+        std::unique_lock build_lock{build_mutex};
+        build_condvar.wait(build_lock, [this] {
+            return is_built.load(std::memory_order_acquire);
+        });
+    }
     const auto state = optimize_state;
     if (!state) return;
     std::unique_lock lock{state->mutex};
