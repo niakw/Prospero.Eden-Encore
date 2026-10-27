@@ -35,6 +35,8 @@ on:
       - 'tools/check-ps5-f07-cold-stalls-host.py'
       - 'tools/check-ps5-f07-pipeline-transitions-host.py'
       - 'tools/check-ps5-f07-*.py'
+      - 'vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp'
+      - 'tools/check-deferred-native-bridge-contract.py'
       - 'tools/prepare-vulkan-port.py'
       - 'tools/check-vendored-vulkan-fork.py'
       - 'tools/check-native-quiet-shutdown-heap-host.py'
@@ -312,6 +314,9 @@ jobs:
           python3 -B tools/check-ps5-graphics-pipeline-aware-preflight-host.py
           python3 -B tools/check-ps5-empty-image-view-retirement-host.py
           python3 -B tools/check-ps5-present-framebuffer-freshness-host.py
+          # Catch drift of the complete inactive DEV Vulkan bridge before
+          # the costly full source preflight and PS5 native build.
+          python3 -B tools/check-deferred-native-bridge-contract.py
           python3 -B tools/check-ps5-texture-channel-missing-mapping-host.py
           python3 -B tools/check-fc27-f03-native-texture-feedback-chain-host.py
           python3 -B tools/check-fc27-f03-native-present-freshness-host.py
