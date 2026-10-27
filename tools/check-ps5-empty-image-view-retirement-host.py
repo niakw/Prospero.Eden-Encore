@@ -24,6 +24,18 @@ gen = (root / "tools/prepare-vulkan-port.py").read_text()
 assert "Retired images without a view" in gen
 assert "vulkan-cache/video_core/texture_cache/texture_cache.h" in gen
 assert (root / "headless/vulkan.cmake").read_text().count('file(COPY "${EDEN_ACTIVE_VULKAN}/" DESTINATION "${PORT_BUILD_DIR}")') == 1
+# F07 P0.4: compile the exact change-notification predicate emitted by
+# the active Vulkan texture cache. Stale remapped views must advance the
+# generation even when the new backing is temporarily unavailable (NULL).
+header="ImageViewId TextureCache<P>::VisitImageView(u32 index, bool compute) {"
+assert src.count(header)==1
+method=src.split(header,1)[1].split("\ntemplate <class P>",1)[0]
+marker="        if (pair->second != NULL_IMAGE_VIEW_ID || remapped_cached_view)\n            ++texture_bindings_serial;"
+assert method.count(marker)==1
+assert method.index(marker) < method.index("channel_state->image_view_ids.insert_or_assign(map_index, pair->second);",method.index("const bool remapped_cached_view"))
+assert "'F07 P0.4 remap-to-NULL view binding generation'" in gen
+notification=marker
+
 fixture = r"""
 #include <algorithm>
 #include <array>
@@ -99,6 +111,33 @@ int main() {
     assert(cache.runtime.clears==2 && cache.sentenced_framebuffers.pushes==2);
 }
 """
+# Append a source-extracted remap-notification contract to the same C++20
+# witness. A normal NULL->NULL retry must not invent a new generation.
+fixture=fixture.replace("int main() {", r'''
+struct RemapGeneration {
+    static constexpr int NULL_IMAGE_VIEW_ID=0;
+    int texture_bindings_serial{};
+    void Publish(int reconstructed_view, bool remapped_cached_view) {
+        struct Entry { int second; };
+        Entry entry{reconstructed_view};
+        Entry* pair=&entry;
+''' + notification + r'''
+    }
+};
+int main() {
+    RemapGeneration null_to_null;
+    null_to_null.Publish(0,false);
+    assert(null_to_null.texture_bindings_serial==0);
+    RemapGeneration null_to_valid;
+    null_to_valid.Publish(29,false);
+    assert(null_to_valid.texture_bindings_serial==1);
+    RemapGeneration remapped_to_null;
+    remapped_to_null.Publish(0,true);
+    assert(remapped_to_null.texture_bindings_serial==1);
+    RemapGeneration remapped_to_valid;
+    remapped_to_valid.Publish(31,true);
+    assert(remapped_to_valid.texture_bindings_serial==1);
+''',1)
 with tempfile.TemporaryDirectory(prefix="encore-empty-image-retirement-") as tmp:
     cpp = Path(tmp) / "fixture.cpp"
     cpp.write_text(fixture)
