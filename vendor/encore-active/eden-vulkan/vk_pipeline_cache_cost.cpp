@@ -1043,7 +1043,34 @@ GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {
             ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
 #endif
         pipeline = CreateGraphicsPipeline();
+#ifdef PS5_NATIVE
+        if (!pipeline && failed_graphics_retries.size() < 64) {
+            // Cold misses are allowed to fail, but do not cache a transient
+            // translation error forever. Only failed keys allocate metadata.
+            failed_graphics_retries.try_emplace(
+                graphics_key, GraphicsRetryState{
+                    std::chrono::steady_clock::now() + std::chrono::seconds(2), false});
+        }
+#endif
     }
+#ifdef PS5_NATIVE
+    else if (!pipeline) {
+        const auto failed = failed_graphics_retries.find(graphics_key);
+        if (failed != failed_graphics_retries.end() && !failed->second.attempted &&
+            std::chrono::steady_clock::now() >= failed->second.eligible_at) {
+            // Publish the attempted bit BEFORE the potentially expensive
+            // guest IR/SPIR-V translation. Repeated failed HUD draws stay O(1).
+            failed->second.attempted = true;
+            ::Eden::Performance::CachePhaseTimer retry_cpu_cost{
+                ::Eden::Performance::CachePhase::GraphicsPipelineCreate,
+                ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
+            pipeline = CreateGraphicsPipeline();
+            if (pipeline) {
+                failed_graphics_retries.erase(failed);
+            }
+        }
+    }
+#endif
     if (!pipeline) {
         return nullptr;
     }
