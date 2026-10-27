@@ -317,6 +317,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h` | `maintained-override` | V41 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h` | `maintained-override` | V33 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h` | `maintained-override` | V10 |
+| `eden-vulkan/include/video_core/renderer_vulkan/vk_pipeline_cache.h` | `maintained-override` | — |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_present_manager.h` | `maintained-override` | V32 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_scheduler.h` | `maintained-override` | V31 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h` | `maintained-override` | V42 |
