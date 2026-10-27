@@ -12,6 +12,8 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 src = (root / "vendor/encore-active/eden-vulkan/vk_pipeline_cache_cost.cpp").read_text()
 hdr = (root / "vendor/sources/eden/src/video_core/renderer_vulkan/vk_pipeline_cache.h").read_text()
+active = (root / "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_pipeline_cache.h").read_text()
+cmake = (root / "headless/vulkan.cmake").read_text()
 gen = (root / "tools/prepare-vulkan-port.py").read_text()
 start = "GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {"
 end = "    if (!pipeline) {\n        return nullptr;"
@@ -26,6 +28,12 @@ assert block.count("CachePhase::GraphicsPipelineCreate") == 2
 assert "F07 bounded failed graphics retry state" in gen
 assert "F07 one delayed retry for failed graphics shader" in gen
 assert "failed_graphics_retries" not in hdr  # the pinned input is immutable
+assert active.count("failed_graphics_retries;") == 1
+assert active.count("struct GraphicsRetryState") == 1
+assert "std::chrono::steady_clock::time_point eligible_at" in active
+assert "adapt('src/video_core/renderer_vulkan/vk_pipeline_cache.h'" in gen
+assert 'TARGET_DIRECTORY video_core APPEND PROPERTY OBJECT_DEPENDS' in cmake
+assert '${PORT_BUILD_DIR}/include/video_core/renderer_vulkan/vk_pipeline_cache.h' in cmake
 assert "::Common::unordered_map<GraphicsPipelineCacheKey, std::unique_ptr<GraphicsPipeline>> graphics_cache;" in hdr
 
 cpp = r"""
