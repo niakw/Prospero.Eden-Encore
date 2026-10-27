@@ -405,3 +405,19 @@ runtime réservent désormais la priorité **avant** ces opérations. Les scopes
 RAII imbriqués maintiennent la réservation jusqu'au build Vulkan, sans délai
 sur le thread propriétaire et sans changer le préchauffage disque.
 **Le coût synchrone reste présent ; gain FPS console non prouvé.**
+
+## F07 P0.2 — file des reconstructions Vulkan facultatives bornée (27 octobre)
+
+`VkPipelineOptimize` utilise un seul worker, mais chaque nouveau pipeline
+pouvait ajouter une reconstruction spéculative sans limite de file. Les
+changements de HUD avec de nombreuses premières utilisations pouvaient donc
+laisser un long arriéré, même si le chemin indispensable `MakePipeline`
+rapide était déjà disponible. Sur PS5, l'admission facultative est désormais
+bornée à **16 travaux en attente ou actifs**, avec compteur atomique sans
+mutex GPU. Les travaux excédentaires conservent le pipeline de premier usage
+valide sans allocation ni attente facultative. Les places sont restituées
+après achèvement, annulation, échec de compilation ou refus de `QueueWork` ;
+les exceptions avant transfert de propriété sont couvertes par RAII. Le
+chemin desktop et les builds de préchauffage disque ne changent pas.
+**Validation CI/native, mesures de latence et absence de régression console
+restent nécessaires.**

@@ -962,6 +962,24 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
 
 
 namespace {
+#ifdef PS5_NATIVE
+// Only first-use pipelines are mandatory. Cap queued + running speculative
+// driver rebuilds so HUD shader bursts cannot accumulate unbounded work.
+constexpr unsigned kMaxQueuedOptionalOptimizations = 16;
+std::atomic<unsigned> pending_optional_optimizations{0};
+
+bool ReserveOptionalOptimizationSlot() noexcept {
+    unsigned pending = pending_optional_optimizations.load(std::memory_order_relaxed);
+    while (pending < kMaxQueuedOptionalOptimizations) {
+        if (pending_optional_optimizations.compare_exchange_weak(
+                pending, pending + 1, std::memory_order_acq_rel,
+                std::memory_order_relaxed)) {
+            return true;
+        }
+    }
+    return false;
+}
+#endif
 Common::ThreadWorker& OptimizeWorker() {
     static Common::ThreadWorker worker(1, "VkPipelineOptimize");
     return worker;
@@ -987,6 +1005,17 @@ GraphicsPipeline::~GraphicsPipeline() {
 }
 
 void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {
+#ifdef PS5_NATIVE
+    // A skipped OPTIONAL rebuild keeps the already-built first-use pipeline.
+    // Reserve before allocations so an overloaded worker uses no extra memory.
+    if (!ReserveOptionalOptimizationSlot()) return;
+    bool optional_slot_handed_off = false;
+    SCOPE_EXIT {
+        if (!optional_slot_handed_off) {
+            pending_optional_optimizations.fetch_sub(1, std::memory_order_release);
+        }
+    };
+#endif
     optimize_state = std::make_shared<OptimizeState>();
     const auto state = optimize_state;
     // An accepted optimization is in flight even while queued. Otherwise the
@@ -1006,6 +1035,10 @@ void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {
                     state->running = false;
                 }
                 state->done.notify_all();
+#ifdef PS5_NATIVE
+                // Every accepted job releases its slot, including cancellation.
+                pending_optional_optimizations.fetch_sub(1, std::memory_order_release);
+#endif
             }
         } completion{state};
 #ifdef PS5_NATIVE
@@ -1057,6 +1090,11 @@ void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {
             LOG_WARNING(Render_Vulkan, "Optimized pipeline rebuild failed: unknown exception");
         }
         });
+#ifdef PS5_NATIVE
+        // The queued worker now owns the slot. The caller's failure guard
+        // handles allocation/admission exceptions before this handoff.
+        optional_slot_handed_off = true;
+#endif
     } catch (...) {
         // QueueWork failed before the worker accepted ownership. Do not strand
         // a pending flag that would make the destructor wait forever.
