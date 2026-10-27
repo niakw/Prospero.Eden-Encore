@@ -23,7 +23,12 @@ assert "ps5_first_use_new" in generator
 assert "build_condvar.wait(lock, [this] { return is_built.load" in gp
 assert "is_built.store(true, std::memory_order_release)" in gp
 assert "build_condvar.notify_all()" in gp
-assert "if (IsBuilt() && !pipeline)" in gp
+# An initial null fast-first handle no longer means a terminal draw drop:
+# the optimized handle can already be published and valid. The worker still
+# rejects a draw when neither handle is usable.
+assert "if (IsBuilt() && !pipeline && !optimized_ready.load(std::memory_order_acquire))" in gp
+assert "if (!pipeline && !use_optimized)" in gp
+assert "use_optimized ? *optimized_pipeline : *pipeline" in gp
 
 fixture = r"""
 #include <cassert>
