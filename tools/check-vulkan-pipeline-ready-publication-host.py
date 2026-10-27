@@ -32,7 +32,9 @@ for path in FILES:
         assert destroy.count(GUARD) == 1
         assert destroy.index("build_condvar.wait(build_lock") < destroy.index(
             "const auto state = optimize_state;")
-        assert text[text.index("bool GraphicsPipeline::ConfigureDraw("):].count(GUARD) == 1
+        configure = text[text.index("bool GraphicsPipeline::ConfigureDraw("):
+                         text.index("GraphicsPipeline::~GraphicsPipeline()")]
+        assert configure.count(GUARD) == 1
     assert text.count("is_built.store(true, std::memory_order_release);")==1,path
     assert "if (!is_built.load(std::memory_order::relaxed)) {" not in text,path
     # A thread that observes ready must acquire the pipeline before BindPipeline.
