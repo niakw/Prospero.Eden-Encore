@@ -321,3 +321,15 @@ Tests hôte et validation native/console encore nécessaires.
 L'annulation remet également `current_unswizzle_frame` à zéro : la
 prochaine tâche n'hérite pas de la temporisation de quatre images d'un lot
 abandonné. Les tâches propres conservent leur temporisation normale.
+
+## F07 P0.4 — validité des tranches BCn 3D GPU (27 octobre)
+
+Le chemin `TickAsyncUnswizzle` calculait `stride` en u32 puis divisait
+plusieurs fois par `bytes_per_slice` sans vérifier une valeur nulle ou
+une taille de staging divisible en tranches complètes. Un dépassement du
+stride u32 ou un dernier lot incomplet risquait une division par zéro ou
+une copie de tranche au-delà de l'allocation GPU. Sur PS5, le stride est
+élargi avant multiplication, le produit est borné et les dimensions
+incohérentes annulent le lot avant tout transfert, en libérant le staging
+de manière différée et en conservant `CpuModified`. Le chemin desktop
+n'est pas modifié. Qualification CI/native et résultat console à confirmer.

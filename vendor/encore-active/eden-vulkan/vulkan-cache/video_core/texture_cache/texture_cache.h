@@ -2016,9 +2016,39 @@ void TextureCache<P>::TickAsyncUnswizzle() {
         const u32 width_blocks = Common::DivCeil(info.size.width, 4u);
         const u32 height_blocks = Common::DivCeil(info.size.height, 4u);
 
+#ifdef PS5_NATIVE
+        // Widen BEFORE multiplying: an overflowing u32 stride can become 0
+        // and trigger a division by zero in the multi-frame upload below.
+        const size_t stride = static_cast<size_t>(width_blocks) * bytes_per_block;
+#else
         const u32 stride = width_blocks * bytes_per_block;
+#endif
         const u32 aligned_height = height_blocks;
+#ifdef PS5_NATIVE
+        const bool slice_overflow =
+            aligned_height != 0 && stride > std::numeric_limits<size_t>::max() / aligned_height;
+        task.bytes_per_slice = slice_overflow ? 0 : stride * aligned_height;
+        // The current staging allocation must hold complete 3D slices.
+        // Reject zero, overflow and misaligned guest sizes before ANY read or
+        // accelerated upload; an incomplete final slice can overrun staging.
+        const bool invalid_slices =
+            task.bytes_per_slice == 0 || task.bytes_per_slice > task.total_size ||
+            task.total_size % task.bytes_per_slice != 0 ||
+            task.total_size / task.bytes_per_slice < static_cast<size_t>(info.size.depth);
+        if (invalid_slices) {
+            runtime.FreeDeferredStagingBuffer(task.staging_buffer);
+            image.flags |= ImageFlagBits::CpuModified;
+            if (True(image.flags & ImageFlagBits::Tracked)) {
+                UntrackImage(image, task.image_id);
+            }
+            image.flags &= ~ImageFlagBits::IsDecoding;
+            unswizzle_queue.pop_front();
+            current_unswizzle_frame = 0u;
+            return;
+        }
+#else
         task.bytes_per_slice = static_cast<size_t>(stride) * aligned_height;
+#endif
         task.last_submitted_offset = 0;
         task.initialized = true;
     }
