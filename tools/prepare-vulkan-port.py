@@ -3504,6 +3504,17 @@ apply_reviewed_delta("vk_compute_pipeline_cost.cpp",
     "F07 compute worker completion ownership transfer")
 
 
+# F07 P0.1/P0.2: protect first-use compute CFG, IR, SPIR-V and
+# shader module work BEFORE the Vulkan builder task gets queued.
+apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
+    "namespace Vulkan {\n\nnamespace {\nusing Shader::Backend::SPIRV::EmitSPIRV;",
+    "namespace Vulkan {\n#ifdef PS5_NATIVE\n// The compute pipeline builder exposes this Vulkan-namespace atomic counter.\nextern std::atomic<unsigned> pending_first_use_compute_builds;\n#endif\n\nnamespace {\n#ifdef PS5_NATIVE\n// Keep the OPTIONAL graphics optimizer away from foreground compute\n// CFG/IR/SPIR-V translation, before the Vulkan driver worker is enqueued.\n// Only runtime first-use translation participates; preloaded cache jobs do not.\nstruct ComputeTranslationPriorityScope {\n    explicit ComputeTranslationPriorityScope(bool foreground_) : foreground{foreground_} {\n        if (foreground) {\n            pending_first_use_compute_builds.fetch_add(1, std::memory_order_release);\n        }\n    }\n    ~ComputeTranslationPriorityScope() {\n        if (foreground) {\n            pending_first_use_compute_builds.fetch_sub(1, std::memory_order_release);\n        }\n    }\n    bool foreground;\n};\n#endif\nusing Shader::Backend::SPIRV::EmitSPIRV;",
+    "F07 foreground compute shader translation scope")
+apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
+    "    PipelineStatistics* statistics, bool build_in_parallel) try {\n    auto hash = key.Hash();\n    if (device.HasBrokenCompute()) {",
+    "    PipelineStatistics* statistics, bool build_in_parallel) try {\n#ifdef PS5_NATIVE\n    // Count cold shader translation as foreground work. The pipeline\n    // constructor separately counts the queued driver build; both stages\n    // now prevent speculative graphics optimization from competing.\n    ComputeTranslationPriorityScope translation_priority{build_in_parallel};\n#endif\n    auto hash = key.Hash();\n    if (device.HasBrokenCompute()) {",
+    "F07 compute CFG IR SPIRV fairness before driver queue")
+
 # F07 P0.2: cold compute driver builds must take priority over
 # optional optimized graphics rebuilds, including builds still in queue.
 apply_reviewed_delta("vk_compute_pipeline_cost.cpp",

@@ -71,8 +71,30 @@
 #endif
 
 namespace Vulkan {
+#ifdef PS5_NATIVE
+// The compute pipeline builder exposes this Vulkan-namespace atomic counter.
+extern std::atomic<unsigned> pending_first_use_compute_builds;
+#endif
 
 namespace {
+#ifdef PS5_NATIVE
+// Keep the OPTIONAL graphics optimizer away from foreground compute
+// CFG/IR/SPIR-V translation, before the Vulkan driver worker is enqueued.
+// Only runtime first-use translation participates; preloaded cache jobs do not.
+struct ComputeTranslationPriorityScope {
+    explicit ComputeTranslationPriorityScope(bool foreground_) : foreground{foreground_} {
+        if (foreground) {
+            pending_first_use_compute_builds.fetch_add(1, std::memory_order_release);
+        }
+    }
+    ~ComputeTranslationPriorityScope() {
+        if (foreground) {
+            pending_first_use_compute_builds.fetch_sub(1, std::memory_order_release);
+        }
+    }
+    bool foreground;
+};
+#endif
 using Shader::Backend::SPIRV::EmitSPIRV;
 using Shader::Maxwell::ConvertLegacyToGeneric;
 using Shader::Maxwell::GenerateGeometryPassthrough;
@@ -1388,6 +1410,12 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
 std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
     ShaderPools& pools, const ComputePipelineCacheKey& key, Shader::Environment& env,
     PipelineStatistics* statistics, bool build_in_parallel) try {
+#ifdef PS5_NATIVE
+    // Count cold shader translation as foreground work. The pipeline
+    // constructor separately counts the queued driver build; both stages
+    // now prevent speculative graphics optimization from competing.
+    ComputeTranslationPriorityScope translation_priority{build_in_parallel};
+#endif
     auto hash = key.Hash();
     if (device.HasBrokenCompute()) {
         LOG_ERROR(Render_Vulkan, "Skipping {:#016x}", hash);
