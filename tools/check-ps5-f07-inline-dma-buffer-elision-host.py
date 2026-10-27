@@ -86,7 +86,8 @@ struct BufferCache {
     bool inline_accepted=false;
     bool InlineMemory(DAddr a,std::size_t size,std::span<const u8> bytes) {
         ++inline_calls;
-        assert(memory && memory->unsafe_writes==1);
+        // Both first and subsequent inline DMA writes reach guest RAM first.
+        assert(memory && memory->unsafe_writes>=1);
         assert(std::equal(bytes.begin(),bytes.begin()+size,memory->bytes.begin()+a));
         return inline_accepted;
     }
