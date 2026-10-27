@@ -960,8 +960,20 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
 #else
     const std::stop_token reader_token{stop_loading};
 #endif
-    VideoCommon::LoadPipelines(reader_token, pipeline_cache_filename, CACHE_VERSION, load_compute,
-                               load_graphics);
+#ifdef PS5_NATIVE
+    // A damaged disk cache or an enqueue failure can interrupt the reader
+    // after jobs borrowed local state. Always reach the non-cancelling drain.
+    try {
+#endif
+        VideoCommon::LoadPipelines(reader_token, pipeline_cache_filename, CACHE_VERSION, load_compute,
+                                   load_graphics);
+#ifdef PS5_NATIVE
+    } catch (const std::exception& error) {
+        LOG_WARNING(Render_Vulkan, "PS5 shader prewarm aborted: {}", error.what());
+    } catch (...) {
+        LOG_WARNING(Render_Vulkan, "PS5 shader prewarm aborted: unknown exception");
+    }
+#endif
 
     LOG_INFO(Render_Vulkan, "Total Pipeline Count: {}", state.total);
 

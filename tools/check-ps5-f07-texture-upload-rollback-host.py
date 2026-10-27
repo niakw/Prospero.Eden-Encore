@@ -47,7 +47,7 @@ struct Cache {
         image.flags &= ~ImageFlagBits::Tracked;
         ++untracks;
     }
-    void Refresh(Image& image, int fail) {
+    void Refresh([[maybe_unused]] Image& image, int fail) {
         [[maybe_unused]] int image_id = 1;
 #ifndef OLD
 GUARD
