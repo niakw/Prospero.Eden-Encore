@@ -3577,6 +3577,14 @@ apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
     "while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0) {", "while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 ||\n               pending_first_use_compute_builds.load(std::memory_order_acquire) != 0) {",
     "F07 optimized graphics yields to compute builds")
 
+# F07 P0.2: avoid a speculative vkCreateGraphicsPipelines in the gap
+# between two waves of HUD shader translations / first-use builds. Only the
+# background optimized worker waits; foreground GPU work is not delayed.
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "        while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 ||\n               pending_first_use_compute_builds.load(std::memory_order_acquire) != 0) {\n            {\n                std::scoped_lock lock{state->mutex};\n                if (state->cancelled) return;\n            }\n            std::this_thread::sleep_for(std::chrono::milliseconds(2));\n        }",
+    "        // A momentarily empty builder queue is not an idle GPU frame.\n        // Require a brief QUIET period before any OPTIONAL driver rebuild:\n        // new HUD shaders appearing in a burst reset the countdown. This\n        // sleep is confined to the optimizer worker, never the GPU owner.\n        constexpr auto quiet_window = std::chrono::milliseconds(16);\n        auto quiet_since = std::chrono::steady_clock::now();\n        for (;;) {\n            const bool cold_build_pending =\n                pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 ||\n                pending_first_use_compute_builds.load(std::memory_order_acquire) != 0;\n            if (cold_build_pending) {\n                quiet_since = std::chrono::steady_clock::now();\n            } else if (std::chrono::steady_clock::now() - quiet_since >= quiet_window) {\n                break;\n            }\n            {\n                std::scoped_lock lock{state->mutex};\n                if (state->cancelled) return;\n            }\n            std::this_thread::sleep_for(std::chrono::milliseconds(2));\n        }",
+    "F07 quiet-window priority between cold pipeline bursts")
+
 # F07 P0.4: protect the image BEFORE Tracked registration can throw.
 # Successful async/MSAA exits explicitly commit their accepted handoff.
 apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",

@@ -43,8 +43,14 @@ old_gate = "while (pending_first_use_graphics_builds.load(std::memory_order_acqu
 new_gate = ("while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 ||\n"
             "               pending_first_use_compute_builds.load(std::memory_order_acquire) != 0) {")
 assert worker.count(old_gate) == 1
-assert worker.replace(old_gate, new_gate) in (
-    root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
+# The second reviewed late delta turns the counter wait into an
+# idle-window loop. Reapply both generator deltas in order before comparison.
+source_body = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
+old_body = "        while (pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 ||\n               pending_first_use_compute_builds.load(std::memory_order_acquire) != 0) {\n            {\n                std::scoped_lock lock{state->mutex};\n                if (state->cancelled) return;\n            }\n            std::this_thread::sleep_for(std::chrono::milliseconds(2));\n        }"
+new_body = "        // A momentarily empty builder queue is not an idle GPU frame.\n        // Require a brief QUIET period before any OPTIONAL driver rebuild:\n        // new HUD shaders appearing in a burst reset the countdown. This\n        // sleep is confined to the optimizer worker, never the GPU owner.\n        constexpr auto quiet_window = std::chrono::milliseconds(16);\n        auto quiet_since = std::chrono::steady_clock::now();\n        for (;;) {\n            const bool cold_build_pending =\n                pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 ||\n                pending_first_use_compute_builds.load(std::memory_order_acquire) != 0;\n            if (cold_build_pending) {\n                quiet_since = std::chrono::steady_clock::now();\n            } else if (std::chrono::steady_clock::now() - quiet_since >= quiet_window) {\n                break;\n            }\n            {\n                std::scoped_lock lock{state->mutex};\n                if (state->cancelled) return;\n            }\n            std::this_thread::sleep_for(std::chrono::milliseconds(2));\n        }"
+assert 'F07 quiet-window priority between cold pipeline bursts' in generator
+assert worker.count(old_gate) == 1
+assert worker.replace(old_gate, new_gate).replace(old_body, new_body) in source_body
 assert "F07 optimized graphics yields to compute builds" in generator
 assert "std::make_shared<OptimizeState>()" in worker
 assert worker.index("state->running = true;") < worker.index("OptimizeWorker().QueueWork")
