@@ -104,6 +104,23 @@ de pipeline compute. Aucun `wait`, fence ou ordre de commande n'est supprimé.
 **Ce changement apporte une attribution des blocages, sans gain FPS revendiqué.**
 Les coûts agrégés des différents threads ne valent pas durée d'une frame.
 
+## P0.2 — préservation des workers shader après annulation
+
+Le générateur Vulkan et la source active dissocient l'annulation du lecteur
+de cache de celle du pool de compilation PS5.
+`StatefulThreadWorker::WaitForRequests(stop_token)` appelle
+`request_stop()` sur **tous** les workers lorsque le jeton de chargement
+est annulé. Un retour au lanceur pendant un chargement pouvait ainsi
+rendre les compilateurs indisponibles pour les nouveaux shaders.
+
+Sur PS5, `workers.WaitForRequests()` attend seulement la fin des
+huit jobs de préchauffage au maximum, sans stopper les workers.
+Les autres plateformes conservent `WaitForRequests(stop_loading)`.
+Le test hôte reproduit une annulation après admission des jobs puis
+l'acceptation d'un nouveau shader. Il n'y a aucune nouvelle attente
+dans la boucle de dessin. Le gain FPS et le HUD restent à qualifier
+sur matériel.
+
 ## Dossiers de preuves existants
 
 - [F07 — priorités et mesures](FC27_F07_STUTTER_HUD_PRIORITY_2026-10-26.md)

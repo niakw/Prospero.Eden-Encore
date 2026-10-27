@@ -26,7 +26,12 @@ assert "constexpr size_t kStartupPrewarmPipelines = 8;" in method
 assert "std::stop_source startup_reader;" in method
 assert "const std::stop_token reader_token{startup_reader.get_token()};" in method
 assert "VideoCommon::LoadPipelines(reader_token" in method
-assert "workers.WaitForRequests(stop_loading);" in method
+assert "#ifdef PS5_NATIVE\n    // A cancelled title-cache load" in method
+assert "    workers.WaitForRequests();\n#else\n    workers.WaitForRequests(stop_loading);\n#endif" in method
+assert method.count("    workers.WaitForRequests(stop_loading);") == 1
+assert "StatefulThreadWorker::WaitForRequests(stop_token)" in method
+assert "    workers.WaitForRequests();" in gen
+assert "    workers.WaitForRequests(stop_loading);" in gen
 assert "workers.WaitForRequests(reader_token)" not in method
 assert 'mode=bounded-prewarm8' in main
 assert 'lazy_cache.request_stop();' not in main
@@ -58,7 +63,8 @@ struct Worker {
         pending.clear();
     }
 };
-std::size_t Run(std::size_t persisted, Worker& workers, bool init_only=false) {
+std::size_t Run(std::size_t persisted, Worker& workers, bool init_only=false,
+                bool cancel_title=false) {
     if(init_only) return 0;  // legacy setup-only compatibility
     std::stop_source startup_reader;
     std::size_t queued=0;
@@ -68,7 +74,12 @@ std::size_t Run(std::size_t persisted, Worker& workers, bool init_only=false) {
         if(queued == kStartupPrewarmPipelines)
             startup_reader.request_stop();
     }
-    workers.WaitForRequests(std::stop_token{});
+    // Mimic cancellation after at most eight jobs were admitted.
+    // Only the cache reader stops. The shader builder must remain alive.
+    std::stop_source title;
+    if(cancel_title) title.request_stop();
+    workers.WaitForRequests();
+    assert(!cancel_title || title.stop_requested());
     assert(workers.alive); // never forward startup_reader.get_token()
     return queued;
 }
@@ -83,6 +94,12 @@ int main(){
         workers.WaitForRequests();
         assert(workers.done==count+1);
         assert(Run(1, workers, true)==0);
+        Worker canceled;
+        assert(Run(persisted, canceled, false, true)==count);
+        assert(canceled.alive && canceled.done==count);
+        canceled.QueueWork([]{});
+        canceled.WaitForRequests();
+        assert(canceled.done==count+1);
     }
     Worker negative;
     std::stop_source canceled;
