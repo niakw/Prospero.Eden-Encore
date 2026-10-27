@@ -3669,5 +3669,5 @@ apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
     "F07 graphics first-use counter exported at Vulkan namespace scope")
 apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
     "constexpr size_t NUM_STAGES = Maxwell::MaxShaderStage;\n#ifdef PS5_NATIVE\n// Counts cold first-use Vulkan graphics builds, not draws or cached pipelines.\n// Only the optional fast-first dev profile updates it; normal gameplay pays nothing.\nstd::atomic<unsigned> pending_first_use_graphics_builds{0};\n#endif",
-    "constexpr size_t NUM_STAGES = Maxwell::MaxShaderStage;",
+    "constexpr size_t NUM_STAGES = Maxwell::MaxShaderStage;\n// The shared first-use graphics counter is defined at Vulkan namespace scope.",
     "F07 remove anonymous graphics counter shadow")
