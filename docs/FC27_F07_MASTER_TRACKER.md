@@ -348,3 +348,15 @@ Le staging PS5 de ce chemin est désormais demandé **après** la validation
 des tranches : les dimensions invalides sont rejetées avant toute
 allocation GPU différée, évitant des réservations lourdes inutiles. Le
 chemin desktop garde l'ordre historique de ses allocations.
+
+## F07 P0.1/P0.2 — priorité de la traduction des shaders graphiques
+
+Comme pour le compute, la traduction CFG/IR/SPIR-V des shaders graphiques
+première utilisation est dorénavant comptée dans les réservations de travail
+au premier plan **avant** l'admission du pipeline Vulkan sur son worker. Le
+worker d'optimisation graphique facultatif attend donc la fin de cette étape,
+puis celle du build Vulkan réel. L'ajout PS5 est activé uniquement quand
+`fast_first_pipelines` et `build_in_parallel` le sont ; le préchauffage
+synchrone des caches disque n'est pas compté. La garde RAII libère la
+réservation après succès, retour anticipé ou exception, sans bloquer le GPU.
+Pas de preuve de réduction des stutters FC27 sans mesures console.
