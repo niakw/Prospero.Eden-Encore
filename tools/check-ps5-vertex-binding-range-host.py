@@ -29,7 +29,9 @@ new = """    const u32 min_binding = (std::min)(bindings.min_index, device_max);
     const u32 binding_count = max_binding - min_binding;"""
 assert old in pinned
 assert method.count(new) == 1
-assert method.index(new) < method.index("if (device.IsExtExtendedDynamicStateSupported())")
+assert method.index(new) < method.index("boost::container::static_vector<VkBuffer,")
+assert method.index(new) < method.index("ReserveNullBuffer();")
+assert "F07 reject empty vertex binding ranges before cache handle resolution" in generator
 assert "python3 -B tools/check-ps5-vertex-binding-range-host.py" in workflow
 
 tree = ast.parse(generator)
@@ -50,7 +52,7 @@ assert pairs.count((old, new)) == 1
 # Extract the actual native range clamp and early-return logic into a
 # host-compiled witness. No source reimplementation of the guard.
 prefix = method[method.index("    const u32 device_max ="):method.index(
-    "    if (device.IsExtExtendedDynamicStateSupported())")]
+    "    boost::container::static_vector<VkBuffer,")]
 assert prefix.count("return;") == 1
 cpp = r"""
 #include <algorithm>
@@ -100,3 +102,90 @@ with tempfile.TemporaryDirectory(prefix="encore-vertex-bind-") as tmp:
                     str(src),"-o",str(bin)],check=True,timeout=45)
     subprocess.run([str(bin)],check=True,timeout=30)
 print("VERTEX_BINDING_RANGE_HOST_PASS normal=3 clamped=2 reversed=3 empty=2")
+
+# Execute the source-extracted guard INCLUDING the handle-creation loop.
+# Reversed and clamped-empty ranges must not probe any buffer handle,
+# mutate a binding or reserve a substitute NULL buffer.
+whole_prefix=method[method.index("    const u32 device_max ="):
+                    method.index("    if (device.IsExtExtendedDynamicStateSupported())")]
+assert whole_prefix.index("if (max_binding <= min_binding)") < whole_prefix.index("buffer_handles(bindings.buffers.size())")
+extended=r"""
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <limits>
+#include <optional>
+#include <vector>
+using u32=std::uint32_t;
+using VkBuffer=std::uint64_t;
+constexpr VkBuffer VK_NULL_HANDLE=0;
+constexpr std::uint64_t VK_WHOLE_SIZE=~std::uint64_t{0};
+namespace VideoCommon {constexpr std::size_t NUM_VERTEX_BUFFERS=32;}
+namespace boost {namespace container{
+template<class T,std::size_t Capacity>using static_vector=std::vector<T>;
+}}
+struct Buffer {
+  unsigned* accesses{};VkBuffer value{};
+  VkBuffer Handle() const {++*accesses;return value;}
+};
+struct Bindings {
+  u32 min_index{}, max_index{};
+  std::vector<Buffer*> buffers{};
+  std::vector<u32> offsets{};
+  std::vector<std::uint64_t> sizes{};
+};
+struct Device {
+  u32 max_bindings{};
+  bool allows_null{};
+  u32 GetMaxVertexInputBindings() const{return max_bindings;}
+  bool HasNullDescriptor() const{return allows_null;}
+};
+struct Host {
+  Device device{};
+  Bindings bindings{};
+  std::optional<VkBuffer> null_buffer{99};
+  unsigned substitute_requests{}, selected{};
+  void ReserveNullBuffer(){++substitute_requests;}
+  void Bind(){
+""" + whole_prefix + r"""
+  selected=binding_count;
+  }
+};
+int main(){
+  unsigned calls=0;
+  Buffer absent{&calls,0};
+  Host reversed{{16,false},{8,4,{&absent},{9},{123}}};
+  reversed.Bind();
+  assert(reversed.selected==0 && calls==0 && reversed.substitute_requests==0);
+  assert(reversed.bindings.offsets[0]==9 && reversed.bindings.sizes[0]==123);
+
+  Host capped{{8,false},{8,30,{&absent},{9},{123}}};
+  capped.Bind();
+  assert(capped.selected==0 && calls==0 && capped.substitute_requests==0);
+  assert(capped.bindings.offsets[0]==9 && capped.bindings.sizes[0]==123);
+
+  Buffer present{&calls,77};
+  Host valid{{16,false},{1,3,{&present,&absent},{3,5},{200,100}}};
+  valid.Bind();
+  assert(valid.selected==2 && calls==2 && valid.substitute_requests==1);
+  assert(valid.bindings.offsets[0]==3 && valid.bindings.offsets[1]==0);
+  assert(valid.bindings.sizes[1]==VK_WHOLE_SIZE);
+
+  Host maxzero{{0,false},{0,4,{&absent},{4},{8}}};
+  maxzero.Bind();
+  assert(maxzero.selected==0 && calls==2 && maxzero.substitute_requests==0);
+}
+"""
+with tempfile.TemporaryDirectory(prefix="encore-vertex-early-") as tmp:
+    src=Path(tmp)/"vertex.cpp"
+    src.write_text(extended)
+    for mode in ("-O0","-O2"):
+        bin=Path(tmp)/("vertex"+mode)
+        built=subprocess.run([clang,"-std=c++20",mode,"-Wall","-Wextra","-Werror",
+                              "-fsanitize=undefined","-fno-sanitize-recover=all",
+                              str(src),"-o",str(bin)],capture_output=True,text=True,timeout=45)
+        assert built.returncode==0,(mode,built.stderr[-5000:])
+        run=subprocess.run([str(bin)],capture_output=True,text=True,timeout=20)
+        assert run.returncode==0,(mode,run.stderr[-5000:])
+print("VERTEX_EARLY_REJECTION_HOST_PASS invalid_no_handles=1 clamped_no_null=1"
+      " valid_handles_and_fallback=1 O0_O2=1")

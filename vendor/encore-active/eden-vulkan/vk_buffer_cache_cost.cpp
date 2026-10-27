@@ -671,6 +671,16 @@ void BufferCacheRuntime::BindVertexBuffer(u32 index, VkBuffer buffer, u32 offset
 }
 
 void BufferCacheRuntime::BindVertexBuffers(VideoCommon::HostBindings<Buffer>& bindings) {
+    // Reject a reversed/empty/out-of-device-range draw BEFORE resolving guest
+    // vertex handles or reserving substitute null buffers under cache locks.
+    const u32 device_max = device.GetMaxVertexInputBindings();
+    const u32 min_binding = (std::min)(bindings.min_index, device_max);
+    const u32 max_binding = (std::min)(bindings.max_index, device_max);
+    // Do not wrap a reversed binding range into a huge Vulkan binding count.
+    if (max_binding <= min_binding) {
+        return;
+    }
+    const u32 binding_count = max_binding - min_binding;
     boost::container::static_vector<VkBuffer, VideoCommon::NUM_VERTEX_BUFFERS> buffer_handles(bindings.buffers.size());
     for (u32 i = 0; i < bindings.buffers.size(); ++i) {
         auto handle = bindings.buffers[i]->Handle();
@@ -684,14 +694,6 @@ void BufferCacheRuntime::BindVertexBuffers(VideoCommon::HostBindings<Buffer>& bi
         }
         buffer_handles[i] = handle;
     }
-    const u32 device_max = device.GetMaxVertexInputBindings();
-    const u32 min_binding = (std::min)(bindings.min_index, device_max);
-    const u32 max_binding = (std::min)(bindings.max_index, device_max);
-    // Do not wrap a reversed binding range into a huge Vulkan binding count.
-    if (max_binding <= min_binding) {
-        return;
-    }
-    const u32 binding_count = max_binding - min_binding;
     if (device.IsExtExtendedDynamicStateSupported()) {
         scheduler.Record([bindings_ = std::move(bindings), buffer_handles_ = std::move(buffer_handles), binding_count](vk::CommandBuffer cmdbuf) {
             cmdbuf.BindVertexBuffers2EXT(bindings_.min_index, binding_count, buffer_handles_.data(), bindings_.offsets.data(), bindings_.sizes.data(), bindings_.strides.data());
