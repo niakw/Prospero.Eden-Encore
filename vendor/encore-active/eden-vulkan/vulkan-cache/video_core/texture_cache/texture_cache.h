@@ -1968,13 +1968,43 @@ void TextureCache<P>::TickAsyncUnswizzle() {
         return;
     }
 
+#ifndef PS5_NATIVE
     if(current_unswizzle_frame > 0) {
         current_unswizzle_frame--;
         return;
     }
+#endif
 
     PendingUnswizzle& task = unswizzle_queue.front();
     Image& image = slot_images[task.image_id];
+#ifdef PS5_NATIVE
+    // This task may span several frames. A new CPU write or guest remap
+    // invalidates its staged bytes even when texture dimensions do not change.
+    // Abandon the old content before dispatching another GPU upload batch.
+    if (True(image.flags & (ImageFlagBits::CpuModified | ImageFlagBits::Remapped))) {
+        if (task.initialized) {
+            // Previously submitted batches may still be on the GPU worker.
+            // Return their source buffer using the EXISTING deferred free.
+            runtime.FreeDeferredStagingBuffer(task.staging_buffer);
+        }
+        image.flags |= ImageFlagBits::CpuModified;
+        if (True(image.flags & ImageFlagBits::Tracked)) {
+            UntrackImage(image, task.image_id);
+        }
+        image.flags &= ~ImageFlagBits::IsDecoding;
+        unswizzle_queue.pop_front();
+        // No throttling after cancellation: the replacement can be queued
+        // as soon as RefreshContents observes the retained CPU modification.
+        return;
+    }
+#endif
+
+#ifdef PS5_NATIVE
+    if(current_unswizzle_frame > 0) {
+        current_unswizzle_frame--;
+        return;
+    }
+#endif
 
     if (!task.initialized) {
         task.total_size = MapSizeBytes(image);

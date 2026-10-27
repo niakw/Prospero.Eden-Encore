@@ -304,3 +304,16 @@ le retour anticipé et l'échec d'une traduction décrémentent le compteur
 via le destructeur, sans nouveau verrou ni attente sur le thread graphique.
 Le préchauffage synchrone du cache disque ne participe pas à ce compteur.
 **Contrats hôte et build natif requis avant toute validation de performance.**
+
+## F07 P0.4 — annulation des uploads GPU unswizzle devenus obsolètes (27 octobre)
+
+Une opération `TickAsyncUnswizzle` peut s'étendre sur plusieurs images,
+avec un buffer différé et des tranches déjà soumises au GPU. Une écriture CPU
+ou un remappage intervenant entre deux tranches rend ce contenu ancien.
+Le chemin PS5 annule désormais la tâche **avant** la tranche suivante si
+`CpuModified` ou `Remapped` est présent. Si le staging a été créé, il
+est rendu via `FreeDeferredStagingBuffer` et **jamais** libéré immédiatement.
+Le suivi ancien est invalidé, `IsDecoding` est retiré et `CpuModified`
+reste actif pour une nouvelle prise en charge sans cooldown artificiel.
+La branche normale et le comportement hors PS5 restent inchangés.
+Tests hôte et validation native/console encore nécessaires.
