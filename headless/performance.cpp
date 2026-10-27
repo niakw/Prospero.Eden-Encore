@@ -1426,7 +1426,7 @@ void ReportGpuThread(unsigned frame) {
             "guest_write_buffer_wait", "guest_write_buffer_work",
             "guest_write_texture_wait", "guest_write_texture_work",
             "guest_write_shader_invalidate",
-            "graphics_pipeline_create", "shader_pool_reset", "shader_cfg",
+            "graphics_pipeline_create", "graphics_shader_environment", "shader_pool_reset", "shader_cfg",
             "shader_ir", "shader_spirv", "shader_module",
             "graphics_pipeline_wait", "compute_pipeline_wait", "texture_upload_staging",
             "texture_upload_contents", "texture_upload_barrier"
