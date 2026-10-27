@@ -15,13 +15,6 @@
       "evidence": "Source read: Cold storage-root selection is computed once per process; no per-frame filesystem probing. Contract U46; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
     },
     {
-      "path": "headless/audio.cpp",
-      "disposition": "reviewed_without_new_code_edit",
-      "contract_id": "U04",
-      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
-      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Audio worker is stop-aware, output is paced by 256-frame device calls, mutex protects PCM publish; do not disrupt device cadence."
-    },
-    {
       "path": "headless/audio_out_init.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U47",
@@ -29,6 +22,13 @@
       "proof_ref": "tools/check-headless-app-policy-owners.py",
       "source_review_document": "docs/EDEN_NATIVE_POLICY_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Source read: Shared sceAudioOutInit is protected by call_once; no repeated device initialization on audio streams. Contract U47; no new CPU/GPU optimization justified by current evidence. Hardware/functional validation separate."
+    },
+    {
+      "path": "headless/audio.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U04",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Audio worker is stop-aware, output is paced by 256-frame device calls, mutex protects PCM publish; do not disrupt device cadence."
     },
     {
       "path": "headless/boot_trace.h",
@@ -149,20 +149,20 @@
       "evidence": "Source inspected: Commandes de test par fichier/istream et identifiants monotones, uniquement en simulation DEV. Pas de boucle d’attente ajoutée au polling HID normal. Reopen if: Une surcharge mesurée du lecteur DEV ou des commandes rejouées."
     },
     {
-      "path": "headless/devices.h",
-      "disposition": "reviewed_without_new_code_edit",
-      "contract_id": "U52",
-      "reviewed_source_git_blob": "0a819622e35d9d89ce83c3937190fae6dc822ae6",
-      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
-      "evidence": "Source inspected: L’interface manette borne le nombre de joueurs et le chemin vibration utilise une indication atomique sur les polls silencieux. Le mapping réel reste dans les implémentations et mérite ses tests de jeu. Reopen if: Une régression d’actions FC27 imputable à la définition des états HID."
-    },
-    {
       "path": "headless/devices_check.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "review_scope": "host-only-test",
       "reviewed_source_git_blob": "c9a8b4e737e6b2238cab90de06e4ddaf5cd48aef",
       "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Exact Git blob source inspected; Cible eden-devices-check séparée du jeu ; scénarios de manette/audio et ABI, aucun traitement dans une frame normale. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
+    },
+    {
+      "path": "headless/devices.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U52",
+      "reviewed_source_git_blob": "0a819622e35d9d89ce83c3937190fae6dc822ae6",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: L’interface manette borne le nombre de joueurs et le chemin vibration utilise une indication atomique sur les polls silencieux. Le mapping réel reste dans les implémentations et mérite ses tests de jeu. Reopen if: Une régression d’actions FC27 imputable à la définition des états HID."
     },
     {
       "path": "headless/diagnostics.h",
@@ -469,6 +469,14 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "headless/jit_list.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "J11",
+      "reviewed_source_git_blob": "405813ad83c313f619b1ab39e9e2fc362099e237",
+      "source_review_document": "docs/EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md",
+      "evidence": "Précompilation JIT expérimentale, protégée par EDEN_SHARED_JIT_AVAILABLE et opt-in ; chemin absent du rendu standard, historique borné et titre/build contrôlés. Ne pas rendre actif sans qualification de la quiescence JIT. Ouvrir de nouveau si blob modifié ou cas reproductible."
+    },
+    {
       "path": "headless/jit-allocator.h",
       "disposition": "code_changed_in_batch",
       "contract_id": "J06",
@@ -490,14 +498,6 @@
       "reviewed_source_git_blob": "c079d146d267d42fed09f42f3b0394955043ff51",
       "source_review_document": "docs/EDEN_NATIVE_HOTPATH_FAST_REVIEW_2026-10-21.md",
       "evidence": "Current source inspected: Repli de capacité JIT uniquement lors d’un échec de construction ; réduit par paliers bornés et ne publie pas de pointeur exécutable avant succès. Aucun polling en jeu. Rerun this review only on source drift or Échec d’allocation reproductible malgré la stratégie de repli."
-    },
-    {
-      "path": "headless/jit_list.h",
-      "disposition": "reviewed_without_new_code_edit",
-      "contract_id": "J11",
-      "reviewed_source_git_blob": "405813ad83c313f619b1ab39e9e2fc362099e237",
-      "source_review_document": "docs/EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md",
-      "evidence": "Précompilation JIT expérimentale, protégée par EDEN_SHARED_JIT_AVAILABLE et opt-in ; chemin absent du rendu standard, historique borné et titre/build contrôlés. Ne pas rendre actif sans qualification de la quiescence JIT. Ouvrir de nouveau si blob modifié ou cas reproductible."
     },
     {
       "path": "headless/log_pipe.h",
@@ -555,14 +555,6 @@
       "evidence": "Exact Git blob source inspected; Déclarations et état des faux devices partagés par la bibliothèque de simulation, pas les périphériques PS5 réels. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
     },
     {
-      "path": "headless/mods.h",
-      "disposition": "reviewed_without_new_code_edit",
-      "contract_id": "U62",
-      "reviewed_source_git_blob": "a8ab3fe9da35e362a75674af56a08014c407b23b",
-      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
-      "evidence": "Source inspected: Inventaire filesystem des mods par dossier de titre avant exécution. Aucun balayage de répertoire pour chaque draw ou sync invité. Reopen if: Traçage montrant une rescannérisation de mods en jeu."
-    },
-    {
       "path": "headless/mods_check.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "review_scope": "host-only-test",
@@ -571,30 +563,20 @@
       "evidence": "Exact Git blob source inspected; Exécutable eden-mods-check distinct ; construit des fixtures IPS/pchtxt et vérifie les paramètres, absent du chemin jeu. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
     },
     {
+      "path": "headless/mods.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U62",
+      "reviewed_source_git_blob": "a8ab3fe9da35e362a75674af56a08014c407b23b",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Inventaire filesystem des mods par dossier de titre avant exécution. Aucun balayage de répertoire pour chaque draw ou sync invité. Reopen if: Traçage montrant une rescannérisation de mods en jeu."
+    },
+    {
       "path": "headless/native_directory.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U41",
       "reviewed_source_git_blob": "5b0c96dfc98f7d25b3fb602f4ad68b03e125ec7d",
       "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
       "evidence": "Source inspected: Lecture native getdents par tampon 64 KiB, vérification d’enregistrements bornés ; cette traversée est d’infrastructure fichier, pas un accès GPU. Reopen if: Erreur ou surcharge observée sur grands répertoires."
-    },
-    {
-      "path": "headless/ncz.cpp",
-      "disposition": "format_feature_source_integrated",
-      "source_scope": "native_adapter",
-      "reviewed_source_git_blob": "7deff2ea1a82574b9e756ad9c2f0d869aa94612b",
-      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
-      "proof_ref": "tools/check-encore-ncz-sources.py",
-      "evidence": "New format-loader code path inspected and pinned: NCZ reader adapter selected by CMake, cache and import behavior distinct from frame GPU. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
-    },
-    {
-      "path": "headless/ncz.h",
-      "disposition": "format_feature_source_integrated",
-      "source_scope": "header_only",
-      "reviewed_source_git_blob": "85ced3460d83be2a8011f189c0df406b4dd32b8c",
-      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
-      "proof_ref": "tools/check-ncz.py",
-      "evidence": "New format-loader code path inspected and pinned: NCZ streaming decompressor, bounded cache writes, tested host reconstruction. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
     },
     {
       "path": "headless/ncz_check.cpp",
@@ -615,6 +597,31 @@
       "evidence": "New format-loader code path inspected and pinned: NCZ VFS bridge for selected maintained file system source owners. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
     },
     {
+      "path": "headless/ncz.cpp",
+      "disposition": "format_feature_source_integrated",
+      "source_scope": "native_adapter",
+      "reviewed_source_git_blob": "7deff2ea1a82574b9e756ad9c2f0d869aa94612b",
+      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
+      "proof_ref": "tools/check-encore-ncz-sources.py",
+      "evidence": "New format-loader code path inspected and pinned: NCZ reader adapter selected by CMake, cache and import behavior distinct from frame GPU. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
+    },
+    {
+      "path": "headless/ncz.h",
+      "disposition": "format_feature_source_integrated",
+      "source_scope": "header_only",
+      "reviewed_source_git_blob": "85ced3460d83be2a8011f189c0df406b4dd32b8c",
+      "feature_review_document": "docs/EDEN_FORMAT_SOURCE_REVIEW_2026-10-23.md",
+      "proof_ref": "tools/check-ncz.py",
+      "evidence": "New format-loader code path inspected and pinned: NCZ streaming decompressor, bounded cache writes, tested host reconstruction. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
+    },
+    {
+      "path": "headless/network_audit_sockets.c",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U06",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: POSIX socket wrappers preserve errno and call target formatting, getpeername and file audit only when diagnostics active; no unconditional socket peer query."
+    },
+    {
       "path": "headless/network_audit.c",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U05",
@@ -628,13 +635,6 @@
       "reviewed_source_git_blob": "df460cb201395e322f627031f2ad6a19dffa3a41",
       "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
       "evidence": "Source inspected: Interface de contrôle optionnel des métadonnées réseau ; OFF ne déclenche pas d’I/O ; la filtration DNS réelle est dans un propriétaire distinct. Reopen if: I/O réseau déclenchée alors que le détail est désactivé."
-    },
-    {
-      "path": "headless/network_audit_sockets.c",
-      "disposition": "reviewed_without_new_code_edit",
-      "contract_id": "U06",
-      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
-      "evidence": "Source-read optimization triage, no additional hotpath edit justified: POSIX socket wrappers preserve errno and call target formatting, getpeername and file audit only when diagnostics active; no unconditional socket peer query."
     },
     {
       "path": "headless/network_domain_rules.c",
@@ -652,19 +652,19 @@
       "evidence": "Source inspected: API C du chargement unique de la blocklist et de la décision de domaine. Le matching est exécuté par son moteur dédié, pas implémenté dans ce header. Reopen if: Incohérence de décision entre résolution hôte et DNS invité."
     },
     {
-      "path": "headless/pad.cpp",
-      "disposition": "reviewed_without_new_code_edit",
-      "contract_id": "U03",
-      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
-      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Controller input and rumble path has release/acquire pending hint before mutex; no hotpath locking on silent polls, preserve paired publication."
-    },
-    {
       "path": "headless/pad_diagnostics.h",
       "disposition": "reviewed_without_new_code_edit",
       "contract_id": "U71",
       "reviewed_source_git_blob": "892bef9a655028c6c8215cd1fc8f2e9ed3f698ac",
       "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
       "evidence": "Source inspected: Calcul d’arêtes d’entrée sans allocation ; intégré uniquement aux échantillons DualSense détaillés. Aucun log synchrone systématique. Reopen if: Perte d’un événement PlayStation sur un échantillon reproductible."
+    },
+    {
+      "path": "headless/pad.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U03",
+      "source_review_document": "docs/EDEN_HEADLESS_RUNTIME_OPTIMIZATION_REVIEW_2026-10-21.md",
+      "evidence": "Source-read optimization triage, no additional hotpath edit justified: Controller input and rumble path has release/acquire pending hint before mutex; no hotpath locking on silent polls, preserve paired publication."
     },
     {
       "path": "headless/performance.cpp",
@@ -689,20 +689,20 @@
       "evidence": "Source inspected: Registre de première utilisation pipeline limité à 65 536 entrées, mutex uniquement lorsque la trace DEV est active ; protège l’ancien unordered_set concurrent. Reopen if: Coût mesuré de trace-pipeline activée ou accès hors trace."
     },
     {
-      "path": "headless/preferences.h",
-      "disposition": "reviewed_without_new_code_edit",
-      "contract_id": "U73",
-      "reviewed_source_git_blob": "c23ba14a4ee176fb98183958deb892d9139d8f1e",
-      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
-      "evidence": "Source inspected: Header de compatibilité déléguant le stockage JSON à settings_store.h ; aucune lecture ou écriture active ici. Reopen if: Régression du composant settings_store lui-même."
-    },
-    {
       "path": "headless/preferences_check.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "review_scope": "host-only-test",
       "reviewed_source_git_blob": "3e48c14325e018e6ca9d0e6235dbcf5308ea7b9a",
       "source_review_document": "docs/EDEN_NATIVE_NON_HOT_OPTIMIZATION_REVIEW_2026-10-21.md",
       "evidence": "Exact Git blob source inspected; Exécutable eden-settings-check distinct ; assertions JSON et migration de profils, pas d'itération par frame. Rouvrir uniquement sur changement de blob, problème reproductible ou usage hotpath constaté."
+    },
+    {
+      "path": "headless/preferences.h",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "U73",
+      "reviewed_source_git_blob": "c23ba14a4ee176fb98183958deb892d9139d8f1e",
+      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "Source inspected: Header de compatibilité déléguant le stockage JSON à settings_store.h ; aucune lecture ou écriture active ici. Reopen if: Régression du composant settings_store lui-même."
     },
     {
       "path": "headless/present_interval_witness.h",
@@ -737,6 +737,14 @@
       "evidence": "Embedded French catalog data, not a per-frame algorithm. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
     },
     {
+      "path": "headless/prosperoeden/frontend_stub.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "386e9893835d915935d87e7b61e0c6d95f278ab6",
+      "review_scope": "startup-shim",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Headless alternative frontend stub; not the shipping graphical path. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
       "path": "headless/prosperoeden/frontend.cpp",
       "disposition": "reviewed_without_new_code_edit",
       "reviewed_source_git_blob": "6b0e980fb727b9dce86824994004e49964a41fe4",
@@ -751,14 +759,6 @@
       "review_scope": "launcher-release-support",
       "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
       "evidence": "SelectProsperoEdenGame launcher interface only. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
-    },
-    {
-      "path": "headless/prosperoeden/frontend_stub.cpp",
-      "disposition": "reviewed_without_new_code_edit",
-      "reviewed_source_git_blob": "386e9893835d915935d87e7b61e0c6d95f278ab6",
-      "review_scope": "startup-shim",
-      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
-      "evidence": "Headless alternative frontend stub; not the shipping graphical path. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
     },
     {
       "path": "headless/prosperoeden/host/fake_services.cpp",
@@ -913,6 +913,14 @@
       "evidence": "DrawList reusable vectors and clip/transform stack declarations. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
     },
     {
+      "path": "headless/prosperoeden/pe/gfx/font_format.hpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "reviewed_source_git_blob": "cc807dc31fbf062682a9ebc39a3355c6b70e0bf2",
+      "review_scope": "launcher-release-support",
+      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
+      "evidence": "Packed immutable font/glyph format definitions. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
+    },
+    {
       "path": "headless/prosperoeden/pe/gfx/font.cpp",
       "disposition": "new_source_issue_corrected",
       "reviewed_source_git_blob": "1d7c2e186ac4cd4451ce0e9c347d41fb3fd7ec2d",
@@ -927,14 +935,6 @@
       "review_scope": "launcher-release-support",
       "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
       "evidence": "Font atlas/dynamic layout declarations and shaping cache ownership. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
-    },
-    {
-      "path": "headless/prosperoeden/pe/gfx/font_format.hpp",
-      "disposition": "reviewed_without_new_code_edit",
-      "reviewed_source_git_blob": "cc807dc31fbf062682a9ebc39a3355c6b70e0bf2",
-      "review_scope": "launcher-release-support",
-      "source_review_document": "docs/EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md",
-      "evidence": "Packed immutable font/glyph format definitions. Reviewed for shipping-path optimization relevance; no additional source edit justified by presently verified evidence."
     },
     {
       "path": "headless/prosperoeden/pe/gfx/gl_batch.cpp",
@@ -1484,6 +1484,18 @@
       "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract F31. No new FPS or native progress claim."
     },
     {
+      "path": "vendor/encore-active/eden-backports/src/common/settings_enums.h",
+      "disposition": "shipping_backport_integrated_previously",
+      "contract_id": "F34",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-active-source-inventory.py",
+      "shipping_relpath": "src/common/settings_enums.h",
+      "shipping_active_sha256": "d617d9bd8882d6803fe885dd15302675b211a2e71e6c6faac18e549224aa1689",
+      "shipping_upstream_sha256": "f2a3ae93b4257611958fab5a0c652f89c8158d2e16da31fb196a27960cf467ba",
+      "shipping_bytes": 9670,
+      "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract F34. No new FPS or native progress claim."
+    },
+    {
       "path": "vendor/encore-active/eden-backports/src/common/settings.cpp",
       "disposition": "shipping_backport_integrated_previously",
       "contract_id": "F32",
@@ -1506,18 +1518,6 @@
       "shipping_upstream_sha256": "c0d18cd299a6b1c4c5f696a663383dc3aeb3d02501d9455a349385def3aa9a31",
       "shipping_bytes": 52331,
       "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract F33. No new FPS or native progress claim."
-    },
-    {
-      "path": "vendor/encore-active/eden-backports/src/common/settings_enums.h",
-      "disposition": "shipping_backport_integrated_previously",
-      "contract_id": "F34",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-active-source-inventory.py",
-      "shipping_relpath": "src/common/settings_enums.h",
-      "shipping_active_sha256": "d617d9bd8882d6803fe885dd15302675b211a2e71e6c6faac18e549224aa1689",
-      "shipping_upstream_sha256": "f2a3ae93b4257611958fab5a0c652f89c8158d2e16da31fb196a27960cf467ba",
-      "shipping_bytes": 9670,
-      "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract F34. No new FPS or native progress claim."
     },
     {
       "path": "vendor/encore-active/eden-backports/src/core/device_memory_manager.h",
@@ -1616,18 +1616,6 @@
       "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract H38. No new FPS or native progress claim."
     },
     {
-      "path": "vendor/encore-active/eden-backports/src/core/hle/kernel/svc/svc_info.cpp",
-      "disposition": "shipping_backport_integrated_previously",
-      "contract_id": "H43",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-active-source-inventory.py",
-      "shipping_relpath": "src/core/hle/kernel/svc/svc_info.cpp",
-      "shipping_active_sha256": "b118f5e32d2dd711e9815bc85c94e0d10f7d0351a678c772b6d3535de3b4a317",
-      "shipping_upstream_sha256": "76b12e3a425e6f60d4982348ea8bbe17e109b3d06341362191b1545cb6ae112c",
-      "shipping_bytes": 13479,
-      "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract H43. No new FPS or native progress claim."
-    },
-    {
       "path": "vendor/encore-active/eden-backports/src/core/hle/kernel/svc_types.h",
       "disposition": "shipping_backport_integrated_previously",
       "contract_id": "H44",
@@ -1638,6 +1626,18 @@
       "shipping_upstream_sha256": "5619f8fd62f292084432263d56456e7b656b626dad7781a76ba9ccb2f70a1acb",
       "shipping_bytes": 14184,
       "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract H44. No new FPS or native progress claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-backports/src/core/hle/kernel/svc/svc_info.cpp",
+      "disposition": "shipping_backport_integrated_previously",
+      "contract_id": "H43",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-active-source-inventory.py",
+      "shipping_relpath": "src/core/hle/kernel/svc/svc_info.cpp",
+      "shipping_active_sha256": "b118f5e32d2dd711e9815bc85c94e0d10f7d0351a678c772b6d3535de3b4a317",
+      "shipping_upstream_sha256": "76b12e3a425e6f60d4982348ea8bbe17e109b3d06341362191b1545cb6ae112c",
+      "shipping_bytes": 13479,
+      "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract H43. No new FPS or native progress claim."
     },
     {
       "path": "vendor/encore-active/eden-backports/src/core/hle/service/acc/acc.cpp",
@@ -2248,18 +2248,6 @@
       "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract H40. No new FPS or native progress claim."
     },
     {
-      "path": "vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h",
-      "disposition": "shipping_backport_integrated_previously",
-      "contract_id": "V51",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-active-source-inventory.py",
-      "shipping_relpath": "src/video_core/buffer_cache/buffer_cache.h",
-      "shipping_active_sha256": "bcdd02829670620acc2338416726a23347c48fc95073b310d873808ba402e9fa",
-      "shipping_upstream_sha256": "9fc3189be03fb5b13ec1b6accc1a5620a2d42c725282ee0e1598e8a828e8b861",
-      "shipping_bytes": 86702,
-      "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract V51. No new FPS or native progress claim. 2026-10-24 F01 clean-upload short-circuit added; source digest refreshed, no FPS or F01 completion claim."
-    },
-    {
       "path": "vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache_base.h",
       "disposition": "shipping_backport_integrated_previously",
       "contract_id": "V53",
@@ -2270,6 +2258,18 @@
       "shipping_upstream_sha256": "19a863252d04f9541849884db9dcf51f153316e8f5736225b0d449d1a5e9052b",
       "shipping_bytes": 18954,
       "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract V53. No new FPS or native progress claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-backports/src/video_core/buffer_cache/buffer_cache.h",
+      "disposition": "shipping_backport_integrated_previously",
+      "contract_id": "V51",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-active-source-inventory.py",
+      "shipping_relpath": "src/video_core/buffer_cache/buffer_cache.h",
+      "shipping_active_sha256": "bcdd02829670620acc2338416726a23347c48fc95073b310d873808ba402e9fa",
+      "shipping_upstream_sha256": "9fc3189be03fb5b13ec1b6accc1a5620a2d42c725282ee0e1598e8a828e8b861",
+      "shipping_bytes": 86702,
+      "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract V51. No new FPS or native progress claim. 2026-10-24 F01 clean-upload short-circuit added; source digest refreshed, no FPS or F01 completion claim."
     },
     {
       "path": "vendor/encore-active/eden-backports/src/video_core/control/channel_state_cache.h",
@@ -2376,18 +2376,6 @@
       "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract V62. No new FPS or native progress claim."
     },
     {
-      "path": "vendor/encore-active/eden-backports/src/video_core/texture_cache/texture_cache.h",
-      "disposition": "shipping_backport_integrated_previously",
-      "contract_id": "V52",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-active-source-inventory.py",
-      "shipping_relpath": "src/video_core/texture_cache/texture_cache.h",
-      "shipping_active_sha256": "6519168f033aba8dfbc9fa7d6e9fae0c4f488761e3373aeb2d4ee71653ca5567",
-      "shipping_upstream_sha256": "59f06d6839d09c96e9d7541a727a87fee680b7e7bebe763e82fec523a5caf498",
-      "shipping_bytes": 120047,
-      "evidence": "Shipping texture cache maintained for F01 generation-aware feedback decision: avoid view-key scan when RT/descriptor serial already invalidates it, preserve exact barrier logic. Versioned source SHA/size match the backport manifest and source replay is CI-gated. FC27 performance on console not yet proven. F04 guarded PS5 BaseLayer * layer_stride as u64 and rejected absent image subresource; shipping/native versioned parity, exact host replay and C++ fixture, not console-qualified. F03/F04 detects cached views bound to ImageFlagBits::Remapped images, recreates on resident backing and publishes NULL with invalidation serial when absent; source-extracted host regression and strict replay included, console behavior unmeasured. F03/F04 now selectively marks remapped color/depth framebuffer attachments dirty before the next UpdateRenderTargets, with C++ host source-extracted coverage and exact replay; native build and FC27 unverified. F03/F04 removes end()-iterator dereference in PS5 shipping image_view_ids lookup; validates both native and shipping C++ methods, ordered patch replay, with no PS5-run claim."
-    },
-    {
       "path": "vendor/encore-active/eden-backports/src/video_core/texture_cache/texture_cache_base.h",
       "disposition": "shipping_backport_integrated_previously",
       "contract_id": "V54",
@@ -2398,6 +2386,18 @@
       "shipping_upstream_sha256": "36a3fd563bd620d51bfbfb0ae2d5381d77eb19c9c18d16cbe0c169c37eaecc5b",
       "shipping_bytes": 21882,
       "evidence": "Existing modified and installed shipping backport; pinned source/active SHA256 and bytes in vendor/encore-active/eden-backports/manifest.json; exact contract V54. No new FPS or native progress claim. 2026-10-24 native-only page-range guards for zero/overflow CPU/GPU image scans, with exact patched-source replay and host test; not a closed F03/F04 gate. Second repair: invoke_result_t bool callbacks now stop image page traversal on PS5; pinned page range patch and host regression updated."
+    },
+    {
+      "path": "vendor/encore-active/eden-backports/src/video_core/texture_cache/texture_cache.h",
+      "disposition": "shipping_backport_integrated_previously",
+      "contract_id": "V52",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-active-source-inventory.py",
+      "shipping_relpath": "src/video_core/texture_cache/texture_cache.h",
+      "shipping_active_sha256": "6519168f033aba8dfbc9fa7d6e9fae0c4f488761e3373aeb2d4ee71653ca5567",
+      "shipping_upstream_sha256": "59f06d6839d09c96e9d7541a727a87fee680b7e7bebe763e82fec523a5caf498",
+      "shipping_bytes": 120047,
+      "evidence": "Shipping texture cache maintained for F01 generation-aware feedback decision: avoid view-key scan when RT/descriptor serial already invalidates it, preserve exact barrier logic. Versioned source SHA/size match the backport manifest and source replay is CI-gated. FC27 performance on console not yet proven. F04 guarded PS5 BaseLayer * layer_stride as u64 and rejected absent image subresource; shipping/native versioned parity, exact host replay and C++ fixture, not console-qualified. F03/F04 detects cached views bound to ImageFlagBits::Remapped images, recreates on resident backing and publishes NULL with invalidation serial when absent; source-extracted host regression and strict replay included, console behavior unmeasured. F03/F04 now selectively marks remapped color/depth framebuffer attachments dirty before the next UpdateRenderTargets, with C++ host source-extracted coverage and exact replay; native build and FC27 unverified. F03/F04 removes end()-iterator dereference in PS5 shipping image_view_ids lookup; validates both native and shipping C++ methods, ordered patch replay, with no PS5-run claim."
     },
     {
       "path": "vendor/encore-active/eden-backports/src/video_core/texture_cache/util.cpp",
@@ -2507,15 +2507,6 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract J43: Complete shared-JIT callback matches former M03 generated unit byte-for-byte, is selected by COPYONLY; experimental OFF and console not qualified. CI witness retained. No FPS claim."
     },
     {
-      "path": "vendor/encore-active/eden-core/dynarmic/shared-jit/jit_group.h",
-      "disposition": "historical_maintained_unit_parity",
-      "contract_id": "J21",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-vendor-consolidation-debt.py",
-      "profile_visibility": "optional_or_staged",
-      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J21: Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved. CI witness retained. No FPS claim."
-    },
-    {
       "path": "vendor/encore-active/eden-core/dynarmic/shared-jit/jit_group_support.inc",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "J22",
@@ -2523,6 +2514,15 @@
       "proof_ref": "tools/check-vendor-consolidation-debt.py",
       "profile_visibility": "optional_or_staged",
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract J22: Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/dynarmic/shared-jit/jit_group.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "J21",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract J21: Same blob moved from headless to Encore; shared JIT remains experimental OFF and native behavior unproved. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/dynarmic/shared-jit/jit_impl.inc",
@@ -3019,6 +3019,13 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
+      "path": "vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc_standard.cpp",
+      "disposition": "code_changed_in_batch",
+      "contract_id": "U80",
+      "proof_ref": "tools/verify/hle/check-native-hle-ipc-receive-index-host.py",
+      "evidence": "The shipping ReplyAndReceiveImpl dereferenced objs[index] after a successful KSynchronizationObject::Wait without checking index range or null entry. A malformed or raced native wake could therefore access invalid memory and crash. Added a production-only fail-closed index/object guard returning ResultOutOfRange with out_index=-1; valid IPC, timeout and ResultNotFound retry semantics unchanged. Maintained exact pinned+three deltas oracle, extended C++20 ASan/UBSan receive harness for negative, past-end and null slots, added both IPC oracles to fast gate. No PS5 runtime validation or FPS claim."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc.cpp",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "H21",
@@ -3026,13 +3033,6 @@
       "proof_ref": "tools/check-vendor-consolidation-debt.py",
       "profile_visibility": "optional_or_staged",
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract H21: DEV sync IPC request/thread attribution now maintained, with exact former CMake code parity; the guest's resumed JIT PC after request completion remains unproved. CI witness retained. No FPS claim."
-    },
-    {
-      "path": "vendor/encore-active/eden-core/src/core/hle/kernel/svc/svc_ipc_standard.cpp",
-      "disposition": "code_changed_in_batch",
-      "contract_id": "U80",
-      "proof_ref": "tools/verify/hle/check-native-hle-ipc-receive-index-host.py",
-      "evidence": "The shipping ReplyAndReceiveImpl dereferenced objs[index] after a successful KSynchronizationObject::Wait without checking index range or null entry. A malformed or raced native wake could therefore access invalid memory and crash. Added a production-only fail-closed index/object guard returning ResultOutOfRange with out_index=-1; valid IPC, timeout and ResultNotFound retry semantics unchanged. Maintained exact pinned+three deltas oracle, extended C++20 ASan/UBSan receive harness for negative, past-end and null slots, added both IPC oracles to fast gate. No PS5 runtime validation or FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/core/hle/service/am/service/application_functions.cpp",
@@ -3134,24 +3134,6 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract N03: DEV dequeue timing now comes from maintained TU with pinned generated-source parity gate; hardware slot wake/back-pressure and visible guest progress still unproved. CI witness retained. No FPS claim."
     },
     {
-      "path": "vendor/encore-active/eden-core/src/core/hle/service/server_manager.cpp",
-      "disposition": "historical_maintained_unit_parity",
-      "contract_id": "H56",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-maintained-server-manager.py",
-      "profile_visibility": "profile_dependent_or_selected",
-      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H56: Normal server stop/destruction unit directly compiled, parity checked; service wake still needs console testing. CI witness retained. No FPS claim."
-    },
-    {
-      "path": "vendor/encore-active/eden-core/src/core/hle/service/server_manager.h",
-      "disposition": "historical_maintained_unit_parity",
-      "contract_id": "H54",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-maintained-server-manager.py",
-      "profile_visibility": "profile_dependent_or_selected",
-      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H54: Normal service header selected by copy only; RequestStop declaration parity checked, native shutdown unqualified. CI witness retained. No FPS claim."
-    },
-    {
       "path": "vendor/encore-active/eden-core/src/core/hle/service/server_manager_dev.cpp",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "H57",
@@ -3168,6 +3150,24 @@
       "proof_ref": "tools/check-maintained-server-manager.py",
       "profile_visibility": "optional_or_staged",
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract H55: DEV service header preserves diagnostic state and matches previous generator exactly. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/server_manager.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "H56",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-server-manager.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H56: Normal server stop/destruction unit directly compiled, parity checked; service wake still needs console testing. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/hle/service/server_manager.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "H54",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-server-manager.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract H54: Normal service header selected by copy only; RequestStop declaration parity checked, native shutdown unqualified. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/core/hle/service/service.cpp",
@@ -3214,6 +3214,14 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract F36: Native VSync composition delay and published game FPS from former generator, exact source-parity test; console behavior unproved. CI witness retained. No FPS claim."
     },
     {
+      "path": "vendor/encore-active/eden-core/src/core/internal_network/network_interface.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "F10",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previous audit host contract F10: Three FreeBSD conditional substitutions are in maintained native C++ with an old-generator parity and core selection PASS in preflight #39058024476; native interface snapshot unqualified"
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/core/internal_network/network.cpp",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "N19",
@@ -3221,14 +3229,6 @@
       "proof_ref": "tools/check-vendor-consolidation-debt.py",
       "profile_visibility": "profile_dependent_or_selected",
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract N19: Native socketpair prime and nonblocking interrupt wakeups now maintained as a complete source; exact generator replay, no console behavior proof. CI witness retained. No FPS claim."
-    },
-    {
-      "path": "vendor/encore-active/eden-core/src/core/internal_network/network_interface.cpp",
-      "disposition": "historical_host_contract_reviewed",
-      "contract_id": "F10",
-      "prior_status": "HOST",
-      "proof_ref": "tools/check-vendor-consolidation-debt.py",
-      "evidence": "Previous audit host contract F10: Three FreeBSD conditional substitutions are in maintained native C++ with an old-generator parity and core selection PASS in preflight #39058024476; native interface snapshot unqualified"
     },
     {
       "path": "vendor/encore-active/eden-core/src/core/loader/deconstructed_rom_directory.cpp",
@@ -3266,14 +3266,6 @@
       "evidence": "New format-loader code path inspected and pinned: Pinned NSP reader with exact .ncz member detection; CMake selected. This is source integration, NOT a claimed F01-F06 optimization or console runtime proof."
     },
     {
-      "path": "vendor/encore-active/eden-core/src/core/memory.cpp",
-      "disposition": "previously_integrated_source_change",
-      "contract_id": "M11",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-vendor-consolidation-debt.py",
-      "evidence": "Previously maintained/ported source M11: Maintained A32-only fastmem gate matches installed shipping backport plus one guarded replacement; actual guest execution and alias coherence require console proof"
-    },
-    {
       "path": "vendor/encore-active/eden-core/src/core/memory_native_a32.cpp",
       "disposition": "preexisting_generated_or_inactive_unit",
       "contract_id": "V98",
@@ -3290,6 +3282,14 @@
       "proof_ref": "tools/check-deferred-native-bridge-contract.py",
       "profile_visibility": "maintained_standard_memory",
       "evidence": "Existing source owner audited for optimization relevance: maintained_standard_memory; contract V97 G13/X05 standard memory selected as complete native source; historical parity host only, console unqualified. This is not a new runtime performance improvement."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/core/memory.cpp",
+      "disposition": "previously_integrated_source_change",
+      "contract_id": "M11",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-vendor-consolidation-debt.py",
+      "evidence": "Previously maintained/ported source M11: Maintained A32-only fastmem gate matches installed shipping backport plus one guarded replacement; actual guest execution and alias coherence require console proof"
     },
     {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/block_range_information.cpp",
@@ -3310,20 +3310,20 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract J41: Full maintained header shadows upstream layout via unchanged copied include and retains 4-KiB tracking; console unqualified. CI witness retained. No FPS claim."
     },
     {
-      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_emit_x64.cpp",
-      "disposition": "historical_host_contract_reviewed",
-      "contract_id": "B12",
-      "prior_status": "HOST",
-      "proof_ref": "tools/check-maintained-emitters.py",
-      "evidence": "Previous audit host contract B12: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-emitters.py ; exécution native PS5, FPS et comportement invité non qualifiés"
-    },
-    {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_emit_x64_memory.cpp",
       "disposition": "historical_host_contract_reviewed",
       "contract_id": "B19",
       "prior_status": "HOST",
       "proof_ref": "tools/check-maintained-memory-units.py",
       "evidence": "Previous audit host contract B19: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-memory-units.py ; exécution native PS5, FPS et comportement invité non qualifiés"
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_emit_x64.cpp",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B12",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-emitters.py",
+      "evidence": "Previous audit host contract B12: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-emitters.py ; exécution native PS5, FPS et comportement invité non qualifiés"
     },
     {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/a32_interface_native.cpp",
@@ -3390,14 +3390,6 @@
       "evidence": "22 October F02 fix: drain compiled-block invalidations outside request mutex. Source-extracted A32/A64 reentrant replay proves new invalidations survive an in-flight drain. Historical no-change audit superseded; no FPS claim."
     },
     {
-      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code.h",
-      "disposition": "historical_host_contract_reviewed",
-      "contract_id": "B10",
-      "prior_status": "HOST",
-      "proof_ref": "tools/check-maintained-block-of-code.py",
-      "evidence": "Previous audit host contract B10: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-block-of-code.py ; exécution native PS5, FPS et comportement invité non qualifiés"
-    },
-    {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code_host.cpp",
       "disposition": "historical_host_contract_reviewed",
       "contract_id": "B09",
@@ -3411,6 +3403,14 @@
       "contract_id": "J09",
       "proof_ref": "tools/check-native-jit-code-space-bounds-host.py",
       "evidence": "Native JIT code allocation checked size_+alloc_size against maxSize_ before advancing the cursor or clearing new bytes. Unsigned overflow could bypass that capacity bound, leading to writes outside mapped JIT memory. Now rejects size_>=maxSize_ and alloc_size >= maxSize_-size_ before any arithmetic, preserving exact-fit rejection and successful valid zeroing/commit. C++20 ASan/UBSan test extracts actual allocator method and checks wrap, exact bound, zeroing and no side effects after rejected allocations. W^X/patch ordering unchanged. 26 October F07 single-profile follow-up: reviewed native sparse RX/RW allocation, 2MiB demand commits, quiesced full-clear physical trim, lifetime generation invalidation, firmware probe/fail-closed path and release-only source selection. New source-extracted O0/O2 and full native build gates required. Dynamic GPU/CPU arbitration and console FPS not yet proven."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/block_of_code.h",
+      "disposition": "historical_host_contract_reviewed",
+      "contract_id": "B10",
+      "prior_status": "HOST",
+      "proof_ref": "tools/check-maintained-block-of-code.py",
+      "evidence": "Previous audit host contract B10: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-block-of-code.py ; exécution native PS5, FPS et comportement invité non qualifiés"
     },
     {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/constant_pool.cpp",
@@ -3439,15 +3439,6 @@
       "evidence": "Previous audit host contract B17: Hôte: parité complète des sources, empreintes/sélection CMake et/ou syntaxe compilateur couvertes par check-maintained-common-emit-x64.py ; exécution native PS5, FPS et comportement invité non qualifiés"
     },
     {
-      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_memory.h",
-      "disposition": "historical_maintained_unit_parity",
-      "contract_id": "B21",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-maintained-memory-g06-g07.py",
-      "profile_visibility": "profile_dependent_or_selected",
-      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B21: Complete page-table decoder and checked helpers; native runtime unqualified. CI witness retained. No FPS claim."
-    },
-    {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_memory_checked.cpp.inc",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "B23",
@@ -3464,6 +3455,15 @@
       "proof_ref": "tools/check-maintained-memory-g06-g07.py",
       "profile_visibility": "profile_dependent_or_selected",
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract B22: Standard scalar/exclusive body and shared layout guards, native runtime unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_memory.h",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "B21",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-memory-g06-g07.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract B21: Complete page-table decoder and checked helpers; native runtime unqualified. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/dynarmic/backend/x64/emit_x64_native.cpp",
@@ -3553,6 +3553,14 @@
       "evidence": "NPad HID service had an explicit 1ms/1000Hz overclock of its documented 4ms baseline. Changed the sole NPad timer to 4ms/250Hz (reducing scheduled callbacks x4) to favor CPU scheduler fairness; event lifetime and other HID periods unchanged. Checked source parity to pinned+two exact deltas, and host sanitizer period witness. Potential additional input sample latency up to 3ms; no measured FPS/PS5 validation."
     },
     {
+      "path": "vendor/encore-active/eden-core/src/hid_core/resources/npad/npad_pause_diag.cpp",
+      "disposition": "reviewed_without_new_code_edit",
+      "contract_id": "H52",
+      "reviewed_source_git_blob": "ea1cee774ef6299aa52dda918cc609ddbf169bbf",
+      "source_review_document": "docs/EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md",
+      "evidence": "Implémentation NPad de diagnostic choisie seulement sous PS5_NATIVE + EDEN_DEV_PROFILE ; les trois compteurs atomiques et impressions de progression sont DEV, pas la voie de livraison. Conserver l'observabilité sans alourdir le chemin normal. Ouvrir de nouveau si blob modifié ou cas reproductible."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/hid_core/resources/npad/npad.cpp",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "H48",
@@ -3560,14 +3568,6 @@
       "proof_ref": "tools/check-vendor-consolidation-debt.py",
       "profile_visibility": "profile_dependent_or_selected",
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract H48: Maintained shipping NPad plus exact two former CMake null guards; parity and native hid_core selection checked, console behavior unproved. CI witness retained. No FPS claim."
-    },
-    {
-      "path": "vendor/encore-active/eden-core/src/hid_core/resources/npad/npad_pause_diag.cpp",
-      "disposition": "reviewed_without_new_code_edit",
-      "contract_id": "H52",
-      "reviewed_source_git_blob": "ea1cee774ef6299aa52dda918cc609ddbf169bbf",
-      "source_review_document": "docs/EDEN_NATIVE_REMAINING_ENGINE_REVIEW_2026-10-21.md",
-      "evidence": "Implémentation NPad de diagnostic choisie seulement sous PS5_NATIVE + EDEN_DEV_PROFILE ; les trois compteurs atomiques et impressions de progression sont DEV, pas la voie de livraison. Conserver l'observabilité sans alourdir le chemin normal. Ouvrir de nouveau si blob modifié ou cas reproductible."
     },
     {
       "path": "vendor/encore-active/eden-core/src/shader_recompiler/frontend/maxwell/translate/impl/not_implemented.cpp",
@@ -3584,15 +3584,6 @@
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
     },
     {
-      "path": "vendor/encore-active/eden-core/src/video_core/dma_pusher.cpp",
-      "disposition": "historical_maintained_unit_parity",
-      "contract_id": "V85",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-maintained-guest-gpu-sync.py",
-      "profile_visibility": "profile_dependent_or_selected",
-      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V85: G20 normal: bounded DMA fence and shutdown, source parity only; console unqualified. CI witness retained. No FPS claim."
-    },
-    {
       "path": "vendor/encore-active/eden-core/src/video_core/dma_pusher_dev.cpp",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "V86",
@@ -3600,6 +3591,15 @@
       "proof_ref": "tools/check-maintained-guest-gpu-sync.py",
       "profile_visibility": "profile_dependent_or_selected",
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract V86: G20 DEV: conditional DMA fence timer, preserved diagnostics, console unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/dma_pusher.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V85",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-guest-gpu-sync.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V85: G20 normal: bounded DMA fence and shutdown, source parity only; console unqualified. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/video_core/engines/draw_manager.cpp",
@@ -3642,15 +3642,6 @@
       "evidence": "Maxwell DMA pitch-to-pitch row copy used CopyBlock and flush for every row. New constexpr eligibility folds only positive contiguous equal pitches with non-overlapping src/dst, valid 64-bit end addresses and <=u32 max transfer into one memory manager CopyBlock. Other rows retain prior path. Pinned+audited extent source parity and C++20 ASan/UBSan source-extracted oracle. Console performance and title behavior not qualified."
     },
     {
-      "path": "vendor/encore-active/eden-core/src/video_core/engines/puller.cpp",
-      "disposition": "historical_maintained_unit_parity",
-      "contract_id": "V87",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-maintained-guest-gpu-sync.py",
-      "profile_visibility": "profile_dependent_or_selected",
-      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V87: G20 normal: guest semaphore shutdown-aware loop; console unqualified. CI witness retained. No FPS claim."
-    },
-    {
       "path": "vendor/encore-active/eden-core/src/video_core/engines/puller_dev.cpp",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "V88",
@@ -3660,21 +3651,21 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract V88: G20 DEV: conditional semaphore timer with stop guard; console unqualified. CI witness retained. No FPS claim."
     },
     {
+      "path": "vendor/encore-active/eden-core/src/video_core/engines/puller.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V87",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-guest-gpu-sync.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V87: G20 normal: guest semaphore shutdown-aware loop; console unqualified. CI witness retained. No FPS claim."
+    },
+    {
       "path": "vendor/encore-active/eden-core/src/video_core/engines/sw_blitter/blitter.cpp",
       "disposition": "previously_integrated_source_change",
       "contract_id": "V79",
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-maintained-sw-blitter.py",
       "evidence": "Previously maintained/ported source V79: Complete blitter preserves production backport pixel indexing and three former widening edits; native console unqualified"
-    },
-    {
-      "path": "vendor/encore-active/eden-core/src/video_core/gpu_gl_host.cpp",
-      "disposition": "historical_maintained_unit_parity",
-      "contract_id": "V100",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-g21-gpu-profile-matrix-host.py",
-      "profile_visibility": "optional_or_staged",
-      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V100: Host GL generated profile staged as full owned Encore source; historical CMake parity, not selected in build or qualified on console. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/video_core/gpu_gl_host_dev.cpp",
@@ -3686,13 +3677,13 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract V101: Host GL DEV diagnostics candidate, source parity only; not selected nor console qualified. CI witness retained. No FPS claim."
     },
     {
-      "path": "vendor/encore-active/eden-core/src/video_core/gpu_gl_native.cpp",
+      "path": "vendor/encore-active/eden-core/src/video_core/gpu_gl_host.cpp",
       "disposition": "historical_maintained_unit_parity",
-      "contract_id": "V102",
+      "contract_id": "V100",
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-g21-gpu-profile-matrix-host.py",
       "profile_visibility": "optional_or_staged",
-      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V102: Native GL GPU cancellation/fatal-wait candidate, staged only until G21 source selector cutover; not console qualified. CI witness retained. No FPS claim."
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V100: Host GL generated profile staged as full owned Encore source; historical CMake parity, not selected in build or qualified on console. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/video_core/gpu_gl_native_dev.cpp",
@@ -3702,6 +3693,15 @@
       "proof_ref": "tools/check-g21-gpu-profile-matrix-host.py",
       "profile_visibility": "optional_or_staged",
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract V103: Native GL DEV diagnostics candidate, staged historical parity; not selected nor console qualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/gpu_gl_native.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V102",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-g21-gpu-profile-matrix-host.py",
+      "profile_visibility": "optional_or_staged",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V102: Native GL GPU cancellation/fatal-wait candidate, staged only until G21 source selector cutover; not console qualified. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/video_core/gpu_vulkan.cpp",
@@ -3760,15 +3760,6 @@
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract V15: Former query slicing bypass maintained and source-selected only with native OpenGL; no console proof. CI witness retained. No FPS claim."
     },
     {
-      "path": "vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_rasterizer.cpp",
-      "disposition": "historical_maintained_unit_parity",
-      "contract_id": "V83",
-      "prior_status": "SOURCE",
-      "proof_ref": "tools/check-maintained-opengl-rasterizer.py",
-      "profile_visibility": "profile_dependent_or_selected",
-      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V83: Normal guest-GL draw bounded logs, exact parity with old CMake source; native console unqualified. CI witness retained. No FPS claim."
-    },
-    {
       "path": "vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_rasterizer_dev.cpp",
       "disposition": "historical_maintained_unit_parity",
       "contract_id": "V84",
@@ -3776,6 +3767,15 @@
       "proof_ref": "tools/check-maintained-opengl-rasterizer.py",
       "profile_visibility": "profile_dependent_or_selected",
       "evidence": "Previously maintained complete source/profile or former generated source replay; contract V84: Exclusive DEV profile retains pass capture and rasterizer timer; native console unqualified. CI witness retained. No FPS claim."
+    },
+    {
+      "path": "vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_rasterizer.cpp",
+      "disposition": "historical_maintained_unit_parity",
+      "contract_id": "V83",
+      "prior_status": "SOURCE",
+      "proof_ref": "tools/check-maintained-opengl-rasterizer.py",
+      "profile_visibility": "profile_dependent_or_selected",
+      "evidence": "Previously maintained complete source/profile or former generated source replay; contract V83: Normal guest-GL draw bounded logs, exact parity with old CMake source; native console unqualified. CI witness retained. No FPS claim."
     },
     {
       "path": "vendor/encore-active/eden-core/src/video_core/renderer_opengl/gl_texture_cache.cpp",
@@ -4117,9 +4117,9 @@
       "evidence": "Read and triaged in docs/EDEN_P0_SOURCE_REVIEW_2026-10-20.md or docs/EDEN_P0_VULKAN_REVIEW_2026-10-20.md"
     },
     {
-      "path": "vendor/encore-active/eden-vulkan/include/video_core/vulkan_common/vulkan.h",
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/vulkan_common/vulkan_wrapper.h",
       "disposition": "historical_native_selected_unit",
-      "contract_id": "V43",
+      "contract_id": "V44",
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
@@ -4127,9 +4127,9 @@
       "contract_evidence": "headless/vulkan.cmake"
     },
     {
-      "path": "vendor/encore-active/eden-vulkan/include/video_core/vulkan_common/vulkan_wrapper.h",
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/vulkan_common/vulkan.h",
       "disposition": "historical_native_selected_unit",
-      "contract_id": "V44",
+      "contract_id": "V43",
       "prior_status": "SOURCE",
       "proof_ref": "tools/check-vendored-vulkan-fork.py",
       "source_selector": "vulkan",
@@ -4199,12 +4199,6 @@
       "path": "vendor/encore-active/eden-vulkan/vk_texture_cache_cost.cpp",
       "disposition": "code_changed_in_batch",
       "evidence": "Git comparison 82c531d08..05846723c: real C/C++ source/header delta; not necessarily a performance improvement"
-    },
-    {
-      "path": "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h",
-      "disposition": "new_source_issue_corrected",
-      "evidence": "F04 selected native Vulkan cache: rejected wrapped TIC layer offsets and absent remapped image subresources in CreateImageView; exact pinned generator/parity and CI-invoked native-source C++ host test. No FPS or native console validation claim. F03/F04 additional fix: remapped image-view IDs are never reused after GPU unmap; recovers null views when backing is resident, guarded by test/check-ps5-remapped-texture-view-host.py and generator parity, PS5 behavior not yet measured.",
-      "proof_ref": "tools/check-ps5-texture-tic-layer-host.py"
     },
     {
       "path": "vendor/encore-active/eden-vulkan/vulkan_blit_screen.cpp",
@@ -4318,6 +4312,12 @@
       "source_selector": "vulkan",
       "evidence": "Existing source selected in native profile by the checked-in vulkan owner with a CI-invoked source fingerprint/parity test. Prior integration, NOT newly measured FPS gain.",
       "contract_evidence": "headless/vulkan.cmake"
+    },
+    {
+      "path": "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h",
+      "disposition": "new_source_issue_corrected",
+      "evidence": "F04 selected native Vulkan cache: rejected wrapped TIC layer offsets and absent remapped image subresources in CreateImageView; exact pinned generator/parity and CI-invoked native-source C++ host test. No FPS or native console validation claim. F03/F04 additional fix: remapped image-view IDs are never reused after GPU unmap; recovers null views when backing is resident, guarded by test/check-ps5-remapped-texture-view-host.py and generator parity, PS5 behavior not yet measured.",
+      "proof_ref": "tools/check-ps5-texture-tic-layer-host.py"
     },
     {
       "path": "vendor/encore-active/ps5-mesa/src/amd/vulkan/meta/radv_meta_clear.c",
@@ -4441,7 +4441,7 @@
     "headless/frame_metrics.h",
     "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp",
     "vendor/encore-active/eden-core/src/video_core/host1x/syncpoint_manager.cpp",
-    "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_pipeline_cache.h",
-    "vendor/encore-active/eden-vulkan/vulkan_memory_allocator.cpp"
+    "vendor/encore-active/eden-vulkan/vulkan_memory_allocator.cpp",
+    "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_pipeline_cache.h"
   ]
 }

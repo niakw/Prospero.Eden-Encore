@@ -245,17 +245,17 @@ historiques ci-dessous recoupent le graphe : **ne pas les additionner**.
 
 | Périmètre | Points | Fichiers distincts | Mentions de fonctions / contrats |
 | --- | ---: | ---: | ---: |
-| Graphe connu | 492 | 469 | 992 |
+| Graphe connu | 493 | 470 | 994 |
 | HOST — preuve ciblée hôte | 62 | 57 | 127 |
-| SOURCE — lecture effectuée, preuve insuffisante | 407 | 397 | 826 |
+| SOURCE — lecture effectuée, preuve insuffisante | 408 | 398 | 828 |
 | OPEN — question technique non résolue | 15 | 15 | 28 |
 | PARKED — expérimentation suspendue | 8 | 8 | 11 |
-| **Encore à qualifier (SOURCE + OPEN)** | **422** | **411** | **854** |
-| Dont priorité P0 (SOURCE + OPEN) | 102 | 97 | 233 |
+| **Encore à qualifier (SOURCE + OPEN)** | **423** | **412** | **856** |
+| Dont priorité P0 (SOURCE + OPEN) | 103 | 98 | 235 |
 
-Le **noyau restant** compte donc 422 critères répartis sur
-411 fichiers et 854 mentions fonction/contrat :
-15 OPEN et 407 SOURCE.
+Le **noyau restant** compte donc 423 critères répartis sur
+412 fichiers et 856 mentions fonction/contrat :
+15 OPEN et 408 SOURCE.
 Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
