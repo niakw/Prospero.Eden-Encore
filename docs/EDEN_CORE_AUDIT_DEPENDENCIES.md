@@ -260,7 +260,7 @@ Cela **ne signifie pas que toutes ces fonctions sont jamais lues** :
 plusieurs sont déjà étudiées, mais nécessitent une preuve spécifique.
 L'inventaire exhaustif des sources Encore est suivi séparément dans
 [`EDEN_ACTIVE_SOURCE_CATALOG.md`](EDEN_ACTIVE_SOURCE_CATALOG.md) :
-329 fichiers de code/en-têtes présents et 329 avec un chemin de
+330 fichiers de code/en-têtes présents et 330 avec un chemin de
 graphe exact, sans aucun chemin source non rattaché dans ce périmètre.
 Cette couverture de chemins n'est **pas** une preuve fonctionnelle ni une
 certification de la sélection du code à l'exécution.
@@ -500,6 +500,7 @@ function/contract tokens are checked by CI for existence only; the
 | V05 | P0 | V01,V04 | vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp | RasterizerVulkan::PrepareDraw; RasterizerVulkan::OnCPUWrite; RasterizerVulkan::GetFlushArea | SOURCE | tools/check-ps5-vulkan-cache-phases.py | Identify mutex owner for rare 285-ms texture wait; no guessing | 🟡 Source étudiée |
 | V06 | P1 | V05 | vendor/sources/eden/src/video_core/texture_cache/texture_cache.h | TextureCache<P>::RunGarbageCollector; TextureCache<P>::TickFrame | SOURCE | tools/check-vulkan-gc-budget-host.py | Zero GC evictions near 3300-3600; deprioritized for that window | 🟡 Source étudiée |
 | V07 | P1 | V05 | vendor/encore-active/eden-vulkan/vk_pipeline_cache_cost.cpp | PipelineCache::CurrentGraphicsPipeline | SOURCE | tools/check-vulkan-shader-workers.py | Actual compiled native Vulkan pipeline cache, not pinned Eden source; correlate build latency only with isolated frame evidence | 🟡 Source étudiée |
+| V110 | P0 | V07 | vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_pipeline_cache.h | PipelineCache::GraphicsRetryState; PipelineCache::failed_graphics_retries | SOURCE | tools/check-ps5-f07-bounded-failed-shader-retry-host.py | Native-only bounded retry metadata for null first-use shader pipelines, derived from pinned header; host recovery tests only, no console validation | 🟡 Source étudiée |
 | V08 | P1 | V05 | vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp | RasterizerVulkan::TickFrame | SOURCE | tools/check-ps5-vulkan-cache-phases.py | Only time critical sections if evidence identifies new window | 🟡 Source étudiée |
 | J01 | P0 | B01 | headless/performance.cpp | eden_jit_compile; eden_jit_phases | SOURCE | tools/analyze-fc27-stutter.py | Per-core time/calls/evacuations are instrumented; standard A64 JIT does not call eden_jit_phases with default SHARED_JIT/COMPILE_BATCH OFF; EDEN_PERF_JITPATH likewise belongs to shared JIT. Their zero counters do not prove the native per-core JIT never recompiles/invalidates a location. The native evacuation counter only covers automatic full-cache evacuation. A new opt-in present-interval witness pairs existing counters between displayed frames, not with a guest stall owner. Need hardware confirmation before modifying JIT policies | 🟡 Source étudiée |
 | J02 | P1 | J01 | vendor/sources/eden/src/core/arm/dynarmic/arm_dynarmic_64.cpp | ArmDynarmic64::SignalInterrupt | SOURCE | docs/DEFERRED_JIT_QUIESCENCE_ARCHITECTURE_2026-10-17.md | Interrupt request alone is not JIT-exit acknowledgment | 🟡 Source étudiée |
