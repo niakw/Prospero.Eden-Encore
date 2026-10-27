@@ -481,3 +481,18 @@ d'appel et couvre PS5/desktop en `-O0` et `-O2`. Le buffer cache continue
 à exécuter `UnbindComputeTextureBuffers` et les autres opérations de
 configuration. **Ce raccourci évite un passage sous verrous, mais ne prouve
 pas de changement perceptible dans FC 27.**
+
+## F07 P0.3 — parcours des render targets propres limité aux images présentes
+
+Sur les draws où `Dirty::RenderTargets` est déjà faux, les IDs des huit
+attachements couleur et de la profondeur sont stables, et `rt_active_mask`
+représente leur présence. Le chemin PS5 parcourt uniquement les bits actifs
+avec `std::countr_zero`, préserve l'ordre des slots puis la profondeur, et
+appelle `PrepareImageView` pour chaque image réelle avec les mêmes paramètres.
+Les vues nulles n'appellent plus la préparation. La branche dirty,
+`RescaleRenderTargets`, le rendu desktop et la gestion des clears restent
+inchangés. Le témoin C++ extrait la condition et teste le cas vide, les
+attachments clairsemés, la profondeur, les clears, la répétition des draws
+et le passage par la branche dirty aux optimisations `-O0` et `-O2`.
+**Cette réduction de travail sous mutex ne démontre pas encore un gain FPS
+réel sur PS5.**
