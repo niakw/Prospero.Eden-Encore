@@ -35,6 +35,8 @@ assert "image.flags |= ImageFlagBits::CpuModified;" in guard
 assert body.index("runtime.InsertUploadMemoryBarrier();") < body.rindex("upload_completed = true;")
 assert "F07 restore failed texture upload dirty state" in gen
 assert "F07 completed texture upload marker" in gen
+assert "F07 defer CPU revision while decode is in flight" in gen
+assert body.index("if (True(image.flags & ImageFlagBits::IsDecoding))") < body.index("image.flags &= ~ImageFlagBits::CpuModified;")
 cpp = r"""
 #include <cassert>
 #include <cstdio>

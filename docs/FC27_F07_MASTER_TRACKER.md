@@ -256,3 +256,25 @@ obsolète, aucun octet n'est copié : l'image est requalifiée
 upload. Le témoin C++ reproduit exactement le `TickAsyncDecode`
 actif en `-O0` et `-O2`, avec mutex instrumenté et contrôle de taille.
 **Source et témoin intégrés, CI/native/console à qualifier.**
+
+## F07 P0.4 — écriture CPU pendant un décodage en cours (27 octobre)
+
+`RefreshContents` effaçait `CpuModified` puis pouvait placer un deuxième
+`QueueAsyncDecode` alors qu'un décodage plus ancien détenait `IsDecoding`.
+Une nouvelle révision HUD était ainsi susceptible d'être effacée ou
+supplantée par une image obsolète. Le chemin PS5 quitte maintenant
+`RefreshContents` **avant** d'effacer `CpuModified` si `IsDecoding`
+est déjà actif. Après achèvement de l'ancienne opération, la révision
+reste candidate au rafraîchissement normal. Le témoin F04 source-extrait
+couvre les écritures concurrentes, l'absence de deuxième admission et
+la reprise après achèvement. Tests CI / console encore à confirmer.
+
+### F07 P0.4 — rejet d'une révision décodée obsolète à taille inchangée
+
+Si le CPU modifie l'image pendant l'opération, le décodage antérieur est
+également rejeté dans `TickAsyncDecode` même si le nombre d'octets est
+identique. Cela empêche les anciennes données du HUD d'être publiées
+après une nouvelle écriture ; la révision CPU reste sale et sera reprise.
+Témoin source-extrait étendu avec texture de même taille, décodage
+terminé, écriture CPU concurrente et contrôle de l'absence d'upload.
+Qualification CI/native/console toujours requise.

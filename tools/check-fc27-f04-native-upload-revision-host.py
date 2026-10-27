@@ -65,7 +65,7 @@ using GPUVAddr = u64;
 using ImageId = std::size_t;
 enum class ImageFlagBits : unsigned {
     CpuModified=1,AsynchronousDecode=2,GpuModified=4,AcceleratedUpload=8,
-    Converted=16,Tracked=32
+    Converted=16,Tracked=32,IsDecoding=64
 };
 struct Flags {
     unsigned bits{};
@@ -284,6 +284,21 @@ int main(){
     cache.RefreshContents(image,0);
     assert(cache.async_decode==1 && image.uploads==4);
     assert(cache.runtime.barriers==4 && cache.runtime.allocations==4);
+    // An older async job owns this texture. A new guest CPU revision must
+    // stay dirty and must not queue a competing stale decode.
+    image.flags |= ImageFlagBits::IsDecoding;
+    Changed(image);
+    const unsigned queued_before=cache.async_decode;
+    const unsigned tracked_before=cache.tracked;
+    cache.RefreshContents(image,0);
+    assert(cache.async_decode==queued_before);
+    assert(cache.tracked==tracked_before);
+    assert(True(image.flags & ImageFlagBits::CpuModified));
+    // After that job completes, the pending revision can be admitted.
+    image.flags.bits&=~static_cast<unsigned>(ImageFlagBits::IsDecoding);
+    cache.RefreshContents(image,0);
+    assert(cache.async_decode==queued_before+1);
+    assert(False(image.flags & ImageFlagBits::CpuModified));
     image.flags.bits&=~static_cast<unsigned>(ImageFlagBits::AsynchronousDecode);
     // Unsupported MSAA uploads must transition without pretending pixels changed.
     image.info.num_samples=4;
