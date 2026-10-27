@@ -412,6 +412,7 @@ jobs:
           python3 -B tools/check-ps5-f07-bounded-prewarm-host.py
           python3 -B tools/check-ps5-f07-shader-cache-drain-host.py
           python3 -B tools/check-ps5-f07-bounded-failed-shader-retry-host.py
+          python3 -B tools/check-ps5-f07-bounded-failed-compute-retry-host.py
           python3 -B tools/check-ps5-f07-prewarm-pipeline-admission-host.py
           python3 -B tools/check-eden-optimization-coverage.py
           python3 -B tools/check-vendor-archive-pin-contract-host.py

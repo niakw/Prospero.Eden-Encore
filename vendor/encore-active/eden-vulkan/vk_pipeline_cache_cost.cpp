@@ -763,7 +763,31 @@ ComputePipeline* PipelineCache::CurrentComputePipeline() {
     auto& pipeline{pair->second};
     if (is_new) {
         pipeline = CreateComputePipeline(key, shader);
+#ifdef PS5_NATIVE
+        if (!pipeline && failed_compute_retries.size() < 32) {
+            // A transient guest shader translation failure must not permanently
+            // suppress a compute dispatch. Track failures only.
+            failed_compute_retries.try_emplace(
+                key, ComputeRetryState{
+                    std::chrono::steady_clock::now() + std::chrono::seconds(2), false});
+        }
+#endif
     }
+#ifdef PS5_NATIVE
+    else if (!pipeline) {
+        const auto failed = failed_compute_retries.find(key);
+        if (failed != failed_compute_retries.end() && !failed->second.attempted &&
+            std::chrono::steady_clock::now() >= failed->second.eligible_at) {
+            // Mark before translation: persistent failure must never spin
+            // within repeated compute dispatches.
+            failed->second.attempted = true;
+            pipeline = CreateComputePipeline(key, shader);
+            if (pipeline) {
+                failed_compute_retries.erase(failed);
+            }
+        }
+    }
+#endif
     if (::Eden::DevVulkan::trace_pipelines && pipeline) {
         const auto first_use = ::Eden::PipelineTrace::compute_first_use.Record(
             ::Eden::DevVulkan::gpu_time_session.load(std::memory_order_acquire), pipeline.get());

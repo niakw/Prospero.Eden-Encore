@@ -284,6 +284,7 @@ jobs:
           python3 -B tools/check-ps5-f07-bounded-prewarm-host.py
           python3 -B tools/check-ps5-f07-shader-cache-drain-host.py
           python3 -B tools/check-ps5-f07-bounded-failed-shader-retry-host.py
+          python3 -B tools/check-ps5-f07-bounded-failed-compute-retry-host.py
           python3 -B tools/check-ps5-f07-prewarm-pipeline-admission-host.py
           python3 -B tools/check-ps5-gpu-producer-wake.py
           python3 -B tools/check-ps5-native-load-replay.py
