@@ -524,3 +524,16 @@ prouvant l'absence de lectures/réservations pour les rejets et leur présence
 sur une plage valide, à `-O0`/`-O2`. Les sources Eden/backports restent
 inchangées ; l'override est reproduit par le générateur Vulkan strict.
 **Aucun effet mesuré sur FC 27 console à ce stade.**
+
+## F07 — empreinte historique des copies Vulkan et patches successifs
+
+Le fast gate de `5dc2e7fc` a échoué sur une empreinte SHA-1 du module
+`vk_buffer_cache_cost.cpp` **avant** l'optimisation des captures de copies.
+La reconstruction du fichier historique annulait déjà les changements
+de captures différées et le snapshot de tick, mais pas les deux nouvelles
+transformations F07 indépendantes (copies vides sans barrière et validation
+précoce de la plage vertex). Le témoin annule désormais ces deux
+transformations dans l'ordre inverse directement depuis les ancrages stricts
+du générateur, puis conserve la comparaison avec **l'empreinte historique
+inchangée**. Un déplacement ou une divergence des blocs natifs fait échouer
+le témoin, plutôt que d'actualiser artificiellement le SHA.
