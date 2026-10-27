@@ -22,7 +22,17 @@ assert SCRIPT in FAST and SCRIPT in FULL
 GUARD="    if (!is_built.load(std::memory_order_acquire)) {"
 for path in FILES:
     text=path.read_text()
-    assert text.count(GUARD)==1,path
+    # Graphics uses the acquire guard both in ConfigureDraw and, since F07,
+    # in the destructor joining the still-queued first-use builder.
+    is_graphics = path.name == "vk_graphics_pipeline_cost.cpp"
+    assert text.count(GUARD) == (2 if is_graphics else 1), path
+    if is_graphics:
+        destroy = text[text.index("GraphicsPipeline::~GraphicsPipeline()"):
+                       text.index("void GraphicsPipeline::QueueOptimizedPipeline(")]
+        assert destroy.count(GUARD) == 1
+        assert destroy.index("build_condvar.wait(build_lock") < destroy.index(
+            "const auto state = optimize_state;")
+        assert text[text.index("bool GraphicsPipeline::ConfigureDraw("):].count(GUARD) == 1
     assert text.count("is_built.store(true, std::memory_order_release);")==1,path
     assert "if (!is_built.load(std::memory_order::relaxed)) {" not in text,path
     # A thread that observes ready must acquire the pipeline before BindPipeline.
