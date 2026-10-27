@@ -372,17 +372,22 @@ void Scheduler::RequestOutsideRenderPassOperationContext() {
     EndRenderPass();
 }
 
-bool Scheduler::UpdateGraphicsPipeline(GraphicsPipeline* pipeline) {
+bool Scheduler::UpdateGraphicsPipeline(GraphicsPipeline* pipeline, bool optimized) {
     if (state.graphics_pipeline == pipeline) {
         if (pipeline && pipeline->UsesExtendedDynamicState() &&
             state.needs_state_enable_refresh) {
             state_tracker.InvalidateStateEnableFlag();
             state.needs_state_enable_refresh = false;
         }
-        return false;
+        // A completed optimized variant shares its cache key and owner pointer.
+        // Rebind once after publication even if the same shader keeps drawing.
+        const bool variant_changed = state.graphics_pipeline_optimized != optimized;
+        state.graphics_pipeline_optimized = optimized;
+        return variant_changed;
     }
 
     state.graphics_pipeline = pipeline;
+    state.graphics_pipeline_optimized = optimized;
 
     if (!pipeline) {
         return true;
@@ -561,6 +566,7 @@ void Scheduler::AllocateNewContext() {
 
 void Scheduler::InvalidateState() {
     state.graphics_pipeline = nullptr;
+    state.graphics_pipeline_optimized = false;
     state.rescaling_defined = false;
     state.descriptor_buffer_bound = false;
     state_tracker.InvalidateCommandBufferState();

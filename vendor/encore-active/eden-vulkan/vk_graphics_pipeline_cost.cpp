@@ -862,7 +862,10 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
     }
     const bool is_rescaling{texture_cache.IsRescaling()};
     const bool update_rescaling{scheduler.UpdateRescaling(is_rescaling)};
-    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(this)};
+    // Publish a ready optimized variant at the next draw even if this
+    // logical pipeline stays selected across multiple command buffers.
+    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(
+        this, optimized_ready.load(std::memory_order_acquire))};
     const bool bind_descriptor_buffer{
         descriptor_set_layout && uses_descriptor_buffer &&
         scheduler.UpdateDescriptorBufferChunk(descriptor_buffer_chunk)};
