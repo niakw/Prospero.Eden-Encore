@@ -462,10 +462,15 @@ void BufferCacheRuntime::CopyBuffer(VkBuffer dst_buffer, VkBuffer src_buffer,
         return;
     }
 #ifdef PS5_NATIVE
-    // No GPU copy and no requested barriers: do not allocate a copy vector
-    // or submit an empty scheduler callback under the guest cache locks.
-    // Keep the original barrier-bearing and desktop paths intact.
-    if (copies.empty() && !barrier) {
+    // Vulkan copies require at least one region. An empty batch is a
+    // no-op unless the caller explicitly requested synchronization.
+    // Preserve both barriers without recording an invalid zero-region copy,
+    // including when a staging upload would otherwise bypass the barriers.
+    if (copies.empty()) {
+        if (barrier) {
+            PreCopyBarrier();
+            PostCopyBarrier();
+        }
         return;
     }
 #endif
