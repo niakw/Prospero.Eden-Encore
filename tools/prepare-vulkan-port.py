@@ -3707,3 +3707,11 @@ apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
     "        });\n    } catch (...) {\n        // QueueWork failed before the worker accepted ownership. Do not strand",
     "        });\n#ifdef PS5_NATIVE\n        // The queued worker now owns the slot. The caller's failure guard\n        // handles allocation/admission exceptions before this handoff.\n        optional_slot_handed_off = true;\n#endif\n    } catch (...) {\n        // QueueWork failed before the worker accepted ownership. Do not strand",
     "F07 hand off optional pipeline slot after successful queue admission")
+
+# F07 P0.3: inline DMA writes to never-registered CPU pages cannot affect a
+# pre-existing GPU buffer. Avoid the buffer mutex only on proven-empty spans;
+# preserve the guest write, texture, shader and query invalidation order.
+apply_reviewed_delta("vulkan_rasterizer.cpp",
+    "    {\n        std::unique_lock<std::recursive_mutex> lock{buffer_cache.mutex};\n        if (!buffer_cache.InlineMemory(*cpu_addr, copy_size, memory)) {\n            buffer_cache.WriteMemory(*cpu_addr, copy_size);\n        }\n    }",
+    "    // P0.3: an unregistered page has no buffer-backed GPU dirty bytes.\n    // Unknown, large and previously owned spans retain the original lock.\n    if (!::Eden::BufferPages::NeverRegistered(*cpu_addr, copy_size)) {\n        std::unique_lock<std::recursive_mutex> lock{buffer_cache.mutex};\n        if (!buffer_cache.InlineMemory(*cpu_addr, copy_size, memory)) {\n            buffer_cache.WriteMemory(*cpu_addr, copy_size);\n        }\n    }",
+    "F07 elide never-owned inline DMA buffer cache mutex")
