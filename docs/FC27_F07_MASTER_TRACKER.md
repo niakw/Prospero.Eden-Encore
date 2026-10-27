@@ -470,3 +470,14 @@ les alias et mettre à jour le LRU. De plus, un view `Remapped` déclenche
 `VisitImageView` au lieu de réutiliser son ID : un TIC B rencontré entre
 A et A peut avoir invalidé l'adresse GPU de la première vue. Le témoin
 C++ vérifie les deux scénarios A–B–A (alias devenu dirty et remappage).
+
+## F07 P0.3 — compute sans images : éviter la recherche de vues inutile
+
+Sur les dispatches compute ne possédant **aucune vue image**, le chemin
+PS5 évite maintenant `FillImageViews` tant que la liste descripteurs est
+vide. L'appel originel subsiste quand des images sont liées, et le chemin
+desktop reste inchangé. Le test C++ extrait exactement le nouveau site
+d'appel et couvre PS5/desktop en `-O0` et `-O2`. Le buffer cache continue
+à exécuter `UnbindComputeTextureBuffers` et les autres opérations de
+configuration. **Ce raccourci évite un passage sous verrous, mais ne prouve
+pas de changement perceptible dans FC 27.**

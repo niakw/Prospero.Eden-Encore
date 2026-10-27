@@ -33,6 +33,20 @@ assert sync.count("texture_cache.SynchronizeDescriptors(true);") == 1
 for name in ("texture_buffer_descriptors", "image_buffer_descriptors",
              "texture_descriptors", "image_descriptors"):
     assert f"info.{name}.empty()" in sync
+# PS5-only no-view path mirrors graphics: all compute descriptors are still
+# synchronized/bound normally when images exist. Keep desktop unchanged.
+zero_view_begin = "#ifdef PS5_NATIVE\\n    // The empty view list cannot resolve/revive any TIC"
+zero_view_end = "\\n\\n    buffer_cache.UnbindComputeTextureBuffers();"
+zero_view_anchor = zero_view_begin.replace("\\\\n", "\\n")
+zero_view_end_anchor = zero_view_end.replace("\\\\n", "\\n")
+assert compute.count(zero_view_anchor) == 1
+zero_view = compute[compute.index(zero_view_anchor):
+                    compute.index(zero_view_end_anchor,compute.index(zero_view_anchor))]
+assert zero_view.count("texture_cache.FillImageViews(std::span(views.data(), views.size()), true);") == 1
+assert zero_view.count("if (!views.empty())") == 1
+assert zero_view.count("#ifdef PS5_NATIVE") == 2
+assert zero_view.count("#endif") == 2
+assert "F07 bypass compute image-view resolution when no images are bound" in oracle
 queue_header = (root / "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_update_descriptor.h").read_text()
 assert "void AcquireKnownEmpty(bool use_descriptor_buffer_) noexcept" in queue_header
 
@@ -198,3 +212,58 @@ with tempfile.TemporaryDirectory(prefix="encore-compute-empty-desc-") as folder:
                        check=True, timeout=30)
         subprocess.run([str(sync_exe)], check=True, timeout=10)
         print("COMPUTE_EMPTY_TEXTURE_SYNC_PASS", opt)
+
+# Compile and execute the exact selected C++ callsite under both desktop and
+# PS5 defines. Zero views skip only the PS5 call; populated dispatches still
+# resolve views exactly once. This tests invocation semantics, not PS5 timing.
+view_guard_test = r"""
+#include <cassert>
+#include <cstdint>
+#include <span>
+#include <vector>
+struct View {unsigned id{};};
+struct TextureCache {
+ unsigned calls{};
+ void FillImageViews(std::span<View> views,bool compute) {
+  assert(compute);
+  ++calls;
+  for(auto& view:views)view.id=77;
+ }
+};
+struct Probe {
+ std::vector<View> views{};
+ TextureCache texture_cache{};
+ void Run() {
+""" + zero_view + r"""
+ }
+};
+int main(){
+ Probe p;p.Run();
+#ifdef PS5_NATIVE
+ assert(p.texture_cache.calls==0);
+#else
+ assert(p.texture_cache.calls==1);
+#endif
+ p.views.push_back(View{});
+ p.Run();
+#ifdef PS5_NATIVE
+ assert(p.texture_cache.calls==1);
+#else
+ assert(p.texture_cache.calls==2);
+#endif
+ assert(p.views.front().id==77);
+}
+"""
+with tempfile.TemporaryDirectory(prefix="encore-compute-empty-views-") as folder:
+    cpp=Path(folder)/"empty_views.cpp"
+    cpp.write_text(view_guard_test)
+    for mode in ("-O0","-O2"):
+        for ps5 in (False,True):
+            exe=Path(folder)/("views"+mode+("ps5" if ps5 else "desktop"))
+            build=subprocess.run(["c++","-std=c++20",mode,"-Wall","-Wextra","-Werror",
+                                *(["-DPS5_NATIVE=1"] if ps5 else []),str(cpp),"-o",str(exe)],
+                                capture_output=True,text=True,timeout=30)
+            assert build.returncode==0,(mode,ps5,build.stderr[-4000:])
+            run=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
+            assert run.returncode==0,(mode,ps5,run.stderr[-4000:])
+print("COMPUTE_EMPTY_IMAGE_VIEWS_PASS ps5_skipped=1 desktop_preserved=1 populated=1 O0_O2=1")
