@@ -67,6 +67,7 @@ using VideoCore::Surface::PixelFormatFromDepthFormat;
 using VideoCore::Surface::PixelFormatFromRenderTargetFormat;
 
 constexpr size_t NUM_STAGES = Maxwell::MaxShaderStage;
+// The shared first-use graphics counter is defined at Vulkan namespace scope.
 
 // Descriptor-heavy titles can exceed small_vector's inline capacity on
 // thousands of draws per second. Keep the spare heap capacity on the GPU
