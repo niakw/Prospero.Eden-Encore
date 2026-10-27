@@ -22,6 +22,8 @@ block = src[src.index(start) + len(start):src.index(end, src.index(start))]
 assert block.count("CreateGraphicsPipeline()") == 2
 assert "failed_graphics_retries.size() < 64" in block
 assert "failed->second.attempted = true;" in block
+assert 'failed_graphics_retries.erase(failed);' in block
+assert 'if (pipeline) {\n                failed_graphics_retries.erase(failed);' not in block
 assert "std::chrono::seconds(2)" in block
 assert block.index("failed->second.attempted = true;") < block.rindex("pipeline = CreateGraphicsPipeline();")
 assert block.count("CachePhase::GraphicsPipelineCreate") == 2
@@ -94,6 +96,32 @@ int main() {
     assert(!persistent.graphics_cache.at(0));
     for (int i = 0; i < 2048; ++i) persistent.Probe();
     assert(persistent.create_calls == 2);  // one retry, never a storm
+
+    // Fill the bound with distinct failing shaders. An already-attempted
+    // null cache entry must not occupy a retry metadata slot indefinitely.
+    PipelineCache recycled;
+    for (int key = 0; key < 64; ++key) {
+        recycled.graphics_key = key;
+        recycled.Probe();
+    }
+    assert(recycled.failed_graphics_retries.size() == 64);
+    for (int key = 0; key < 64; ++key) {
+        recycled.graphics_key = key;
+        recycled.failed_graphics_retries.at(key).eligible_at =
+            std::chrono::steady_clock::now() - std::chrono::seconds(1);
+        recycled.Probe();
+        assert(!recycled.graphics_cache.at(key));
+    }
+    assert(recycled.create_calls == 128);
+    assert(recycled.failed_graphics_retries.empty());
+    for (int key = 0; key < 64; ++key) {
+        recycled.graphics_key = key;
+        recycled.Probe();
+    }
+    assert(recycled.create_calls == 128);  // consumed keys never retry again
+    recycled.graphics_key = 64;
+    recycled.Probe();
+    assert(recycled.create_calls == 129 && recycled.failed_graphics_retries.size() == 1);
 
     PipelineCache full;
     for (int i = 0; i < 64; ++i)
