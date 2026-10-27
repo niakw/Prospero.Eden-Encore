@@ -115,4 +115,139 @@ with tempfile.TemporaryDirectory(prefix="f07-upload-rollback-") as temp:
             assert result.returncode == 0,result.stderr
             result = subprocess.run([str(out)],capture_output=True,text=True,timeout=15)
             assert result.returncode == 0 and ("OLD_STALE_REPRODUCED" if old else "NEW_PATH_OK") in result.stdout,(result.stdout,result.stderr)
+# Source-extract the native asynchronous decode admission/rollback clauses.
+# Throw from pixel preparation, worker enqueue and unswizzle queue admission.
+async_start="void TextureCache<P>::QueueAsyncDecode(Image& image, ImageId image_id) {"
+async_end="\ntemplate <class P>\nvoid TextureCache<P>::QueueAsyncUnswizzle("
+unswizzle_end="\ntemplate <class P>\nvoid TextureCache<P>::TickAsyncDecode()"
+assert s.count(async_start)==s.count(async_end)==s.count(unswizzle_end)==1
+decode=s[s.index(async_start):s.index(async_end,s.index(async_start))]
+unswizzle=s[s.index(async_end)+1:s.index(unswizzle_end,s.index(async_end))]
+guard_begin="#ifdef PS5_NATIVE\n    // Never strand IsDecoding"
+assert decode.count(guard_begin)==1
+guard=decode[decode.index(guard_begin):decode.index("    auto decode = std::make_unique<AsyncDecodeContext>();")]
+pointer=decode[decode.index("    auto* decode_ptr = decode.get();")+len("    auto* decode_ptr = decode.get();\n"):decode.index("    decode->image_id = image_id;")]
+queue=decode[decode.index("    texture_decode_worker.QueueWork(std::move(func));"):decode.rindex("\n}")]
+assert "const bool was_decoding" in guard
+assert "async_decodes.pop_back();" in guard
+assert "decode_admitted = true;" in queue
+assert "incomplete_decode = decode_ptr;" in pointer
+assert unswizzle.index("unswizzle_queue.push_back") < unswizzle.rindex("image.flags |= ImageFlagBits::IsDecoding;")
+for name in ("F07 decode rollback on admission", "F07 decode rollback pointer",
+             "F07 decode successful admission marker",
+             "F07 unswizzle queue before pending flag"):
+    assert name in gen
+native_cpp=r"""
+#include <cassert>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
+#include <vector>
+struct Maker {};
+template<class F> struct Guard{F fn;~Guard(){fn();}};
+template<class F> Guard<std::decay_t<F>> operator+(Maker,F&& f){return {std::forward<F>(f)};}
+#define SCOPE_EXIT auto scope_exit_guard = Maker{} + [&]
+using ImageId = std::size_t;
+enum class ImageFlagBits:unsigned {IsDecoding=1};
+struct Flags {
+    unsigned bits{};
+    Flags& operator|=(ImageFlagBits b){bits|=static_cast<unsigned>(b);return *this;}
+    Flags& operator&=(unsigned n){bits&=n;return *this;}
+};
+unsigned operator~(ImageFlagBits b){return ~static_cast<unsigned>(b);}
+unsigned operator&(Flags f,ImageFlagBits b){return f.bits&static_cast<unsigned>(b);}
+bool True(unsigned n){return n!=0;}
+struct Image{Flags flags{};struct Info{int code{};} info{};};
+struct AsyncDecodeContext{};
+struct Worker {
+    bool fail{};
+    unsigned admitted{};
+    void QueueWork(std::function<void()> fn) {
+        if(fail) throw std::runtime_error("enqueue failure");
+        ++admitted;
+        fn();
+    }
+};
+struct UnswizzleQueue {
+    bool fail{};
+    struct Pending{ImageId image_id;Image::Info info;};
+    std::vector<Pending> pending;
+    void push_back(Pending p){
+        if(fail)throw std::runtime_error("push failure");
+        pending.push_back(p);
+    }
+};
+template<class P> struct TextureCache {
+    std::vector<std::unique_ptr<AsyncDecodeContext>> async_decodes;
+    Worker texture_decode_worker;
+    UnswizzleQueue unswizzle_queue;
+    void ProbeAdmission(Image& image,bool fail_prepare){
+__GUARD__
+        auto decode=std::make_unique<AsyncDecodeContext>();
+        auto* decode_ptr=decode.get();
+__POINTER__
+        async_decodes.push_back(std::move(decode));
+        if(fail_prepare)throw std::runtime_error("preparation failure");
+        auto func=[]{};
+__QUEUE__
+    }
+    void QueueAsyncUnswizzle(Image&,ImageId);
+};
+__UNSWIZZLE__
+int main(){
+    TextureCache<int> cache;
+    Image image;
+    bool caught=false;
+    try{cache.ProbeAdmission(image,true);}
+    catch(const std::runtime_error&){caught=true;}
+    assert(caught && !True(image.flags&ImageFlagBits::IsDecoding));
+    assert(cache.async_decodes.empty());
+    caught=false;
+    cache.texture_decode_worker.fail=true;
+    try{cache.ProbeAdmission(image,false);}
+    catch(const std::runtime_error&){caught=true;}
+    assert(caught && !True(image.flags&ImageFlagBits::IsDecoding));
+    assert(cache.async_decodes.empty() && cache.texture_decode_worker.admitted==0);
+    cache.texture_decode_worker.fail=false;
+    cache.ProbeAdmission(image,false);
+    assert(True(image.flags&ImageFlagBits::IsDecoding));
+    assert(cache.async_decodes.size()==1 && cache.texture_decode_worker.admitted==1);
+    // If an older job already owns the flag, a later failed admission
+    // must not clear it or erase the older decode's allocation.
+    cache.texture_decode_worker.fail=true;
+    caught=false;
+    try{cache.ProbeAdmission(image,false);}
+    catch(const std::runtime_error&){caught=true;}
+    assert(caught && True(image.flags&ImageFlagBits::IsDecoding));
+    assert(cache.async_decodes.size()==1);
+    Image another;
+    cache.unswizzle_queue.fail=true;
+    caught=false;
+    try{cache.QueueAsyncUnswizzle(another,3);}
+    catch(const std::runtime_error&){caught=true;}
+    assert(caught && !True(another.flags&ImageFlagBits::IsDecoding));
+    assert(cache.unswizzle_queue.pending.empty());
+    cache.unswizzle_queue.fail=false;
+    cache.QueueAsyncUnswizzle(another,3);
+    assert(True(another.flags&ImageFlagBits::IsDecoding));
+    assert(cache.unswizzle_queue.pending.size()==1);
+}
+""".replace("__GUARD__",guard).replace("__POINTER__",pointer).replace("__QUEUE__",queue).replace("__UNSWIZZLE__",unswizzle)
+with tempfile.TemporaryDirectory(prefix="eden-f07-async-decode-") as directory:
+    fixture=Path(directory)/"async.cpp"
+    fixture.write_text(native_cpp)
+    for opt in ("-O0","-O2"):
+        exe=Path(directory)/("async"+opt[1:])
+        built=subprocess.run([compiler,"-std=c++20",opt,"-DPS5_NATIVE=1",
+                              "-Wall","-Wextra","-Werror","-fsanitize=undefined",
+                              "-fno-sanitize-recover=all",str(fixture),"-o",str(exe)],
+                             capture_output=True,text=True,timeout=50)
+        assert built.returncode==0,(opt,built.stderr[-6000:])
+        ran=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
+        assert ran.returncode==0,(opt,ran.stdout,ran.stderr[-6000:])
+print("F07_ASYNC_DECODE_ADMISSION_PASS prepare=1 enqueue=1 previous_decode=1 unswizzle=1 O0=1 O2=1")
+
 print("F07_UPLOAD_ROLLBACK_HOST_PASS O0=1 O2=1 exception_stages=3 success=1")

@@ -1834,9 +1834,30 @@ void TextureCache<P>::QueueAsyncDecode(Image& image, ImageId image_id) {
     UNIMPLEMENTED_IF(False(image.flags & ImageFlagBits::Converted));
     LOG_INFO(HW_GPU, "Queuing async texture decode");
 
+#ifdef PS5_NATIVE
+    // Never strand IsDecoding or a pending decode entry if preparation or
+    // worker queue admission throws. Preserve an already active decode.
+    const bool was_decoding = True(image.flags & ImageFlagBits::IsDecoding);
+    AsyncDecodeContext* incomplete_decode{};
+    bool decode_admitted = false;
+    SCOPE_EXIT {
+        if (!decode_admitted) {
+            if (!was_decoding) {
+                image.flags &= ~ImageFlagBits::IsDecoding;
+            }
+            if (incomplete_decode && !async_decodes.empty() &&
+                async_decodes.back().get() == incomplete_decode) {
+                async_decodes.pop_back();
+            }
+        }
+    };
+#endif
     image.flags |= ImageFlagBits::IsDecoding;
     auto decode = std::make_unique<AsyncDecodeContext>();
     auto* decode_ptr = decode.get();
+#ifdef PS5_NATIVE
+    incomplete_decode = decode_ptr;
+#endif
     decode->image_id = image_id;
     async_decodes.push_back(std::move(decode));
 
@@ -1858,6 +1879,9 @@ void TextureCache<P>::QueueAsyncDecode(Image& image, ImageId image_id) {
         async_decode->complete = true;
     };
     texture_decode_worker.QueueWork(std::move(func));
+#ifdef PS5_NATIVE
+    decode_admitted = true;
+#endif
 }
 
 template <class P>
@@ -1866,12 +1890,18 @@ void TextureCache<P>::QueueAsyncUnswizzle(Image& image, ImageId image_id) {
         return;
     }
 
+#ifndef PS5_NATIVE
     image.flags |= ImageFlagBits::IsDecoding;
-
+#endif
+    // Native: commit IsDecoding only after successful queue admission.
+    // A throwing allocation must not leave a permanently pending image.
     unswizzle_queue.push_back({
         .image_id = image_id,
         .info = image.info
     });
+#ifdef PS5_NATIVE
+    image.flags |= ImageFlagBits::IsDecoding;
+#endif
 }
 
 template <class P>

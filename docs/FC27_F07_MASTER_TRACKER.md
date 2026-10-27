@@ -227,3 +227,17 @@ MSAA et asynchrones réussis marquent la prise en charge comme terminée.
 Le test F04 source-extrait reproduit une exception après suivi partiel,
 vérifie l'annulation du suivi et la publication à la prochaine tentative.
 **Validation hôte/CI et résultat console encore nécessaires.**
+
+## F07 P0.4 — admission des décodages asynchrones (27 octobre)
+
+Dans le chemin natif, `QueueAsyncDecode` positionnait `IsDecoding` et
+inscrivait le contexte avant la préparation des pixels puis `QueueWork`.
+Une exception pendant la préparation ou un refus d'admission pouvait laisser
+un contexte incomplet sans worker et une image bloquée en décodage. Le
+rollback restaure l'ancien état `IsDecoding` et supprime uniquement le
+contexte **non admis** ; le décodage précédent reste intact s'il existe.
+`QueueAsyncUnswizzle` n'active désormais `IsDecoding` qu'après
+l'insertion effective de sa tâche. Témoins C++ `-O0`/`-O2` avec
+refus d'enqueue, préparation interrompue et décodage antérieur.
+**CI complète et comportement console encore à confirmer ; pas de preuve
+de gain FPS.**
