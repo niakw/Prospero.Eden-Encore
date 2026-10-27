@@ -50,7 +50,41 @@ old_body = "        while (pending_first_use_graphics_builds.load(std::memory_or
 new_body = "        // A momentarily empty builder queue is not an idle GPU frame.\n        // Require a brief QUIET period before any OPTIONAL driver rebuild:\n        // new HUD shaders appearing in a burst reset the countdown. This\n        // sleep is confined to the optimizer worker, never the GPU owner.\n        constexpr auto quiet_window = std::chrono::milliseconds(16);\n        auto quiet_since = std::chrono::steady_clock::now();\n        for (;;) {\n            const bool cold_build_pending =\n                pending_first_use_graphics_builds.load(std::memory_order_acquire) != 0 ||\n                pending_first_use_compute_builds.load(std::memory_order_acquire) != 0;\n            if (cold_build_pending) {\n                quiet_since = std::chrono::steady_clock::now();\n            } else if (std::chrono::steady_clock::now() - quiet_since >= quiet_window) {\n                break;\n            }\n            {\n                std::scoped_lock lock{state->mutex};\n                if (state->cancelled) return;\n            }\n            std::this_thread::sleep_for(std::chrono::milliseconds(2));\n        }"
 assert 'F07 quiet-window priority between cold pipeline bursts' in generator
 assert worker.count(old_gate) == 1
-assert worker.replace(old_gate, new_gate).replace(old_body, new_body) in source_body
+# Reconstruct the selected optimizer after the reviewed generator deltas,
+# including the PS5-only admission cap. Comparing the original R313 literal
+# directly would reject a correctly regenerated source after these changes.
+generated_worker = worker.replace(old_gate, new_gate).replace(old_body, new_body)
+backlog_delta_names = {
+    "F07 bound optional Vulkan optimizer queue helper",
+    "F07 skip overloaded optional pipeline builds before allocation",
+    "F07 release optional pipeline slot on completion or cancellation",
+    "F07 hand off optional pipeline slot after successful queue admission",
+}
+applied_backlog_deltas = set()
+for node in nodes:
+    if not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call):
+        continue
+    call = node.value
+    if not isinstance(call.func, ast.Name) or call.func.id != "apply_reviewed_delta":
+        continue
+    if len(call.args) != 4:
+        continue
+    try:
+        name = ast.literal_eval(call.args[3])
+    except (ValueError, TypeError):
+        continue
+    if name not in backlog_delta_names:
+        continue
+    assert ast.literal_eval(call.args[0]) == "vk_graphics_pipeline_cost.cpp"
+    before = ast.literal_eval(call.args[1])
+    after = ast.literal_eval(call.args[2])
+    assert generated_worker.count(before) == 1, name
+    assert after not in generated_worker, name
+    generated_worker = generated_worker.replace(before, after)
+    assert name not in applied_backlog_deltas
+    applied_backlog_deltas.add(name)
+assert applied_backlog_deltas == backlog_delta_names
+assert generated_worker in source_body
 assert "F07 optimized graphics yields to compute builds" in generator
 assert "std::make_shared<OptimizeState>()" in worker
 assert worker.index("state->running = true;") < worker.index("OptimizeWorker().QueueWork")
