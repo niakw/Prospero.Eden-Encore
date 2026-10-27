@@ -28,12 +28,15 @@ assert method.index("lock.unlock();") < method.index("i = async_decodes.erase(i)
 assert method.rindex("lock.unlock();") < method.rindex("i = async_decodes.erase(i);")
 assert "async_decode->decoded_data.size() != expected_size" in method
 assert "True(image.flags & ImageFlagBits::CpuModified)" in method
+assert "True(image.flags & ImageFlagBits::Remapped)" in method
+assert method.index("True(image.flags & ImageFlagBits::Remapped)") < method.index("std::memcpy(")
 assert method.index("True(image.flags & ImageFlagBits::CpuModified)") < method.index("std::memcpy(")
 assert "image.flags |= ImageFlagBits::CpuModified;" in method
 assert "UntrackImage(image, async_decode->image_id);" in method
 for delta in ("F07 async texture revision length guard",
               "F07 async decode unlock before context erase",
-              "F07 discard stale decoded HUD revision after CPU write"):
+              "F07 discard stale decoded HUD revision after CPU write",
+              "F07 discard same-size async texture after guest remap"):
     assert delta in generator
 
 cpp = r"""
@@ -52,7 +55,7 @@ struct CheckedMutex {
     void unlock(){assert(held);held=false;}
     ~CheckedMutex(){assert(!held && "decode mutex destroyed while still locked");}
 };
-enum class ImageFlagBits:std::uint32_t{IsDecoding=1,CpuModified=2,Tracked=4};
+enum class ImageFlagBits:std::uint32_t{IsDecoding=1,CpuModified=2,Tracked=4,Remapped=8};
 struct Flags{
     std::uint32_t bits{};
     Flags& operator&=(std::uint32_t n){bits&=n;return *this;}
@@ -104,7 +107,7 @@ template<class P>struct TextureCache{
 """ + method + r"""
 int main(){
     TextureCache<int> cache;
-    cache.slot_images.resize(4);
+    cache.slot_images.resize(5);
     for(auto& image:cache.slot_images){
         image.size=4;
         image.flags|=ImageFlagBits::IsDecoding;
@@ -125,10 +128,15 @@ int main(){
     // A later CPU modification invalidates the decoded bytes while retaining
     // exactly the same dimensions: a common HUD update.
     cache.slot_images[3].flags|=ImageFlagBits::CpuModified;
+    auto stale_remapped=std::make_unique<AsyncDecodeContext>();
+    stale_remapped->image_id=4; stale_remapped->complete=true;
+    stale_remapped->decoded_data={8,8,8,8};
+    cache.slot_images[4].flags|=ImageFlagBits::Remapped;
     cache.async_decodes.emplace_back(std::move(pending));
     cache.async_decodes.emplace_back(std::move(stale));
     cache.async_decodes.emplace_back(std::move(ready));
     cache.async_decodes.emplace_back(std::move(stale_same_size));
+    cache.async_decodes.emplace_back(std::move(stale_remapped));
     cache.TickAsyncDecode();
     assert(cache.async_decodes.size()==1 && !cache.async_decodes[0]->complete);
     assert(True(cache.slot_images[1].flags&ImageFlagBits::CpuModified));
@@ -139,10 +147,14 @@ int main(){
     assert(True(cache.slot_images[3].flags&ImageFlagBits::CpuModified));
     assert(!True(cache.slot_images[3].flags&ImageFlagBits::Tracked));
     assert(!True(cache.slot_images[3].flags&ImageFlagBits::IsDecoding));
+    assert(cache.slot_images[4].uploads==0);
+    assert(True(cache.slot_images[4].flags&ImageFlagBits::CpuModified));
+    assert(!True(cache.slot_images[4].flags&ImageFlagBits::Tracked));
+    assert(!True(cache.slot_images[4].flags&ImageFlagBits::IsDecoding));
     assert(cache.slot_images[2].uploads==1);
     assert((cache.slot_images[2].result==std::vector<std::uint8_t>{5,6,7,8}));
     assert(cache.runtime.staging_calls==1 && cache.runtime.barriers==1);
-    assert(cache.untracked==2);
+    assert(cache.untracked==3);
     cache.async_decodes.front()->complete=true;
     cache.TickAsyncDecode();
     assert(cache.async_decodes.empty() && cache.runtime.barriers==2);
@@ -162,4 +174,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-async-lifetime-") as directory
         assert built.returncode==0,(optimization,built.stderr[-5000:])
         ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=20)
         assert ran.returncode==0,(optimization,ran.stdout,ran.stderr[-5000:])
-print("F07_ASYNC_TICK_LIFETIME_HOST_PASS unlock_before_erase=1 revision_size_guard=1 stale_same_size=1 pending=1 O0=1 O2=1")
+print("F07_ASYNC_TICK_LIFETIME_HOST_PASS unlock_before_erase=1 revision_size_guard=1 stale_same_size=1 stale_remapped_same_size=1 pending=1 O0=1 O2=1")

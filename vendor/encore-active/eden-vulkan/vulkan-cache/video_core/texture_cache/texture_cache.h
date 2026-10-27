@@ -1930,10 +1930,11 @@ void TextureCache<P>::TickAsyncDecode() {
         // Do not copy the old revision beyond its current staging allocation.
         const size_t expected_size = MapSizeBytes(image);
         if (async_decode->decoded_data.size() != expected_size ||
-            True(image.flags & ImageFlagBits::CpuModified)) {
-            // A newer guest CPU write invalidates the queued result even
-            // when dimensions have not changed (typical dynamic HUD).
-            // Keep CpuModified set so the newer content is re-uploaded.
+            True(image.flags & ImageFlagBits::CpuModified) ||
+            True(image.flags & ImageFlagBits::Remapped)) {
+            // A guest CPU revision OR remapping invalidates decoded bytes,
+            // even when dimensions have not changed (dynamic HUD).
+            // Retain CpuModified so the current mapping can be refreshed.
             image.flags &= ~ImageFlagBits::IsDecoding;
             image.flags |= ImageFlagBits::CpuModified;
             if (True(image.flags & ImageFlagBits::Tracked)) {
