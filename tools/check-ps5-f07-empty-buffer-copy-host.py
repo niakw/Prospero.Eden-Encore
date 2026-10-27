@@ -46,7 +46,8 @@ struct Copy {std::size_t size;};
 struct Runtime {
  unsigned records{};
  void CopyBuffer(VkBuffer dst_buffer,VkBuffer src_buffer,
-                 std::span<const Copy> copies,bool barrier,bool) {
+                 [[maybe_unused]] std::span<const Copy> copies,
+                 [[maybe_unused]] bool barrier,bool) {
 """ + selected + r"""
   // Mock only what follows the original guarded region. Both upload
   // and transfer paths can queue one callback, with extra barriers
