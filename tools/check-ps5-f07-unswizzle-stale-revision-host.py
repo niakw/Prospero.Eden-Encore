@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""F07 P0.4: source-extracted stale multi-frame unswizzle cancellation.
+
+The test compiles the actual queue/cancel/throttle prefix of TickAsyncUnswizzle.
+It proves deferred release of initialized staging, preservation of pending CPU
+revisions, rejection of remapped bytes, and desktop's unchanged cooldown.
+No claim is made about GPU command completion or console frame latency.
+"""
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+
+root = Path(__file__).resolve().parents[1]
+active = (root / "vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text()
+pinned = (root / "vendor/sources/eden/src/video_core/texture_cache/texture_cache.h").read_text()
+generator = (root / "tools/prepare-vulkan-port.py").read_text()
+method_start = "void TextureCache<P>::TickAsyncUnswizzle() {"
+method_end = "\n    if (!task.initialized) {"
+assert active.count(method_start) == pinned.count(method_start) == 1
+start = active.index(method_start)
+end = active.index(method_end, start)
+fragment = active[start:end]
+pinned_prefix = pinned[pinned.index(method_start):pinned.index(method_end, pinned.index(method_start))]
+assert fragment.count("FreeDeferredStagingBuffer(task.staging_buffer);") == 1
+assert fragment.index("ImageFlagBits::CpuModified | ImageFlagBits::Remapped") < fragment.index(
+    "#ifdef PS5_NATIVE\n    if(current_unswizzle_frame > 0)")
+assert fragment.count("unswizzle_queue.pop_front();") == 1
+assert fragment.index("unswizzle_queue.pop_front();") < fragment.index(
+    "#ifdef PS5_NATIVE\n    if(current_unswizzle_frame > 0)")
+assert fragment.count("#ifndef PS5_NATIVE") == 1
+assert "FreeDeferredStagingBuffer(task.staging_buffer)" not in pinned_prefix
+assert "F07 cancel stale GPU unswizzle with deferred staging and native cooldown" in generator
+
+cpp = r"""
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <deque>
+#include <vector>
+using ImageId = std::size_t;
+enum class ImageFlagBits : unsigned {
+    CpuModified=1, Remapped=2, Tracked=4, IsDecoding=8
+};
+unsigned operator~(ImageFlagBits f) {return ~static_cast<unsigned>(f);}
+unsigned operator|(ImageFlagBits a,ImageFlagBits b) {
+    return static_cast<unsigned>(a)|static_cast<unsigned>(b);
+}
+struct Flags {
+    unsigned bits{};
+    Flags& operator|=(ImageFlagBits f){bits|=static_cast<unsigned>(f);return *this;}
+    Flags& operator&=(unsigned m){bits&=m;return *this;}
+};
+unsigned operator&(Flags a,unsigned b){return a.bits & b;}
+unsigned operator&(Flags a,ImageFlagBits b){return a.bits & static_cast<unsigned>(b);}
+bool True(unsigned b){return b!=0;}
+struct PendingUnswizzle {
+    ImageId image_id{};
+    bool initialized{};
+    struct Staging {bool allocated{};} staging_buffer{};
+};
+struct Image {Flags flags{};};
+struct Runtime {
+    unsigned deferred_free{};
+    void FreeDeferredStagingBuffer(PendingUnswizzle::Staging& stage){
+        assert(stage.allocated);
+        stage.allocated=false;
+        ++deferred_free;
+    }
+};
+template<class P> struct TextureCache {
+    std::deque<PendingUnswizzle> unswizzle_queue;
+    std::vector<Image> slot_images;
+    unsigned current_unswizzle_frame{}, reached_normal{}, untracked{};
+    Runtime runtime;
+    void UntrackImage(Image& img,ImageId){
+        assert(True(img.flags & ImageFlagBits::Tracked));
+        img.flags &= ~ImageFlagBits::Tracked;
+        ++untracked;
+    }
+    void TickAsyncUnswizzle();
+};
+template<class P>
+""" + fragment + r"""
+    ++reached_normal;
+}
+void Submit(TextureCache<int>& c,ImageId id,bool allocated,bool dirty,bool remapped,bool tracked) {
+    c.unswizzle_queue.push_back({id,allocated,{allocated}});
+    auto& flags=c.slot_images[id].flags;
+    flags.bits=0;
+    flags|=ImageFlagBits::IsDecoding;
+    if(dirty)flags|=ImageFlagBits::CpuModified;
+    if(remapped)flags|=ImageFlagBits::Remapped;
+    if(tracked)flags|=ImageFlagBits::Tracked;
+}
+int main(){
+    TextureCache<int> c;
+    c.slot_images.resize(5);
+#ifdef PS5_NATIVE
+    // An obsolete first task cancels immediately, even during a 4-frame
+    // cooldown. Submitted GPU batches keep their staging until deferred free.
+    Submit(c,0,true,true,false,true);
+    c.current_unswizzle_frame=3;
+    c.TickAsyncUnswizzle();
+    assert(c.unswizzle_queue.empty() && c.runtime.deferred_free==1);
+    assert(c.current_unswizzle_frame==3 && c.untracked==1);
+    assert(True(c.slot_images[0].flags&ImageFlagBits::CpuModified));
+    assert(!True(c.slot_images[0].flags&ImageFlagBits::IsDecoding));
+    // Admission failed before allocating staging: never free default handle.
+    Submit(c,1,false,true,false,false);
+    c.TickAsyncUnswizzle();
+    assert(c.unswizzle_queue.empty() && c.runtime.deferred_free==1);
+    // Remapping invalidates old bytes even without an explicit CPU dirty flag.
+    Submit(c,2,true,false,true,false);
+    c.TickAsyncUnswizzle();
+    assert(c.unswizzle_queue.empty() && c.runtime.deferred_free==2);
+    assert(True(c.slot_images[2].flags&ImageFlagBits::CpuModified));
+    // A clean task retains its usual throttled processing.
+    Submit(c,3,true,false,false,false);
+    c.TickAsyncUnswizzle();
+    assert(c.current_unswizzle_frame==2 && c.reached_normal==0);
+    c.current_unswizzle_frame=0;
+    c.TickAsyncUnswizzle();
+    assert(c.reached_normal==1 && c.unswizzle_queue.size()==1);
+#else
+    Submit(c,0,true,true,false,true);
+    c.current_unswizzle_frame=3;
+    c.TickAsyncUnswizzle();
+    assert(c.current_unswizzle_frame==2);
+    assert(c.unswizzle_queue.size()==1 && c.runtime.deferred_free==0);
+    c.current_unswizzle_frame=0;
+    c.TickAsyncUnswizzle();
+    assert(c.reached_normal==1);
+#endif
+}
+"""
+compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
+assert compiler, "C++20 compiler required"
+with tempfile.TemporaryDirectory(prefix="eden-f07-stale-unswizzle-") as d:
+    source_file=Path(d)/"unswizzle.cpp"
+    source_file.write_text(cpp)
+    for opt in ("-O0","-O2"):
+        for native in (False,True):
+            exe=Path(d)/("unswizzle"+opt[1:]+("-native" if native else "-desktop"))
+            command=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                     "-fsanitize=undefined","-fno-sanitize-recover=all"]
+            if native: command.append("-DPS5_NATIVE=1")
+            result=subprocess.run([*command,str(source_file),"-o",str(exe)],
+                                  capture_output=True,text=True,timeout=40)
+            assert result.returncode==0,(opt,native,result.stderr[-5000:])
+            run=subprocess.run([str(exe)],capture_output=True,text=True,timeout=15)
+            assert run.returncode==0,(opt,native,run.stdout,run.stderr[-5000:])
+print("F07_UNSWIZZLE_STALE_HOST_PASS native_cancel=1 uninitialized=1"
+      " remap=1 deferred_staging=1 desktop_unchanged=1 O0=1 O2=1")

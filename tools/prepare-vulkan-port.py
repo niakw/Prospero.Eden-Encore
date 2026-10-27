@@ -3515,6 +3515,13 @@ apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
     "    PipelineStatistics* statistics, bool build_in_parallel) try {\n#ifdef PS5_NATIVE\n    // Count cold shader translation as foreground work. The pipeline\n    // constructor separately counts the queued driver build; both stages\n    // now prevent speculative graphics optimization from competing.\n    ComputeTranslationPriorityScope translation_priority{build_in_parallel};\n#endif\n    auto hash = key.Hash();\n    if (device.HasBrokenCompute()) {",
     "F07 compute CFG IR SPIRV fairness before driver queue")
 
+# F07 P0.4: stale multi-frame unswizzle uploads must be cancelled
+# BEFORE the native frame throttle, but keep the pinned desktop ordering.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    if(current_unswizzle_frame > 0) {\n        current_unswizzle_frame--;\n        return;\n    }\n\n    PendingUnswizzle& task = unswizzle_queue.front();\n    Image& image = slot_images[task.image_id];\n\n    if (!task.initialized) {",
+    "#ifndef PS5_NATIVE\n    if(current_unswizzle_frame > 0) {\n        current_unswizzle_frame--;\n        return;\n    }\n#endif\n\n    PendingUnswizzle& task = unswizzle_queue.front();\n    Image& image = slot_images[task.image_id];\n#ifdef PS5_NATIVE\n    // This task may span several frames. A new CPU write or guest remap\n    // invalidates its staged bytes even when texture dimensions do not change.\n    // Abandon the old content before dispatching another GPU upload batch.\n    if (True(image.flags & (ImageFlagBits::CpuModified | ImageFlagBits::Remapped))) {\n        if (task.initialized) {\n            // Previously submitted batches may still be on the GPU worker.\n            // Return their source buffer using the EXISTING deferred free.\n            runtime.FreeDeferredStagingBuffer(task.staging_buffer);\n        }\n        image.flags |= ImageFlagBits::CpuModified;\n        if (True(image.flags & ImageFlagBits::Tracked)) {\n            UntrackImage(image, task.image_id);\n        }\n        image.flags &= ~ImageFlagBits::IsDecoding;\n        unswizzle_queue.pop_front();\n        // No throttling after cancellation: the replacement can be queued\n        // as soon as RefreshContents observes the retained CPU modification.\n        return;\n    }\n#endif\n\n#ifdef PS5_NATIVE\n    if(current_unswizzle_frame > 0) {\n        current_unswizzle_frame--;\n        return;\n    }\n#endif\n\n    if (!task.initialized) {",
+    "F07 cancel stale GPU unswizzle with deferred staging and native cooldown")
+
 # F07 P0.2: cold compute driver builds must take priority over
 # optional optimized graphics rebuilds, including builds still in queue.
 apply_reviewed_delta("vk_compute_pipeline_cost.cpp",

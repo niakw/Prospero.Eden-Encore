@@ -66,8 +66,8 @@ replace_once('#include <memory>\n','#include <memory>\n#include <ranges>\n',"hea
 replace_once('using u8 = std::uint8_t;\nusing u64 = std::uint64_t;',
              'using u8 = std::uint8_t;\nusing u32 = std::uint32_t;\nusing u64 = std::uint64_t;\nusing s64 = std::int64_t;\nusing DAddr = u64;\nusing ImageViewId = std::size_t;\nconstexpr ImageViewId NULL_IMAGE_VIEW_ID = 0;\nconstexpr std::size_t NUM_RT = 4;\nnamespace Dirty {constexpr std::size_t ZetaBuffer=0,ColorBuffer0=1,RenderTargets=10;}\nnamespace boost::container {template<class T,std::size_t N> using small_vector=std::vector<T>;}',
              "types")
-replace_once('    Converted=16,Tracked=32\n};',
-             '    Converted=16,Tracked=32,Rescaled=64,Remapped=128\n};',
+replace_once('    Converted=16,Tracked=32,IsDecoding=64\n};',
+             '    Converted=16,Tracked=32,IsDecoding=64,Rescaled=128,Remapped=256\n};',
              "flags enum")
 # The upload fixture already defines native Flags::operator|=; retain it unchanged.
 replace_once('struct Image {\n',
