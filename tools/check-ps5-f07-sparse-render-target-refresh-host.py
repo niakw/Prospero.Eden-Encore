@@ -95,7 +95,12 @@ int main(){
 #else
  assert(empty.attempts.size()==2*(NUM_RT+1));
 #endif
+#ifdef PS5_NATIVE
  assert(empty.full_clear_calls==0);
+#else
+ // The unchanged desktop path still queries the clear state on NULL IDs.
+ assert(empty.full_clear_calls==NUM_RT+1);
+#endif
 
  Fixture sparse;
  sparse.render_targets.color_buffer_ids[0]=11;
@@ -106,14 +111,19 @@ int main(){
  sparse.Execute(true);
  assert((sparse.prepared==std::vector<ImageViewId>{11,25,37,71}));
  assert((sparse.cleared==std::vector<ImageViewId>{25,71}));
- assert(sparse.full_clear_calls==4);
 #ifdef PS5_NATIVE
+ assert(sparse.full_clear_calls==4);
  assert(sparse.attempts.size()==4);
 #else
+ assert(sparse.full_clear_calls==NUM_RT+1);
  assert(sparse.attempts.size()==NUM_RT+1);
 #endif
  sparse.Execute(false);
+#ifdef PS5_NATIVE
  assert(sparse.full_clear_calls==4);
+#else
+ assert(sparse.full_clear_calls==NUM_RT+1);
+#endif
  assert(sparse.prepared.size()==8);
  assert(sparse.cleared.size()==2);
 
