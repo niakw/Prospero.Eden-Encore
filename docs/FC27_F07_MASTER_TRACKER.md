@@ -448,11 +448,16 @@ correctif natif PS5 utilise 16 entrées directes **locales à chaque passe**,
 sans allocation et sans cache persistant. Les collisions remplacent une
 entrée, les identifiants NULL sont relus, et la réutilisation est désactivée
 durant suppression/retry ou blacklist/rescale. La méthode épinglée hors PS5
-reste inchangée. Le générateur reproduit désormais ce chemin, qui était
-auparavant présent uniquement dans les sources intégrées.
+reste inchangée. Le générateur étend désormais le raccourci consécutif fourni par les
+**backports Eden actifs** ; la reconstruction ne repart pas de l'archive vierge.
 
 La prévalidation du SHA précédent a échoué sur un **ancien test inline DMA**
 qui n'incluait pas `buffer_pages.h` et supposait toujours une entrée dans le
 cache buffer. Le témoin est ajusté pour les pages vraiment jamais enregistrées
 et pour les buffers enregistrés, sans toucher au contrat runtime.
 **Preuves C++ / CI et amélioration FC 27 console restent à valider.**
+
+**Précision CI :** la première ancre de génération ciblait par erreur
+l'archive Eden vierge. La source d'entrée réelle est le backport actif.
+L'ancre stricte est recalée sur ce dernier, sans modifier le comportement
+natif compilé.

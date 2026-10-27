@@ -5,6 +5,7 @@ import shutil, subprocess, tempfile, ast
 root=Path(__file__).resolve().parents[1]
 native=(root/"vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text()
 pinned=(root/"vendor/sources/eden/src/video_core/texture_cache/texture_cache.h").read_text()
+backports=(root/"vendor/encore-active/eden-backports/src/video_core/texture_cache/texture_cache.h").read_text()
 gen=(root/"tools/prepare-vulkan-port.py").read_text()
 pre=(root/".github/workflows/encore-core-preflight.yml").read_text()
 fast=(root/".github/workflows/encore-core-fast-gate.yml").read_text()
@@ -20,6 +21,9 @@ def method(s):
 source=method(native)
 baseline=method(pinned)
 assert "view_memo" not in baseline
+assert "previous_view_id" in method(backports)
+assert "previous_view_id" not in source
+assert method(backports) != source
 assert source.count("view_memo[view.index & 15U]")==2
 assert source.count("std::array<ViewMemo, 16> view_memo{}")==1
 assert "previous_view_id" not in source
