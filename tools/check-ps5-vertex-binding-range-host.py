@@ -53,7 +53,7 @@ assert pairs.count((old, new)) == 1
 # Extract the actual native range clamp and early-return logic into a
 # host-compiled witness. No source reimplementation of the guard.
 prefix = method[method.index("    const u32 device_max ="):method.index(
-    "    boost::container::static_vector<VkBuffer,")]
+    "\n#ifdef PS5_NATIVE", method.index("    const u32 device_max ="))]
 assert prefix.count("return;") == 1
 cpp = r"""
 #include <algorithm>
@@ -182,26 +182,34 @@ int main(){
   Host clipped{{2,false},{0,4,{&present,&absent,&absent,&absent},
                                {11,13,17,19},{101,103,107,109},{1,2,3,4}}};
   clipped.Bind();
+#ifdef PS5_NATIVE
   assert(clipped.selected==2 && calls==4 && clipped.substitute_requests==1);
   assert(clipped.bindings.offsets[2]==17 && clipped.bindings.offsets[3]==19);
   assert(clipped.bindings.sizes[2]==107 && clipped.bindings.sizes[3]==109);
-
   // A malformed live range must not dereference short host arrays.
   Host short_host{{4,false},{0,3,{&present},{7},{11},{4}}};
   short_host.Bind();
   assert(short_host.selected==0 && calls==4 && short_host.substitute_requests==0);
+#else
+  // Desktop retains its original all-handles preparation behavior.
+  assert(clipped.selected==2 && calls==6 && clipped.substitute_requests==3);
+  assert(clipped.bindings.offsets[2]==0 && clipped.bindings.offsets[3]==0);
+  assert(clipped.bindings.sizes[2]==VK_WHOLE_SIZE);
+#endif
 }
 """
 with tempfile.TemporaryDirectory(prefix="encore-vertex-early-") as tmp:
     src=Path(tmp)/"vertex.cpp"
     src.write_text(extended)
     for mode in ("-O0","-O2"):
-        bin=Path(tmp)/("vertex"+mode)
-        built=subprocess.run([clang,"-std=c++20",mode,"-Wall","-Wextra","-Werror",
-                              "-fsanitize=undefined","-fno-sanitize-recover=all",
-                              str(src),"-o",str(bin)],capture_output=True,text=True,timeout=45)
-        assert built.returncode==0,(mode,built.stderr[-5000:])
-        run=subprocess.run([str(bin)],capture_output=True,text=True,timeout=20)
-        assert run.returncode==0,(mode,run.stderr[-5000:])
+        for ps5 in (False,True):
+            bin=Path(tmp)/("vertex"+mode+("-ps5" if ps5 else "-desktop"))
+            built=subprocess.run([clang,"-std=c++20",mode,"-Wall","-Wextra","-Werror",
+                                  "-fsanitize=undefined","-fno-sanitize-recover=all",
+                                  *(["-DPS5_NATIVE=1"] if ps5 else []),
+                                  str(src),"-o",str(bin)],capture_output=True,text=True,timeout=45)
+            assert built.returncode==0,(mode,ps5,built.stderr[-5000:])
+            run=subprocess.run([str(bin)],capture_output=True,text=True,timeout=20)
+            assert run.returncode==0,(mode,ps5,run.stderr[-5000:])
 print("VERTEX_EARLY_REJECTION_HOST_PASS invalid_no_handles=1 clamped_no_null=1"
-      " clamped_tail_ignored=1 malformed_rejected=1 valid_handles_and_fallback=1 O0_O2=1")
+      " clamped_tail_ignored=1 malformed_rejected=1 desktop_unchanged=1 valid_handles_and_fallback=1 O0_O2=1")
