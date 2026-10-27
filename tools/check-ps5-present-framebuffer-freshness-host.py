@@ -29,7 +29,16 @@ assert loop.count("ImageFlagBits::Remapped | ImageFlagBits::CpuModified") == 1
 assert loop.index("if (image.cpu_addr != cpu_addr)") < loop.index("ImageFlagBits::Remapped | ImageFlagBits::CpuModified")
 assert loop.index("ImageFlagBits::Remapped | ImageFlagBits::CpuModified") < loop.index("if (image.image_view_ids.empty())")
 assert "F07 P0.4 accelerated present rejects remapped or CPU-dirty framebuffer" in generator
-assert "if (!image_view) {" in raster.split("RasterizerVulkan::AccelerateDisplay(",1)[1].split("return info;",1)[0]
+display = raster.split("RasterizerVulkan::AccelerateDisplay(",1)[1].split("return info;",1)[0]
+assert "if (!image_view) {" in display
+assert display.count("gpu_memory->FlushCaching();") == 1
+assert display.index("gpu_memory->FlushCaching();") < display.index("std::scoped_lock lock{texture_cache.mutex};")
+assert display.index("std::scoped_lock lock{texture_cache.mutex};") < display.index("TryFindFramebufferImageView(config, framebuffer_addr)")
+assert "F07 P0.4 present flushes remaps before inspecting image cache" in generator
+# The engine's regular DrawTexture path provides a proven ownership/locking
+# pattern for this extra present-side flush.
+draw_texture=raster.split("void RasterizerVulkan::DrawTexture() {",1)[1].split("void RasterizerVulkan::Clear(",1)[0]
+assert draw_texture.index("gpu_memory->FlushCaching();") < draw_texture.index("std::scoped_lock l{texture_cache.mutex};")
 assert "return {};" in raster.split("RasterizerVulkan::AccelerateDisplay(",1)[1].split("query_cache.NotifySegment",1)[0]
 assert "if (!use_accelerated) {\n        UpdateRawImage(framebuffer, image_index);" in layer
 for wf in (fast,full):
