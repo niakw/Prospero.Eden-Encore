@@ -174,6 +174,12 @@ private:
         bool attempted{};
     };
     ::Common::unordered_map<GraphicsPipelineCacheKey, GraphicsRetryState> failed_graphics_retries;
+    // Independently bounded recovery for failed compute translations.
+    struct ComputeRetryState {
+        std::chrono::steady_clock::time_point eligible_at{};
+        bool attempted{};
+    };
+    ::Common::unordered_map<ComputePipelineCacheKey, ComputeRetryState> failed_compute_retries;
 #endif
 
     ShaderPools main_pools;
