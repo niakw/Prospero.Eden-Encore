@@ -21,6 +21,13 @@ assert active.count(method_start) == pinned.count(method_start) == 1
 start = active.index(method_start)
 end = active.index(method_end, start)
 fragment = active[start:end]
+# The extracted prefix ends before the desktop branch consumes its image.
+# Keep -Werror in BOTH builds: the mock source may mark that local as unused,
+# without changing the production C++ source or suppressing other diagnostics.
+compiled_fragment = fragment.replace(
+    "Image& image = slot_images[task.image_id];",
+    "[[maybe_unused]] Image& image = slot_images[task.image_id];")
+assert compiled_fragment != fragment
 pinned_prefix = pinned[pinned.index(method_start):pinned.index(method_end, pinned.index(method_start))]
 assert fragment.count("FreeDeferredStagingBuffer(task.staging_buffer);") == 1
 assert fragment.index("ImageFlagBits::CpuModified | ImageFlagBits::Remapped") < fragment.index(
@@ -81,7 +88,7 @@ template<class P> struct TextureCache {
     void TickAsyncUnswizzle();
 };
 template<class P>
-""" + fragment + r"""
+""" + compiled_fragment + r"""
     ++reached_normal;
 }
 void Submit(TextureCache<int>& c,ImageId id,bool allocated,bool dirty,bool remapped,bool tracked) {
@@ -103,7 +110,7 @@ int main(){
     c.current_unswizzle_frame=3;
     c.TickAsyncUnswizzle();
     assert(c.unswizzle_queue.empty() && c.runtime.deferred_free==1);
-    assert(c.current_unswizzle_frame==3 && c.untracked==1);
+    assert(c.current_unswizzle_frame==0 && c.untracked==1);
     assert(True(c.slot_images[0].flags&ImageFlagBits::CpuModified));
     assert(!True(c.slot_images[0].flags&ImageFlagBits::IsDecoding));
     // Admission failed before allocating staging: never free default handle.
@@ -115,13 +122,17 @@ int main(){
     c.TickAsyncUnswizzle();
     assert(c.unswizzle_queue.empty() && c.runtime.deferred_free==2);
     assert(True(c.slot_images[2].flags&ImageFlagBits::CpuModified));
-    // A clean task retains its usual throttled processing.
+    // A clean replacement is admitted without inheriting the cancelled
+    // task's cooldown. A separately active cooldown still operates normally.
     Submit(c,3,true,false,false,false);
     c.TickAsyncUnswizzle();
-    assert(c.current_unswizzle_frame==2 && c.reached_normal==0);
+    assert(c.current_unswizzle_frame==0 && c.reached_normal==1);
+    c.current_unswizzle_frame=2;
+    c.TickAsyncUnswizzle();
+    assert(c.current_unswizzle_frame==1 && c.reached_normal==1);
     c.current_unswizzle_frame=0;
     c.TickAsyncUnswizzle();
-    assert(c.reached_normal==1 && c.unswizzle_queue.size()==1);
+    assert(c.reached_normal==2 && c.unswizzle_queue.size()==1);
 #else
     Submit(c,0,true,true,false,true);
     c.current_unswizzle_frame=3;
