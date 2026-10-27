@@ -149,3 +149,25 @@ sur matériel.
 - [Architecture native et contraintes PS5](PS5_NATIVE_ARCHITECTURE.md)
 
 **Ne pas réutiliser les compteurs documentaires « fichiers restants » comme nombre de corrections requises :** inventaire, optimisation et qualification sont trois axes différents.
+
+## P0.2 — vie des compilations optimisées en attente (27 octobre)
+
+Le chemin « fast-first » maintenait `OptimizeState::running=false` entre
+`QueueWork` et le début effectif du worker : le destructeur pouvait alors
+libérer un `GraphicsPipeline` encore capturé par un job en file. La correction
+marque le travail **en attente avant publication**, puis libère cet état pour
+toutes les sorties (annulation avant démarrage, exceptions, fin normale et
+échec de l'admission dans la file). Elle ne publie plus un pipeline optimisé
+si le pilote retourne un handle Vulkan nul. Le témoin C++ natif vérifie les
+cycles annulation/fermeture, pipeline manquant et refus de file, tandis que la
+reproduction du générateur Vulkan conserve la parité avec la source sélectionnée.
+
+C'est un correctif de **durée de vie et de validité des pipelines**, sans preuve
+de réduction des saccades, ni levée du F07 sur console.
+
+## Dernière base CI pleinement vérifiée
+
+Sur `d76fc53a9ae553eef61e0898195d5ea374b1b2b0`, les quatre jobs
+(native build, fast gate, preflight complet, analyse de sécurité) sont
+`SUCCESS`. Toute modification après ce commit doit faire ses propres
+contrôles CI au même SHA ; un résultat antérieur n'est pas transférable.
