@@ -35,6 +35,7 @@ on:
       - 'tools/check-ps5-f07-cold-stalls-host.py'
       - 'tools/check-ps5-f07-pipeline-transitions-host.py'
       - 'tools/check-ps5-f07-*.py'
+      - '.github/workflows/encore-core-preflight.yml'
       - 'vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp'
       - 'tools/check-deferred-native-bridge-contract.py'
       - 'tools/prepare-vulkan-port.py'
