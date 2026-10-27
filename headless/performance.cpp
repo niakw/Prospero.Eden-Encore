@@ -1429,7 +1429,8 @@ void ReportGpuThread(unsigned frame) {
             "graphics_pipeline_create", "graphics_shader_environment", "shader_pool_reset", "shader_cfg",
             "shader_ir", "shader_spirv", "shader_module",
             "graphics_pipeline_wait", "compute_pipeline_wait", "texture_upload_staging",
-            "texture_upload_contents", "texture_upload_barrier"
+            "texture_upload_contents", "texture_upload_barrier",
+            "compute_pair_wait", "compute_pair_held", "compute_configure"
         };
         static_assert(std::size(cache_phase_names) == cache_phase_totals.size());
         constexpr const char* drop_names[] = {

@@ -210,7 +210,8 @@ enum class CachePhase : unsigned {
     GraphicsPipelineCreate, GraphicsShaderEnvironment, ShaderPoolReset, ShaderCfg, ShaderIr,
     ShaderSpirv, ShaderModule, GraphicsPipelineWait, ComputePipelineWait,
     TextureUploadStaging, TextureUploadContents,
-    TextureUploadBarrier, Count
+    TextureUploadBarrier,
+    ComputePairWait, ComputePairHeld, ComputeConfigure, Count
 };
 struct CachePhaseTotal {
     std::atomic<unsigned long long> samples{}, total_ns{}, max_ns{};

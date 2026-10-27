@@ -66,12 +66,10 @@ replace_once('#include <memory>\n','#include <memory>\n#include <ranges>\n',"hea
 replace_once('using u8 = std::uint8_t;\nusing u64 = std::uint64_t;',
              'using u8 = std::uint8_t;\nusing u32 = std::uint32_t;\nusing u64 = std::uint64_t;\nusing s64 = std::int64_t;\nusing DAddr = u64;\nusing ImageViewId = std::size_t;\nconstexpr ImageViewId NULL_IMAGE_VIEW_ID = 0;\nconstexpr std::size_t NUM_RT = 4;\nnamespace Dirty {constexpr std::size_t ZetaBuffer=0,ColorBuffer0=1,RenderTargets=10;}\nnamespace boost::container {template<class T,std::size_t N> using small_vector=std::vector<T>;}',
              "types")
-replace_once('    Converted=16\n};',
+replace_once('    Converted=16,Tracked=32\n};',
              '    Converted=16,Tracked=32,Rescaled=64,Remapped=128\n};',
              "flags enum")
-replace_once('    Flags& operator&=(unsigned mask){bits &= mask;return *this;}\n};',
-             '    Flags& operator&=(unsigned mask){bits &= mask;return *this;}\n    Flags& operator|=(ImageFlagBits bit){bits|=static_cast<unsigned>(bit);return *this;}\n};',
-             "flags op")
+# The upload fixture already defines native Flags::operator|=; retain it unchanged.
 replace_once('struct Image {\n',
              '''struct ImageCopy {std::size_t dst_offset{},src_offset{},length{};};
 struct AliasedImage {ImageId id{};std::vector<ImageCopy> copies{};};
@@ -106,7 +104,7 @@ replace_once('    Runtime runtime{};\n',
     Maxwell* maxwell3d=&maxwell_instance;
     FramebufferState render_targets{};
     u64 modification_tick=0;
-    unsigned copy_count=0,untrack_count=0;
+    unsigned copy_count=0;
     std::vector<ImageId> copy_order;
     template<class F> void ForEachImageInRegion(DAddr cpu,size_t size,F visit){
         for(ImageId i=0;i<slot_images.size();++i) {
@@ -136,14 +134,8 @@ replace_once('    Runtime runtime{};\n',
         ++copy_count;
         copy_order.push_back(src_id);
     }
-    void UntrackImage(Image& img,ImageId){
-        img.flags.bits &= ~static_cast<unsigned>(ImageFlagBits::Tracked);
-        ++untrack_count;
-    }
 ''',"cache methods")
-replace_once('    void TrackImage(Image&,ImageId){++tracked;}',
-             '    void TrackImage(Image& img,ImageId){++tracked;img.flags |= ImageFlagBits::Tracked;}',
-             "tracked")
+# The upload fixture already models tracking and untracking both image flags.
 replace_once('    void RefreshContents(Image&,ImageId);\n',
              '    void RefreshContents(Image&,ImageId);\n    void WriteMemory(DAddr,size_t);\n    void UnmapGPUMemory(size_t,GPUVAddr,size_t);\n    void SynchronizeAliases(ImageId);\n',"declarations")
 replace_once('__METHODS__\n',
