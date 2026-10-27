@@ -946,7 +946,16 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
     state.has_loaded = true;
     lock.unlock();
 
+#ifdef PS5_NATIVE
+    // A cancelled title-cache load must never stop the persistent shader
+    // compiler pool: StatefulThreadWorker::WaitForRequests(stop_token)
+    // requests stop on every worker when that token is cancelled.
+    // Only the disk reader observes cancellation. The queued <=8 jobs
+    // must complete before their borrowed stack state can be destroyed.
+    workers.WaitForRequests();
+#else
     workers.WaitForRequests(stop_loading);
+#endif
 #ifdef PS5_NATIVE
     // Completed attempts include failed native handles; track valid results.
     // One startup summary, never a per-frame or per-draw instrumentation cost.

@@ -2586,7 +2586,7 @@ if shader_source.count(f07_warm_before_3) != 1:
     raise RuntimeError('F07 bounded cache prewarm anchor 3 moved')
 shader_source = shader_source.replace(f07_warm_before_3, f07_warm_after_3)
 f07_warm_before_4 = "    workers.WaitForRequests(stop_loading);\n\n    if (use_vulkan_pipeline_cache) {"
-f07_warm_after_4 = "    workers.WaitForRequests(stop_loading);\n#ifdef PS5_NATIVE\n    LOG_INFO(Render_Vulkan, \"PS5 shader cache bounded prewarm built {}/{} entries\",\n             state.built, state.total);\n#endif\n\n    if (use_vulkan_pipeline_cache) {"
+f07_warm_after_4 = "#ifdef PS5_NATIVE\n    // A cancelled title-cache load must never stop the persistent shader\n    // compiler pool: StatefulThreadWorker::WaitForRequests(stop_token)\n    // requests stop on every worker when that token is cancelled.\n    // Only the disk reader observes cancellation. The queued <=8 jobs\n    // must complete before their borrowed stack state can be destroyed.\n    workers.WaitForRequests();\n#else\n    workers.WaitForRequests(stop_loading);\n#endif\n#ifdef PS5_NATIVE\n    LOG_INFO(Render_Vulkan, \"PS5 shader cache bounded prewarm built {}/{} entries\",\n             state.built, state.total);\n#endif\n\n    if (use_vulkan_pipeline_cache) {"
 if shader_source.count(f07_warm_before_4) != 1:
     raise RuntimeError('F07 bounded cache prewarm anchor 4 moved')
 shader_source = shader_source.replace(f07_warm_before_4, f07_warm_after_4)
