@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Exercise selected Vulkan buffer-copy guards for empty nonbarrier batches.
+"""Exercise the selected Vulkan copy guard, including barrier-only batches.
 
-The original GPU-memory barrier path is intentionally left intact. Only an
-empty nonbarrier batch may return without queueing any work on PS5.
+Empty batches must never enqueue a zero-region copy on PS5. An explicit
+barrier request retains both original ordering barriers; desktop is unchanged.
 """
 from pathlib import Path
 import ast
@@ -29,7 +29,10 @@ def guards(text):
     return text[start:end]
 selected=guards(source)
 original=guards(pinned)
-assert selected.count("if (copies.empty() && !barrier)") == 1
+assert selected.count("if (copies.empty())") == 1
+assert selected.count("PreCopyBarrier();") == 1
+assert selected.count("PostCopyBarrier();") == 1
+assert selected.index("if (copies.empty())") < selected.index("PreCopyBarrier();")
 assert "#ifdef PS5_NATIVE" in selected and "#endif" in selected
 assert "copies.empty()" not in original
 assert selected.index("dst_buffer == VK_NULL_HANDLE") < selected.index("copies.empty()")
@@ -45,6 +48,9 @@ constexpr VkBuffer VK_NULL_HANDLE=0;
 struct Copy {std::size_t size;};
 struct Runtime {
  unsigned records{};
+ unsigned pre_barriers{}, post_barriers{};
+ void PreCopyBarrier() { ++pre_barriers; }
+ void PostCopyBarrier() { ++post_barriers; }
  void CopyBuffer(VkBuffer dst_buffer,VkBuffer src_buffer,
                  [[maybe_unused]] std::span<const Copy> copies,
                  [[maybe_unused]] bool barrier,bool) {
@@ -71,7 +77,11 @@ int main() {
 
  Runtime barrier;
  barrier.CopyBuffer(1,2,{},true,false);
- assert(barrier.records==1);
+#ifdef PS5_NATIVE
+ assert(barrier.records==0 && barrier.pre_barriers==1 && barrier.post_barriers==1);
+#else
+ assert(barrier.records==1 && barrier.pre_barriers==0 && barrier.post_barriers==0);
+#endif
 
  Runtime one;
  const Copy item{1024};
@@ -102,4 +112,4 @@ with tempfile.TemporaryDirectory(prefix="f07-empty-copy-") as folder:
             run=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
             assert run.returncode==0,(opt,ps5,run.stderr[-4000:])
 print("F07_EMPTY_BUFFER_COPY_HOST_PASS null=1 zero_no_barrier=1"
-      " zero_with_barrier=1 one=1 many=1 desktop=1 O0_O2=1")
+      " barrier_only_pre_post=1 no_empty_vulkan_copy=1 one=1 many=1 desktop=1 O0_O2=1")
