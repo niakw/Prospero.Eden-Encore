@@ -46,6 +46,21 @@ assert graphics_scope.count("pending_first_use_graphics_builds.fetch_add(1, std:
 assert graphics_scope.count("pending_first_use_graphics_builds.fetch_sub(1, std::memory_order_release)") == 1
 assert "F07 graphics translation observes first-use worker counter" in generator
 assert "F07 graphics shader translation priority scope" in generator
+assert "F07 graphics environment first-use priority before shader translation" in generator
+assert "F07 compute environment first-use priority before shader translation" in generator
+# Runtime entrypoints reserve before reading the guest shader environment or
+# resetting pools. Inner scopes stay active throughout CFG/IR/SPIR-V.
+outer_gfx = source[source.index("std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {"):
+                   source.index("std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(")]
+assert outer_gfx.count("GraphicsTranslationPriorityScope first_use_preparation_priority{") == 1
+assert outer_gfx.index("GraphicsTranslationPriorityScope first_use_preparation_priority{") < outer_gfx.index("GetGraphicsEnvironments(environments")
+assert outer_gfx.index("GraphicsTranslationPriorityScope first_use_preparation_priority{") < outer_gfx.index("main_pools.ReleaseContents()")
+assert "::Eden::DevVulkan::fast_first_pipelines" in outer_gfx
+outer_cmp = source[source.index("std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline("):
+                   source.index("std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(\n    ShaderPools& pools")]
+assert outer_cmp.count("ComputeTranslationPriorityScope first_use_preparation_priority{true};") == 1
+assert outer_cmp.index("ComputeTranslationPriorityScope first_use_preparation_priority{true};") < outer_cmp.index("ComputeEnvironment env{")
+assert outer_cmp.index("ComputeTranslationPriorityScope first_use_preparation_priority{true};") < outer_cmp.index("main_pools.ReleaseContents()")
 assert "F07 reserve graphics translation before CFG IR SPIRV" in generator
 graphics_method_start = "    bool build_in_parallel) try {\n#ifdef PS5_NATIVE\n    // The optional optimizer"
 graphics_method_end = "    auto hash = key.Hash();\n    LOG_DEBUG(Render_Vulkan, \"{:#016x}\", hash);"
