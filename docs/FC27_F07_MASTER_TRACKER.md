@@ -421,3 +421,20 @@ les exceptions avant transfert de propriété sont couvertes par RAII. Le
 chemin desktop et les builds de préchauffage disque ne changent pas.
 **Validation CI/native, mesures de latence et absence de régression console
 restent nécessaires.**
+
+## F07 P0.3 — écriture DMA inline sans mutex buffer inutile (27 octobre)
+
+`RasterizerVulkan::AccelerateInlineToMemory` bloquait systématiquement
+sur `buffer_cache.mutex`, même si **aucun buffer GPU n'avait jamais été
+registré sur les pages CPU ciblées**. Sur la source native PS5 et son pont
+DEV, le témoin monotone `BufferPages::NeverRegistered` permet maintenant
+d'éviter dans ce cas l'appel inutile `InlineMemory`/`WriteMemory` et la
+prise du mutex. La copie vers la mémoire invitée précède toujours le test ;
+les invalidations textures, pipeline et requêtes suivent comme auparavant.
+Les régions inconnues, les tailles supérieures à 256 Kio, les anciennes
+occupations et les chevauchements restent dans le chemin verrouillé.
+Le premier enregistrement d'un buffer démarre CPU-dirty : une écriture
+DMA antérieure à son existence n'a pas d'ancienne version GPU à invalider.
+Un harnais extrait le vrai C++ et vérifie cas connus, jamais possédés,
+textures seules, chevauchements, grandes plages et adresses sans mapping.
+**Effet FPS/HUD et tests console non prouvés.**
