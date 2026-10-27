@@ -510,3 +510,17 @@ réelle et teste handles invalides, copies nulles, barrière seule, 1 et
 plusieurs copies, en modes natif/desktop et `-O0`/`-O2`.
 **Ce raccourci évite des soumissions inutiles mais n'est pas une mesure
 réelle des FPS console.**
+
+## F07 P0.3 — rejet anticipé d'une plage vertex invalide
+
+`BufferCacheRuntime::BindVertexBuffers` calculait une plage vide, inversée
+ou hors limites **après** avoir résolu tous les handles et éventuellement
+réservé les buffers NULL de remplacement. En PS5 natif la validation de
+`GetMaxVertexInputBindings()` passe avant le tableau local et les appels
+`Handle()` ; les plages admises conservent leur chemin Vulkan exact. Le
+contrôle existant de non-débordement demeure ; un témoin C++ supplémentaire
+exécute la nouvelle amorce de méthode avec de vraies résolutions simulées,
+prouvant l'absence de lectures/réservations pour les rejets et leur présence
+sur une plage valide, à `-O0`/`-O2`. Les sources Eden/backports restent
+inchangées ; l'override est reproduit par le générateur Vulkan strict.
+**Aucun effet mesuré sur FC 27 console à ce stade.**
