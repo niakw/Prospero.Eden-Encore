@@ -1544,16 +1544,34 @@ void TextureCache<P>::RefreshContents(Image& image, ImageId image_id) {
         ::Eden::Performance::CachePhase::TextureCpuRefresh};
 #endif
     image.flags &= ~ImageFlagBits::CpuModified;
+#ifdef PS5_NATIVE
+    // Synchronous upload failure must not leave the CPU image incorrectly clean.
+    bool upload_completed = false;
+    SCOPE_EXIT {
+        if (!upload_completed) {
+            if (True(image.flags & ImageFlagBits::Tracked)) {
+                UntrackImage(image, image_id);
+            }
+            image.flags |= ImageFlagBits::CpuModified;
+        }
+    };
+#endif
 
     TrackImage(image, image_id);
 
     if (image.info.num_samples > 1 && !runtime.CanUploadMSAA()) {
         LOG_WARNING(HW_GPU, "MSAA image uploads are not implemented");
         runtime.TransitionImageLayout(image);
+#ifdef PS5_NATIVE
+        upload_completed = true;  // Intentional unsupported MSAA fallback.
+#endif
         return;
     }
     if (True(image.flags & ImageFlagBits::AsynchronousDecode)) {
         QueueAsyncDecode(image, image_id);
+#ifdef PS5_NATIVE
+        upload_completed = true;  // Decode handoff accepted.
+#endif
         return;
     }
 
@@ -1568,20 +1586,11 @@ void TextureCache<P>::RefreshContents(Image& image, ImageId image_id) {
         False(image.flags & ImageFlagBits::GpuModified)) {
 
         QueueAsyncUnswizzle(image, image_id);
+#ifdef PS5_NATIVE
+        upload_completed = true;  // Unswizzle handoff accepted.
+#endif
         return;
     }
-#ifdef PS5_NATIVE
-    // Synchronous upload failure must not leave the CPU image incorrectly clean.
-    bool upload_completed = false;
-    SCOPE_EXIT {
-        if (!upload_completed) {
-            if (True(image.flags & ImageFlagBits::Tracked)) {
-                UntrackImage(image, image_id);
-            }
-            image.flags |= ImageFlagBits::CpuModified;
-        }
-    };
-#endif
 #ifdef PS5_NATIVE
     // F07: isolate staging allocation, CPU decode/unswizzle and the required
     // upload barrier within the existing 1-in-16 sampled refresh.

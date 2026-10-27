@@ -17,6 +17,16 @@ tag = "#ifdef PS5_NATIVE\n    // Synchronous upload failure must not"
 i = body.index(tag)
 guard = body[i:body.index("#endif\n", i) + len("#endif\n")]
 assert "if (!upload_completed)" in guard
+assert body.index("bool upload_completed = false;") < body.index("TrackImage(image, image_id);")
+assert body.count("upload_completed = true;") == 4
+for branch in ("runtime.TransitionImageLayout(image);",
+               "QueueAsyncDecode(image, image_id);",
+               "QueueAsyncUnswizzle(image, image_id);"):
+    first = body.index(branch)
+    early_return = body.index("return;", first)
+    assert "upload_completed = true;" in body[first:early_return]
+for label in ("MSAA","decode","unswizzle"):
+    assert f"F07 complete {label} image handoff" in gen
 assert "UntrackImage(image, image_id);" in guard
 assert "image.flags |= ImageFlagBits::CpuModified;" in guard
 assert body.index("runtime.InsertUploadMemoryBarrier();") < body.index("upload_completed = true;")
