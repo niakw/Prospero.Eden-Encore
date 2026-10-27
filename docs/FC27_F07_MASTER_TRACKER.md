@@ -183,3 +183,15 @@ Vulkan sont synchronisées ; un test C++ extrait la vraie politique et couvre
 O0/O2 et le budget de retries. Le défaut distinct d'un handle Vulkan qui
 échoue après création asynchrone n'est pas traité ici. **F07 et la preuve
 HUD/FPS console restent ouverts.**
+
+## P0.2 — fermeture du compteur de compilation compute
+
+En production native, la notification shader-building du constructeur
+compute précède les opérations d'initialisation du layout et l'admission
+au worker. Une exception sur ces chemins pouvait garder le compteur en état
+« compilation en cours ». La garde RAII native retourne maintenant la
+notification avant le transfert ; après transfert, le SCOPE_EXIT existant de
+la callback reste son unique propriétaire. Le test hôte reproduit la fuite
+sur l'ancienne route et vérifie préparation échouée, file fermée, compilation
+inline et worker différé en -O0/-O2. Aucun changement de synchronisation
+des ressources invitées ni d'attente GPU. F07 console non qualifié.
