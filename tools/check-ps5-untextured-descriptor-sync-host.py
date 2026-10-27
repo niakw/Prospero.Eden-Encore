@@ -79,6 +79,67 @@ int main() {
     assert(plain.texture_cache.synchronizations == 1);
 }
 '''
+# F07 P0.3: native selected stage host buffer gate is replayed verbatim.
+header=(root/"vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h").read_text()
+assert "std::array<bool, NUM_STAGES> stage_has_host_buffer_bindings{};" in header
+assert "stage_has_host_buffer_bindings[stage] = info->constant_buffer_mask != 0 ||" in constructor
+for kind in ("storage_buffers_descriptors", "texture_buffer_descriptors",
+             "image_buffer_descriptors"):
+    assert "!info->"+kind+".empty()" in constructor
+assert "stage_has_image_bindings[stage]" in constructor
+assert "PushImageDescriptors(texture_cache, guest_descriptor_queue" in after
+start=after.index("        if (stage_has_host_buffer_bindings[stage]) {")
+stop=after.index("        const auto& info{stage_infos[stage]};",start)
+host_gate=after[start:stop]
+assert host_gate.count("buffer_cache.BindHostStageBuffers(stage);")==1
+assert "CachePhase::StageHostBuffers" in host_gate
+assert oracle.count("'F07 P0.3 omit empty host buffer stage walks'")==1
+
+host_fixture=r'''
+#include <array>
+#include <cassert>
+#include <cstddef>
+namespace Eden::Performance {
+enum class CachePhase { StageHostBuffers };
+struct CachePhaseTimer { explicit CachePhaseTimer(CachePhase) {} };
+}
+struct BufferCache {
+    std::array<unsigned,5> calls{};
+    void BindHostStageBuffers(std::size_t stage) { ++calls[stage]; }
+};
+struct Pipeline {
+    std::array<bool,5> stage_has_host_buffer_bindings{};
+    BufferCache buffer_cache;
+    void Run(std::size_t stage) {
+'''+host_gate+r'''
+    }
+};
+int main() {
+    Pipeline p;
+    for(std::size_t i=0;i<5;++i) p.Run(i);
+    for(unsigned v:p.buffer_cache.calls) assert(v==0);
+    p.stage_has_host_buffer_bindings={true,true,true,false,false};
+    for(std::size_t i=0;i<5;++i) p.Run(i);
+    assert(p.buffer_cache.calls[0]==1);
+    assert(p.buffer_cache.calls[1]==1);
+    assert(p.buffer_cache.calls[2]==1);
+    assert(p.buffer_cache.calls[3]==0);
+    assert(p.buffer_cache.calls[4]==0);
+    p.stage_has_host_buffer_bindings={false,false,false,false,false};
+    for(std::size_t i=0;i<5;++i) p.Run(i);
+    assert(p.buffer_cache.calls[0]==1);
+}
+'''
+with tempfile.TemporaryDirectory(prefix="encore-f07-stage-buffers-") as tmp:
+    cpp=Path(tmp)/"stage.cpp"
+    cpp.write_text(host_fixture)
+    for optimization in ("-O0","-O2"):
+        exe=Path(tmp)/optimization
+        subprocess.run(["c++","-std=c++20",optimization,"-Wall","-Wextra",
+                        "-Werror",str(cpp),"-o",str(exe)],check=True)
+        subprocess.run([str(exe)],check=True)
+        print("ENCORE_F07_EMPTY_STAGE_HOST_BUFFERS_PASS",optimization)
+
 with tempfile.TemporaryDirectory(prefix="encore-nontexture-tic-") as tmp:
     cpp=Path(tmp)/"test.cpp"
     cpp.write_text(sample)
