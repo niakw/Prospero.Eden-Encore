@@ -216,3 +216,14 @@ même clé. Aucun travail supplémentaire sur les shaders valides ni dans la
 boucle chaude. Témoins source-extraits O0/O2 : épuisement initial du quota,
 réutilisation, absence de seconde reprise et conservation du délai de 2 s.
 **Correctif source/hôte à qualifier en CI ; pas de gain FPS/HUD démontré.**
+
+## F07 P0.4 — rollback texture avant enregistrement (27 octobre)
+
+Sur PS5, `CpuModified` était effacé avant `TrackImage`, alors que le
+rollback n'était installé qu'après les chemins asynchrones et MSAA.
+Une exception lors du suivi pouvait donc laisser une texture non rafraîchie
+considérée propre. La garde couvre désormais l'enregistrement ; les retours
+MSAA et asynchrones réussis marquent la prise en charge comme terminée.
+Le test F04 source-extrait reproduit une exception après suivi partiel,
+vérifie l'annulation du suivi et la publication à la prochaine tentative.
+**Validation hôte/CI et résultat console encore nécessaires.**

@@ -3504,11 +3504,24 @@ apply_reviewed_delta("vk_compute_pipeline_cost.cpp",
     "F07 compute worker completion ownership transfer")
 
 
-# F07: prevent falsely clean CPU images after a failed synchronous upload.
+# F07 P0.4: protect the image BEFORE Tracked registration can throw.
+# Successful async/MSAA exits explicitly commit their accepted handoff.
 apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
-    "#ifdef PS5_NATIVE\n    // F07: isolate staging allocation, CPU decode/unswizzle and the required",
-    "#ifdef PS5_NATIVE\n    // Synchronous upload failure must not leave the CPU image incorrectly clean.\n    bool upload_completed = false;\n    SCOPE_EXIT {\n        if (!upload_completed) {\n            if (True(image.flags & ImageFlagBits::Tracked)) {\n                UntrackImage(image, image_id);\n            }\n            image.flags |= ImageFlagBits::CpuModified;\n        }\n    };\n#endif\n#ifdef PS5_NATIVE\n    // F07: isolate staging allocation, CPU decode/unswizzle and the required",
-    "F07 restore failed texture upload dirty state")
+    "    image.flags &= ~ImageFlagBits::CpuModified;\n\n    TrackImage(image, image_id);",
+    "    image.flags &= ~ImageFlagBits::CpuModified;\n#ifdef PS5_NATIVE\n    // Synchronous upload failure must not leave the CPU image incorrectly clean.\n    bool upload_completed = false;\n    SCOPE_EXIT {\n        if (!upload_completed) {\n            if (True(image.flags & ImageFlagBits::Tracked)) {\n                UntrackImage(image, image_id);\n            }\n            image.flags |= ImageFlagBits::CpuModified;\n        }\n    };\n#endif\n\n    TrackImage(image, image_id);",
+    "F07 restore failed texture upload dirty state before registration")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        runtime.TransitionImageLayout(image);\n        return;",
+    "        runtime.TransitionImageLayout(image);\n#ifdef PS5_NATIVE\n        upload_completed = true;  // Intentional unsupported MSAA fallback.\n#endif\n        return;",
+    "F07 complete MSAA image handoff")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        QueueAsyncDecode(image, image_id);\n        return;",
+    "        QueueAsyncDecode(image, image_id);\n#ifdef PS5_NATIVE\n        upload_completed = true;  // Decode handoff accepted.\n#endif\n        return;",
+    "F07 complete decode image handoff")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        QueueAsyncUnswizzle(image, image_id);\n        return;",
+    "        QueueAsyncUnswizzle(image, image_id);\n#ifdef PS5_NATIVE\n        upload_completed = true;  // Unswizzle handoff accepted.\n#endif\n        return;",
+    "F07 complete unswizzle image handoff")
 apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    runtime.InsertUploadMemoryBarrier();\n#ifdef PS5_NATIVE\n    barrier_phase.Stop();\n#endif\n}",
     "    runtime.InsertUploadMemoryBarrier();\n#ifdef PS5_NATIVE\n    barrier_phase.Stop();\n    upload_completed = true;\n#endif\n}",

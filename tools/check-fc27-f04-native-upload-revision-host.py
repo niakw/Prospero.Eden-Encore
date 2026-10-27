@@ -42,6 +42,7 @@ cpp = r"""
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <stdexcept>
 #include <span>
 #include <type_traits>
 #include <utility>
@@ -206,9 +207,11 @@ template<class P> struct TextureCache {
     Buffer swizzle_data_buffer,unswizzle_data_buffer;
     std::size_t gpu_unswizzle_maxsize=65536;
     unsigned tracked=0,async_decode=0,async_unswizzle=0,untrack_count=0;
+    bool fail_track=false;
     void TrackImage(Image& img,ImageId){
         ++tracked;
         img.flags |= ImageFlagBits::Tracked;
+        if(fail_track)throw std::runtime_error("tracked registration failure");
     }
     void UntrackImage(Image& img,ImageId){
         assert(True(img.flags & ImageFlagBits::Tracked));
@@ -289,9 +292,24 @@ int main(){
     cache.RefreshContents(image,0);
     assert(cache.runtime.transitions==1 && image.uploads==4);
     assert(cache.runtime.barriers==4 && cache.runtime.allocations==4);
+    // Failure registering a CPU revision must not hide it from a later upload.
+    image.info.num_samples=1;
+    Changed(image);
+    cache.fail_track=true;
+    bool threw=false;
+    try { cache.RefreshContents(image,0); }
+    catch(const std::runtime_error&) { threw=true; }
+    assert(threw && True(image.flags & ImageFlagBits::CpuModified));
+    assert(False(image.flags & ImageFlagBits::Tracked));
+    assert(image.uploads==4 && cache.runtime.barriers==4);
+    cache.fail_track=false;
+    cache.runtime.expected=Data(m,image.gpu_addr);
+    cache.RefreshContents(image,0);
+    assert(image.uploads==5 && cache.runtime.barriers==5);
+    assert(False(image.flags & ImageFlagBits::CpuModified));
     std::puts("F04_NATIVE_TEXTURE_UPLOAD_REVISION_PASS ordinary=2 converted=1 "
               "accelerated=1 async=1 msaa_transition=1 barriers=4 "
-              "scope=source_extracted_host_mock_staging_no_gpu");
+              "registration_failure_recovered=1 scope=source_extracted_host_mock_staging_no_gpu");
 }
 """.replace("__METHODS__",method)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
