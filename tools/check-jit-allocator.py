@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Exercise the production Xbyak allocator with real RW/RX mappings."""
+"""Exercise real RX/RW Xbyak code on host and source-backed PS5 sparse mocks.
+
+Do not run the retired dense-native fault injection against sparse-only PS5:
+that tested an unshipped kernel ABI and aborted. The maintained native mock
+compiles the actual PS5 memory manager and sparse Xbyak adapter, covering
+bootstrap, demand commits, alias mapping, rollback and fail-closed behavior.
+"""
 from pathlib import Path
 import subprocess
 import sys
@@ -35,56 +41,6 @@ source = r'''
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#ifdef EDEN_JIT_ALIAS_NATIVE
-namespace Common { std::size_t DenseJitDirectBytes() noexcept; }
-static unsigned fail_stage, stage;
-static std::vector<void*> views;
-static std::vector<int> handles;
-static bool enabled;
-extern "C" std::int64_t sceKernelGetDirectMemorySize() { return std::int64_t{1}<<40; }
-extern "C" int sceKernelEnableDmemAliasing() { enabled=true; return 0; }
-// The same source file also holds the heap's growing range and the sparse tables; this check
-// does not use them (tools/check-heap-growth.py and eden-memory-check do).
-extern "C" int sceKernelDebugOutText(int, const char*) { return 0; }
-extern "C" int sceKernelReserveVirtualRange(void**, size_t, int, size_t) { return std::int32_t(0x80020001u); }
-extern "C" int sceKernelAllocateDirectMemory(std::int64_t, std::int64_t, size_t size,
-                                               size_t, int type, std::int64_t* out) {
-    if (++stage==fail_stage) return std::int32_t(0x80020001u);
-    assert(type==12);
-    int fd=memfd_create("native-direct-mock",MFD_CLOEXEC); assert(fd>=0);
-    handles.push_back(fd); assert(ftruncate(fd,size)==0);
-    *out=std::int64_t(fd)<<32; return 0;
-}
-extern "C" int sceKernelReleaseDirectMemory(std::int64_t physical, size_t) {
-    return close(physical>>32);
-}
-extern "C" int sceKernelMapDirectMemory(void** out, size_t size, int prot, int,
-                                           std::int64_t physical, size_t) {
-    if (++stage==fail_stage) return std::int32_t(0x80020001u);
-    const auto offset=physical & 0xffffffff;
-    assert(!(prot&PROT_EXEC) && (!offset || enabled));
-    assert(reinterpret_cast<uintptr_t>(*out)==0x1000000000ull);
-    // Linux normally places anonymous/shared mappings far above the native
-    // 0x3...0x40 CPU VA window. Exercise the PS5 mapping contract with a
-    // collision-checked address *inside* that window, not a random host VA.
-    // Retain the deliberate out-of-window success in fault stage 5.
-    static uintptr_t next_safe_va=0x1000000000ull;
-    const bool low = fail_stage==5 && stage==2;
-    const uintptr_t address = low ? 0x280000000ull : next_safe_va;
-    if (!low) next_safe_va += ((size + 0x1fffff) & ~size_t(0x1fffff)) + 0x200000;
-    *out=mmap(reinterpret_cast<void*>(address),size,prot,
-              MAP_SHARED | MAP_FIXED_NOREPLACE,physical>>32,offset);
-    assert(*out!=MAP_FAILED);
-    assert(reinterpret_cast<uintptr_t>(*out)==address);
-    views.push_back(*out); return 0;
-}
-extern "C" int __real_mprotect(void*,size_t,int);
-extern "C" int __wrap_mprotect(void* p,size_t size,int prot) {
-    assert(!((prot&PROT_WRITE) && (prot&PROT_EXEC)));
-    if (++stage==fail_stage) { errno=EPERM; return -1; }
-    return __real_mprotect(p,size,prot);
-}
-#endif
 void fault(const unsigned char* p, bool write) {
     auto child=fork(); assert(child>=0);
     if (!child) {
@@ -99,9 +55,6 @@ int main() {
     auto* allocator = EdenJitAllocator();
     assert(!allocator->alloc(std::numeric_limits<std::size_t>::max()));
     allocator->free(nullptr);
-#ifdef EDEN_JIT_ALIAS_NATIVE
-    assert(Common::DenseJitDirectBytes() == 0);
-#endif
     std::vector<std::unique_ptr<Xbyak::CodeGenerator>> caches;
     std::vector<const unsigned char*> pointers;
     const auto page = sysconf(_SC_PAGESIZE);
@@ -122,41 +75,33 @@ int main() {
         code->rewrite(1,84,4);
         assert(code->getCode<int(*)()>()()==84);
         caches.push_back(std::move(code));
-#ifdef EDEN_JIT_ALIAS_NATIVE
-        assert(Common::DenseJitDirectBytes() > 0);
-#endif
     }
     caches.clear();
-#ifdef EDEN_JIT_ALIAS_NATIVE
-    assert(Common::DenseJitDirectBytes() == 0);
-#endif
     for (auto* p : pointers) {
         unsigned char state;
         errno=0;
         assert(mincore(const_cast<unsigned char*>(p), page, &state)==-1 && errno==ENOMEM);
     }
-#ifdef EDEN_JIT_ALIAS_NATIVE
-    for (fail_stage=1; fail_stage<=5; ++fail_stage) {
-        stage=0; views.clear(); handles.clear();
-        // All five fault stages MUST fail allocation without returning
-        // a RW/NX address as executable code. A previous test explicitly
-        // accepted that unsafe fallback on alias-map/mprotect failure.
-        assert(!allocator->alloc(page));
-        for (int fd : handles) { errno=0; assert(fcntl(fd,F_GETFD)==-1 && errno==EBADF); }
-        for (void* p : views) { unsigned char state; errno=0; assert(mincore(p,page,&state)==-1 && errno==ENOMEM); }
-        assert(Common::DenseJitDirectBytes() == 0);
-    }
-#endif
 }
 '''
 with tempfile.TemporaryDirectory() as temp:
     cpp=Path(temp)/'check.cpp'; exe=Path(temp)/'check'
     cpp.write_text(source)
-    for native_mock in (False, True):
+    # Original host alias execution/permission regression is still mandatory.
+    # PS5 sparse native semantics are verified below in their own real-memory mock.
+    for host_alias in (True,):
         subprocess.run(['clang++-18','-std=c++20','-O2','-I'+str(root/'headless'),
             '-I'+str(scratch/'native-local/headless/include'),
             '-I'+str(scratch/'source/.cache/cpm/xbyak/v7.40.1'),str(cpp),
-            *(['-DEDEN_JIT_ALIAS_NATIVE=1','-DPS5_NATIVE=1','-Wl,--wrap=mprotect'] if native_mock else []),
             str(root/'src/memory_pages.cpp'),'-o',str(exe)],check=True)
         subprocess.run([str(exe)],check=True, cwd=temp)
-print('Production JIT aliases: bounded 16/8/8/4 MiB host allocations, overflow, RX write/RW execute faults, live rewrite, both-view release and native API partial-failure cleanup PASS (host backend/mocked native APIs; full production size covered by memory-policy tests)')
+# These source-extracted test suites target the only shipping PS5 allocator,
+# not the old dense syscall mock. Let either failure block the native package.
+native_sparse = root / 'tools/check-jit-sparse-host.py'
+native_release = root / 'tools/check-native-sparse-jit-release-selector-host.py'
+assert native_sparse.is_file() and native_release.is_file()
+for proof in (native_sparse, native_release):
+    subprocess.run([sys.executable, '-B', str(proof)], check=True, timeout=180)
+print('Production JIT allocation PASS: host RW/RX execution and W^X faults; '
+      'native sparse PS5 real-source mock, demand commits, OOM rollback and '
+      'release-only selection (firmware execution still unverified)')
