@@ -3429,3 +3429,25 @@ apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
     "        if (bind_pipeline) {\n            if (!pipeline) {\n                // An asynchronously-built pipeline can fail after Configure's\n                // earlier IsBuilt()/pipeline check but before this worker\n                // callback executes. Count the actual GPU draw omission.\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,\n    optimized_ready.load(std::memory_order_acquire) ? *optimized_pipeline : *pipeline);\n        }",
     "        if (bind_pipeline) {\n            // An initial fast-first Vulkan creation can return a null handle\n            // without throwing. Its subsequent optimized rebuild may still\n            // succeed. Acquire the published optimized handle before deciding\n            // whether this ordered draw must be discarded.\n            const bool use_optimized = optimized_ready.load(std::memory_order_acquire);\n            if (!pipeline && !use_optimized) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,\n                                use_optimized ? *optimized_pipeline : *pipeline);\n        }",
     "F07 recovered optimized draw handle after initial fast-first failure")
+
+
+# F07: recovered optimized pipelines must survive the GPU owner's built
+# validity check, and command-buffer callbacks must not draw through an
+# invalid/stale handle when a previous bind is cached. Rebind when the
+# optimized release publication races with the scheduler record step.
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "    if (IsBuilt() && !pipeline) {",
+    "    // The first-use VkPipeline may fail while a separately rebuilt optimized\n    // variant succeeds. Keep that recovered handle eligible for guest draws.\n    if (IsBuilt() && !pipeline && !optimized_ready.load(std::memory_order_acquire)) {",
+    "F07 recover optimized built pipeline")
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(\n        this, optimized_ready.load(std::memory_order_acquire))};",
+    "    const bool optimized_at_record = optimized_ready.load(std::memory_order_acquire);\n    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(this, optimized_at_record)};",
+    "F07 snapshot optimized variant")
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "    scheduler.Record([this, descriptor_data, bind_pipeline, update_descriptors,",
+    "    scheduler.Record([this, descriptor_data, bind_pipeline, optimized_at_record, update_descriptors,",
+    "F07 capture pipeline variant snapshot")
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "        if (bind_pipeline) {\n            // An initial fast-first Vulkan creation can return a null handle\n            // without throwing. Its subsequent optimized rebuild may still\n            // succeed. Acquire the published optimized handle before deciding\n            // whether this ordered draw must be discarded.\n            const bool use_optimized = optimized_ready.load(std::memory_order_acquire);\n            if (!pipeline && !use_optimized) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,\n                                use_optimized ? *optimized_pipeline : *pipeline);\n        }",
+    "        // The worker must verify validity on EVERY draw: a failed pipeline\n        // remains selected by the guest scheduler after the first attempted\n        // bind. Otherwise subsequent draws can accidentally reuse a previous\n        // shader while the optimized rebuild is still missing.\n        const bool use_optimized = optimized_ready.load(std::memory_order_acquire);\n        if (!pipeline && !use_optimized) {\n            ::Eden::Performance::RecordGraphicsDrawDrop(\n                ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n            return;\n        }\n        // Optimization may publish between GPU-owner recording and ordered\n        // Vulkan-worker execution. Rebind the newly published handle in this\n        // callback even when the owner recorded no pipeline-key transition.\n        if (bind_pipeline || (use_optimized != optimized_at_record)) {\n            cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,\n                                use_optimized ? *optimized_pipeline : *pipeline);\n        }",
+    "F07 validate every worker draw and late publish")
