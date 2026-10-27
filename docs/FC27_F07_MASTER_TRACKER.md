@@ -317,3 +317,7 @@ Le suivi ancien est invalidé, `IsDecoding` est retiré et `CpuModified`
 reste actif pour une nouvelle prise en charge sans cooldown artificiel.
 La branche normale et le comportement hors PS5 restent inchangés.
 Tests hôte et validation native/console encore nécessaires.
+
+L'annulation remet également `current_unswizzle_frame` à zéro : la
+prochaine tâche n'hérite pas de la temporisation de quatre images d'un lot
+abandonné. Les tâches propres conservent leur temporisation normale.

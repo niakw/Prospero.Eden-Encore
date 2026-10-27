@@ -1993,6 +1993,7 @@ void TextureCache<P>::TickAsyncUnswizzle() {
         }
         image.flags &= ~ImageFlagBits::IsDecoding;
         unswizzle_queue.pop_front();
+        current_unswizzle_frame = 0u;
         // No throttling after cancellation: the replacement can be queued
         // as soon as RefreshContents observes the retained CPU modification.
         return;
