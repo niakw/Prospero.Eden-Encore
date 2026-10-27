@@ -289,3 +289,18 @@ dès l'admission en file, puis libère ce compteur sur achèvement et refus.
 `VkPipelineOptimize` patiente tant que graphics **ou** compute reste en cours,
 sans attente additionnelle sur le thread GPU. La sortie anticipée lors de
 l'arrêt du jeu reste active. Qualification CI et résultat console à confirmer.
+
+## F07 P0.1/P0.2 — priorité compute pendant CFG/IR/SPIR-V
+
+La priorité introduite pour les builds compute ne commençait qu'au moment
+de `QueueWork` dans le constructeur du pipeline, tandis que CFG, IR et
+SPIR-V avaient **déjà été traduits synchroniquement** sur le thread GPU.
+L'optimiseur graphique facultatif pouvait donc continuer à utiliser les
+ressources CPU/Vulkan pendant ce travail nécessaire au dispatch courant.
+Sur PS5, un scope RAII compte maintenant cette phase **avant** la traduction
+compute, uniquement si `build_in_parallel` est activé. Le constructeur
+garde sa propre réservation jusqu'à la fin du build driver. L'exception,
+le retour anticipé et l'échec d'une traduction décrémentent le compteur
+via le destructeur, sans nouveau verrou ni attente sur le thread graphique.
+Le préchauffage synchrone du cache disque ne participe pas à ce compteur.
+**Contrats hôte et build natif requis avant toute validation de performance.**
