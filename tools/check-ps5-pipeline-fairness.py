@@ -12,6 +12,12 @@ generator = (root / "tools/prepare-vulkan-port.py").read_text()
 ast.parse(generator)
 assert '#include <atomic>' in vulkan
 assert 'std::atomic<unsigned> pending_first_use_graphics_builds{0};' in vulkan
+# The native LTO link requires an exported Vulkan:: symbol, not an
+# anonymous-namespace variable that happens to have the same spelling.
+vulkan_namespace = vulkan.split('namespace Vulkan {', 1)[1].split('namespace {', 1)[0]
+assert vulkan_namespace.count('std::atomic<unsigned> pending_first_use_graphics_builds{0};') == 1
+assert vulkan.count('std::atomic<unsigned> pending_first_use_graphics_builds{0};') == 1
+assert 'F07 graphics first-use counter exported at Vulkan namespace scope' in generator
 assert 'pending_first_use_graphics_builds.fetch_add(1, std::memory_order_release);' in vulkan
 assert vulkan.count('pending_first_use_graphics_builds.fetch_sub(1, std::memory_order_release);') == 2
 assert 'worker_thread->QueueWork([build = std::move(func)]() mutable {' in vulkan

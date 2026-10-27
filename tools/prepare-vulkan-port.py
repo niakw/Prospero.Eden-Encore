@@ -3659,3 +3659,15 @@ apply_reviewed_delta("vulkan_rasterizer.cpp",
     "    SCOPE_EXIT { SyncProbe(scheduler, \"dispatch\", pipeline); };\n    std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};\n    if (!pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache,\n                             texture_cache)) {\n        return;\n    }\n",
     "    SCOPE_EXIT { SyncProbe(scheduler, \"dispatch\", pipeline); };\n#ifdef PS5_NATIVE\n    // P0.3: sampled compute lock wait versus time spent holding both guest\n    // caches. No fence, shader, descriptor or lock ordering change.\n    const bool compute_sample = ::Eden::Performance::ShouldSampleCacheDraw();\n    ::Eden::Performance::CachePhaseTimer compute_pair_wait{\n        ::Eden::Performance::CachePhase::ComputePairWait, compute_sample};\n#endif\n    std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};\n#ifdef PS5_NATIVE\n    compute_pair_wait.Stop();\n    ::Eden::Performance::CachePhaseTimer compute_pair_held{\n        ::Eden::Performance::CachePhase::ComputePairHeld, compute_sample};\n    ::Eden::Performance::CachePhaseTimer compute_configure{\n        ::Eden::Performance::CachePhase::ComputeConfigure, compute_sample};\n#endif\n    if (!pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache,\n                             texture_cache)) {\n        return;\n    }\n#ifdef PS5_NATIVE\n    compute_configure.Stop();\n#endif\n",
     "F07 compute paired GPU cache profiling")
+
+# F07 P0.1: graphics first-use shader translation references this global
+# across two native translation units. The historical R421 insertion was
+# in an anonymous namespace; relocate after the pinned deltas above.
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "namespace Vulkan {\n#ifdef PS5_NATIVE\n// The optional graphics optimizer also yields to cold compute builds.\nextern std::atomic<unsigned> pending_first_use_compute_builds;\n#endif\nnamespace {",
+    "namespace Vulkan {\n#ifdef PS5_NATIVE\n// Graphics first-use builds and cold shader translation share this counter.\n// Export it from Vulkan, not the anonymous namespace, for native LTO.\nextern std::atomic<unsigned> pending_first_use_compute_builds;\nstd::atomic<unsigned> pending_first_use_graphics_builds{0};\n#endif\nnamespace {",
+    "F07 graphics first-use counter exported at Vulkan namespace scope")
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "constexpr size_t NUM_STAGES = Maxwell::MaxShaderStage;\n#ifdef PS5_NATIVE\n// Counts cold first-use Vulkan graphics builds, not draws or cached pipelines.\n// Only the optional fast-first dev profile updates it; normal gameplay pays nothing.\nstd::atomic<unsigned> pending_first_use_graphics_builds{0};\n#endif",
+    "constexpr size_t NUM_STAGES = Maxwell::MaxShaderStage;",
+    "F07 remove anonymous graphics counter shadow")
