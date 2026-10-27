@@ -27,6 +27,9 @@ assert method(backports) != source
 assert source.count("view_memo[view.index & 15U]")==2
 assert source.count("std::array<ViewMemo, 16> view_memo{}")==1
 assert "previous_view_id" not in source
+assert source.count("PrepareImageView(cached.id, false, false);") == 1
+assert "ImageFlagBits::Remapped" in source
+assert source.index("const bool remapped") < source.index("PrepareImageView(cached.id, false, false);")
 assert source.index("!blacklist && !has_deleted_images")<source.index("VisitImageView(view.index, compute)")
 assert source.count("cached.id != NULL_IMAGE_VIEW_ID")==1
 code=r"""
@@ -38,17 +41,34 @@ code=r"""
 using u32=std::uint32_t; using ImageViewId=std::size_t;
 constexpr ImageViewId NULL_IMAGE_VIEW_ID=0;
 struct ImageViewInOut {u32 index{};bool blacklist{};ImageViewId id{};};
-struct ImageViewBase {std::size_t image_id{};};
-struct Image {bool down{};u32 scale_rating{3};};
+enum class ImageFlagBits:unsigned {None=0,Remapped=1};
+constexpr bool True(ImageFlagBits value){return value!=ImageFlagBits::None;}
+struct ImageViewBase {std::size_t image_id{};bool IsBuffer()const{return false;}};
+struct Image {bool down{};u32 scale_rating{3};ImageFlagBits flags{ImageFlagBits::None};};
 template<class P>struct TextureCache {
  bool has_deleted_images{}, delete_nine{};
+ bool dirty_one{}, uploaded_again{}, remap_on_two{};unsigned reuploads{},prepares{},remap_rebuilds{};
  std::array<unsigned,64> visits{};unsigned total{},scales{};
  std::array<ImageViewBase,64> slot_image_views{};
  std::array<Image,64> slot_images{};
+ void PrepareImageView(ImageViewId id,bool,bool) {
+  if(!id)return;
+  ++prepares;
+  if(id==2 && dirty_one){dirty_one=false;uploaded_again=true;++reuploads;}
+ }
  ImageViewId VisitImageView(u32 idx,bool) {
   assert(idx<63);++visits[idx];++total;
   if(idx==9 && delete_nine){delete_nine=false;has_deleted_images=true;}
-  return idx==7 ? NULL_IMAGE_VIEW_ID : idx+1;
+  const auto id=idx==7 ? NULL_IMAGE_VIEW_ID : idx+1;
+  slot_image_views[id].image_id=id;
+  if(idx==1 && True(slot_images[id].flags)){slot_images[id].flags=ImageFlagBits::None;++remap_rebuilds;}
+  PrepareImageView(id,false,false);
+  // A different TIC can dirty or remap the previously sampled A.
+  if(idx==2){
+   dirty_one=true;
+   if(remap_on_two)slot_images[2].flags=ImageFlagBits::Remapped;
+  }
+  return id;
  }
  bool ScaleDown(Image& i){++scales;if(i.down)return false;i.down=true;return true;}
  void FillImageViews(std::span<ImageViewInOut>,bool,bool);
@@ -60,6 +80,8 @@ int main(){
  c.FillImageViews(a,false,false);
  #ifdef PS5_NATIVE
  assert(c.total==2 && c.visits[1]==1);
+ assert(c.uploaded_again && !c.dirty_one && c.reuploads==1);
+ assert(c.prepares==3);
  #else
  assert(c.total==3 && c.visits[1]==2);
  #endif
@@ -70,6 +92,12 @@ int main(){
  #else
  assert(c.total==6);
  #endif
+ }
+ // A remap while B resolves must force A through VisitImageView again.
+ {TextureCache<int> c;c.remap_on_two=true;
+ std::array<V,3> a{V{1},V{2},V{1}};
+ c.FillImageViews(a,false,false);
+ assert(c.total==3 && c.visits[1]==2 && c.remap_rebuilds==1);
  }
  {TextureCache<int> c;std::array<V,3> a{V{1},V{17},V{1}};
  c.FillImageViews(a,false,false);assert(c.total==3);}
