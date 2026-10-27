@@ -101,7 +101,10 @@ int main() {
 #endif
 }
 """
-test = test.replace("MARK", mark).replace("GUARD", guard).replace("HANDOFF", handoff)
+# Replace standalone placeholders only: never rewrite result strings containing HANDOFF.
+test = (test.replace("\nMARK\n", "\n" + mark)
+            .replace("\nGUARD\n", "\n" + guard)
+            .replace("\nHANDOFF\n", "\n" + handoff + "\n"))
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
 assert compiler, "C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="eden-compute-notify-") as directory:
