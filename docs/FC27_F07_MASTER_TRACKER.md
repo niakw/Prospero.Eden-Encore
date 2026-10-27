@@ -195,3 +195,7 @@ la callback reste son unique propriétaire. Le test hôte reproduit la fuite
 sur l'ancienne route et vérifie préparation échouée, file fermée, compilation
 inline et worker différé en -O0/-O2. Aucun changement de synchronisation
 des ressources invitées ni d'attente GPU. F07 console non qualifié.
+
+## P0.4 — restauration de texture après erreur d'upload
+
+TextureCache::RefreshContents efface CpuModified avant staging, copie et barrière Vulkan. Une exception sur ces étapes laissait une image considérée propre sans upload terminé. La source PS5 restaure maintenant CpuModified et annule le suivi de pages si cet upload synchrone échoue. Un upload et sa barrière terminés conservent l'état propre. Le générateur, l'en-tête actif et le témoin hôte O0/O2 sont synchronisés. Pas de modification aux branches de retour MSAA/async. Pas de preuve de correction du HUD/FC27 sur console.

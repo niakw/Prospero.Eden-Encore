@@ -1571,6 +1571,18 @@ void TextureCache<P>::RefreshContents(Image& image, ImageId image_id) {
         return;
     }
 #ifdef PS5_NATIVE
+    // Synchronous upload failure must not leave the CPU image incorrectly clean.
+    bool upload_completed = false;
+    SCOPE_EXIT {
+        if (!upload_completed) {
+            if (True(image.flags & ImageFlagBits::Tracked)) {
+                UntrackImage(image, image_id);
+            }
+            image.flags |= ImageFlagBits::CpuModified;
+        }
+    };
+#endif
+#ifdef PS5_NATIVE
     // F07: isolate staging allocation, CPU decode/unswizzle and the required
     // upload barrier within the existing 1-in-16 sampled refresh.
     // No lock, image flag, command order or guest-visible upload is changed.
@@ -1592,6 +1604,7 @@ void TextureCache<P>::RefreshContents(Image& image, ImageId image_id) {
     runtime.InsertUploadMemoryBarrier();
 #ifdef PS5_NATIVE
     barrier_phase.Stop();
+    upload_completed = true;
 #endif
 }
 
