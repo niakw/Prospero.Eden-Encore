@@ -32,6 +32,7 @@ assert method.count(new) == 1
 assert method.index(new) < method.index("boost::container::static_vector<VkBuffer,")
 assert method.index(new) < method.index("ReserveNullBuffer();")
 assert "F07 reject empty vertex binding ranges before cache handle resolution" in generator
+assert "F07 trim vertex handles after device limit clamp" in generator
 assert "python3 -B tools/check-ps5-vertex-binding-range-host.py" in workflow
 
 tree = ast.parse(generator)
@@ -108,7 +109,7 @@ print("VERTEX_BINDING_RANGE_HOST_PASS normal=3 clamped=2 reversed=3 empty=2")
 # mutate a binding or reserve a substitute NULL buffer.
 whole_prefix=method[method.index("    const u32 device_max ="):
                     method.index("    if (device.IsExtExtendedDynamicStateSupported())")]
-assert whole_prefix.index("if (max_binding <= min_binding)") < whole_prefix.index("buffer_handles(bindings.buffers.size())")
+assert whole_prefix.index("if (max_binding <= min_binding)") < whole_prefix.index("buffer_handles(handle_count)")
 extended=r"""
 #include <algorithm>
 #include <cassert>
@@ -133,6 +134,7 @@ struct Bindings {
   std::vector<Buffer*> buffers{};
   std::vector<u32> offsets{};
   std::vector<std::uint64_t> sizes{};
+  std::vector<std::uint64_t> strides{};
 };
 struct Device {
   u32 max_bindings{};
@@ -165,7 +167,7 @@ int main(){
   assert(capped.bindings.offsets[0]==9 && capped.bindings.sizes[0]==123);
 
   Buffer present{&calls,77};
-  Host valid{{16,false},{1,3,{&present,&absent},{3,5},{200,100}}};
+  Host valid{{16,false},{1,3,{&present,&absent},{3,5},{200,100},{4,8}}};
   valid.Bind();
   assert(valid.selected==2 && calls==2 && valid.substitute_requests==1);
   assert(valid.bindings.offsets[0]==3 && valid.bindings.offsets[1]==0);
@@ -174,6 +176,20 @@ int main(){
   Host maxzero{{0,false},{0,4,{&absent},{4},{8}}};
   maxzero.Bind();
   assert(maxzero.selected==0 && calls==2 && maxzero.substitute_requests==0);
+
+  // The driver exposes only two bindings of the four host entries.
+  // Unused tail handles and offset/size data must remain untouched.
+  Host clipped{{2,false},{0,4,{&present,&absent,&absent,&absent},
+                               {11,13,17,19},{101,103,107,109},{1,2,3,4}}};
+  clipped.Bind();
+  assert(clipped.selected==2 && calls==4 && clipped.substitute_requests==1);
+  assert(clipped.bindings.offsets[2]==17 && clipped.bindings.offsets[3]==19);
+  assert(clipped.bindings.sizes[2]==107 && clipped.bindings.sizes[3]==109);
+
+  // A malformed live range must not dereference short host arrays.
+  Host short_host{{4,false},{0,3,{&present},{7},{11},{4}}};
+  short_host.Bind();
+  assert(short_host.selected==0 && calls==4 && short_host.substitute_requests==0);
 }
 """
 with tempfile.TemporaryDirectory(prefix="encore-vertex-early-") as tmp:
@@ -188,4 +204,4 @@ with tempfile.TemporaryDirectory(prefix="encore-vertex-early-") as tmp:
         run=subprocess.run([str(bin)],capture_output=True,text=True,timeout=20)
         assert run.returncode==0,(mode,run.stderr[-5000:])
 print("VERTEX_EARLY_REJECTION_HOST_PASS invalid_no_handles=1 clamped_no_null=1"
-      " valid_handles_and_fallback=1 O0_O2=1")
+      " clamped_tail_ignored=1 malformed_rejected=1 valid_handles_and_fallback=1 O0_O2=1")

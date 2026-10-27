@@ -37,6 +37,7 @@ assert len(upload_deltas) == 4
 f07_copy_labels = (
     'F07 avoid barrier-free empty Vulkan buffer copies',
     'F07 reject empty vertex binding ranges before cache handle resolution',
+    'F07 trim vertex handles after device limit clamp',
 )
 f07_buffer_deltas = []
 for statement in tree.body:
