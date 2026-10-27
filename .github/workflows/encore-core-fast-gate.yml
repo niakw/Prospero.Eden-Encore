@@ -335,6 +335,7 @@ jobs:
           python3 -B tools/check-vulkan-multirange-overflow-host.py
           python3 -B tools/check-vulkan-fence-completed-wait-host.py
           python3 -B tools/check-vulkan-pipeline-ready-publication-host.py
+          python3 -B tools/check-ps5-f07-fast-pipeline-rebind-host.py
           python3 -B tools/check-vulkan-buffer-frame-tick-snapshot-host.py
           python3 -B tools/check-ps5-quad-index-initial-fence-host.py
           python3 -B tools/check-vulkan-worker-fatal-drain-host.py

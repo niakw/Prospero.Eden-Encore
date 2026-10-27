@@ -3395,3 +3395,28 @@ apply_reviewed_delta(
 }
 ''',
     'F03 F04 remap framebuffer invalidation', allow_preapplied=True)
+
+
+# F07: promote a completed optimized Vulkan pipeline without changing its
+# owner pointer, shader translation or descriptor cache. Reproduce on every
+# pinned source adaptation and fail closed on upstream source drift.
+apply_reviewed_delta("include/video_core/renderer_vulkan/vk_scheduler.h",
+    "    bool UpdateGraphicsPipeline(GraphicsPipeline* pipeline);",
+    "    bool UpdateGraphicsPipeline(GraphicsPipeline* pipeline, bool optimized = false);",
+    "F07 scheduler optimized variant declaration")
+apply_reviewed_delta("include/video_core/renderer_vulkan/vk_scheduler.h",
+    "        GraphicsPipeline* graphics_pipeline = nullptr;\n        bool is_rescaling = false;",
+    "        GraphicsPipeline* graphics_pipeline = nullptr;\n        // GPU owner only: the optimized variant can become ready without\n        // changing the logical pipeline pointer.\n        bool graphics_pipeline_optimized = false;\n        bool is_rescaling = false;",
+    "F07 scheduler optimized variant state")
+apply_reviewed_delta("vulkan_scheduler.cpp",
+    "bool Scheduler::UpdateGraphicsPipeline(GraphicsPipeline* pipeline) {\n    if (state.graphics_pipeline == pipeline) {\n        if (pipeline && pipeline->UsesExtendedDynamicState() &&\n            state.needs_state_enable_refresh) {\n            state_tracker.InvalidateStateEnableFlag();\n            state.needs_state_enable_refresh = false;\n        }\n        return false;\n    }\n\n    state.graphics_pipeline = pipeline;\n\n    if (!pipeline) {\n        return true;\n    }\n\n    if (!pipeline->UsesExtendedDynamicState()) {\n        state.needs_state_enable_refresh = true;\n    } else if (state.needs_state_enable_refresh) {\n        state_tracker.InvalidateStateEnableFlag();\n        state.needs_state_enable_refresh = false;\n    }\n\n    return true;\n}",
+    "bool Scheduler::UpdateGraphicsPipeline(GraphicsPipeline* pipeline, bool optimized) {\n    if (state.graphics_pipeline == pipeline) {\n        if (pipeline && pipeline->UsesExtendedDynamicState() &&\n            state.needs_state_enable_refresh) {\n            state_tracker.InvalidateStateEnableFlag();\n            state.needs_state_enable_refresh = false;\n        }\n        // A completed optimized variant shares its cache key and owner pointer.\n        // Rebind once after publication even if the same shader keeps drawing.\n        const bool variant_changed = state.graphics_pipeline_optimized != optimized;\n        state.graphics_pipeline_optimized = optimized;\n        return variant_changed;\n    }\n\n    state.graphics_pipeline = pipeline;\n    state.graphics_pipeline_optimized = optimized;\n\n    if (!pipeline) {\n        return true;\n    }\n\n    if (!pipeline->UsesExtendedDynamicState()) {\n        state.needs_state_enable_refresh = true;\n    } else if (state.needs_state_enable_refresh) {\n        state_tracker.InvalidateStateEnableFlag();\n        state.needs_state_enable_refresh = false;\n    }\n\n    return true;\n}",
+    "F07 scheduler variant change rebind")
+apply_reviewed_delta("vulkan_scheduler.cpp",
+    "void Scheduler::InvalidateState() {\n    state.graphics_pipeline = nullptr;\n    state.rescaling_defined = false;",
+    "void Scheduler::InvalidateState() {\n    state.graphics_pipeline = nullptr;\n    state.graphics_pipeline_optimized = false;\n    state.rescaling_defined = false;",
+    "F07 scheduler variant invalidation")
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(this)};",
+    "    // Publish a ready optimized variant at the next draw even if this\n    // logical pipeline stays selected across multiple command buffers.\n    const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(\n        this, optimized_ready.load(std::memory_order_acquire))};",
+    "F07 graphics optimize publication handoff")
