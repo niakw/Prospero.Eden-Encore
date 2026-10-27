@@ -114,6 +114,17 @@ int main(){
  assert(c.total==6);
  #endif
  }
+ // An empty compute/graphics descriptor list is NOT a no-op: it must
+ // clear the deletion/retry latch left by preceding texture mutations.
+ {TextureCache<int> c;
+ std::array<V,0> views{};
+ c.has_deleted_images=true;
+ c.FillImageViews(views,true,false);
+ assert(!c.has_deleted_images && c.total==0 && c.prepares==0);
+ c.has_deleted_images=true;
+ c.FillImageViews(views,true,true);
+ assert(!c.has_deleted_images && c.total==0 && c.scales==0);
+ }
  {TextureCache<int> c;c.slot_image_views[4].image_id=4;
  std::array<V,3> a{V{3,true},V{2},V{3,true}};
  c.FillImageViews(a,false,true);
@@ -134,4 +145,4 @@ with tempfile.TemporaryDirectory(prefix="f07-tic-reuse-") as tmp:
    assert p.returncode==0,(cmd,p.stderr[-5000:])
    p=subprocess.run([str(binary)],capture_output=True,text=True,timeout=20)
    assert p.returncode==0,(opt,native_on,p.stdout,p.stderr[-5000:])
-print("F07_NONADJACENT_TIC_MEMO_PASS duplicate=1 collisions=1 null=1 deletion=1 blacklist=1 desktop=1 O0_O2=1")
+print("F07_NONADJACENT_TIC_MEMO_PASS duplicate=1 collisions=1 null=1 deletion=1 blacklist=1 empty_resets_deletion=1 desktop=1 O0_O2=1")
