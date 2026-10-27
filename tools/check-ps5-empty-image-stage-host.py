@@ -13,6 +13,11 @@ e=src.index("    }};",b)+len("    }};")
 stage_code=src[b:e]
 assert src.count("if (stage_has_image_bindings[stage]) {")==1
 assert hdr.count("std::array<bool, NUM_STAGES> stage_has_image_bindings{};")==1
+assert hdr.count("std::array<bool, NUM_STAGES> stage_has_host_buffer_bindings{};")==1
+assert "stage_has_host_buffer_bindings[stage] = info->constant_buffer_mask != 0 ||" in constructor
+for desc in ("storage_buffers_descriptors", "texture_buffer_descriptors", "image_buffer_descriptors"):
+    assert "!info->"+desc+".empty()" in constructor
+assert "if (stage_has_host_buffer_bindings[stage]) {" in stage_code
 for desc in ("texture_buffer_descriptors","image_buffer_descriptors","texture_descriptors","image_descriptors"):
     assert "info->"+desc+".empty()" in constructor
 assert stage_code.index("buffer_cache.BindHostStageBuffers(stage);") < stage_code.index("if (stage_has_image_bindings[stage])")
@@ -23,6 +28,8 @@ assert stage_code.count("CachePhase::StageImageDescriptors") == 1
 oracle=(root/"tools/prepare-vulkan-port.py").read_text()
 assert "Source-proven no-image stage fast path" in oracle
 assert "std::array<bool, NUM_STAGES> stage_has_image_bindings{};" in oracle
+assert "F07 P0.3 host stage mask in pipeline header" in oracle
+assert "F07 P0.3 omit empty host buffer stage walks" in oracle
 cpp=r"""
 #include <array>
 #include <cassert>
@@ -30,6 +37,8 @@ cpp=r"""
 #include <vector>
 #define LAMBDA_FORCEINLINE
 struct Info {
+    unsigned constant_buffer_mask=0;
+    std::vector<int> storage_buffers_descriptors;
     std::vector<int> texture_buffer_descriptors;
     std::vector<int> image_buffer_descriptors;
     std::vector<int> texture_descriptors;
@@ -70,6 +79,7 @@ struct Pipeline {
     static constexpr std::size_t NUM_STAGES=5;
     std::array<Info,NUM_STAGES> stage_infos{};
     std::array<bool,NUM_STAGES> stage_has_image_bindings{};
+    std::array<bool,NUM_STAGES> stage_has_host_buffer_bindings{};
     BufferCache buffer_cache;
     TextureCache texture_cache;
     GuestDescriptorQueue guest_descriptor_queue;
@@ -96,33 +106,52 @@ int main() {
     empty.uses_render_area=true;
     p.Init(0,&empty);
     assert(!p.stage_has_image_bindings[0]);
+    assert(!p.stage_has_host_buffer_bindings[0]);
     p.DrawStage(0);
-    assert(p.buffer_cache.calls==1 && push_calls==0);
+    assert(p.buffer_cache.calls==0 && push_calls==0);
     assert(p.views_it==p.views.data() && p.samplers_it==p.samplers.data());
     assert(p.render_area.uses_render_area);
     Info buffer_only;
     buffer_only.texture_buffer_descriptors={1,2};
     p.Init(1,&buffer_only);
     assert(p.stage_has_image_bindings[1]);
+    assert(p.stage_has_host_buffer_bindings[1]);
     p.DrawStage(1);
-    assert(p.buffer_cache.calls==2 && push_calls==1);
+    assert(p.buffer_cache.calls==1 && push_calls==1);
     assert(p.views_it==p.views.data()+2 && p.samplers_it==p.samplers.data());
     Info sampled;
     sampled.texture_descriptors={1,2,3};
     p.Init(2,&sampled);
+    assert(p.stage_has_image_bindings[2]);
+    assert(!p.stage_has_host_buffer_bindings[2]);
     p.DrawStage(2);
-    assert(p.buffer_cache.calls==3 && push_calls==2);
+    assert(p.buffer_cache.calls==1 && push_calls==2);
     assert(p.views_it==p.views.data()+5 && p.samplers_it==p.samplers.data()+3);
     Info images;
     images.image_descriptors={1};
     p.Init(3,&images);
+    assert(!p.stage_has_host_buffer_bindings[3]);
     p.DrawStage(3);
-    assert(p.views_it==p.views.data()+6 && push_calls==3);
+    assert(p.buffer_cache.calls==1 && p.views_it==p.views.data()+6 && push_calls==3);
     Info image_buffers;
     image_buffers.image_buffer_descriptors={1,2};
     p.Init(4,&image_buffers);
+    assert(p.stage_has_host_buffer_bindings[4]);
     p.DrawStage(4);
-    assert(p.views_it==p.views.data()+8 && push_calls==4);
+    assert(p.buffer_cache.calls==2 && p.views_it==p.views.data()+8 && push_calls==4);
+    // Uniform-only and SSBO-only shaders must keep host bindings active.
+    Info uniform;
+    uniform.constant_buffer_mask=1;
+    p.Init(0,&uniform);
+    assert(p.stage_has_host_buffer_bindings[0] && !p.stage_has_image_bindings[0]);
+    p.DrawStage(0);
+    assert(p.buffer_cache.calls==3 && push_calls==4);
+    Info ssbo;
+    ssbo.storage_buffers_descriptors={1};
+    p.Init(2,&ssbo);
+    assert(p.stage_has_host_buffer_bindings[2] && !p.stage_has_image_bindings[2]);
+    p.DrawStage(2);
+    assert(p.buffer_cache.calls==4 && push_calls==4);
 }
 """
 with tempfile.TemporaryDirectory(prefix="encore-empty-graphics-stage-") as tmp:
