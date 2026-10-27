@@ -29,7 +29,10 @@ for label in ("MSAA","decode","unswizzle"):
     assert f"F07 complete {label} image handoff" in gen
 assert "UntrackImage(image, image_id);" in guard
 assert "image.flags |= ImageFlagBits::CpuModified;" in guard
-assert body.index("runtime.InsertUploadMemoryBarrier();") < body.index("upload_completed = true;")
+# Earlier explicit acknowledgements belong to accepted async/MSAA paths.
+# The LAST acknowledgement commits the synchronous GPU upload only after
+# the mandatory barrier. Keep this ordering assertion source-extracted.
+assert body.index("runtime.InsertUploadMemoryBarrier();") < body.rindex("upload_completed = true;")
 assert "F07 restore failed texture upload dirty state" in gen
 assert "F07 completed texture upload marker" in gen
 cpp = r"""
