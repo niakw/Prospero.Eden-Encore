@@ -782,9 +782,9 @@ ComputePipeline* PipelineCache::CurrentComputePipeline() {
             // within repeated compute dispatches.
             failed->second.attempted = true;
             pipeline = CreateComputePipeline(key, shader);
-            if (pipeline) {
-                failed_compute_retries.erase(failed);
-            }
+            // A consumed retry cannot repeat: the null compute_cache entry
+            // is no longer marked retryable. Recycle its 32-key budget slot.
+            failed_compute_retries.erase(failed);
         }
     }
 #endif
@@ -1114,9 +1114,10 @@ GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {
                 ::Eden::Performance::CachePhase::GraphicsPipelineCreate,
                 ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
             pipeline = CreateGraphicsPipeline();
-            if (pipeline) {
-                failed_graphics_retries.erase(failed);
-            }
+            // The null graphics_cache entry itself guarantees at most one
+            // retry for this key. Retaining consumed retry metadata would
+            // exhaust the 64-key budget after unrelated transient failures.
+            failed_graphics_retries.erase(failed);
         }
     }
 #endif

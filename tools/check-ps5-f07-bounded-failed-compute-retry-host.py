@@ -15,6 +15,8 @@ assert src.count(begin) == 1 and src.count(stop) == 1
 body = src[src.index(begin):src.index(stop, src.index(begin))]
 assert body.count("CreateComputePipeline(key, shader)") == 2
 assert "failed_compute_retries.size() < 32" in body
+assert "failed_compute_retries.erase(failed);" in body
+assert 'if (pipeline) {\n                failed_compute_retries.erase(failed);' not in body
 assert "std::chrono::seconds(2)" in body
 assert body.index("failed->second.attempted = true;") < body.rindex("pipeline = CreateComputePipeline(key, shader);")
 assert "F07 bounded failed compute shader retry state" in gen
@@ -70,6 +72,31 @@ int main() {
     assert(persistent.create_calls == 2 && !persistent.compute_cache.at(0));
     for (int i = 0; i < 1024; ++i) persistent.Probe();
     assert(persistent.create_calls == 2);
+
+    // A retry already consumed must not starve newly failing compute keys.
+    PipelineCache recycled;
+    for (int key = 0; key < 32; ++key) {
+        recycled.key = key;
+        recycled.Probe();
+    }
+    assert(recycled.failed_compute_retries.size() == 32);
+    for (int key = 0; key < 32; ++key) {
+        recycled.key = key;
+        recycled.failed_compute_retries.at(key).eligible_at =
+            std::chrono::steady_clock::now() - std::chrono::seconds(1);
+        recycled.Probe();
+        assert(!recycled.compute_cache.at(key));
+    }
+    assert(recycled.create_calls == 64);
+    assert(recycled.failed_compute_retries.empty());
+    for (int key = 0; key < 32; ++key) {
+        recycled.key = key;
+        recycled.Probe();
+    }
+    assert(recycled.create_calls == 64);  // no repeated failed dispatch retries
+    recycled.key = 32;
+    recycled.Probe();
+    assert(recycled.create_calls == 65 && recycled.failed_compute_retries.size() == 1);
 
     PipelineCache full;
     for (int i = 0; i < 32; ++i)

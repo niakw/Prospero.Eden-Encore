@@ -203,3 +203,16 @@ TextureCache::RefreshContents efface CpuModified avant staging, copie et barriè
 ## P0.3 — attribution compute du verrou buffer/texture
 
 `DispatchCompute` acquiert la paire de mutex buffer/texture puis exécute `Configure` et la préparation des commandes. Jusqu'ici ses coûts ne contribuaient pas aux phases `pair_wait/pair_held` réservées aux draws graphiques. Trois phases spécifiques `compute_pair_wait`, `compute_pair_held`, `compute_configure` distinguent désormais sur le chemin PS5 l'attente de la paire, la durée sous verrou et la configuration du shader compute, avec le même échantillonnage 1/16 exclusivement en Detailed Logging. Aucun nouveau verrou, barrière, drainage ni appel d'horloge en mode silencieux. Le test hôte verrouille la parité entre enum/rapport, vrai chemin source et générateur; ce lot est un instrument de diagnostic, pas encore une optimisation FPS.
+
+## F07 — réutilisation du quota des reprises de shaders échoués (27 octobre)
+
+Les budgets natifs de métadonnées de reprise (64 clés graphiques et 32 compute)
+comptaient encore les tentatives **déjà consommées mais toujours en échec**.
+Après saturation, un nouveau shader transitoirement indisponible pouvait
+rester définitivement nul, sans accès à son unique reprise différée. Le suivi
+est désormais libéré après chaque tentative, réussie ou non : l'entrée nulle
+du cache de pipeline continue à interdire toute nouvelle tentative pour cette
+même clé. Aucun travail supplémentaire sur les shaders valides ni dans la
+boucle chaude. Témoins source-extraits O0/O2 : épuisement initial du quota,
+réutilisation, absence de seconde reprise et conservation du délai de 2 s.
+**Correctif source/hôte à qualifier en CI ; pas de gain FPS/HUD démontré.**
