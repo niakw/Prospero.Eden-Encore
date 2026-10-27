@@ -33,7 +33,10 @@ for expected in (
     "catch (...)",
 ):
     assert expected in worker, expected
-assert "VulkanTimer(24)" not in worker  # performance.h uses std::array<Totals,24>, 0..23
+assert "VulkanTimer(24)" not in worker
+assert worker.index("build_condvar.wait(build_lock") < worker.index("const auto state = optimize_state;")
+assert "is_built.load(std::memory_order_acquire)" in worker
+assert worker in (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()  # performance.h uses std::array<Totals,24>, 0..23
 assert "std::make_shared<OptimizeState>()" in worker
 assert worker.index("state->running = true;") < worker.index("OptimizeWorker().QueueWork")
 assert worker.count("state->running = true;") == 1
@@ -95,6 +98,11 @@ public:
         bool running{false};
     };
     std::shared_ptr<OptimizeState> optimize_state;
+    // Existing optimization tests construct a finished first-use baseline.
+    // A separate scenario below forces the constructor's worker to stay queued.
+    std::atomic_bool is_built{true};
+    std::mutex build_mutex;
+    std::condition_variable build_condvar;
     vk::Pipeline optimized_pipeline{};
     std::atomic_bool optimized_ready{false};
     ~GraphicsPipeline();
@@ -132,6 +140,38 @@ int main() {
         state->done.wait(lock, [&] { return !state->running; });
         assert(!p.optimized_ready.load(std::memory_order_acquire));
     }
+    // Destroy a pipeline while its FIRST-use worker is still queued, before
+    // the optimizer can publish optimize_state. Deletion must block until
+    // initial pipeline publication; otherwise the worker retains a dead this.
+    {
+        auto* p = new GraphicsPipeline;
+        p->is_built.store(false, std::memory_order_release);
+        std::atomic_bool allow_build{false};
+        std::atomic_bool destroy_started{false};
+        std::atomic_bool destroyed{false};
+        std::thread build([p, &allow_build] {
+            while (!allow_build.load(std::memory_order_acquire))
+                std::this_thread::yield();
+            {
+                std::scoped_lock lock{p->build_mutex};
+                p->is_built.store(true, std::memory_order_release);
+            }
+            p->build_condvar.notify_all();
+        });
+        std::thread teardown([p, &destroy_started, &destroyed] {
+            destroy_started.store(true, std::memory_order_release);
+            delete p;
+            destroyed.store(true, std::memory_order_release);
+        });
+        while (!destroy_started.load(std::memory_order_acquire))
+            std::this_thread::yield();
+        std::this_thread::sleep_for(std::chrono::milliseconds(8));
+        assert(!destroyed.load(std::memory_order_acquire));
+        allow_build.store(true, std::memory_order_release);
+        build.join();
+        teardown.join();
+        assert(destroyed.load(std::memory_order_acquire));
+    }
     {
         GraphicsPipeline p;
         Common::ThreadWorker::reject_next.store(true);
@@ -150,5 +190,5 @@ with tempfile.TemporaryDirectory(prefix="eden-r313-pipelines-") as d:
     subprocess.run(["c++", "-std=c++20", "-O2", "-pthread", "-Wall", "-Wextra",
                     "-Werror", str(source), "-o", str(app)], check=True, timeout=40)
     subprocess.run([str(app)], check=True, timeout=20)
-print("PASS F07 native optimizer queued lifetime, cancel, null handle, rejection, release/acquire")
+print("PASS F07 initial builder teardown, optimizer queued lifetime, cancel, null handle, rejection, release/acquire")
 print("PASS R313 runtime-only fast-first, disk cache exclusion, one worker, no OOB index 24")
