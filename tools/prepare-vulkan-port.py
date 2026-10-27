@@ -2906,6 +2906,24 @@ apply_reviewed_delta(pipeline, "        buffer_cache.BindHostStageBuffers(stage)
 apply_reviewed_delta(pipeline, "        if (stage_has_image_bindings[stage]) {\n            PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling,\n                                 samplers_it, views_it);\n        }", "        if (stage_has_image_bindings[stage]) {\n            ::Eden::Performance::CachePhaseTimer phase{\n                ::Eden::Performance::CachePhase::StageImageDescriptors};\n            PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling,\n                                 samplers_it, views_it);\n        }",
     'F01 isolate image descriptor push cost within stage binding')
 
+# F07 P0.3: precompute immutable shader-stage host buffer usage.
+# No image binding or invalidation behavior changes.
+apply_reviewed_delta(
+    'include/video_core/renderer_vulkan/vk_graphics_pipeline.h',
+    "    std::array<bool, NUM_STAGES> stage_has_image_bindings{};",
+    "    // Immutable shader layout: no UBO/SSBO/TBO means no host buffer work.\n    std::array<bool, NUM_STAGES> stage_has_host_buffer_bindings{};\n    std::array<bool, NUM_STAGES> stage_has_image_bindings{};",
+    'F07 P0.3 host stage mask in pipeline header')
+apply_reviewed_delta(
+    pipeline,
+    "        stage_has_image_bindings[stage] =\n            !info->texture_buffer_descriptors.empty() ||",
+    "        // BindHostStageBuffers walks only uniform, storage, texture buffers.\n        stage_has_host_buffer_bindings[stage] = info->constant_buffer_mask != 0 ||\n            !info->storage_buffers_descriptors.empty() ||\n            !info->texture_buffer_descriptors.empty() ||\n            !info->image_buffer_descriptors.empty();\n        stage_has_image_bindings[stage] =\n            !info->texture_buffer_descriptors.empty() ||",
+    'F07 P0.3 stage UBO SSBO TBO presence metadata')
+apply_reviewed_delta(
+    pipeline,
+    "        {\n            ::Eden::Performance::CachePhaseTimer phase{\n                ::Eden::Performance::CachePhase::StageHostBuffers};\n            buffer_cache.BindHostStageBuffers(stage);\n        }\n        const auto& info{stage_infos[stage]};",
+    "        // Skip three guaranteed-empty bitset walks under paired GPU locks.\n        // Image descriptors are handled independently and remain untouched.\n        if (stage_has_host_buffer_bindings[stage]) {\n            ::Eden::Performance::CachePhaseTimer phase{\n                ::Eden::Performance::CachePhase::StageHostBuffers};\n            buffer_cache.BindHostStageBuffers(stage);\n        }\n        const auto& info{stage_infos[stage]};",
+    'F07 P0.3 omit empty host buffer stage walks')
+
 texture = 'vulkan-cache/video_core/texture_cache/texture_cache.h'
 apply_reviewed_delta(texture,
     '''#ifdef PS5_NATIVE

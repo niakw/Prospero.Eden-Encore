@@ -343,6 +343,11 @@ GraphicsPipeline::GraphicsPipeline(
         stage_infos[stage] = *info;
         // Immutable shader-stage metadata: avoid repeated empty descriptor
         // walks while both guest buffer/texture caches are locked.
+        // BindHostStageBuffers walks only uniform, storage, texture buffers.
+        stage_has_host_buffer_bindings[stage] = info->constant_buffer_mask != 0 ||
+            !info->storage_buffers_descriptors.empty() ||
+            !info->texture_buffer_descriptors.empty() ||
+            !info->image_buffer_descriptors.empty();
         stage_has_image_bindings[stage] =
             !info->texture_buffer_descriptors.empty() ||
             !info->image_buffer_descriptors.empty() ||
@@ -731,7 +736,9 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
     const auto prepare_stage{[&](size_t stage) LAMBDA_FORCEINLINE {
         // Detailed-only 1/16 sampling: separate host buffer synchronization
         // from image descriptor push work inside the existing paired locks.
-        {
+        // Skip three guaranteed-empty bitset walks under paired GPU locks.
+        // Image descriptors are handled independently and remain untouched.
+        if (stage_has_host_buffer_bindings[stage]) {
             ::Eden::Performance::CachePhaseTimer phase{
                 ::Eden::Performance::CachePhase::StageHostBuffers};
             buffer_cache.BindHostStageBuffers(stage);

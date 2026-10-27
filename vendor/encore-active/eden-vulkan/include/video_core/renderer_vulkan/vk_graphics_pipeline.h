@@ -224,6 +224,8 @@ private:
     u32 num_descriptor_entries{};
     size_t num_image_elements{};
     u32 num_textures{};
+    // Immutable shader layout: no UBO/SSBO/TBO means no host buffer work.
+    std::array<bool, NUM_STAGES> stage_has_host_buffer_bindings{};
     std::array<bool, NUM_STAGES> stage_has_image_bindings{};
     std::array<size_t, NUM_STAGES> stage_sampled_view_counts{};
     std::array<size_t, NUM_STAGES> stage_storage_view_counts{};
