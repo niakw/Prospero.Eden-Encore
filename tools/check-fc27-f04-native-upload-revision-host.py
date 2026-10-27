@@ -43,19 +43,33 @@ cpp = r"""
 #include <cstring>
 #include <memory>
 #include <span>
+#include <type_traits>
 #include <utility>
 #include <vector>
+// The source-extracted F07 upload guard uses the same RAII unwind contract
+// as the production cache. Keep this fixture's image flags and page counter real.
+struct HostScopeExitMaker {};
+template<class F> struct HostScopeExit {
+    F f;
+    ~HostScopeExit() { f(); }
+};
+template<class F>
+HostScopeExit<std::decay_t<F>> operator+(HostScopeExitMaker, F&& f) {
+    return {std::forward<F>(f)};
+}
+#define SCOPE_EXIT auto _f07_upload_scope = HostScopeExitMaker{} + [&]
 using u8 = std::uint8_t;
 using u64 = std::uint64_t;
 using GPUVAddr = u64;
 using ImageId = std::size_t;
 enum class ImageFlagBits : unsigned {
     CpuModified=1,AsynchronousDecode=2,GpuModified=4,AcceleratedUpload=8,
-    Converted=16
+    Converted=16,Tracked=32
 };
 struct Flags {
     unsigned bits{};
     Flags& operator&=(unsigned mask){bits &= mask;return *this;}
+    Flags& operator|=(ImageFlagBits bit){bits|=static_cast<unsigned>(bit);return *this;}
 };
 constexpr unsigned operator~(ImageFlagBits b){return ~static_cast<unsigned>(b);}
 inline bool True(Flags f,ImageFlagBits bit){return (f.bits&static_cast<unsigned>(bit))!=0;}
@@ -191,8 +205,16 @@ template<class P> struct TextureCache {
     Runtime runtime{};
     Buffer swizzle_data_buffer,unswizzle_data_buffer;
     std::size_t gpu_unswizzle_maxsize=65536;
-    unsigned tracked=0,async_decode=0,async_unswizzle=0;
-    void TrackImage(Image&,ImageId){++tracked;}
+    unsigned tracked=0,async_decode=0,async_unswizzle=0,untrack_count=0;
+    void TrackImage(Image& img,ImageId){
+        ++tracked;
+        img.flags |= ImageFlagBits::Tracked;
+    }
+    void UntrackImage(Image& img,ImageId){
+        assert(True(img.flags & ImageFlagBits::Tracked));
+        img.flags.bits &= ~static_cast<unsigned>(ImageFlagBits::Tracked);
+        ++untrack_count;
+    }
     void QueueAsyncDecode(Image&,ImageId){++async_decode;}
     void QueueAsyncUnswizzle(Image&,ImageId){++async_unswizzle;}
     void RefreshContents(Image&,ImageId);

@@ -3513,3 +3513,12 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    runtime.InsertUploadMemoryBarrier();\n#ifdef PS5_NATIVE\n    barrier_phase.Stop();\n#endif\n}",
     "    runtime.InsertUploadMemoryBarrier();\n#ifdef PS5_NATIVE\n    barrier_phase.Stop();\n    upload_completed = true;\n#endif\n}",
     "F07 completed texture upload marker")
+
+
+# F07 P0.3: compute dispatch currently holds both guest cache mutexes but
+# does not distinguish contention from descriptor/texture Configure work.
+# Sample only Detailed Logging, mirroring the graphics paired-lock timer.
+apply_reviewed_delta("vulkan_rasterizer.cpp",
+    "    SCOPE_EXIT { SyncProbe(scheduler, \"dispatch\", pipeline); };\n    std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};\n    if (!pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache,\n                             texture_cache)) {\n        return;\n    }\n",
+    "    SCOPE_EXIT { SyncProbe(scheduler, \"dispatch\", pipeline); };\n#ifdef PS5_NATIVE\n    // P0.3: sampled compute lock wait versus time spent holding both guest\n    // caches. No fence, shader, descriptor or lock ordering change.\n    const bool compute_sample = ::Eden::Performance::ShouldSampleCacheDraw();\n    ::Eden::Performance::CachePhaseTimer compute_pair_wait{\n        ::Eden::Performance::CachePhase::ComputePairWait, compute_sample};\n#endif\n    std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};\n#ifdef PS5_NATIVE\n    compute_pair_wait.Stop();\n    ::Eden::Performance::CachePhaseTimer compute_pair_held{\n        ::Eden::Performance::CachePhase::ComputePairHeld, compute_sample};\n    ::Eden::Performance::CachePhaseTimer compute_configure{\n        ::Eden::Performance::CachePhase::ComputeConfigure, compute_sample};\n#endif\n    if (!pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache,\n                             texture_cache)) {\n        return;\n    }\n#ifdef PS5_NATIVE\n    compute_configure.Stop();\n#endif\n",
+    "F07 compute paired GPU cache profiling")
