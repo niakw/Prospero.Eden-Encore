@@ -424,8 +424,18 @@ void TextureCache<P>::FillImageViews(std::span<ImageViewInOut> views, bool compu
             if (!blacklist && !has_deleted_images) {
                 const auto& cached = view_memo[view.index & 15U];
                 if (cached.id != NULL_IMAGE_VIEW_ID && cached.index == view.index) {
-                    view.id = cached.id;
-                    continue;
+                    const auto& cached_view = slot_image_views[cached.id];
+                    // A different TIC can remap this image during the pass.
+                    // VisitImageView must rebuild remapped descriptors.
+                    const bool remapped = !cached_view.IsBuffer() &&
+                        True(slot_images[cached_view.image_id].flags & ImageFlagBits::Remapped);
+                    if (!remapped) {
+                        view.id = cached.id;
+                        // Reuse the lookup only: PrepareImageView still
+                        // refreshes dirty pixels and synchronizes aliases.
+                        PrepareImageView(cached.id, false, false);
+                        continue;
+                    }
                 }
             }
 #endif

@@ -461,3 +461,12 @@ et pour les buffers enregistrés, sans toucher au contrat runtime.
 l'archive Eden vierge. La source d'entrée réelle est le backport actif.
 L'ancre stricte est recalée sur ce dernier, sans modifier le comportement
 natif compilé.
+
+### F07 P0.3 — revalidation des hits TIC et de la fraîcheur HUD
+
+Le mémo conserve uniquement la résolution du descripteur. Un hit effectue
+encore `PrepareImageView` afin de rafraîchir les pixels modifiés, traiter
+les alias et mettre à jour le LRU. De plus, un view `Remapped` déclenche
+`VisitImageView` au lieu de réutiliser son ID : un TIC B rencontré entre
+A et A peut avoir invalidé l'adresse GPU de la première vue. Le témoin
+C++ vérifie les deux scénarios A–B–A (alias devenu dirty et remappage).
