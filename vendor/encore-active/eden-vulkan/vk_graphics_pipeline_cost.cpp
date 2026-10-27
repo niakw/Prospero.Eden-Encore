@@ -967,7 +967,25 @@ GraphicsPipeline::~GraphicsPipeline() {
 void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {
     optimize_state = std::make_shared<OptimizeState>();
     const auto state = optimize_state;
-    OptimizeWorker().QueueWork([this, state, render_pass] {
+    // An accepted optimization is in flight even while queued. Otherwise the
+    // owner can be destroyed before the worker begins, leaving a dangling 'this'.
+    {
+        std::scoped_lock lock{state->mutex};
+        state->running = true;
+    }
+    try {
+        OptimizeWorker().QueueWork([this, state, render_pass] {
+        // Always release a pending/active job, including early cancellation and exceptions.
+        struct CompletionGuard {
+            const std::shared_ptr<OptimizeState>& state;
+            ~CompletionGuard() {
+                {
+                    std::scoped_lock lock{state->mutex};
+                    state->running = false;
+                }
+                state->done.notify_all();
+            }
+        } completion{state};
 #ifdef PS5_NATIVE
         ::Eden::Performance::ProbeSchedulerOnce("VkPipelineOptimize");
         // R444: Speculative rebuilds must not compete with first-use shaders.
@@ -987,11 +1005,14 @@ void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {
         {
             std::scoped_lock lock{state->mutex};
             if (state->cancelled) return;
-            state->running = true;
         }
         try {
             MakePipeline(render_pass, 0, &optimized_pipeline);
-            optimized_ready.store(true, std::memory_order_release);
+            // A non-throwing driver failure may still produce a null handle.
+            // Keep using the working first-use pipeline in that case.
+            if (optimized_pipeline) {
+                optimized_ready.store(true, std::memory_order_release);
+            }
         } catch (const std::exception& exception) {
             // Keep the already-built, valid first-use pipeline after any
             // optimization failure. Completion must always release shutdown.
@@ -999,12 +1020,17 @@ void GraphicsPipeline::QueueOptimizedPipeline(VkRenderPass render_pass) {
         } catch (...) {
             LOG_WARNING(Render_Vulkan, "Optimized pipeline rebuild failed: unknown exception");
         }
+        });
+    } catch (...) {
+        // QueueWork failed before the worker accepted ownership. Do not strand
+        // a pending flag that would make the destructor wait forever.
         {
             std::scoped_lock lock{state->mutex};
             state->running = false;
         }
         state->done.notify_all();
-    });
+        throw;
+    }
 }
 
 void GraphicsPipeline::MakePipeline(VkRenderPass render_pass, VkPipelineCreateFlags extra_flags,

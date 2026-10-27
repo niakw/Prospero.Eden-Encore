@@ -27,12 +27,17 @@ for expected in (
     "optimized_ready.store(true, std::memory_order_release);",
     "state->running = false;",
     "state->done.notify_all();",
+    "CompletionGuard",
+    "if (optimized_pipeline)",
     "catch (const std::exception& exception)",
     "catch (...)",
 ):
     assert expected in worker, expected
 assert "VulkanTimer(24)" not in worker  # performance.h uses std::array<Totals,24>, 0..23
 assert "std::make_shared<OptimizeState>()" in worker
+assert worker.index("state->running = true;") < worker.index("OptimizeWorker().QueueWork")
+assert worker.count("state->running = true;") == 1
+assert "state->running = false;" in worker
 assert "worker_thread != nullptr" in generator  # disk preload worker pointer null
 assert "VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT" in generator
 assert "optimized_ready.load(std::memory_order_acquire)" in generator
@@ -69,7 +74,9 @@ namespace Common {
 class ThreadWorker {
 public:
     ThreadWorker(int count, const char*) { assert(count == 1); }
+    inline static std::atomic_bool reject_next{false};
     template<class F> void QueueWork(F func) {
+        if (reject_next.exchange(false)) throw std::runtime_error("queue rejected");
         jobs.emplace_back([func = std::move(func)]() mutable {
             std::this_thread::sleep_for(std::chrono::milliseconds(4));
             func();
@@ -98,12 +105,15 @@ public:
     // The body above is the actual generated native TU method signature.
     // This stub models Vulkan CreateGraphicsPipeline on a worker and the
     // release/acquire transfer to the main GPU thread.
-    if (target) *target = render_pass + extra_flags + 44;
+    if (render_pass == -1) throw std::runtime_error("mock driver exception");
+    if (target) *target = render_pass == 0 ? 0 : render_pass + extra_flags + 44;
 }
 int main() {
     for (int i = 0; i < 100; ++i) {
         GraphicsPipeline p;
         p.QueueOptimizedPipeline(11);
+        // The queued job is already counted before it can start.
+        assert(p.optimize_state->running);
         if (i % 2 == 0) {
             // Destroy before a queued worker starts. Must cancel safely.
             continue;
@@ -113,6 +123,22 @@ int main() {
             std::this_thread::yield();
         assert(p.optimized_ready.load(std::memory_order_acquire));
         assert(p.optimized_pipeline == 55);
+    }
+    for (int pass : {0, -1}) {
+        GraphicsPipeline p;
+        p.QueueOptimizedPipeline(pass);
+        const auto state = p.optimize_state;
+        std::unique_lock lock{state->mutex};
+        state->done.wait(lock, [&] { return !state->running; });
+        assert(!p.optimized_ready.load(std::memory_order_acquire));
+    }
+    {
+        GraphicsPipeline p;
+        Common::ThreadWorker::reject_next.store(true);
+        bool rejected = false;
+        try { p.QueueOptimizedPipeline(11); }
+        catch (const std::runtime_error&) { rejected = true; }
+        assert(rejected && !p.optimize_state->running);
     }
 }
 """
@@ -124,5 +150,5 @@ with tempfile.TemporaryDirectory(prefix="eden-r313-pipelines-") as d:
     subprocess.run(["c++", "-std=c++20", "-O2", "-pthread", "-Wall", "-Wextra",
                     "-Werror", str(source), "-o", str(app)], check=True, timeout=40)
     subprocess.run([str(app)], check=True, timeout=20)
-print("PASS R313 real native optimizer worker C++ lifecycle, cancelled jobs, release/acquire")
+print("PASS F07 native optimizer queued lifetime, cancel, null handle, rejection, release/acquire")
 print("PASS R313 runtime-only fast-first, disk cache exclusion, one worker, no OOB index 24")
