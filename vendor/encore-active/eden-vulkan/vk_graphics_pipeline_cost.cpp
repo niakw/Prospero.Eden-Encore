@@ -474,7 +474,17 @@ GraphicsPipeline::GraphicsPipeline(
 }
 
 void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {
+#ifdef PS5_NATIVE
+    // Both appends are optional memoization. The canonical graphics cache
+    // already owns the target and will resolve a missing edge on demand.
+    try {
+        transition_keys.push_back(transition->key);
+    } catch (...) {
+        return;
+    }
+#else
     transition_keys.push_back(transition->key);
+#endif
 #ifdef PS5_NATIVE
     // Both arrays must describe the same transition index. An allocation
     // failure while appending the pointer must not leave an orphaned key:
