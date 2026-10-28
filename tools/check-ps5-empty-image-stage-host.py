@@ -203,10 +203,10 @@ struct TextureCache {
         for (auto& view : views) { ++lookups; view.id = 11; }
     }
 };
+struct Spec { static constexpr bool has_images = false; };
 struct Graphics {
     TextureCache texture_cache;
     std::vector<ImageViewInOut> views;
-    static constexpr bool has_images = false;
     void Configure() {
 """ + image_call + r"""
     }
