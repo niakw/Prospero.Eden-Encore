@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <new>
 #include <thread>
 #include <utility>
 #include <queue>
@@ -130,7 +131,15 @@ public:
             return;
         }
         DispatchWork();
+#ifdef PS5_NATIVE
+        // Even after rollover the new chunk can refuse the command.
+        // Never treat a missing draw/descriptor upload as successfully queued.
+        if (!chunk->Record(command)) {
+            throw std::bad_alloc{};
+        }
+#else
         (void)chunk->Record(command);
+#endif
 #ifdef PS5_NATIVE
         } catch (...) {
             InvalidateState();
