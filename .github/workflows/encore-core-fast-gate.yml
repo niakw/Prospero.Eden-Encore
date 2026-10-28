@@ -435,6 +435,7 @@ jobs:
           python3 -B tools/check-ps5-f07-unswizzle-stale-revision-host.py
           python3 -B tools/check-ps5-f07-unswizzle-slice-bounds-host.py
           python3 -B tools/check-ps5-f07-bcn-output-buffer-host.py
+          python3 -B tools/check-ps5-f07-image-upload-record-rollback-host.py
           python3 -B tools/check-ps5-f07-pipeline-transitions-host.py
           python3 -B tools/check-ps5-f07-pipeline-publication-host.py
           python3 -B tools/check-ps5-f07-compute-ready-callback-host.py

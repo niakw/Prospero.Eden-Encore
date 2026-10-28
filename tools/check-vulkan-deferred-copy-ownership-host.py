@@ -52,6 +52,7 @@ f07_texture_labels = (
     'F07 add explicit PS5 native bad_alloc header for staging readback',
     'F07 PS5 transactional BCn 3D compute output buffer',
     'F07 reject null native BCn 3D output buffer handle',
+    'F07 native image initialized only after accepted upload record',
 )
 f07_texture_deltas = []
 for statement in tree.body:
