@@ -61,9 +61,9 @@ struct Image {
     Scheduler* scheduler;
     void Submit() {
         std::vector<int> vk_copies{42};
-        const VkBuffer src_buffer=1;
-        const VkImage vk_image=2;
-        const VkImageAspectFlags vk_aspect_mask=4;
+        VkBuffer src_buffer=1;
+        VkImage vk_image=2;
+        VkImageAspectFlags vk_aspect_mask=4;
 """ + fragment + r"""
     }
 };
