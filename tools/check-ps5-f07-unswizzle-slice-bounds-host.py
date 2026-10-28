@@ -27,7 +27,10 @@ assert block.index("task.total_size % task.bytes_per_slice") < block.index(
     "task.total_size / task.bytes_per_slice")
 assert "std::numeric_limits<size_t>::max()" in block
 assert "runtime.FreeDeferredStagingBuffer(task.staging_buffer);" not in block
-assert "task.staging_buffer = runtime.UploadStagingBuffer(task.total_size, true);" in block
+assert "task.staging_buffer = staging;" in block
+assert "staging.mapped_span.size() < task.total_size" in block
+assert "runtime.FreeDeferredStagingBuffer(staging);" in block
+assert "F07 3D unswizzle staging OOM and short mapping recovery" in generator
 assert "image.flags |= ImageFlagBits::CpuModified;" in block
 assert "unswizzle_queue.pop_front();" in block
 assert "current_unswizzle_frame = 0u;" in block
@@ -42,6 +45,7 @@ cpp = r"""
 #include <cstdint>
 #include <deque>
 #include <limits>
+#include <new>
 #include <vector>
 using u32 = std::uint32_t;
 enum class ImageFlagBits:unsigned {CpuModified=1,Tracked=2,IsDecoding=4};
@@ -59,17 +63,24 @@ struct Image {
 };
 struct Task {
     std::size_t image_id{},total_size{},bytes_per_slice{},last_submitted_offset{};
-    struct Staging{bool allocated{false};} staging_buffer;
+    struct Staging{
+        bool allocated{false};
+        struct Mapped{std::size_t bytes{};std::size_t size() const{return bytes;}} mapped_span{};
+        bool buffer{false};
+    } staging_buffer;
 };
 struct Runtime {
     unsigned deferred{},allocations{};
+    bool fail{},short_mapping{};
     Task::Staging UploadStagingBuffer(std::size_t size,bool deferred_){
         assert(size!=0 && deferred_);
         ++allocations;
-        return {true};
+        if(fail) throw std::bad_alloc{};
+        return {true,{short_mapping?size-1:size},true};
     }
     void FreeDeferredStagingBuffer(Task::Staging& s){
-        assert(s.allocated);s.allocated=false;++deferred;
+        assert(s.allocated && s.buffer);
+        s.allocated=false;s.buffer=false;++deferred;
     }
 };
 struct Cache {
@@ -89,6 +100,23 @@ struct Cache {
         ++accepted;
     }
 };
+void StagingFailure(bool short_mapping) {
+    Cache c;
+    c.unswizzle_queue.push_back({.image_id=0,.total_size=64,.staging_buffer={false}});
+    c.slot_images[0].info.size.depth=1;
+    c.slot_images[0].flags|=ImageFlagBits::IsDecoding;
+    c.slot_images[0].flags|=ImageFlagBits::Tracked;
+    c.runtime.fail=!short_mapping;
+    c.runtime.short_mapping=short_mapping;
+    c.Check(4,16,1);
+    assert(c.accepted==0 && c.unswizzle_queue.empty());
+    assert(c.runtime.allocations==1);
+    assert(c.runtime.deferred==(short_mapping?1u:0u));
+    assert(c.current_unswizzle_frame==0u && c.untracked==1);
+    assert(True(c.slot_images[0].flags&ImageFlagBits::CpuModified));
+    assert(!True(c.slot_images[0].flags&ImageFlagBits::IsDecoding));
+    assert(!True(c.slot_images[0].flags&ImageFlagBits::Tracked));
+}
 void Invalid(std::size_t total,u32 width,u32 block,u32 height,u32 depth,bool tracked) {
     Cache c;
     c.unswizzle_queue.push_back({.image_id=0,.total_size=total,.staging_buffer={false}});
@@ -103,6 +131,8 @@ void Invalid(std::size_t total,u32 width,u32 block,u32 height,u32 depth,bool tra
     assert(c.untracked==(tracked?1u:0u));
 }
 int main(){
+    StagingFailure(false);
+    StagingFailure(true);
     Invalid(64,0,16,1,1,true);                      // zero stride, no division
     Invalid(64,1,0,1,1,false);                      // zero block size
     Invalid(8,2,16,1,1,true);                       // slice > staging
@@ -139,4 +169,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-unswizzle-bounds-") as folder:
         run=subprocess.run([str(executable)],capture_output=True,text=True,timeout=15)
         assert run.returncode==0,(opt,run.stdout,run.stderr[-6000:])
 print("F07_UNSWIZZLE_SLICE_BOUNDS_PASS zero=2 truncated=1 overflow=1"
-      " oversized=1 depth=3 valid=1 allocation_order=1 O0=1 O2=1")
+      " oversized=1 depth=3 valid=1 allocation_order=1 oom=1 short_span=1 O0=1 O2=1")
