@@ -105,7 +105,8 @@ int main() {
     y.Test();
     assert(y.scheduler.waits == 1 && y.memory.flushes == 1);
     assert(y.pipeline_cache.selects == 2);
-    assert(y.guest_descriptor_queue.exact_checks == 1);
+    // A drain reselected a descriptor-free pipeline: no exact probe is needed.
+    assert(y.guest_descriptor_queue.exact_checks == 0);
     Rasterizer z;
     z.pipeline_cache.selected = &textured;
     z.guest_descriptor_queue.full = true;
