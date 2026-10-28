@@ -239,3 +239,7 @@ Sur PS5 native, `Image::AllocateComputeUnswizzleBuffer` n'annonce plus une nouve
 ## P0.4 — état `initialized` après un enregistrement d'upload Vulkan refusé
 
 Sur PS5 native, `Image::UploadMemory` ne publie plus `initialized = true` avant `scheduler.Record`. Si la file refuse l'insertion (allocation/exception), le prochain upload conserve la transition initiale correcte au lieu de considérer à tort le contenu GPU comme initialisé. Le chemin desktop est conservé. Le témoin source-extrait exécute refus, nouvelle tentative, second refus et réutilisation en modes PS5/desktop sous O0/O2 avec UBSan ; l'oracle historique des copies reprend le delta inverse avant son SHA figé. Aucune preuve de disparition de HUD manquant sur la console n'en découle encore.
+
+## P0.4 — ne pas mémoriser un descripteur de HUD avant un draw enregistré
+
+Pour les descripteurs Vulkan classiques (ni push descriptors, ni descriptor buffer), `GraphicsPipeline::ConfigureDraw` ne publie plus la dernière empreinte de payload avant que `scheduler.Record` ait accepté la commande. Sur PS5 native, un refus laisse donc la dernière empreinte réellement soumise et force la réémission du descripteur modifié au dessin suivant. Les buffers de descripteurs et le chemin desktop restent inchangés. Le témoin C++ extrait les deux blocs réels, teste refus, reprise, payload identique/changé et layout vide à O0/O2 sous UBSan. L'effet sur les HUD FC 27 reste à confirmer sur PS5.
