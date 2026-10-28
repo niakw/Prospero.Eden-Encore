@@ -7,6 +7,9 @@
 #pragma once
 
 #include <limits>
+#ifdef PS5_NATIVE
+#include <new>
+#endif
 #include <optional>
 #include <bit>
 #include "common/container/unordered_map.h"
@@ -335,7 +338,23 @@ void TextureCache<P>::RunGarbageCollector() {
             --num_iterations;
         }
         if (must_download && !UsePrefetched(image_id, image)) {
+#ifdef PS5_NATIVE
+            // Never evict dirty GPU bytes if the fallback guest readback could
+            // not obtain a COMPLETE staging mapping under memory pressure.
+            auto map = [&]() -> decltype(runtime.DownloadStagingBuffer(image.unswizzled_size_bytes)) {
+                try {
+                    return runtime.DownloadStagingBuffer(image.unswizzled_size_bytes);
+                } catch (const std::bad_alloc&) {
+                    return {};
+                }
+            }();
+            if (!map.buffer || map.mapped_span.size_bytes() < image.unswizzled_size_bytes) {
+                ++skipped;
+                return false;
+            }
+#else
             auto map = runtime.DownloadStagingBuffer(image.unswizzled_size_bytes);
+#endif
             const auto copies = FixSmallVectorADL(FullDownloadCopies(image.info));
             image.DownloadMemory(map, copies);
             runtime.Finish();
