@@ -134,11 +134,12 @@
     },
     {
       "path": "headless/dev_vulkan.h",
-      "disposition": "reviewed_without_new_code_edit",
+      "disposition": "code_changed_in_batch",
       "contract_id": "U59",
-      "reviewed_source_git_blob": "af176474dd17505cee9248859ee3d370c1e7acd2",
-      "source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
-      "evidence": "Source inspected: Drapeaux de développement configurés avant la création du device ; fast-first désactivé dans le profil livré. Les booléens hors instrumentation ne réalisent pas de travail par frame. Reopen if: Une preuve de mutation concurrente des options avant création GPU."
+      "reviewed_source_git_blob": "74e754fd45e73649ef6259f923ad9f2755e40c73",
+      "proof_ref": "tools/check-ps5-fast-first-pipelines.py",
+      "historical_source_review_document": "docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md",
+      "evidence": "28 October F07: native PS5 release now enables fast-first initial pipelines by default, with bounded optional optimization and a per-title reset. The selected main.cpp release path reads only a persistent fast-pipelines.txt=off rollback; development retains its existing parser. Host C++ tests cover four build profiles at O0/O2, release override, and first-use worker lifetime. The original 21 October no-edit startup classification has been superseded. Console FPS and first-use shader translation still unverified."
     },
     {
       "path": "headless/development_input.h",
