@@ -277,3 +277,7 @@ Dans `BlockLinearUnswizzle3DPass::UnswizzleChunk`, la barrière native utilise d
 ## P0.2/P0.4 — état des bindings après rejet de Record Vulkan
 
 Sur PS5 native, `Scheduler::RecordWithUploadBuffer` réinitialise désormais les mémos de pipeline graphique, variant optimisé, rescaling et descriptor-buffer lorsque la mise en file ou le rollover échoue avant acceptation. Le rendu déjà enregistré et le renderpass en cours ne sont pas détruits. Cette correction centralisée protège les `ConfigureDraw`/`Configure` dont les mises à jour d'état scheduler précèdent `Record` : le prochain HUD/draw republie ses bindings au lieu d'omettre une liaison non soumise. Le chemin desktop reste inchangé. Témoin C++ source-extrait PS5/desktop O0/O2 UBSan sur les refus d'enregistrement et de dispatch, puis reprise. Validation FC 27 PS5 requise.
+
+## P0.2/P0.4 — second refus d'enregistrement après rollover
+
+Un second `CommandChunk::Record` pouvait renvoyer `false` après `DispatchWork` sans que le scheduler le signale : le code ignorait le résultat et une commande de draw/upload n'était pas enregistrée. Sur PS5, ce refus est maintenant propagé comme une erreur d'allocation, interceptée par le rollback de `RecordWithUploadBuffer`, qui invalide les mémos de pipeline/réscaling/descripteurs sans détruire la renderpass ni les travaux précédemment acceptés. Le chemin desktop reste inchangé. Le témoin C++ source-extrait couvre le double refus et la reprise ; validation CI/PS5 et impact HUD restent à établir.

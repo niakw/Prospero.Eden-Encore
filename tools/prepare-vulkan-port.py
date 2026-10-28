@@ -4491,3 +4491,11 @@ apply_reviewed_delta("include/video_core/renderer_vulkan/vk_scheduler.h",
     "    void RecordWithUploadBuffer(T&& command) {\n        if (chunk->Record(command)) {\n            return;\n        }\n        DispatchWork();\n        (void)chunk->Record(command);\n    }",
     "    void RecordWithUploadBuffer(T&& command) {\n#ifdef PS5_NATIVE\n        // ConfigureDraw/Configure can memoize pipeline, rescaling and\n        // descriptor bindings before enqueueing. If a chunk record or\n        // rollover throws, those bindings were never accepted by the FIFO.\n        // Invalidate ONLY the owner's cached command state; the current\n        // renderpass and already-queued commands are left intact.\n        try {\n#endif\n        if (chunk->Record(command)) {\n            return;\n        }\n        DispatchWork();\n        (void)chunk->Record(command);\n#ifdef PS5_NATIVE\n        } catch (...) {\n            InvalidateState();\n            throw;\n        }\n#endif\n    }",
     "F07 invalidate native Vulkan binding memo after rejected record")
+
+# F07 P0.2/P0.4: the second record after a chunk rollover is not optional.
+# Preserve desktop behavior; an unaccepted native command must invalidate
+# memoized Vulkan bindings rather than silently skip its draw/upload.
+apply_reviewed_delta("include/video_core/renderer_vulkan/vk_scheduler.h",
+    "        DispatchWork();\n        (void)chunk->Record(command);\n#ifdef PS5_NATIVE\n        } catch (...) {",
+    "        DispatchWork();\n#ifdef PS5_NATIVE\n        // Even after rollover the new chunk can refuse the command.\n        // Never treat a missing draw/descriptor upload as successfully queued.\n        if (!chunk->Record(command)) {\n            throw std::bad_alloc{};\n        }\n#else\n        (void)chunk->Record(command);\n#endif\n#ifdef PS5_NATIVE\n        } catch (...) {",
+    "F07 reject native scheduler second record refusal after rollover")

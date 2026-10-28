@@ -15,6 +15,9 @@ assert header.count(begin)==header.count(stop)==1
 method=header[header.index(begin):header.index(stop)]
 assert "#ifdef PS5_NATIVE" in method
 assert "InvalidateState();" in method
+assert "if (!chunk->Record(command)) {" in method
+assert "throw std::bad_alloc{};" in method
+assert "F07 reject native scheduler second record refusal after rollover" in generator
 assert method.index("} catch (...) {") > method.index("(void)chunk->Record(command)")
 assert "F07 invalidate native Vulkan binding memo after rejected record" in generator
 start=implementation.index("void Scheduler::InvalidateState() {")
@@ -36,10 +39,12 @@ cpp=r"""
 namespace vk { struct CommandBuffer {}; }
 struct MockChunk {
     bool refuse_once{};
+    bool refuse_always{};
     bool throw_record{};
     unsigned recorded{};
     template<typename T> bool Record(T&) {
         if (throw_record) throw std::bad_alloc{};
+        if (refuse_always) return false;
         if (refuse_once) { refuse_once=false; return false; }
         ++recorded;
         return true;
@@ -81,6 +86,26 @@ int main() {
         rollover.RecordWithUploadBuffer(cmd);
         assert(rollover.dispatches==1 && rollover.storage.recorded==1);
         assert(rollover.invalidations==0);
+    }
+    {
+        // First and second record refuse: native must throw, clear pipeline
+        // memos and allow a later draw to bind again. Desktop is unchanged.
+        Scheduler denied_twice;
+        denied_twice.storage.refuse_always=true;
+        bool failed=false;
+        try { denied_twice.RecordWithUploadBuffer(cmd); }
+        catch(const std::bad_alloc&) { failed=true; }
+        assert(denied_twice.dispatches==1 && denied_twice.storage.recorded==0);
+#ifdef PS5_NATIVE
+        assert(failed && denied_twice.invalidations==1);
+        assert(!denied_twice.pipeline_memo && !denied_twice.descriptor_memo);
+#else
+        assert(!failed && denied_twice.invalidations==0);
+#endif
+        assert(denied_twice.renderpass_active);
+        denied_twice.storage.refuse_always=false;
+        denied_twice.RecordWithUploadBuffer(cmd);
+        assert(denied_twice.storage.recorded==1);
     }
     for (bool fail_record : {true,false}) {
         Scheduler denied;
