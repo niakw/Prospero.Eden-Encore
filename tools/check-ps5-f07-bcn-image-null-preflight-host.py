@@ -30,6 +30,7 @@ for wf in (".github/workflows/encore-core-fast-gate.yml",
 cpp=r"""
 #include <cassert>
 #include <cstdint>
+#include <initializer_list>
 #include <new>
 using VkImage=std::uint64_t;
 using VkBuffer=std::uint64_t;
@@ -47,6 +48,7 @@ struct Image {
 struct Pass {
     unsigned queued{};
     void Begin(Image& image) {
+        (void)image; // Desktop retains the original no-check behavior.
 """ + guard + r"""
         ++queued;
     }
