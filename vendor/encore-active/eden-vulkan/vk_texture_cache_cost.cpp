@@ -15,6 +15,9 @@
 #include <stdexcept>
 #include <span>
 #include <memory>
+#ifdef PS5_NATIVE
+#include <new>
+#endif
 #include <utility>
 #include <vector>
 #include <boost/container/small_vector.hpp>
@@ -1007,7 +1010,18 @@ StagingBufferRef TextureCacheRuntime::UploadStagingBuffer(size_t size, bool defe
 }
 
 StagingBufferRef TextureCacheRuntime::DownloadStagingBuffer(size_t size, bool deferred) {
+#ifdef PS5_NATIVE
+    // Reject broken readback staging before the pinned batch can record copies.
+    // Never trust a mapped CPU span without a real Vulkan buffer handle.
+    auto map = staging_buffer_pool.Request(size, MemoryUsage::Download, deferred);
+    if (!map.buffer || map.mapped_span.size_bytes() < size) {
+        if (deferred && map.buffer) staging_buffer_pool.FreeDeferred(map);
+        throw std::bad_alloc{};
+    }
+    return map;
+#else
     return staging_buffer_pool.Request(size, MemoryUsage::Download, deferred);
+#endif
 }
 
 void TextureCacheRuntime::FreeDeferredStagingBuffer(StagingBufferRef& ref) {
