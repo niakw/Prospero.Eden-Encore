@@ -4242,7 +4242,7 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        if (any_none_dma) {\n            auto download_map = runtime.DownloadStagingBuffer(total_size_bytes, true);\n#ifdef PS5_NATIVE\n            // The pinned staging handle does not own its pool reservation.\n            // If command recording or queue growth fails, keep this buffer\n            // GPU-safe in the deferred pool and leave the commit retryable.\n            bool staging_transferred = false;\n            SCOPE_EXIT {\n                if (!staging_transferred) runtime.FreeDeferredStagingBuffer(download_map);\n            };\n#endif\n            for (const PendingDownload& download_info : download_ids) {\n                if (download_info.is_swizzle) {\n                    Image& image = slot_images[download_info.object_id];\n                    const auto copies = FixSmallVectorADL(FullDownloadCopies(image.info));\n                    image.DownloadMemory(download_map, copies);\n                    download_map.offset += Common::AlignUp(image.unswizzled_size_bytes, 64);\n                }\n            }\n            uncommitted_async_buffers.emplace_back(download_map);\n#ifdef PS5_NATIVE\n            staging_transferred = true;\n#endif\n        }",
     "F07 return deferred staging when async flush batch preparation fails")
 
-// F07 P0.4: publish async downloads and their staging buffers atomically on PS5.
+# F07 P0.4: publish async downloads and their staging buffers atomically on PS5.
 // Keep native retryable on an exception from the second queue and return only
 // the newly-created swizzle staging; preserve earlier queued DMA sources.
 apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
