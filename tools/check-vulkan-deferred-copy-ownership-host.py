@@ -48,6 +48,8 @@ f07_texture_labels = (
     'F07 validate native reinterpret pixel ratios before coordinate conversion',
     'F07 defer native reinterpret resolve invalidation until valid allocation',
     'F07 invalidate native reinterpret resolve after scratch allocation',
+    'F07 reject invalid Vulkan guest readback staging in runtime',
+    'F07 add explicit PS5 native bad_alloc header for staging readback',
 )
 f07_texture_deltas = []
 for statement in tree.body:
