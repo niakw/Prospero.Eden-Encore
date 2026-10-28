@@ -2066,11 +2066,35 @@ void Image::AllocateComputeUnswizzleBuffer(u32 max_slices) {
     const u32 block_width  = 4;
     const u32 block_height = 4;
 
+#ifdef PS5_NATIVE
+    // The compute pass also rounds width/height in u32. Reject invalid
+    // dimensions before either rounding can wrap or the GPU batch can stall.
+    if (info.size.width == 0 || info.size.height == 0 || max_slices == 0 ||
+        info.size.depth == 0 || block_bytes == 0 ||
+        info.size.width > ~u32{0} - (block_width - 1) ||
+        info.size.height > ~u32{0} - (block_height - 1)) {
+        throw std::bad_alloc{};
+    }
+#endif
     // BCn is 4x4x1 blocks
     const u32 blocks_x = (info.size.width  + block_width  - 1) / block_width;
     const u32 blocks_y = (info.size.height + block_height - 1) / block_height;
     const u32 blocks_z = (std::min)(max_slices, info.size.depth);
 
+#ifdef PS5_NATIVE
+    // Check every multiplication before allocating the BCn 3D output.
+    // An unsigned wrap could otherwise allocate a tiny Vulkan buffer for
+    // an enormous compute write while keeping texture_cache.mutex held.
+    constexpr VkDeviceSize max_buffer = (std::numeric_limits<VkDeviceSize>::max)();
+    if (blocks_z == 0 || static_cast<u64>(blocks_x) > max_buffer / blocks_y) {
+        throw std::bad_alloc{};
+    }
+    const u64 blocks_xy = static_cast<u64>(blocks_x) * blocks_y;
+    if (blocks_xy > max_buffer / blocks_z ||
+        blocks_xy * blocks_z > max_buffer / block_bytes) {
+        throw std::bad_alloc{};
+    }
+#endif
     const u64 block_count =
         static_cast<u64>(blocks_x) *
         static_cast<u64>(blocks_y) *
@@ -2081,13 +2105,15 @@ void Image::AllocateComputeUnswizzleBuffer(u32 max_slices) {
         return;
     }
 
+#ifndef PS5_NATIVE
     compute_unswizzle_buffer_size = required_size;
+#endif
 
     VkBufferCreateInfo ci{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
-        .size = compute_unswizzle_buffer_size,
+        .size = required_size,
         .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
@@ -2095,9 +2121,13 @@ void Image::AllocateComputeUnswizzleBuffer(u32 max_slices) {
         .pQueueFamilyIndices = nullptr,
     };
 
+    // The previous buffer remains valid if the allocator rejects growth.
+    // Publish its NEW size only after Vulkan returned a replacement handle.
     compute_unswizzle_buffer =
         runtime->memory_allocator.CreateBuffer(ci, MemoryUsage::DeviceLocal);
-
+#ifdef PS5_NATIVE
+    compute_unswizzle_buffer_size = required_size;
+#endif
     has_compute_unswizzle_buffer = true;
 }
 
