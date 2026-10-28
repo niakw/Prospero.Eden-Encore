@@ -185,3 +185,7 @@ Sur PS5, `GraphicsPipeline::Next` conserve deux indices récents de transitions 
 ## P0.3 — stabilité des descripteurs texel dans les comparaisons de HUD
 
 Dans `UpdateDescriptorQueue::AddTexelBuffer`, le handle Vulkan occupait 8 octets mais les entrées du cache pouvaient conserver des octets inutilisés issus d'un précédent descripteur (union). Sur PS5 native, le chemin texel legacy initialise désormais l'entrée entière avant de publier le handle. Cela permet à `GraphicsPipeline::ConfigureDraw` et à la voie compute de reconnaître deux payloads identiques au `memcmp` au lieu de provoquer une nouvelle mise à jour de descripteurs. Le chemin desktop est inchangé. Le témoin source-extrait vérifie `-O0`/`-O2`, les payloads empoisonnés et le changement réel de handle. Le gain de temps sous cache mutex et le FPS FC27 restent à mesurer.
+
+## P0.3 — réutilisation des descripteurs image sur le chemin PS5 legacy
+
+Les deux écritures `AddSampledImage` et `AddImage` initialisent désormais l'entrée entière sur PS5, même si le périphérique utilise des descriptor sets classiques plutôt que `VK_EXT_descriptor_buffer`. Ces octets participent à la comparaison des payloads de `ConfigureDraw` et de `Configure` ; une image identique ne doit plus provoquer de mise à jour par différence d'octets de padding. Le test source-extrait existant couvre désormais images, samplers et vues texel, avec et sans descriptor buffers, en `-O0`/`-O2`. Aucun gain FPS n'est inféré avant mesure console.
