@@ -937,6 +937,8 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
             (num_descriptor_entries != 0 &&
              std::memcmp(last_descriptor_payload.data(), entries,
                          num_descriptor_entries * sizeof(DescriptorUpdateEntry)) != 0);
+#ifndef PS5_NATIVE
+        // The legacy desktop path preserves its existing early cache memo.
         if (update_descriptors) {
             if (num_descriptor_entries != 0) {
                 last_descriptor_payload.assign(entries, entries + num_descriptor_entries);
@@ -944,6 +946,7 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
                 last_descriptor_payload.clear();
             }
         }
+#endif
     }
     scheduler.Record([this, descriptor_data, bind_pipeline, optimized_at_record, update_descriptors,
                       descriptor_buffer_offset, descriptor_buffer_chunk, bind_descriptor_buffer,
@@ -1005,6 +1008,21 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
                                       descriptor_set, nullptr);
         }
     });
+#ifdef PS5_NATIVE
+    // Descriptor-set updates are encoded by the Vulkan worker. If Record
+    // throws before accepting the draw, retaining the old memo forces the
+    // next HUD draw to publish its changed descriptors instead of reusing
+    // an unsubmitted descriptor set.
+    if (descriptor_set_layout && !uses_push_descriptor && !uses_descriptor_buffer &&
+        update_descriptors) {
+        const auto* const entries = static_cast<const DescriptorUpdateEntry*>(descriptor_data);
+        if (num_descriptor_entries != 0) {
+            last_descriptor_payload.assign(entries, entries + num_descriptor_entries);
+        } else {
+            last_descriptor_payload.clear();
+        }
+    }
+#endif
     return true;
 }
 
