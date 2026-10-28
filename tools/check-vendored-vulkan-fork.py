@@ -106,13 +106,18 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     for old, new in native_guards:
         assert raster.count(old) == 1, "pinned Vulkan indirect draw moved"
         raster = raster.replace(old, new)
-    # The pinned-draw override supplies one missing-buffer guard, while the
-    # generator now supplies a second one in DispatchCompute. Preserve both
-    # without silently allowing duplicate guards in either source method.
-    assert raster.count("if (!buffer)") == 2, "draw+compute null buffer guard drift"
+    # The pinned draw path has its own null-pointer guard. Compute-indirect
+    # and DMA image now also require a live Vulkan handle, not just Buffer*.
+    # Verify all three paths independently, not a combined obsolete count.
+    assert raster.count("if (!buffer)") == 1, "draw indirect pointer guard drift"
+    native_vk_guard = "if (!buffer || buffer->Handle() == VK_NULL_HANDLE)"
+    assert raster.count(native_vk_guard) == 2, "compute/DMA Vulkan handle guard drift"
     assert raster.count("if (!draw_buffer)") == 1, "counted draw buffer guard drift"
     dispatch = raster.split("void RasterizerVulkan::DispatchCompute() {", 1)[1]
-    assert dispatch.count("if (!buffer)") == 1, "compute indirect null buffer guard drift"
+    assert dispatch.count(native_vk_guard) == 1, "compute indirect VkBuffer guard drift"
+    dma = raster.split("bool AccelerateDMA::DmaBufferImageCopy(", 1)[1].split(
+        "bool AccelerateDMA::ImageToBuffer(", 1)[0]
+    assert dma.count(native_vk_guard) == 1, "DMA image VkBuffer guard drift"
     assert "if (!buffer)" in raster.split("void RasterizerVulkan::DrawIndirect() {", 1)[1].split(
         "void RasterizerVulkan::DispatchCompute() {", 1)[0], "draw indirect guard drift"
     raster_path.write_text(raster)
