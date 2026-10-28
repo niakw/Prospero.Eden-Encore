@@ -14,7 +14,7 @@ assert "return num_descriptor_entries != 0;" in header
 assert "Compute empty-descriptor native anchor changed" in oracle
 dispatch = raster.split("void RasterizerVulkan::DispatchCompute() {", 1)[1]
 initial = dispatch.index("    ComputePipeline* pipeline{pipeline_cache.CurrentComputePipeline()};")
-end = dispatch.index("#ifdef PS5_NATIVE\n    // Compute always allocates", initial)
+end = dispatch.index("#ifdef PS5_NATIVE\n    // Compute reuses same-generation identical descriptor payloads.", initial)
 selection = dispatch[initial:end]
 assert selection.count("pipeline->HasDescriptorEntries()") == 1
 assert selection.count("pipeline_cache.CurrentComputePipeline()") == 2

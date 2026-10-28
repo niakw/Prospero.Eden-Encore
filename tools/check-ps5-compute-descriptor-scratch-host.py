@@ -34,7 +34,20 @@ assert "current->views.clear();" in helper and "current->samplers.clear();" in h
 method_start = src.index("void ComputePipeline::PreflightDescriptorScratch() {")
 method_end = src.index("\n#endif", method_start)
 method = src[method_start:method_end]
-assert method in generator, "selected preflight function differs from generator"
+# The latest generator transforms this method in a later source adapter,
+# rather than embedding the fully composed body as one literal. Extract its
+# actual replacement argument and verify the native prefix byte-for-byte.
+import ast
+generator_patches = [node for node in ast.walk(ast.parse(generator))
+                     if isinstance(node, ast.Call)
+                     and isinstance(node.func, ast.Name)
+                     and node.func.id == "apply_reviewed_delta"
+                     and len(node.args) >= 4
+                     and isinstance(node.args[3], ast.Constant)
+                     and node.args[3].value == "F07 compute descriptor snapshot preflight"]
+assert len(generator_patches) == 1, "missing or repeated native snapshot adapter"
+generator_prefix = ast.literal_eval(generator_patches[0].args[2])
+assert method.startswith(generator_prefix), "selected preflight differs from generator adapter"
 assert "num_image_elements" in method and "num_textures" in method
 assert "scratch.in_use" in method
 
