@@ -428,6 +428,12 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
     // Match the builder's release publication before using its pipeline handle.
     // A ready fast path skips the queued wait, so relaxed is insufficient here.
     if (!is_built.load(std::memory_order_acquire)) {
+#ifdef PS5_NATIVE
+        // The Vulkan worker processes command chunks in FIFO order. Once a
+        // readiness wait precedes the first draw, later draws for this same
+        // pipeline are already ordered behind it. GPU-owner thread only.
+        if (!first_use_wait_recorded) {
+#endif
         // Wait for the pipeline to be built
         scheduler.Record([this](vk::CommandBuffer) {
             // Builder published the pipeline before this ordered GPU callback.
@@ -442,6 +448,10 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
             std::unique_lock lock{build_mutex};
             build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });
         });
+#ifdef PS5_NATIVE
+        first_use_wait_recorded = true;
+        }
+#endif
     }
 
     // Log compute pipeline binding

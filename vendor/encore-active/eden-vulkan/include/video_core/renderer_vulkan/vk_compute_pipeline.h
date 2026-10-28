@@ -115,6 +115,10 @@ private:
     ::Eden::StripedCondition build_condvar;
     ::Eden::StripedMutex build_mutex;
     std::atomic_bool is_built{false};
+#ifdef PS5_NATIVE
+    // The first queued wait covers all following compute dispatches.
+    bool first_use_wait_recorded{};
+#endif
 };
 
 } // namespace Vulkan

@@ -35,3 +35,7 @@ L'état d'une fonction peut être « relue sans changement », « corrigée et t
 ## Revue ciblée P0.1 — nouveaux échecs de traduction après saturation du budget
 
 Les deux fonctions `CurrentGraphicsPipelineSlowPath` et `CurrentComputePipeline` sont modifiées dans le lot de reprise P0.1 : avec plus de 64 clés graphiques ou 32 clés compute ayant échoué, le nouvel échec obtient également **une tentative différée**. La carte de reprise reste plafonnée en recyclant la clé au délai `eligible_at` le plus ancien, sur le chemin **d'échec froid seulement**. Les clés rejetées par saturation restent sans nouvelle tentative ; il s'agit d'un compromis borné, pas d'un système de retries illimités. Les deux témoins C++ extraient le code réel, couvrent `-O0`/`-O2`, et démontrent la saturation ainsi que l'absence de tempête sur un même shader. Aucun chiffre FPS ou récupération HUD sur console n'est revendiqué.
+
+## P0.2 — attente Vulkan unique par pipeline
+
+Les fonctions GraphicsPipeline::ConfigureDraw et ComputePipeline::Configure ont maintenant un indicateur GPU-owner uniquement sur PS5. Une attente de compilation est enregistrée une seule fois pour chaque pipeline non prêt ; toutes les commandes ultérieures restent derrière elle dans la file FIFO, y compris entre les chunks. Le flag est écrit seulement après que scheduler.Record a réussi. Le test hôte extrait les deux portions C++ et compare PS5 et desktop sous O0/O2, avec 64 commandes, build retardé et rejet de Record. Pas de preuve FPS console.

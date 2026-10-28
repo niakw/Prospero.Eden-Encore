@@ -255,6 +255,10 @@ private:
     ::Eden::StripedCondition build_condvar;
     ::Eden::StripedMutex build_mutex;
     std::atomic_bool is_built{false};
+#ifdef PS5_NATIVE
+    // Only the GPU owner writes this after enqueueing the ordered worker wait.
+    bool first_use_wait_recorded{};
+#endif
     bool uses_push_descriptor{false};
     bool uses_descriptor_buffer{false};
 };
