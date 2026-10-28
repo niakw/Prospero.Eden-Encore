@@ -39,3 +39,7 @@ Les deux fonctions `CurrentGraphicsPipelineSlowPath` et `CurrentComputePipeline`
 ## P0.2 — attente Vulkan unique par pipeline
 
 Les fonctions GraphicsPipeline::ConfigureDraw et ComputePipeline::Configure ont maintenant un indicateur GPU-owner uniquement sur PS5. Une attente de compilation est enregistrée une seule fois pour chaque pipeline non prêt ; toutes les commandes ultérieures restent derrière elle dans la file FIFO, y compris entre les chunks. Le flag est écrit seulement après que scheduler.Record a réussi. Le test hôte extrait les deux portions C++ et compare PS5 et desktop sous O0/O2, avec 64 commandes, build retardé et rejet de Record. Pas de preuve FPS console.
+
+## P0.1 — diagnostic à froid lors d'une exception de shader
+
+La branche native de `CreateGraphicsPipeline(ShaderPools&, ...)` ne réanalyse plus les CFG et n'écrit plus de dumps `.ash` après une exception de traduction lorsque `dump_guest_shaders` est désactivé. Cette reconstruction est facultative et survient sur le GPU owner. L'option explicite restaure le diagnostic ; un échec secondaire du CFG ou de l'écriture est contenu sans masquer l'erreur shader d'origine. Le témoin hôte extrait ce handler exact en desktop/PS5, O0/O2. Ce correctif n'accélère pas les traductions réussies et ne constitue pas de preuve FPS console.
