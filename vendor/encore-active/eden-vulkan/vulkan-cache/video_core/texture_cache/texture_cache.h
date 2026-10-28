@@ -1536,6 +1536,74 @@ void TextureCache<P>::PopAsyncFlushes() {
             async_buffers.pop_front();
             return;
         }
+#ifdef PS5_NATIVE
+        // Keep staging queued until the entire guest download is consumed.
+        // Save only offsets (usually <= 4), not a full vector of handles.
+        auto& download_map = async_buffers.front();
+        boost::container::small_vector<size_t, 4> remaining_offsets;
+        remaining_offsets.reserve(download_map.size());
+        for (const auto& buffer : download_map) {
+            remaining_offsets.push_back(buffer.offset);
+        }
+        // Reserve deferred returns BEFORE guest writes. On any failure,
+        // discard only newly queued returns and retry the intact batch.
+        const size_t previous_death_count = async_buffers_death_ring.size();
+        bool batch_consumed = false;
+        SCOPE_EXIT {
+            if (!batch_consumed) {
+                while (async_buffers_death_ring.size() > previous_death_count) {
+                    async_buffers_death_ring.pop_back();
+                }
+            }
+        };
+        for (const auto& buffer : download_map) {
+            async_buffers_death_ring.emplace_back(buffer);
+        }
+        for (size_t i = download_ids.size(); i > 0; --i) {
+            const auto& download_info = download_ids[i - 1];
+            if (download_info.async_buffer_id >= download_map.size()) {
+                throw std::bad_alloc{};
+            }
+            const auto& download_buffer = download_map[download_info.async_buffer_id];
+            auto& offset = remaining_offsets[download_info.async_buffer_id];
+            if (!download_buffer.buffer || offset > download_buffer.mapped_span.size()) {
+                throw std::bad_alloc{};
+            }
+            if (download_info.is_swizzle) {
+                const ImageBase& image = slot_images[download_info.object_id];
+                const auto copies = FixSmallVectorADL(FullDownloadCopies(image.info));
+                const size_t bytes = image.unswizzled_size_bytes;
+                if (bytes > (std::numeric_limits<size_t>::max)() - 63) {
+                    throw std::bad_alloc{};
+                }
+                const size_t aligned = Common::AlignUp(bytes, size_t{64});
+                if (aligned > offset) {
+                    throw std::bad_alloc{};
+                }
+                offset -= aligned;
+                std::span<u8> download_span = download_buffer.mapped_span.subspan(offset);
+                SwizzleImage(*gpu_memory, image.gpu_addr, image.info, copies, download_span,
+                             swizzle_data_buffer);
+            } else {
+                const BufferDownload& buffer_info = slot_buffer_downloads[download_info.object_id];
+                if (buffer_info.size > download_buffer.mapped_span.size() - offset) {
+                    throw std::bad_alloc{};
+                }
+                std::span<u8> download_span = download_buffer.mapped_span.subspan(offset);
+                gpu_memory->WriteBlockUnsafe(buffer_info.address, download_span.data(),
+                                             buffer_info.size);
+            }
+        }
+        // Do not erase DMA slots until every guest write has succeeded.
+        for (const auto& download_info : download_ids) {
+            if (!download_info.is_swizzle) {
+                slot_buffer_downloads.erase(download_info.object_id);
+            }
+        }
+        committed_downloads.pop_front();
+        async_buffers.pop_front();
+        batch_consumed = true;
+#else
         auto download_map = std::move(async_buffers.front());
         for (size_t i = download_ids.size(); i > 0; i--) {
             auto& download_info = download_ids[i - 1];
@@ -1561,6 +1629,7 @@ void TextureCache<P>::PopAsyncFlushes() {
         }
         committed_downloads.pop_front();
         async_buffers.pop_front();
+#endif
     } else {
         const auto& download_ids = committed_downloads.front();
         if (download_ids.empty()) {
