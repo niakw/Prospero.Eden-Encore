@@ -34,6 +34,31 @@ upload_deltas = ast.literal_eval(upload_nodes[0].value)
 assert len(upload_deltas) == 5
 assert sum("VK_KHR_image_format_list" in current for _, current in upload_deltas) == 1
 
+# The new BCn-3D no-pass error path is applied by the generator itself,
+# not by the older upload-barrier oracle. Reverse these two independently
+# reviewed edits before checking the original pre-deferred-copy blob SHA.
+f07_texture_labels = (
+    'F07 native BCn 3D unavailable pass exception include',
+    'F07 native BCn 3D unavailable pass retry signal',
+)
+f07_texture_deltas = []
+for statement in tree.body:
+    if not isinstance(statement, ast.Expr) or not isinstance(statement.value, ast.Call):
+        continue
+    call = statement.value
+    if not isinstance(call.func, ast.Name) or call.func.id != 'apply_reviewed_delta':
+        continue
+    if len(call.args) != 4:
+        continue
+    try:
+        path, old, new, label = (ast.literal_eval(arg) for arg in call.args)
+    except (ValueError, TypeError, SyntaxError):
+        continue
+    if path == 'vk_texture_cache_cost.cpp' and label in f07_texture_labels:
+        f07_texture_deltas.append((old, new, label))
+assert tuple(label for _, _, label in f07_texture_deltas) == f07_texture_labels
+assert all(old != new and old and new for old, new, _ in f07_texture_deltas)
+
 # This historical SHA is checked on the exact pre-deferred-copy source.
 # Reconstruct it by also undoing later F07 changes to the same native module,
 # read from their strict generator transforms. Do not update the SHA just
@@ -82,6 +107,10 @@ for module, changes in edits.items():
             assert previous.count(reviewed_fragment) == 1, (
                 "reviewed Vulkan image upload barrier moved", reviewed_fragment)
             previous = previous.replace(reviewed_fragment, pinned_fragment)
+        for source_before, source_after, label in reversed(f07_texture_deltas):
+            assert previous.count(source_after) == 1, (
+                "native F07 BCn-3D generator delta drift", label)
+            previous = previous.replace(source_after, source_before, 1)
     if module == 'vk_buffer_cache':
         # Undo the newer no-op-copy and vertex-range deltas in reverse
         # application order, using their reviewed exact source spans.
