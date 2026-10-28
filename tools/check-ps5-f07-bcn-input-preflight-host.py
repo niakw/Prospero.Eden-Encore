@@ -35,7 +35,7 @@ cpp=r"""
 using u32=std::uint32_t;
 using VkDeviceSize=std::uint64_t;
 using VkBuffer=std::uint64_t;
-constexpr VkBuffer VK_NULL_HANDLE=0;
+[[maybe_unused]] constexpr VkBuffer VK_NULL_HANDLE=0;
 struct Swizzle { VkDeviceSize buffer_offset{}; };
 struct Staging { VkBuffer buffer{}; VkDeviceSize offset{}; };
 struct Image { struct Info { struct Size { u32 depth{}; } size; } info; VkDeviceSize guest_size_bytes{}; };
