@@ -1,10 +1,31 @@
 # Eden Encore — suivi maître F07 et exploitation PS5
 
-**Date de référence :** 26 octobre 2026. **Branche :** `dev/ps5-sparse-jit`.
+**Date de référence :** 28 octobre 2026. **Branche :** `dev/ps5-sparse-jit`.
 **Source relue :** `3ca07a442d1fd85aa0cc5de08eb02099c46f2bac` (avant création de ce suivi).
 **Priorité produit :** fluidité réelle de FC 27, HUD/maillots/textures corrects, commandes réactives et absence de gel. **F07 ouvert.**
 
 > Ce fichier est le point d'entrée des priorités. Les documents d'audit référencés plus bas contiennent le détail technique. Aucun test hôte ni build PS5 ne permet, seul, de conclure à un correctif visible en jeu. Les mesures console restent privées.
+
+## Référence CI native figée — 28 octobre 2026
+
+**Dernier SHA source 4/4 vert :** `d2c3713a44e30e0be2e55a308d55d55a74b0e660` (branche unique `dev/ps5-sparse-jit`). Vérification des statuts GitHub effectuée après achèvement, et non extrapolée depuis la file d'attente.
+
+| Validation sur ce même SHA | Exécution | Résultat |
+| --- | --- | --- |
+| Core fast gate (hôte) | [40639033832](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40639033832) | **SUCCESS** |
+| Source preflight (hôte) | [40639033849](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40639033849) | **SUCCESS** |
+| Build/package natif PS5 | [40639033809](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40639033809) | **SUCCESS** |
+| CodeQL, C++/Python/workflows | [40639033748](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40639033748) | **SUCCESS** |
+
+**Livrables de la même compilation :**
+- [Archive FTP PPSA99008](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40639033809/artifacts/12794798659) — 38 037 087 octets (archive GitHub) ; empreinte GitHub `sha256:b785766e317271ffc9b3d4d9675f56c5a9e71e1125531d0bcb5661b2ec8ad09a`.
+- [Bundle release compilé](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40639033809/artifacts/12795117950) — 190 398 563 octets ; empreinte GitHub `sha256:7dd3249a4c43c245fcb40bd96a97a3203f8ecd5da3d5f8dada9864773836e780`.
+
+**F07 depuis la dernière mesure console :** le mode fast-first est actif par défaut dans le paquet natif ; option de comparaison par titre `fast-pipelines.txt` contenant `off`, lue depuis `Eden::ConfigDir()`. Les tests O0/O2 ont confirmé les chemins compilés du profil. P0.4 : échec de conversion **après admission** rattrapé par une publication de décodage invalide, suppression du contexte et conservation de `CpuModified`; les pixels partiels ne sont pas publiés. P0.3 : un décodage encore incomplet est sondé via `complete.load(acquire)` sans prendre le mutex du worker sur chaque frame ; le verrou est conservé pour lire le résultat terminé. Générateur d'overlay natif et tests source-extraits mis à jour ensemble.
+
+**Ce que les quatre succès ne prouvent PAS :** le temps réel de première traduction guest CFG/IR/SPIR-V (**P0.1 toujours ouvert**), les attentes Vulkan au premier pipeline (**P0.2 ouvert**), la réduction de contention du HUD sur console (**P0.3 ouvert côté mesure**), la fraîcheur effective des textures/HUD à l'écran (**P0.4 ouvert côté console**), et les freezes guest IPC/pause/mi-temps. Le résultat `F01–F06 = 6/6` reste une preuve **hôte**, pas console.
+
+**Décision de stabilisation :** conserver le commit `d2c3713` comme base binaire PS5 qualifiée CI. Aucune nouvelle modification opportuniste du moteur, ni test console demandé automatiquement : mesurer en campagne groupée lorsqu'elle sera autorisée, plutôt que casser la seule preuve 4/4 obtenue en multipliant les commits.
 
 ## États et règle de preuve
 
@@ -36,7 +57,7 @@
 | **A32/A64 code lifetime** | **SOURCE / HÔTE partiel** : plans d'arènes et gardes de capacité, alias memo/invalidation générationnelle ; plan physique distinct du virtuel. | Corréler les longs ralentissements aux compilations réelles, confirmer invalidations concurrentes/quiescence sur matériel. |
 | **Répartition CPU/compilation shaders** | **POLITIQUE INTÉGRÉE / CONSOLE NON MESURÉE** : le nombre de workers est limité par le masque d'affinité effectivement exposé et les réservations pour workers primaires ; la présence de CPU logiques ≠ cœurs physiques distincts. | Aucune preuve que l'émulateur exploite « 100 % » du CPU ni que davantage de workers améliore les latences. Démontrer temps CPU, contention, GPU idle/busy par phase avant adaptation. |
 | **Vulkan, RADV et VRAM partagée** | **ADAPTATIONS INTÉGRÉES / PARTIEL** : compilations de pipelines asynchrones, caches persistés, textures/barrières synchronisées et mesures de pression ; préchauffage de **8** pipelines, pas précompilation totale. | Premier usage synchrone restant, attente pipeline worker, contenu HUD, contrôle effectif pression mémoire GPU et cadence stable. |
-| **Robustesse livrable** | **EN COURS** : profil `tools/build-package.sh release` unique, ID `PPSA99008`; remplacement des commentaires CMake invalides et retrait du test dense obsolète le 26/10. | Réunir fast gate + prévalidation + build/package + sécurité en **SUCCESS sur le même HEAD**, puis une seule campagne console consolidée. |
+| **Robustesse livrable** | **CI/BIN 4/4 VERT au `d2c3713`** : profil release natif unique et ID `PPSA99008`, artefacts GitHub récupérables, fast gate + preflight + build/package + sécurité réussis sur le même SHA. | Campagne console groupée non effectuée : firmware, mémoire native, fluidité, HUD et redémarrage restent à qualifier. |
 
 **Attention :** « sparse JIT intégré » ne signifie **ni** « JIT terminé », **ni** « GPU/CPU utilisés au maximum », **ni** « FC27 jouable sans saccades ». La console réserve des ressources au système et les temps de synchronisation réels comptent davantage que la saturation CPU/GPU. Les anciennes notes « sparse DEV seulement » de documents historiques ne décrivent plus la sélection `PS5_NATIVE` actuelle.
 
