@@ -482,8 +482,11 @@ void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {
     try {
         transitions.push_back(transition);
     } catch (...) {
+        // Transition memoization is optional. The primary graphics cache
+        // already owns the pipeline; a later lookup can use its slow path.
+        // Do not abort a guest draw solely because this edge could not fit.
         transition_keys.pop_back();
-        throw;
+        return;
     }
 #else
     transitions.push_back(transition);
