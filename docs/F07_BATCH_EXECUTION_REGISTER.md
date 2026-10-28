@@ -112,18 +112,37 @@ Le chemin `guest-bridge` est audité séparément du renderer PS5; les temps de 
 ### B4 — P0.4 : textures, upload et fraîcheur HUD (12)
 Fichiers : `vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h` (9) et `vendor/encore-active/eden-vulkan/vk_texture_cache_cost.cpp` (3).
 
-- [ ] 27 `TextureCache::QueueAsyncDecode` — admission bornée, génération/pages courantes et annulation sûre en cas d'erreur.
-- [ ] 28 `TextureCache::TickAsyncDecode` — récupération des résultats et exceptions, révision courante, file vide sans cooldown inutile.
-- [ ] 29 `TextureCache::QueueAsyncUnswizzle` — valider budgets 3D, dimensions et compatibilité du passage BCn avant mise en file.
-- [ ] 30 `TextureCache::TickAsyncUnswizzle` — rétablissement `CpuModified`, handles valides, rollback si refus/exception/remap.
-- [ ] 31 `TextureCache::RefreshContents` — éviter de publier une texture « propre » avant transfert confirmé, vérifier le fallback synchrone.
-- [ ] 32 `TextureCache::UploadImageContents` — staging >= taille ET handle Vulkan valide, synchronisation et retry sur échec.
-- [ ] 33 `TextureCache::TryFindFramebufferImageView` — exclure aliases sales/décodage en cours, prendre seulement une image visible actuelle.
-- [ ] 34 `TextureCache::SynchronizeAliases` — cohérence alias/remap/CPU-write, sans accès prématuré aux pixels périmés.
-- [ ] 35 `TextureCache::TickFrame` — GC, readbacks différés, progression des jobs et absence de double travail de frame.
-- [ ] 36 `TextureCacheRuntime::UploadStagingBuffer` — protéger refus d'allocation/handle nul/mapping court et barrières d'upload.
-- [ ] 37 `TextureCacheRuntime::TickFrame` — recyclage GPU sûr et coût borné dans la cadence de frame.
-- [ ] 38 `TextureCacheRuntime::AccelerateImageUpload` — BCn 3D chunk par chunk, état/layout/barrières corrects et rollback complet.
+- [x] 27 `TextureCache::QueueAsyncDecode` — admission bornée, génération/pages courantes et annulation sûre en cas d'erreur.
+- [x] 28 `TextureCache::TickAsyncDecode` — récupération des résultats et exceptions, révision courante, file vide sans cooldown inutile.
+- [x] 29 `TextureCache::QueueAsyncUnswizzle` — valider budgets 3D, dimensions et compatibilité du passage BCn avant mise en file.
+- [x] 30 `TextureCache::TickAsyncUnswizzle` — rétablissement `CpuModified`, handles valides, rollback si refus/exception/remap.
+- [x] 31 `TextureCache::RefreshContents` — éviter de publier une texture « propre » avant transfert confirmé, vérifier le fallback synchrone.
+- [x] 32 `TextureCache::UploadImageContents` — staging >= taille ET handle Vulkan valide, synchronisation et retry sur échec.
+- [x] 33 `TextureCache::TryFindFramebufferImageView` — exclure aliases sales/décodage en cours, prendre seulement une image visible actuelle.
+- [x] 34 `TextureCache::SynchronizeAliases` — cohérence alias/remap/CPU-write, sans accès prématuré aux pixels périmés.
+- [x] 35 `TextureCache::TickFrame` — GC, readbacks différés, progression des jobs et absence de double travail de frame.
+- [x] 36 `TextureCacheRuntime::UploadStagingBuffer` — protéger refus d'allocation/handle nul/mapping court et barrières d'upload.
+- [x] 37 `TextureCacheRuntime::TickFrame` — recyclage GPU sûr et coût borné dans la cadence de frame.
+- [x] 38 `TextureCacheRuntime::AccelerateImageUpload` — BCn 3D chunk par chunk, état/layout/barrières corrects et rollback complet.
+
+**B4 — 12/12 revues source documentées; comportement console encore non qualifié.**
+
+| N° | Fonction | Décision de revue / limite |
+|---:|---|---|
+| 27 | `QueueAsyncDecode` | Protection existante conservée : Admission rollback avoids stranded IsDecoding and reclaims incomplete context; new active decode preserved. |
+| 28 | `TickAsyncDecode` | Protection existante conservée : Four completed textures per tick, acquire completion, revisions/remap validation, staging/submit/barrier rollback; frame latency still unmeasured. |
+| 29 | `QueueAsyncUnswizzle` | Protection existante conservée : Queues before IsDecoding commit, zero-budget/unsupported cases handled at refresh; no unsafe speculative queue change. |
+| 30 | `TickAsyncUnswizzle` | Protection existante conservée : Slice-budget partial reads, stale remap cancellation, deferred staging lifetime and CpuModified restoration on failed GPU submission. |
+| 31 | `RefreshContents` | Protection existante conservée : Dirty flag protected by scope rollback on failed native synchronous upload, asynchronous handoff separate, complete barrier required. |
+| 32 | `UploadImageContents` | Protection existante conservée : Upload called only after native staging handle and mapping-size guards in RefreshContents. Converted/accelerated paths keep ordering; console pixels unproven. |
+| 33 | `TryFindFramebufferImageView` | Protection existante conservée : One-pass no-allocation freshest view selection; any decoding, CpuModified or Remapped sibling address triggers raw framebuffer fallback. |
+| 34 | `SynchronizeAliases` | Protection existante conservée : Latest modification tick short-circuit and ordered alias copy; actual remap/CPU-write freshness needs in-game proof. |
+| 35 | `TextureCache TickFrame` | Protection existante conservée : Memory sampling at most every second frame while below watermark, every frame near GC; completion and GC ticks still under texture lock. |
+| 36 | `Runtime UploadStagingBuffer` | Protection existante conservée : Wrapper returns pool staging; native callers check Vulkan handle and span before GPU use. Additional future callsites must preserve guard. |
+| 37 | `Runtime TickFrame` | Protection existante conservée : Recycles MSAA/resolve shadows only after scheduler.IsFree tick; no premature GPU release. |
+| 38 | `AccelerateImageUpload` | Protection existante conservée : ASTC and BCn-3D paths preserved, missing BCn compute pass raises error on PS5 for caller rollback; unsupported layouts still ASSERT, no new safe change without caller proof. |
+
+Les vérifications de staging citées plus haut imposent **handle Vulkan réel ET taille suffisante** sur les appels PS5 concernés. L'absence de preuve sur des futurs callsites ou sur le HUD réel interdit de déclarer ce sous-système « totalement optimisé ».
 
 **Porte B4 :** pas de bandeau noir causé par ancien framebuffer propre sélectionné à tort ; toutes les erreurs d'upload gardent une source récupérable ; aucun gain HUD déclaré sans preuve console.
 
@@ -142,7 +161,7 @@ Fichiers : `vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cac
 | B1 — shader/cache | **7/7 décisions source; CI/console ouvertes** | Réessais 64/32, priorité premier usage, prewarm 8 ; correction mutex `407ad36` | Gate hôte puis mesures console ; ne pas rouvrir sans échec observé |
 | B2 — pipelines/descripteurs | **10/10 décisions source; CI/console ouvertes** | Scratch preflight, FIFO wait, rollback Record, ring/tick et quota optimiseur inspectés | CI groupée puis qualifier les attentes fallback réellement coûteuses sur console |
 | B3 — rasterizer/guest | **9/9 décisions source; mesures console ouvertes** | Preflight, pair-lock, writes guest, frame, FIFO audités ; miroir distinct | Traces >50/>100 ms, progression guest et captures HUD |
-| B4 — textures/HUD | **À traiter** | Nombreuses gardes async/readback/BCn déjà intégrées | Clore les 12 décisions |
+| B4 — textures/HUD | **12/12 décisions source; CI/console ouvertes** | Async rollback, staging nul/court, aliases, GC, BCn et recycler inspectés | Gate commun, puis HUD/mi-temps/bandeau noir sur console |
 | B5 — gates groupés + console | **Bloqué par B1–B4** | Build natif sur SHA unique, puis test physique FC27/BOTW | Fermer ou rouvrir par preuve |
 
 **Reprise programmée :** tâche horaire « Eden Encore — reprise F07 » ; ses actions doivent être revérifiées via le HEAD, les commits et le journal de lots. Elle doit cesser lorsque les critères de clôture sont satisfaits et aucune modification ne doit être inventée si aucun outil n'est accessible.
@@ -151,9 +170,13 @@ Fichiers : `vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cac
 
 ## F07 checkpoint — 2026-10-28
 
-- Source decision count: B1 7/7; B2 10/10; B3 9/9; B4 0/12. The remaining 12 checks are audit decisions, not 12 proven defects. These remaining 31 are audit decisions, not 31 proven defects.
+- Source decision count: B1 7/7; B2 10/10; B3 9/9; B4 12/12 = 38/38 SOURCE DECISIONS; not a final acceptance of CI or PS5. These remaining 31 are audit decisions, not 31 proven defects.
 - Business code commit: `407ad36ef5207d4fef964074241cb197fb153248`. Fork generator and selected Vulkan source were changed together, with host witness updated.
 - CI checks not yet proven green on `407ad36`; no console FPS or HUD freshness proof. No PR or secondary branch created.
 - Next: B2 08–17 source review, targeted regressions, then B3/B4, followed by one coherent four-gate/console campaign.
 
 - B2 n°08–17: 10 source decisions recorded from the three selected Vulkan modules. No performance gain or successful PS5 build has been inferred.
+
+## Consolidation 38 fonctions — 2026-10-28
+
+**38/38 décisions de revue source consignées.** La fermeture des 38 revues ne signifie ni 38 patchs, ni 38 gains de performances, ni 38 validations CI ou console. Le code nouveau et concret de ce passage est la synchronisation du compteur de préchargement shader sur `407ad36`; les autres protections inventoriées préexistaient et sont maintenues. La prochaine étape est B5 : comparer la source générée, compiler les témoins hôte et effectuer les quatre gates sur le **même SHA métier**, puis lancer une seule campagne console FC 27/BOTW. Le défaut P0 de traduction froide synchrone et les blocages HUD/pause restent ouverts tant que les mesures ne les ferment pas. Sans ces preuves, ne pas présenter F07 comme terminé.
