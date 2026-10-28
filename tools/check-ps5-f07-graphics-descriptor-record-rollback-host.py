@@ -78,7 +78,9 @@ int main() {
     // an accepted bind as done, and a later changed count must retry.
     Probe empty{};
     empty.num_descriptor_entries=0;
+    empty.bind_pipeline=true;
     assert(empty.Submit(false));
+    empty.bind_pipeline=false;
     assert(empty.last_descriptor_payload.empty());
     empty.num_descriptor_entries=1;
     assert(empty.Submit(false));
