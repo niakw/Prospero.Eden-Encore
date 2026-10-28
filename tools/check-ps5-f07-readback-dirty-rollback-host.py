@@ -51,7 +51,6 @@ using ImageId=std::size_t;
 using DAddr=std::size_t;
 enum class ImageFlagBits:unsigned {GpuModified=1};
 unsigned operator~(ImageFlagBits f) {return ~static_cast<unsigned>(f);}
-unsigned& operator&=(unsigned& flags,unsigned b) {flags &= b;return flags;}
 unsigned& operator|=(unsigned& flags,ImageFlagBits f) {
     flags |= static_cast<unsigned>(f);return flags;
 }
