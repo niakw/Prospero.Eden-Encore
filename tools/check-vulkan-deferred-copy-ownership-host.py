@@ -36,6 +36,7 @@ assert len(upload_deltas) == 4
 # because the shipping buffer source gained independently reviewed patches.
 f07_copy_labels = (
     'F07 avoid barrier-free empty Vulkan buffer copies',
+    'F07 skip zero-sized Vulkan buffer fill',
     'F07 reject empty vertex binding ranges before cache handle resolution',
     'F07 trim vertex handles after device limit clamp',
 )

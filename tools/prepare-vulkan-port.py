@@ -3739,6 +3739,13 @@ apply_reviewed_delta("vk_buffer_cache_cost.cpp",
     "    if (dst_buffer == VK_NULL_HANDLE || src_buffer == VK_NULL_HANDLE) {\n        return;\n    }\n#ifdef PS5_NATIVE\n    // Vulkan copies require at least one region. An empty batch is a\n    // no-op unless the caller explicitly requested synchronization.\n    // Preserve both barriers without recording an invalid zero-region copy,\n    // including when a staging upload would otherwise bypass the barriers.\n    if (copies.empty()) {\n        if (barrier) {\n            PreCopyBarrier();\n            PostCopyBarrier();\n        }\n        return;\n    }\n#endif\n    static constexpr VkMemoryBarrier READ_BARRIER{",
     "F07 avoid barrier-free empty Vulkan buffer copies")
 
+# F07 P0.3: a zero-byte clear has no guest-visible write. The Vulkan
+# fill command requires a nonzero region; do not enqueue its empty transfer.
+apply_reviewed_delta("vk_buffer_cache_cost.cpp",
+    "void BufferCacheRuntime::ClearBuffer(VkBuffer dest_buffer, u32 offset, size_t size, u32 value) {\n    if (dest_buffer == VK_NULL_HANDLE) {\n        return;\n    }\n    static constexpr VkMemoryBarrier READ_BARRIER{",
+    "void BufferCacheRuntime::ClearBuffer(VkBuffer dest_buffer, u32 offset, size_t size, u32 value) {\n    if (dest_buffer == VK_NULL_HANDLE) {\n        return;\n    }\n#ifdef PS5_NATIVE\n    // A zero-length fill has no memory side effects and is invalid for\n    // vkCmdFillBuffer. Do not record a transfer or its redundant barriers.\n    if (size == 0) {\n        return;\n    }\n#endif\n    static constexpr VkMemoryBarrier READ_BARRIER{",
+    "F07 skip zero-sized Vulkan buffer fill")
+
 # F07 P0.3: the same guest vertex binding range rejection should happen
 # before Handle(), null-buffer reserve or host vector preparation. Do not
 # reorder any valid-range Vulkan recording or change desktop behavior.
