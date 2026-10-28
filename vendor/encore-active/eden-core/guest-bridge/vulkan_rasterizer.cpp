@@ -319,9 +319,11 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
     // wait for the GPU worker even when this pipeline writes zero descriptors.
     // Never hold guest cache locks while waiting. The worker may publish guest
     // remaps and change the selected pipeline, so reselect after a real drain.
+    bool initial_descriptor_drain = false;
     if (pipeline->HasDescriptorEntries() &&
         guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); },
                                                 pipeline->DescriptorEntryReservation())) {
+        initial_descriptor_drain = true;
         gpu_memory->FlushCaching();
         pipeline = pipeline_cache.CurrentGraphicsPipeline();
         if (!pipeline) {
@@ -333,6 +335,10 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
 #endif
 #ifdef PS5_NATIVE
     for (unsigned preflight = 0; preflight != 2; ++preflight) {
+        // The initial exact-capacity check already passed without a drain.
+        // Without a worker wait there was no shader reselection, so a second
+        // identical capacity probe cannot change its answer on this draw.
+        if (preflight == 0 && !initial_descriptor_drain) break;
         if (!pipeline->HasDescriptorEntries() ||
             !guest_descriptor_queue.PreflightExactGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation()))
@@ -854,9 +860,11 @@ void RasterizerVulkan::DispatchCompute() {
     // Select first: descriptor-free compute dispatches must not drain the
     // legacy 1024-entry guest queue. After a real wait, consume guest page
     // invalidations and reselect the possibly changed compute shader.
+    bool initial_compute_descriptor_drain = false;
     if (pipeline->HasDescriptorEntries() &&
         guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitWorker(); },
                                                 pipeline->DescriptorEntryReservation())) {
+        initial_compute_descriptor_drain = true;
         gpu_memory->FlushCaching();
         pipeline = pipeline_cache.CurrentComputePipeline();
         if (!pipeline) return;
@@ -868,6 +876,9 @@ void RasterizerVulkan::DispatchCompute() {
     // while neither guest cache is locked.
     // Worker drains can publish guest shader/descriptor invalidations.
     for (unsigned preflight = 0; preflight != 2; ++preflight) {
+        // No preceding worker drain means neither the descriptor cursor nor
+        // the selected shader changed since the first exact-capacity probe.
+        if (preflight == 0 && !initial_compute_descriptor_drain) break;
         if (!pipeline->HasDescriptorEntries() ||
             !guest_descriptor_queue.PreflightExactGuestDraw(
                 [this] { scheduler.WaitWorker(); }, pipeline->DescriptorEntryReservation()))
