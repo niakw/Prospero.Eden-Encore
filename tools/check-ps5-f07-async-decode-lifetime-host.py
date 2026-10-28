@@ -175,3 +175,92 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-async-lifetime-") as directory
         ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=20)
         assert ran.returncode==0,(optimization,ran.stdout,ran.stderr[-5000:])
 print("F07_ASYNC_TICK_LIFETIME_HOST_PASS unlock_before_erase=1 revision_size_guard=1 stale_same_size=1 stale_remapped_same_size=1 pending=1 O0=1 O2=1")
+
+
+# Extract the real queued native conversion lambda and execute both branches.
+# Conversions can throw after QueueWork has succeeded; the worker must publish
+# a completed failure instead of leaving the guest image IsDecoding forever.
+queue_start = active.index("void TextureCache<P>::QueueAsyncDecode(")
+worker_begin = active.index("    auto func = [out_size, copies, info = image.info,", queue_start)
+worker_end = active.index("    texture_decode_worker.QueueWork(std::move(func));", worker_begin)
+worker_source = active[worker_begin:worker_end]
+assert worker_source.count("catch (...)") == 1
+assert worker_source.count("async_decode->complete = true;") == 2
+assert "async_decode->decoded_data.resize_destructive(0);" in worker_source
+assert "F07 async decode worker exception handoff" in generator
+assert "F07 reject zero-length failed decode completion" in generator
+assert "async_decode->decoded_data.size() == 0 ||" in method
+
+worker_cpp = r"""
+#include <atomic>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <mutex>
+#include <span>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+using u8 = std::uint8_t;
+struct Scratch {
+    std::vector<u8> data;
+    void resize_destructive(std::size_t n) { data.resize(n); }
+    std::size_t size() const { return data.size(); }
+};
+struct ImageInfo {};
+struct Image { ImageInfo info{}; };
+struct AsyncDecodeContext {
+    Scratch decoded_data;
+    std::vector<int> copies;
+    std::mutex mutex;
+    std::atomic_bool complete{false};
+};
+bool throw_conversion = false;
+void ConvertImage(const std::vector<u8>& src, const ImageInfo&,
+                  Scratch& dst, std::span<int> copy_spans) {
+    assert(src.size() == 4 && copy_spans.size() == 1);
+    if (throw_conversion) {
+        if (!dst.data.empty()) dst.data[0] = 99; // partial old bytes
+        throw std::runtime_error("mock conversion failure");
+    }
+    dst.data = src;
+}
+static void run_case(bool fail) {
+    throw_conversion = fail;
+    Image image{};
+    AsyncDecodeContext decode{};
+    AsyncDecodeContext* decode_ptr = &decode;
+    std::size_t out_size = 4;
+    std::vector<int> copies{1};
+    std::vector<u8> local_unswizzle_data_buffer{3, 4, 5, 6};
+""" + worker_source + r"""
+    func();
+    assert(decode.complete.load(std::memory_order_acquire));
+    if (fail) {
+        // TickAsyncDecode's size=0 sentinel must reject the partial revision.
+        assert(decode.decoded_data.size() == 0);
+    } else {
+        assert(decode.decoded_data.size() == 4);
+        assert((decode.decoded_data.data == std::vector<u8>{3,4,5,6}));
+        assert((decode.copies == std::vector<int>{1}));
+    }
+}
+int main() {
+    run_case(false);
+    run_case(true);
+    run_case(false); // a subsequent decode is not poisoned by the failure
+}
+"""
+with tempfile.TemporaryDirectory(prefix="eden-f07-async-worker-recovery-") as directory:
+    worker_path=Path(directory)/"worker.cpp"
+    worker_path.write_text(worker_cpp)
+    for optimization in ("-O0","-O2"):
+        binary=Path(directory)/("worker"+optimization[1:])
+        built=subprocess.run([compiler, "-std=c++20", optimization, "-DPS5_NATIVE=1",
+                              "-Wall", "-Wextra", "-Werror", "-fsanitize=undefined",
+                              "-fno-sanitize-recover=all", str(worker_path), "-o", str(binary)],
+                             capture_output=True,text=True,timeout=50)
+        assert built.returncode==0,(optimization,built.stderr[-4500:])
+        ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=20)
+        assert ran.returncode==0,(optimization,ran.stdout,ran.stderr[-4500:])
+print("F07_ASYNC_WORKER_FAILURE_HOST_PASS normal=1 failed=1 resumed=1 O0=1 O2=1")

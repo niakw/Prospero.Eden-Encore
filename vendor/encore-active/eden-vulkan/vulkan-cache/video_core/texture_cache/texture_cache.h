@@ -1940,14 +1940,26 @@ void TextureCache<P>::QueueAsyncDecode(Image& image, ImageId image_id) {
     auto func = [out_size, copies, info = image.info,
                  input = std::move(local_unswizzle_data_buffer),
                  async_decode = decode_ptr]() mutable {
-        async_decode->decoded_data.resize_destructive(out_size);
-        std::span copies_span{copies.data(), copies.size()};
-        ConvertImage(input, info, async_decode->decoded_data, copies_span);
+#ifdef PS5_NATIVE
+        try {
+#endif
+            async_decode->decoded_data.resize_destructive(out_size);
+            std::span copies_span{copies.data(), copies.size()};
+            ConvertImage(input, info, async_decode->decoded_data, copies_span);
 
-        // TODO: Do we need this lock?
-        std::unique_lock lock{async_decode->mutex};
-        async_decode->copies = std::move(copies);
-        async_decode->complete = true;
+            std::unique_lock lock{async_decode->mutex};
+            async_decode->copies = std::move(copies);
+            async_decode->complete = true;
+#ifdef PS5_NATIVE
+        } catch (...) {
+            // Preserve worker liveness after a conversion/allocation failure.
+            // A zero-length completed decode is a retryable failed revision;
+            // TickAsyncDecode drops it without uploading partial HUD pixels.
+            std::unique_lock lock{async_decode->mutex};
+            async_decode->decoded_data.resize_destructive(0);
+            async_decode->complete = true;
+        }
+#endif
     };
     texture_decode_worker.QueueWork(std::move(func));
 #ifdef PS5_NATIVE
@@ -1991,7 +2003,8 @@ void TextureCache<P>::TickAsyncDecode() {
         // A texture may have been remapped or resized while decode was queued.
         // Do not copy the old revision beyond its current staging allocation.
         const size_t expected_size = MapSizeBytes(image);
-        if (async_decode->decoded_data.size() != expected_size ||
+        if (async_decode->decoded_data.size() == 0 ||
+            async_decode->decoded_data.size() != expected_size ||
             True(image.flags & ImageFlagBits::CpuModified) ||
             True(image.flags & ImageFlagBits::Remapped)) {
             // A guest CPU revision OR remapping invalidates decoded bytes,
