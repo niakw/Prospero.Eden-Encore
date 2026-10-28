@@ -46,6 +46,8 @@ f07_texture_labels = (
     'F07 validate native Vulkan reinterpret scratch byte budget',
     'F07 reject scratch sizes outside Vulkan transient buffer slots',
     'F07 validate native reinterpret pixel ratios before coordinate conversion',
+    'F07 preserve resolve validity on rejected size-incompatible CopyImage',
+    'F07 skip empty size-compatible native Vulkan CopyImage without stale resolve',
     'F07 defer native reinterpret resolve invalidation until valid allocation',
     'F07 invalidate native reinterpret resolve after scratch allocation',
     'F07 reject invalid Vulkan guest readback staging in runtime',
