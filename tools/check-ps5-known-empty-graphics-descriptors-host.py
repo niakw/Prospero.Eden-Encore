@@ -104,7 +104,13 @@ assert "(num_descriptor_entries == 0 ||" in reuse_stmt
 assert "(num_descriptor_entries != 0 &&" in update_stmt
 assert buffer_snapshot.count("last_descriptor_payload.clear();")==1
 assert set_snapshot.count("last_descriptor_payload.clear();")==1
-assert gfx.count("last_descriptor_payload.assign(entries, entries + num_descriptor_entries);")==2
+# Descriptor-buffer, desktop legacy and PS5 post-Record snapshots must
+# each preserve the empty-vector guard.
+assert gfx.count("last_descriptor_payload.assign(entries, entries + num_descriptor_entries);")==3
+assert "#ifndef PS5_NATIVE" in set_snapshot
+assert "#ifdef PS5_NATIVE\\n    // Descriptor-set updates are encoded" in gfx
+assert gfx.index("    scheduler.Record([this, descriptor_data", set_start) < gfx.rindex(
+    "last_descriptor_payload.assign(entries, entries + num_descriptor_entries);")
 assert "Zero-descriptor shaders must not pass a null vector pointer" in oracle
 host_source=r"""
 #include <cassert>
