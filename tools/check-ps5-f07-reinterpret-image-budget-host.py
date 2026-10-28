@@ -50,12 +50,15 @@ assert "F07 reject null native image reinterpret scratch handle" in generator
 assert "if (copy_buffer == VK_NULL_HANDLE)" in size
 assert size.index("if (copy_buffer == VK_NULL_HANDLE)") < size.index("InvalidateResolveShadow(dst.Handle());")
 assert "F07 preserve resolve validity on rejected size-incompatible CopyImage" in generator
+assert "F07 skip empty size-compatible native Vulkan CopyImage without stale resolve" in generator
 copy_start="void TextureCacheRuntime::CopyImage(Image& dst, Image& src,"
 copy_end="    // As per the size-compatible formats section of vulkan, copy manually via ReinterpretImage"
 assert source.count(copy_start)==source.count(copy_end)==1
 copy_method=source[source.index(copy_start):]
 copy_guard=copy_method[copy_method.index("{")+1:copy_method.index(copy_end)]
 assert "BytesPerBlock(src.info.format) == BytesPerBlock(dst.info.format)" in copy_guard
+assert "if (copies.empty() &&" in copy_guard
+assert copy_guard.index("if (copies.empty() &&") < copy_guard.index("InvalidateResolveShadow(dst.Handle());")
 assert copy_guard.count("#else") == 1 and "if (ENABLE_MSAA_RESOLVE_CONSUME)" in copy_guard
 assert copy_guard.index("BytesPerBlock(src.info.format)") < copy_guard.index("#else")
 assert size.index("#else\n    for (const auto& copy") > size.index("#ifdef PS5_NATIVE")
@@ -126,6 +129,16 @@ int main() {
     assert(rejected_handle.calls==1 && rejected_handle.invalidates==0);
 #else
     assert(rejected_handle.calls==1 && rejected_handle.invalidates==1);
+#endif
+    Runtime empty_compatible;
+    empty_compatible.CopyImage(normal,normal,{});
+#ifdef PS5_NATIVE
+    assert(empty_compatible.calls==0 && empty_compatible.invalidates==0 &&
+           empty_compatible.direct_copies==0);
+#else
+    // Desktop retains its historical empty-command and resolve invalidation.
+    assert(empty_compatible.calls==0 && empty_compatible.invalidates==1 &&
+           empty_compatible.direct_copies==1);
 #endif
     Runtime mismatch;
     Image second_format{{8}};
@@ -199,4 +212,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-vulkan-reinterpret-") as folde
             assert built.returncode==0,(native,opt,built.stderr[-6000:])
             ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
-print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 null_handle_not_submitted=1 copy_reinterpret_shadow=1 valid=1 desktop_original=1 O0=1 O2=1")
+print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 null_handle_not_submitted=1 copy_reinterpret_shadow=1 empty_copy_noop=1 valid=1 desktop_original=1 O0=1 O2=1")
