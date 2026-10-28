@@ -103,3 +103,7 @@ Le test `check-ps5-f07-texture-upload-rollback-host.py` est également réalign�
 ## P0.4 — activation tardive de l'unswizzle GPU
 
 Si l'option GPU BCn 3D est activée après la construction du cache alors que les paramètres `swizzle_chunk_size` et `swizzle_slices_per_batch` sont nuls, l'upload passe par le chemin CPU synchrone au lieu de créer une tâche asynchrone impossible à terminer. Une tâche existante avec budget nul est annulée en différé avec `CpuModified` préservé et `IsDecoding` effacé. Les témoins source-extraits couvrent les deux budgets nuls et l'admission une fois les paramètres valides. La fluidité en jeu reste à mesurer.
+
+## P0.3 — sondages mémoire évités pendant le nettoyage des textures propres
+
+Dans `RunGarbageCollector`, le calcul `DirtyEvictions()` pouvait appeler la sonde directe de mémoire graphique avant de découvrir que la texture LRU n'avait aucun téléchargement GPU à effectuer. Ce sondage peut accéder au noyau et se répéter jusqu'au plafond existant de 8 192 visites, sous `texture_cache.mutex`. Le test et le garde sont inversés : seuls les candidats ayant réellement besoin d'un download consultent la sonde. Les décisions concernant les textures sales, coûteuses et le mode d'éviction agressif restent les mêmes. Le témoin C++ source-extrait vérifie 1 000 entrées propres sans sonde et les scénarios sales/agressifs en O0/O2. La mesure du frametime en console reste à effectuer.
