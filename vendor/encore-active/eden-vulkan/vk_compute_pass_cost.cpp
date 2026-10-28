@@ -759,7 +759,14 @@ void BlockLinearUnswizzle3DPass::UnswizzleChunk(
     pc.blocks_dim[1] = blocks_y;
     pc.blocks_dim[2] = z_count; // Only process the count
 
+#ifdef PS5_NATIVE
+    // The BCn 3D pass has exactly two storage-buffer bindings. Reserving
+    // three entries can force an unnecessary queue drain when the cursor
+    // is near its frame limit, under texture-cache synchronization.
+    compute_pass_descriptor_queue.Acquire(scheduler, 2);
+#else
     compute_pass_descriptor_queue.Acquire(scheduler, 3);
+#endif
     compute_pass_descriptor_queue.AddBuffer(swizzled.buffer,
                                            sw.buffer_offset + swizzled.offset,
                                            image.guest_size_bytes - sw.buffer_offset);
