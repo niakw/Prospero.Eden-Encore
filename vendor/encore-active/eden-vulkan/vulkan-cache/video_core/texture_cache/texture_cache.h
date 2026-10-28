@@ -400,7 +400,19 @@ template <class P>
 void TextureCache<P>::TickFrame() {
     // If we can obtain the memory info, use it instead of the estimate.
     if (runtime.CanReportMemoryUsage()) {
+#ifdef PS5_NATIVE
+        // A driver memory-budget probe can run under texture_cache.mutex.
+        // While comfortably below the GC watermark, sample every other
+        // frame; at 2/3 of the watermark or higher, sample EVERY frame to
+        // preserve prompt reclaim and avoid an allocation-pressure blind spot.
+        const bool near_gc_watermark =
+            total_used_memory >= minimum_memory - minimum_memory / 3;
+        if (near_gc_watermark || (frame_tick & 1u) == 0) {
+            total_used_memory = runtime.GetDeviceMemoryUsage();
+        }
+#else
         total_used_memory = runtime.GetDeviceMemoryUsage();
+#endif
     }
     if (total_used_memory > minimum_memory) {
         RunGarbageCollector();

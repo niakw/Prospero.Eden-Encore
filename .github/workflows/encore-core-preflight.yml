@@ -535,6 +535,7 @@ jobs:
           python3 -B tools/check-ps5-f07-download-staging-runtime-host.py
           python3 -B tools/check-ps5-f07-async-dma-rollback-host.py
           python3 -B tools/check-ps5-f07-async-flush-staging-rollback-host.py
+          python3 -B tools/check-ps5-f07-memory-pressure-sampling-host.py
           python3 -B tools/check-ps5-f07-pop-async-transaction-host.py
           python3 -B tools/check-vulkan-readback-small-vector-host.py
           python3 -B tools/check-vulkan-readback-batch-integration-host.py
