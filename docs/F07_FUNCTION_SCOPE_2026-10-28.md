@@ -273,3 +273,7 @@ Sur PS5 native, `BlockLinearUnswizzle3DPass::Unswizzle` vérifie immédiatement 
 ## P0.3 — barrière BCn 3D adaptée à la première tranche
 
 Dans `BlockLinearUnswizzle3DPass::UnswizzleChunk`, la barrière native utilise désormais `COMPUTE_SHADER` lorsque `z_start == 0` : l'image part de `UNDEFINED` (sans accès image source) et seul le buffer de décompression écrit par le compute doit être synchronisé. Les tranches suivantes, dont l'image est en `GENERAL` et peut avoir été échantillonnée par d'autres étapes, conservent `ALL_COMMANDS`. Le chemin desktop reste inchangé. Le témoin de layout compile désormais les masques d'étapes extraits du source et vérifie la première tranche et la tranche réutilisée en natif/desktop, O0/O2, UBSan. La réduction de frametime reste à mesurer sur PS5.
+
+## P0.2/P0.4 — état des bindings après rejet de Record Vulkan
+
+Sur PS5 native, `Scheduler::RecordWithUploadBuffer` réinitialise désormais les mémos de pipeline graphique, variant optimisé, rescaling et descriptor-buffer lorsque la mise en file ou le rollover échoue avant acceptation. Le rendu déjà enregistré et le renderpass en cours ne sont pas détruits. Cette correction centralisée protège les `ConfigureDraw`/`Configure` dont les mises à jour d'état scheduler précèdent `Record` : le prochain HUD/draw republie ses bindings au lieu d'omettre une liaison non soumise. Le chemin desktop reste inchangé. Témoin C++ source-extrait PS5/desktop O0/O2 UBSan sur les refus d'enregistrement et de dispatch, puis reprise. Validation FC 27 PS5 requise.

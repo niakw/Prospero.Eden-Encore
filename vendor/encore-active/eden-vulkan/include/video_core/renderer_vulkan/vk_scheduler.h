@@ -118,11 +118,25 @@ public:
     template <typename T>
         requires std::is_invocable_v<T, vk::CommandBuffer, vk::CommandBuffer>
     void RecordWithUploadBuffer(T&& command) {
+#ifdef PS5_NATIVE
+        // ConfigureDraw/Configure can memoize pipeline, rescaling and
+        // descriptor bindings before enqueueing. If a chunk record or
+        // rollover throws, those bindings were never accepted by the FIFO.
+        // Invalidate ONLY the owner's cached command state; the current
+        // renderpass and already-queued commands are left intact.
+        try {
+#endif
         if (chunk->Record(command)) {
             return;
         }
         DispatchWork();
         (void)chunk->Record(command);
+#ifdef PS5_NATIVE
+        } catch (...) {
+            InvalidateState();
+            throw;
+        }
+#endif
     }
 
     template <typename T>
