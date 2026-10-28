@@ -36,6 +36,8 @@ assert "bool freshest_found = false;" in declaration
 assert "#else\n    boost::container::small_vector<ImageId, 4> valid_image_ids;" in declaration
 assert loop.count("if (True(image.flags & ImageFlagBits::IsDecoding)) {") == 1
 assert loop.count("ImageFlagBits::Remapped | ImageFlagBits::CpuModified") == 1
+assert ("if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {\n"
+        "            return {};") in loop
 assert "return {};" in loop
 assert loop.count("if (!freshest_found ||") == 1
 assert loop.count("slot_images[freshest_id].modification_tick < image.modification_tick") == 1
@@ -51,6 +53,7 @@ for label in (
     "F07 P0.4 framebuffer single-pass candidate declaration",
     "F07 P0.4 framebuffer single-pass admission",
     "F07 P0.4 framebuffer single-pass first-tie selection",
+    "F07 P0.4 prevent stale sibling framebuffer on CPU write or remap",
 ):
     assert label in generator
 display = raster.split("RasterizerVulkan::AccelerateDisplay(",1)[1].split("return info;",1)[0]
@@ -128,17 +131,28 @@ int main() {
     c.image_map_ids={6,1,2,3,4,5,7,8};
     assert(c.Run(guest).empty());
     c.image_map_ids={1,2,3,4,5,6,7,8};
-    // No decode, but the dirty/empty views must be excluded.
+    // No decode: a clean sibling still must NOT hide a CPU-dirty image.
     c.slot_images[6].flags=static_cast<unsigned>(ImageFlagBits::CpuModified);
-    assert((c.Run(guest)==std::vector<int>{5}));
+    assert(c.Run(guest).empty());
+    // A remapped sibling also makes otherwise clean accelerator views stale.
+    c.slot_images[6].flags=0;
     c.slot_images[1].flags=static_cast<unsigned>(ImageFlagBits::Remapped);
+    assert(c.Run(guest).empty());
     c.slot_images[5].flags=static_cast<unsigned>(ImageFlagBits::CpuModified);
     assert(c.Run(guest).empty());
     c.slot_images[2].flags=0;
     c.slot_images[3].flags=0;
-    assert((c.Run(guest)==std::vector<int>{3}));
-    c.slot_images[6].flags=0; // Fresh decode published.
-    assert((c.Run(guest)==std::vector<int>{6}));
+    assert(c.Run(guest).empty());
+    // Once all dirty/remapped siblings are refreshed, direct present returns.
+    c.slot_images[1].flags=0;
+    c.slot_images[5].flags=0;
+    c.slot_images[7].flags=0;
+    assert((c.Run(guest)==std::vector<int>{7}));
+    // A dirty sibling without a view still invalidates the address.
+    c.slot_images[4].flags=static_cast<unsigned>(ImageFlagBits::CpuModified);
+    assert(c.Run(guest).empty());
+    c.slot_images[4].flags=0;
+    assert((c.Run(guest)==std::vector<int>{7}));
     // First equal-tick candidate wins, just like the original max_element.
     c.slot_images[2].modification_tick=100;
     c.slot_images[3].modification_tick=100;
@@ -159,12 +173,31 @@ int main() {
 }
 '''.replace("__SOURCE_DECLARE__", declaration).replace("__SOURCE_LOOP__", loop).replace("__SOURCE_SELECT__", selection)
 
+# Restore only the old sibling policy for a controlled failure-before witness.
+unsafe_loop = loop.replace(
+    "if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {\n"
+    "            return {};",
+    "if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {\n"
+    "            continue;",
+)
+assert unsafe_loop != loop
+
 with tempfile.TemporaryDirectory(prefix="encore-f07-present-fresh-") as d:
     src=Path(d)/"fresh.cpp"
-    src.write_text(cpp)
     for optimization in ("-O0","-O2"):
-        out=Path(d)/optimization
-        subprocess.run(["c++","-std=c++20",optimization,"-DPS5_NATIVE",
-                        "-Wall","-Wextra","-Werror",str(src),"-o",str(out)],check=True,timeout=60)
-        subprocess.run([str(out)],check=True,timeout=15)
-        print("F07_PRESENT_FRAMEBUFFER_FRESHNESS_PASS",optimization)
+        for label, source_loop, should_pass in (
+            ("repaired", loop, True),
+            ("old_alias_policy", unsafe_loop, False),
+        ):
+            src.write_text(cpp.replace(loop,source_loop,1))
+            out=Path(d)/(optimization + label)
+            subprocess.run(["c++","-std=c++20",optimization,"-DPS5_NATIVE",
+                            "-Wall","-Wextra","-Werror",str(src),"-o",str(out)],
+                           check=True,timeout=60)
+            run=subprocess.run([str(out)],capture_output=True,text=True,timeout=15)
+            if should_pass:
+                assert run.returncode == 0,(optimization,label,run.stderr)
+                print("F07_PRESENT_FRAMEBUFFER_FRESHNESS_PASS",optimization)
+            else:
+                assert run.returncode != 0,(optimization,label,"old policy unexpectedly passed")
+                print("F07_PRESENT_STALE_SIBLING_OLD_EXPECTED_FAIL_PASS",optimization)

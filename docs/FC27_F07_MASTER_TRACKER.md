@@ -595,3 +595,20 @@ invités, même après la rencontre d'une vue propre. Le desktop conserve
 strictement son ancienne sélection. Le témoin source-extrait C++ couvre
 l'ordre inversé, les égalités, les vues sales/absentes et sept alias en
 `-O0`/`-O2`. Optimisation structurelle, **gain de latence/FPS PS5 non mesuré**.
+
+
+## F07 P0.4 — alias CPU modifié/remappé et ancien framebuffer propre (28 octobre)
+
+Le filtrage précédent rejetait tout `IsDecoding` présent à la même adresse
+invitée, mais utilisait encore `continue` pour une autre image marquée
+`CpuModified` ou `Remapped`. Lorsqu'un framebuffer possédait plusieurs
+images associées à la **même** adresse, une vue plus ancienne mais propre
+pouvait donc rester candidate, même après écriture CPU ou remappage d'un
+alias. Sur PS5, ces états imposent maintenant le même **repli sûr vers
+`UpdateRawImage`** pour l'adresse entière. Le chemin accéléré mono-parcours
+reste disponible après rafraîchissement de tous les alias. La comparaison
+C++ source-extrait `-O0`/`-O2` exige échec de l'ancien garde et succès
+du nouveau, y compris avec un alias sale sans vue. Le desktop conserve
+son comportement. Aucun résultat de fraîcheur HUD ni de FPS **console**
+n'est revendiqué ; le correctif peut ajouter des uploads quand des alias
+sales coexistent avec un framebuffer GPU plus récent, à qualifier en jeu.

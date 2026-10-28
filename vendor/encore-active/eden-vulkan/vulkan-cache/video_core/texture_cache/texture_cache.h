@@ -1267,9 +1267,11 @@ std::pair<typename P::ImageView*, bool> TextureCache<P>::TryFindFramebufferImage
         if (True(image.flags & ImageFlagBits::IsDecoding)) {
             return {};
         }
-        // Clean GPU-authored images keep the zero-copy presentation path.
+        // A dirty or remapped sibling at the SAME guest address also
+        // invalidates older clean accelerated candidates. CPU guest bytes
+        // must win until all conflicting cache images have been refreshed.
         if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {
-            continue;
+            return {};
         }
 #endif
         if (image.image_view_ids.empty()) {
