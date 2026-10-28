@@ -953,7 +953,7 @@ void RasterizerVulkan::DispatchCompute() {
         // A guest indirect-command address can become unmapped after a
         // shader/descriptor remap. Reject the missing binding before Vulkan
         // barriers or a worker lambda captures buffer->Handle().
-        if (!buffer) {
+        if (!buffer || buffer->Handle() == VK_NULL_HANDLE) {
             return;
         }
 #endif
@@ -1527,6 +1527,12 @@ bool AccelerateDMA::DmaBufferImageCopy(const Tegra::DMA::ImageCopy& copy_info,
                                          : VideoCommon::ObtainBufferOperation::MarkAsWritten;
     const auto [buffer, offset] =
         buffer_cache.ObtainBuffer(buffer_operand.address, buffer_size, sync_info, post_op);
+#ifdef PS5_NATIVE
+    // Guest size alone does not prove a valid GPU buffer handle.
+    if (!buffer || buffer->Handle() == VK_NULL_HANDLE) {
+        return false;
+    }
+#endif
 
     const auto [image, copy] = texture_cache.DmaBufferImageCopy(
         copy_info, buffer_operand, image_operand, image_id, IS_IMAGE_UPLOAD);

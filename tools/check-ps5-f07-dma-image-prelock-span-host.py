@@ -92,6 +92,14 @@ int main(){
     }
 }
 """
+# The executable below already covers span validation; also pin the distinct
+# Vulkan-handle guard and its position before image-cache lookup and upload.
+dma_method = source[source.index(needle):source.index("\nbool AccelerateDMA::ImageToBuffer(",source.index(needle))]
+dma_mirror = variant[variant.index(needle):variant.index("\nbool AccelerateDMA::ImageToBuffer(",variant.index(needle))]
+assert dma_method == dma_mirror
+assert dma_method.count("if (!buffer || buffer->Handle() == VK_NULL_HANDLE)") == 1
+assert dma_method.index("if (!buffer || buffer->Handle() == VK_NULL_HANDLE)") < dma_method.index("texture_cache.DmaBufferImageCopy(")
+assert "F07 DMA image reject null Vulkan handles" in gen
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler
 with tempfile.TemporaryDirectory(prefix="f07-dma-image-prelock-") as folder:

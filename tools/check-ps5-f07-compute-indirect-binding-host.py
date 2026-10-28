@@ -21,6 +21,7 @@ preflight = (ROOT / ".github/workflows/encore-core-preflight.yml").read_text()
 invocation = "python3 -B tools/check-ps5-f07-compute-indirect-binding-host.py"
 assert invocation in fast and invocation in preflight
 assert "F07 reject unmapped indirect compute buffer before Vulkan commands" in generator
+assert "F07 compute indirect reject null Vulkan handles" in generator
 
 method_start = "void RasterizerVulkan::DispatchCompute() {"
 method_end = "\n}\n"
@@ -33,10 +34,10 @@ branch_end = "    const std::array<u32, 3> dim{"
 assert method.count(branch_start) == method.count(branch_end) == 1
 chunk = method[method.index(branch_start):method.index(branch_end)]
 assert chunk.count("buffer_cache.ObtainBuffer(*indirect_address, 12, sync_info, post_op)") == 1
-assert chunk.count("if (!buffer) {") == 1
+assert chunk.count("if (!buffer || buffer->Handle() == VK_NULL_HANDLE) {") == 1
 assert chunk.count("scheduler.RequestOutsideRenderPassOperationContext();") == 1
 assert chunk.count("indirect_buffer = buffer->Handle()") == 1
-assert chunk.index("if (!buffer) {") < chunk.index("scheduler.RequestOutsideRenderPassOperationContext();")
+assert chunk.index("if (!buffer || buffer->Handle() == VK_NULL_HANDLE) {") < chunk.index("scheduler.RequestOutsideRenderPassOperationContext();")
 assert chunk.index("scheduler.RequestOutsideRenderPassOperationContext();") < chunk.index("indirect_buffer = buffer->Handle()")
 assert "#ifdef PS5_NATIVE\n        // A guest indirect-command address" in chunk
 assert "#endif\n        scheduler.RequestOutsideRenderPassOperationContext();" in chunk
@@ -74,7 +75,8 @@ struct CommandBuffer {
     }
 };
 }
-struct Buffer {int Handle() const {return 91;}};
+inline constexpr int VK_NULL_HANDLE=0;
+struct Buffer {int value{91};int Handle() const {return value;}};
 struct BufferCache {
     Buffer* active{};
     std::pair<Buffer*,std::size_t> ObtainBuffer(
@@ -119,6 +121,12 @@ int main(){
     assert(missing.scheduler.events.contexts==0);
     assert(missing.scheduler.events.records==0);
     assert(missing.scheduler.events.dispatches==0);
+    Cache missing_vk;
+    missing_vk.storage.value=VK_NULL_HANDLE;
+    missing_vk.Dispatch();
+    assert(missing_vk.scheduler.events.contexts==0);
+    assert(missing_vk.scheduler.events.records==0);
+    assert(missing_vk.scheduler.events.dispatches==0);
 #endif
     Cache valid;
     valid.Dispatch();
@@ -161,4 +169,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-indirect-compute-") as directo
             assert built.returncode==0,(native,opt,built.stderr[-6500:])
             ran=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
             assert ran.returncode==0,(native,opt,ran.stderr[-5000:])
-print("F07_COMPUTE_INDIRECT_BINDING_PASS native_null_reject=1 no_barrier_on_null=1 valid_dispatch=1 full_barriers=1 unbound_pipeline=1 desktop_original=1 O0=1 O2=1")
+print("F07_COMPUTE_INDIRECT_BINDING_PASS native_null_reject=1 native_null_vk_reject=1 no_barrier_on_null=1 valid_dispatch=1 full_barriers=1 unbound_pipeline=1 desktop_original=1 O0=1 O2=1")
