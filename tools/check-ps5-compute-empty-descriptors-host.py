@@ -96,6 +96,9 @@ struct Rasterizer {
     Queue guest_descriptor_queue;
     void Test() {
 """ + selection + r"""
+        // The extracted selection owns the initial drain flag; verify its
+        // value instead of suppressing an unused-variable warning.
+        assert(initial_compute_descriptor_drain == (scheduler.waits != 0));
         this->pipeline = pipeline;
     }
 };
