@@ -2224,12 +2224,21 @@ void Image::UploadMemory(VkBuffer buffer, VkDeviceSize offset,
     const VkBuffer src_buffer = buffer;
     const VkImage vk_image = *original_image;
     const VkImageAspectFlags vk_aspect_mask = aspect_mask;
+#ifdef PS5_NATIVE
+    // Record can reject before accepting this copy. Keep the old layout state
+    // until a Vulkan command has actually entered the scheduler queue.
+    const bool was_initialized = initialized;
+#else
     const bool was_initialized = std::exchange(initialized, true);
+#endif
 
     scheduler->Record([src_buffer, vk_image, vk_aspect_mask, was_initialized,
                        vk_copies = std::move(vk_copies)](vk::CommandBuffer cmdbuf) {
         CopyBufferToImage(cmdbuf, src_buffer, vk_image, vk_aspect_mask, was_initialized, VideoCommon::FixSmallVectorADL(vk_copies));
     });
+#ifdef PS5_NATIVE
+    initialized = true;
+#endif
 
     if (is_rescaled) {
         ScaleUp();
