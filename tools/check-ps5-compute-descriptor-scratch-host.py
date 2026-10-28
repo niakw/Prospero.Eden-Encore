@@ -50,6 +50,7 @@ generator_prefix = ast.literal_eval(generator_patches[0].args[2])
 assert method.startswith(generator_prefix), "selected preflight differs from generator adapter"
 assert "num_image_elements" in method and "num_textures" in method
 assert "scratch.in_use" in method
+assert "last_descriptor_payload.reserve(num_descriptor_entries);" in method
 
 configure_start = src.index("bool ComputePipeline::Configure(")
 configure_end = src.index("    const auto& qmd{kepler_compute.launch_description};", configure_start)
@@ -79,6 +80,7 @@ prologue = r"""
 #include <cstdint>
 #include <memory>
 #include <thread>
+#include <vector>
 #include <boost/container/small_vector.hpp>
 namespace VideoCommon {
 struct ImageViewInOut { std::uint32_t index{}; };
@@ -87,9 +89,15 @@ struct SamplerId { std::uint32_t index{}; };
 namespace Vulkan {
 """
 pipeline = r"""
+struct DescriptorUpdateEntry { std::uint64_t bits{}; };
 struct ComputePipeline {
     size_t num_image_elements{};
     size_t num_textures{};
+    bool uses_descriptor_buffer{true};
+    size_t num_descriptor_entries{8};
+    std::vector<DescriptorUpdateEntry> last_descriptor_payload{};
+    ComputePipeline(size_t images, size_t textures)
+        : num_image_elements(images), num_textures(textures) {}
     void PreflightDescriptorScratch();
 };
 """
@@ -98,6 +106,7 @@ int main() {
     using namespace Vulkan;
     ComputePipeline p{128, 96};
     p.PreflightDescriptorScratch();
+    assert(p.last_descriptor_payload.capacity() >= p.num_descriptor_entries);
     assert(compute_descriptor_scratch.views.capacity() >= 128);
     assert(compute_descriptor_scratch.samplers.capacity() >= 96);
     assert(!compute_descriptor_scratch.in_use);
@@ -148,7 +157,13 @@ int main() {
     worker.join();
     assert(!compute_descriptor_scratch.in_use);
     ComputePipeline empty{0, 0};
+    empty.num_descriptor_entries = 0;
     empty.PreflightDescriptorScratch();
+    assert(empty.last_descriptor_payload.capacity() == 0);
+    ComputePipeline disabled{0, 0};
+    disabled.uses_descriptor_buffer = false;
+    disabled.PreflightDescriptorScratch();
+    assert(disabled.last_descriptor_payload.capacity() == 0);
     {
         ComputeDescriptorScratchLease zero;
         assert(zero.Views().empty() && zero.Samplers().empty());
