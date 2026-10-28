@@ -13,8 +13,13 @@ pipeline = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.c
 assert "std::memcmp(last_descriptor_payload.data(), entries," in pipeline
 assert "check-ps5-descriptor-entry-canonical-host.py" in workflow
 assert '"#include <variant>"' in generator
-assert generator.count('std::memset(entry, 0, sizeof(*entry));') == 4
-assert header.count('std::memset(entry, 0, sizeof(*entry));') == 4
+# Generator text may contain both replay old/new string forms; assert the
+# individual reviewed deltas rather than counting Python string literals.
+for label in ("F07 zero native image descriptor payload bytes for legacy and buffer reuse",
+              "F07 zero unused native texel descriptor payload bytes"):
+    assert label in generator
+assert header.count('std::memset(entry, 0, sizeof(*entry));') == 5
+assert header.count('entry->texel_buffer = texel_buffer;') == 1
 assert "#ifdef PS5_NATIVE\n#include <cstring>" in header
 
 types = header[header.index("struct DescriptorAddress {"):header.index("class UpdateDescriptorQueue final")]
@@ -100,4 +105,4 @@ with tempfile.TemporaryDirectory(prefix="encore-descriptor-entry-canonical-") as
             # Compilation-only ABI check: raw padding comparison is intentionally
             # not enforced on the unchanged non-native path.
             pass
-print("DESCRIPTOR_ENTRY_CANONICAL_HOST_PASS byte_stable=4 copy_stable=4 nonbuffer_semantics=1")
+print("DESCRIPTOR_ENTRY_CANONICAL_HOST_PASS byte_stable=4 copy_stable=4 native_writers=5 nonbuffer_semantics=1")
