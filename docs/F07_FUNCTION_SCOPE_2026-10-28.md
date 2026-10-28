@@ -181,3 +181,7 @@ Sur PS5, `CommitAsyncFlushes` peut réserver plusieurs buffers et publier d'abor
 ## P0.2 — raccourci de deux transitions graphiques récurrentes
 
 Sur PS5, `GraphicsPipeline::Next` conserve deux indices récents de transitions plutôt qu'un seul. Sur les bascules répétées HUD/scène parmi 48 destinations, les 2 000 alternances du témoin source-extrait doivent ne demander qu'au plus trois comparaisons de clés par appel, sans allocation supplémentaire ni changement pour desktop. Les références de rendu restent des indices sûrs même après croissance du vecteur. Les mesures de FPS sur console restent nécessaires.
+
+## P0.3 — stabilité des descripteurs texel dans les comparaisons de HUD
+
+Dans `UpdateDescriptorQueue::AddTexelBuffer`, le handle Vulkan occupait 8 octets mais les entrées du cache pouvaient conserver des octets inutilisés issus d'un précédent descripteur (union). Sur PS5 native, le chemin texel legacy initialise désormais l'entrée entière avant de publier le handle. Cela permet à `GraphicsPipeline::ConfigureDraw` et à la voie compute de reconnaître deux payloads identiques au `memcmp` au lieu de provoquer une nouvelle mise à jour de descripteurs. Le chemin desktop est inchangé. Le témoin source-extrait vérifie `-O0`/`-O2`, les payloads empoisonnés et le changement réel de handle. Le gain de temps sous cache mutex et le FPS FC27 restent à mesurer.
