@@ -85,8 +85,14 @@ int main(){
             if(!valid)assert(cache.texture_cache.looked_up==1);
 #endif
         };
+        // Zero-length DMA is rejected before mutexes only on PS5.
+#ifdef PS5_NATIVE
         check(0,900,false);
         check(8,0,false);
+#else
+        check(0,900,true);
+        check(8,0,true);
+#endif
         check(0xffffffffu,2,false);
         check(64,32,true);
     }
