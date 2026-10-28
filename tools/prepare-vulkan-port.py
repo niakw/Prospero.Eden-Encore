@@ -3948,3 +3948,39 @@ apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
     "        if (!pipeline && failed_compute_retries.size() < 32) {\n            // A transient guest shader translation failure must not permanently\n            // suppress a compute dispatch. Track failures only.\n            failed_compute_retries.try_emplace(\n                key, ComputeRetryState{\n                    std::chrono::steady_clock::now() + std::chrono::seconds(2), false});\n        }",
     "        if (!pipeline) {\n            // Bound recovery metadata without starving the latest failed\n            // compute shaders after 32 earlier failed keys. This scan runs\n            // ONLY on a new null pipeline, not per compute dispatch.\n            if (failed_compute_retries.size() >= 32) {\n                const auto oldest = std::min_element(\n                    failed_compute_retries.begin(), failed_compute_retries.end(),\n                    [](const auto& left, const auto& right) {\n                        return left.second.eligible_at < right.second.eligible_at;\n                    });\n                if (oldest != failed_compute_retries.end()) {\n                    failed_compute_retries.erase(oldest);\n                }\n            }\n            failed_compute_retries.try_emplace(\n                key, ComputeRetryState{\n                    std::chrono::steady_clock::now() + std::chrono::seconds(2), false});\n        }",
     "F07 bounded compute retry fairness under failing shader burst")
+
+# F07: FIFO worker wait dedup; only native PS5 uses a per-pipeline owner flag.
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "    if (!is_built.load(std::memory_order_acquire)) {\n        // Wait for the pipeline to be built\n        scheduler.Record([this](vk::CommandBuffer) {",
+    "    if (!is_built.load(std::memory_order_acquire)) {\n#ifdef PS5_NATIVE\n        // The Vulkan worker processes command chunks in FIFO order. Once a\n        // readiness wait precedes the first draw, later draws for this same\n        // pipeline are already ordered behind it. GPU-owner thread only.\n        if (!first_use_wait_recorded) {\n#endif\n        // Wait for the pipeline to be built\n        scheduler.Record([this](vk::CommandBuffer) {",
+    "F07 FIFO once wait graphics start")
+
+# F07: FIFO worker wait dedup; only native PS5 uses a per-pipeline owner flag.
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "        });\n    }\n    const bool is_rescaling",
+    "        });\n#ifdef PS5_NATIVE\n        // Commit only after the callback was successfully enqueued.\n        first_use_wait_recorded = true;\n        }\n#endif\n    }\n    const bool is_rescaling",
+    "F07 FIFO once wait graphics end")
+
+# F07: FIFO worker wait dedup; only native PS5 uses a per-pipeline owner flag.
+apply_reviewed_delta("vk_compute_pipeline_cost.cpp",
+    "    if (!is_built.load(std::memory_order_acquire)) {\n        // Wait for the pipeline to be built\n        scheduler.Record([this](vk::CommandBuffer) {",
+    "    if (!is_built.load(std::memory_order_acquire)) {\n#ifdef PS5_NATIVE\n        // The Vulkan worker processes command chunks in FIFO order. Once a\n        // readiness wait precedes the first draw, later draws for this same\n        // pipeline are already ordered behind it. GPU-owner thread only.\n        if (!first_use_wait_recorded) {\n#endif\n        // Wait for the pipeline to be built\n        scheduler.Record([this](vk::CommandBuffer) {",
+    "F07 FIFO once wait compute start")
+
+# F07: FIFO worker wait dedup; only native PS5 uses a per-pipeline owner flag.
+apply_reviewed_delta("vk_compute_pipeline_cost.cpp",
+    "        });\n    }\n\n    // Log compute pipeline binding",
+    "        });\n#ifdef PS5_NATIVE\n        first_use_wait_recorded = true;\n        }\n#endif\n    }\n\n    // Log compute pipeline binding",
+    "F07 FIFO once wait compute end")
+
+# F07: FIFO worker wait dedup; only native PS5 uses a per-pipeline owner flag.
+apply_reviewed_delta("include/video_core/renderer_vulkan/vk_graphics_pipeline.h",
+    "    std::atomic_bool is_built{false};\n    bool uses_push_descriptor{false};",
+    "    std::atomic_bool is_built{false};\n#ifdef PS5_NATIVE\n    // Only the GPU owner writes this after enqueueing the ordered worker wait.\n    bool first_use_wait_recorded{};\n#endif\n    bool uses_push_descriptor{false};",
+    "F07 FIFO once wait graphics header end")
+
+# F07: FIFO worker wait dedup; only native PS5 uses a per-pipeline owner flag.
+apply_reviewed_delta("include/video_core/renderer_vulkan/vk_compute_pipeline.h",
+    "    std::atomic_bool is_built{false};\n};\n\n} // namespace Vulkan",
+    "    std::atomic_bool is_built{false};\n#ifdef PS5_NATIVE\n    // The first queued wait covers all following compute dispatches.\n    bool first_use_wait_recorded{};\n#endif\n};\n\n} // namespace Vulkan",
+    "F07 FIFO once wait compute header end")
