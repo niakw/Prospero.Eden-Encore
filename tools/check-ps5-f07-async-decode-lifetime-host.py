@@ -22,12 +22,14 @@ assert active.count(end) == pinned.count(end) == 1
 method = active[active.index(start):active.index(end, active.index(start))]
 old_method = pinned[pinned.index(start):pinned.index(end, pinned.index(start))]
 assert "lock.unlock();" not in old_method  # original reproducible lifetime hazard
-assert method.count("lock.unlock();") == 3
-assert method.count("i = async_decodes.erase(i);") == 3
+assert method.count("lock.unlock();") == 4
+assert method.count("i = async_decodes.erase(i);") == 4
 assert "F07 async decoded staging allocation failure and short span recovery" in generator
+assert "F07 async decoded Vulkan submission failure recovery" in generator
+assert method.index("image.UploadMemory(staging,") < method.index("} catch (...) {", method.index("image.UploadMemory(staging,"))
 assert "staging.mapped_span.size() < expected_size" in method
 assert method.index("staging.mapped_span.size() < expected_size") < method.index("std::memcpy(")
-assert method.count("image.flags |= ImageFlagBits::CpuModified;") == 2
+assert method.count("image.flags |= ImageFlagBits::CpuModified;") == 3
 assert method.index("lock.unlock();") < method.index("i = async_decodes.erase(i);")
 assert method.rindex("lock.unlock();") < method.rindex("i = async_decodes.erase(i);")
 assert "async_decode->decoded_data.size() != expected_size" in method
@@ -56,6 +58,7 @@ cpp = r"""
 #include <memory>
 #include <mutex>
 #include <new>
+#include <stdexcept>
 #include <span>
 #include <vector>
 using ImageId=std::size_t;
@@ -86,7 +89,9 @@ struct Image{
     std::size_t size{};
     std::vector<std::uint8_t> result;
     unsigned uploads{};
+    bool reject_upload{};
     void UploadMemory(Staging& stage,const std::vector<int>&){
+        if (reject_upload) throw std::runtime_error("mock Vulkan record failure");
         result=stage.bytes;++uploads;
     }
 };
@@ -125,7 +130,7 @@ template<class P>struct TextureCache{
 """ + method + r"""
 int main(){
     TextureCache<int> cache;
-    cache.slot_images.resize(7);
+    cache.slot_images.resize(8);
     for(auto& image:cache.slot_images){
         image.size=4;
         image.flags|=ImageFlagBits::IsDecoding;
@@ -163,12 +168,17 @@ int main(){
     short_staging->decoded_data={1,2,3,4};
     cache.async_decodes.emplace_back(std::move(allocation_failed));
     cache.async_decodes.emplace_back(std::move(short_staging));
+    auto failed_submission=std::make_unique<AsyncDecodeContext>();
+    failed_submission->image_id=7; failed_submission->complete=true;
+    failed_submission->decoded_data={1,2,3,4};
+    cache.slot_images[7].reject_upload=true;
+    cache.async_decodes.emplace_back(std::move(failed_submission));
     cache.runtime.reject_on_call=2;
     cache.runtime.short_on_call=3;
     const unsigned locks_before_first_tick = CheckedMutex::lock_calls;
     cache.TickAsyncDecode();
-    // Six completed tasks consume the mutex; the pending one does not.
-    assert(CheckedMutex::lock_calls == locks_before_first_tick + 6);
+    // Seven completed tasks consume the mutex; the pending one does not.
+    assert(CheckedMutex::lock_calls == locks_before_first_tick + 7);
     assert(cache.async_decodes.size()==1 && !cache.async_decodes[0]->complete);
     assert(True(cache.slot_images[1].flags&ImageFlagBits::CpuModified));
     assert(!True(cache.slot_images[1].flags&ImageFlagBits::Tracked));
@@ -184,8 +194,12 @@ int main(){
     assert(!True(cache.slot_images[4].flags&ImageFlagBits::IsDecoding));
     assert(cache.slot_images[2].uploads==1);
     assert((cache.slot_images[2].result==std::vector<std::uint8_t>{5,6,7,8}));
-    assert(cache.runtime.staging_calls==3 && cache.runtime.barriers==1);
-    assert(cache.untracked==5);
+    assert(cache.runtime.staging_calls==4 && cache.runtime.barriers==1);
+    assert(cache.untracked==6);
+    assert(cache.slot_images[7].uploads==0);
+    assert(True(cache.slot_images[7].flags&ImageFlagBits::CpuModified));
+    assert(!True(cache.slot_images[7].flags&ImageFlagBits::Tracked));
+    assert(!True(cache.slot_images[7].flags&ImageFlagBits::IsDecoding));
     for (std::size_t id : {5u, 6u}) {
         assert(cache.slot_images[id].uploads==0);
         assert(True(cache.slot_images[id].flags & ImageFlagBits::CpuModified));
@@ -194,7 +208,7 @@ int main(){
     }
     cache.async_decodes.front()->complete=true;
     cache.TickAsyncDecode();
-    assert(CheckedMutex::lock_calls == locks_before_first_tick + 7);
+    assert(CheckedMutex::lock_calls == locks_before_first_tick + 8);
     assert(cache.async_decodes.empty() && cache.runtime.barriers==2);
     // A later successful staging allocation accepts a fresh texture revision.
     auto recovered=std::make_unique<AsyncDecodeContext>();
@@ -206,6 +220,16 @@ int main(){
     assert(cache.async_decodes.empty() && cache.runtime.barriers==3);
     assert(cache.slot_images[5].uploads==1);
     assert((cache.slot_images[5].result==std::vector<std::uint8_t>{7,8,9,10}));
+    auto retried_submission=std::make_unique<AsyncDecodeContext>();
+    retried_submission->image_id=7; retried_submission->complete=true;
+    retried_submission->decoded_data={11,12,13,14};
+    cache.slot_images[7].reject_upload=false;
+    cache.slot_images[7].flags.bits=static_cast<std::uint32_t>(ImageFlagBits::IsDecoding);
+    cache.async_decodes.emplace_back(std::move(retried_submission));
+    cache.TickAsyncDecode();
+    assert(cache.async_decodes.empty() && cache.runtime.barriers==4);
+    assert(cache.slot_images[7].uploads==1);
+    assert((cache.slot_images[7].result==std::vector<std::uint8_t>{11,12,13,14}));
 }
 """
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
@@ -222,7 +246,7 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-async-lifetime-") as directory
         assert built.returncode==0,(optimization,built.stderr[-5000:])
         ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=20)
         assert ran.returncode==0,(optimization,ran.stdout,ran.stderr[-5000:])
-print("F07_ASYNC_TICK_LIFETIME_HOST_PASS unlock_before_erase=1 revision_size_guard=1 stale_same_size=1 stale_remapped_same_size=1 pending=1 staging_oom=1 short_span=1 retry=1 O0=1 O2=1")
+print("F07_ASYNC_TICK_LIFETIME_HOST_PASS unlock_before_erase=1 revision_size_guard=1 stale_same_size=1 stale_remapped_same_size=1 pending=1 staging_oom=1 short_span=1 failed_gpu_submission=1 retry=1 O0=1 O2=1")
 
 
 # Extract the real queued native conversion lambda and execute both branches.

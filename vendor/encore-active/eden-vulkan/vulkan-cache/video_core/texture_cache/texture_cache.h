@@ -2054,7 +2054,25 @@ void TextureCache<P>::TickAsyncDecode() {
 #endif
         std::memcpy(staging.mapped_span.data(), async_decode->decoded_data.data(),
                     async_decode->decoded_data.size());
+#ifdef PS5_NATIVE
+        // A failed GPU submission must not strand a completed worker decode.
+        // Staging here is non-deferred; the pool owns its lifetime. Keep the
+        // source image dirty so a later refresh can upload a fresh revision.
+        try {
+#endif
         image.UploadMemory(staging, FixSmallVectorADL(async_decode->copies));
+#ifdef PS5_NATIVE
+        } catch (...) {
+            image.flags &= ~ImageFlagBits::IsDecoding;
+            image.flags |= ImageFlagBits::CpuModified;
+            if (True(image.flags & ImageFlagBits::Tracked)) {
+                UntrackImage(image, async_decode->image_id);
+            }
+            lock.unlock();
+            i = async_decodes.erase(i);
+            continue;
+        }
+#endif
         image.flags &= ~ImageFlagBits::IsDecoding;
         has_uploads = true;
         // The context owns async_decode->mutex. Unlock before destroying it.

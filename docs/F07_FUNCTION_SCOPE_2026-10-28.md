@@ -51,3 +51,7 @@ La sauvegarde Vulkan différée conserve désormais le quota de pipelines attein
 ## P0.4 — extension de formats d’images absente
 
 La construction PS5 de `TextureCacheRuntime` initialise aussi le passage compute BCn 3D lorsque le pilote ne fournit pas `VK_KHR_image_format_list` : ce traitement de buffers n’utilise pas cette extension. Auparavant, le constructeur quittait avant la création du passage alors que `RefreshContents` pouvait continuer à placer ces textures dans la file GPU, avec risque de validation sans image transférée. La branche desktop reste inchangée. Le témoin compile la branche exacte en mode PS5/desktop O0/O2 et l’oracle de sources reconstruit ce delta. Pas de preuve console ni de gain FPS revendiqués.
+
+## P0.4 — échec pendant la soumission d’une image décodée
+
+En PS5 native, `TickAsyncDecode` intercepte désormais une exception du transfert `Image::UploadMemory` après la conversion asynchrone. Le contexte est relâché après déverrouillage, `IsDecoding` est effacé, la texture est détrackée et `CpuModified` est conservé pour un nouvel upload. Le staging ordinaire n’est pas libéré avec l’API différée (qui suppose une allocation `deferred`). Le témoin source-extrait force l’échec et vérifie la récupération au décodage suivant. Pas de preuve console/FPS.
