@@ -3063,6 +3063,16 @@ apply_reviewed_delta(
     "#ifdef PS5_NATIVE\n    if (freshest_found) [[likely]] {\n        return GetImageViewForFramebuffer(freshest_id);\n    }\n#else\n    if (valid_image_ids.size() == 1) [[likely]] {\n        return GetImageViewForFramebuffer(valid_image_ids.front());\n    }\n\n    if (valid_image_ids.size() > 0) [[unlikely]] {\n        auto most_recent = std::ranges::max_element(valid_image_ids, [&](auto a, auto b) {\n            return slot_images[a].modification_tick < slot_images[b].modification_tick;\n        });\n        return GetImageViewForFramebuffer(*most_recent);\n    }\n#endif\n    return {};\n}",
     'F07 P0.4 framebuffer single-pass first-tie selection')
 
+# F07 P0.4: a remapped/CPU-dirty alias invalidates acceleration for the
+# WHOLE guest framebuffer address, not just that image. Otherwise an older
+# clean sibling can be selected under the same texture-cache lock.
+# A GPU-owned clean address retains the single-pass zero-copy path.
+apply_reviewed_delta(
+    'vulkan-cache/video_core/texture_cache/texture_cache.h',
+    "        // Clean GPU-authored images keep the zero-copy presentation path.\n        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {\n            continue;\n        }",
+    "        // A dirty or remapped sibling at the SAME guest address also\n        // invalidates older clean accelerated candidates. CPU guest bytes\n        // must win until all conflicting cache images have been refreshed.\n        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {\n            return {};\n        }",
+    'F07 P0.4 prevent stale sibling framebuffer on CPU write or remap')
+
 # F07 P0.4: composite can be the first GPU consumer after a guest
 # memory remap. Flush queued mapping invalidations ahead of the texture
 # mutex, matching DrawTexture's lock ordering. This keeps the newly selected
