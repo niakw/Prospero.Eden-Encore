@@ -21,6 +21,14 @@ assert method.count("flush_in_flight.store(false, std::memory_order_release)") =
 assert "pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;" in method
 assert method.count("pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;") == 2
 assert "struct ReleaseFlush" in method and "catch (const std::exception& error)" in method
+assert "flush_worker_failed.exchange(false, std::memory_order_acq_rel)" in method
+assert method.count("flush_worker_failed.store(true, std::memory_order_release)") == 2
+header=(root/"vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_pipeline_cache.h").read_text()
+assert "std::atomic_bool flush_worker_failed{};" in header
+for name in ("F07 driver cache worker failure owner handoff state",
+             "F07 restore failed cache flush quota on GPU owner",
+             "F07 publish driver cache worker failure atomically"):
+    assert name in generator
 assert "f07_flush_old" in generator and "f07_flush_new" in generator
 assert "shader_source.count(f07_flush_old) != 1" in generator
 
@@ -41,7 +49,12 @@ constexpr size_t VULKAN_CACHE_FLUSH_PIPELINES=128;
 constexpr size_t VULKAN_CACHE_FLUSH_MIN_SECONDS=30;
 struct TestCache {
     bool throw_read{};
-    void Read(size_t* n, void*) { if(throw_read) throw std::runtime_error("read"); *n=128; }
+    bool throw_unknown{};
+    void Read(size_t* n, void*) {
+        if(throw_unknown) throw 17;
+        if(throw_read) throw std::runtime_error("read");
+        *n=128;
+    }
 };
 struct SerializationThread {
     bool throw_enqueue{};
@@ -51,6 +64,9 @@ struct PipelineCache {
     bool use_vulkan_pipeline_cache{true};
     std::string vulkan_pipeline_cache_filename{"pipeline.bin"};
     std::atomic_bool flush_in_flight{false};
+#ifdef PS5_NATIVE
+    std::atomic_bool flush_worker_failed{false};
+#endif
     size_t pipelines_since_flush{127};
     std::chrono::steady_clock::time_point last_flush{};
     std::atomic_size_t last_cache_size{0};
@@ -77,15 +93,45 @@ int main() {
     io.vulkan_pipeline_cache.throw_read=true;
     io.QueueVulkanPipelineCacheFlush();
     assert(!io.flush_in_flight.load());
+#ifdef PS5_NATIVE
+    assert(io.flush_worker_failed.load());
+    io.vulkan_pipeline_cache.throw_read=false;
+    io.QueueVulkanPipelineCacheFlush();
+    assert(io.pipelines_since_flush==VULKAN_CACHE_FLUSH_PIPELINES+1);
+    assert(io.last_cache_size.load()==0); // original time gate still active
+    assert(!io.flush_worker_failed.load());
+    io.last_flush-=std::chrono::seconds(31);
+#else
     io.vulkan_pipeline_cache.throw_read=false;
     io.pipelines_since_flush=127;
     io.last_flush={};
+#endif
     io.QueueVulkanPipelineCacheFlush();
     assert(io.last_cache_size==128);
+    assert(io.pipelines_since_flush==0);
     PipelineCache save;
     save.throw_serialize=true;
     save.QueueVulkanPipelineCacheFlush();
     assert(!save.flush_in_flight.load());
+#ifdef PS5_NATIVE
+    assert(save.flush_worker_failed.load());
+    save.throw_serialize=false;
+    save.QueueVulkanPipelineCacheFlush();
+    assert(save.pipelines_since_flush==VULKAN_CACHE_FLUSH_PIPELINES+1);
+    save.last_flush-=std::chrono::seconds(31);
+    save.QueueVulkanPipelineCacheFlush();
+    assert(save.last_cache_size.load()==128);
+    PipelineCache unknown;
+    unknown.vulkan_pipeline_cache.throw_unknown=true;
+    unknown.QueueVulkanPipelineCacheFlush();
+    assert(unknown.flush_worker_failed.load());
+    unknown.vulkan_pipeline_cache.throw_unknown=false;
+    unknown.QueueVulkanPipelineCacheFlush();
+    assert(unknown.pipelines_since_flush==VULKAN_CACHE_FLUSH_PIPELINES+1);
+    unknown.last_flush-=std::chrono::seconds(31);
+    unknown.QueueVulkanPipelineCacheFlush();
+    assert(unknown.last_cache_size.load()==128);
+#endif
     PipelineCache queue;
     queue.serialization_thread.throw_enqueue=true;
     queue.QueueVulkanPipelineCacheFlush();
@@ -108,8 +154,10 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-flush-") as directory:
     file=Path(directory)/"flush.cpp"
     file.write_text(code)
     for mode in ("-O0","-O2"):
-        exe=Path(directory)/("flush"+mode[1:])
-        subprocess.run([compiler,"-std=c++20","-pthread",mode,"-Wall","-Wextra","-Werror",
-                        str(file),"-o",str(exe)],check=True,capture_output=True,text=True,timeout=40)
-        subprocess.run([str(exe)],check=True,timeout=15)
-print("F07_DRIVER_CACHE_FLUSH_HOST_PASS normal=1 failed_save=1 failed_read=1 failed_enqueue=1 retry_after_cooldown=1 budget=1")
+        for native in (False,True):
+            exe=Path(directory)/("flush"+mode[1:]+("-ps5" if native else "-desktop"))
+            subprocess.run([compiler,"-std=c++20","-pthread",mode,"-Wall","-Wextra","-Werror",
+                            *(['-DPS5_NATIVE=1'] if native else []),
+                            str(file),"-o",str(exe)],check=True,capture_output=True,text=True,timeout=40)
+            subprocess.run([str(exe)],check=True,timeout=15)
+print("F07_DRIVER_CACHE_FLUSH_HOST_PASS normal=1 failed_save=1 failed_read=1 failed_enqueue=1 retry_after_cooldown=1 worker_failure_handoff=1 unknown_exception=1 desktop_unchanged=1 O0=1 O2=1")

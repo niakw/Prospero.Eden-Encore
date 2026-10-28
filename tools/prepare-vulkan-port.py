@@ -4028,3 +4028,20 @@ apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
     "                MakePipeline(render_pass, VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT);\n                QueueOptimizedPipeline(render_pass);\n            } else {",
     "                MakePipeline(render_pass, VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT);\n#ifdef PS5_NATIVE\n                // This speculative rebuild is not required by the first-use\n                // pipeline. Admission/OOM failures must not turn an already\n                // valid gameplay pipeline into a failed builder invocation.\n                try {\n                    QueueOptimizedPipeline(render_pass);\n                } catch (const std::exception& error) {\n                    LOG_WARNING(Render_Vulkan, \"Optional pipeline rebuild queue rejected: {}\", error.what());\n                } catch (...) {\n                    LOG_WARNING(Render_Vulkan, \"Optional pipeline rebuild queue rejected: unknown exception\");\n                }\n#else\n                QueueOptimizedPipeline(render_pass);\n#endif\n            } else {",
     "F07 isolate optional optimizer enqueue rejection from initial pipeline build")
+
+# F07 P0.1: failures inside the async serializer must preserve the next
+# cache-save checkpoint without writing non-atomic pipeline quota from the
+# worker thread. Only the owner consumes the atomic failure flag, after which
+# the unchanged 30s/size gate prevents a retry storm. Native only.
+apply_reviewed_delta("include/video_core/renderer_vulkan/vk_pipeline_cache.h",
+    "    std::atomic_bool flush_in_flight{};\n\n    Common::ThreadWorker workers;",
+    "    std::atomic_bool flush_in_flight{};\n#ifdef PS5_NATIVE\n    // Written by the serializer; consumed only by the GPU-owner thread.\n    // Do not mutate pipelines_since_flush concurrently with Vulkan draws.\n    std::atomic_bool flush_worker_failed{};\n#endif\n\n    Common::ThreadWorker workers;",
+    "F07 driver cache worker failure owner handoff state")
+apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
+    "    if (++pipelines_since_flush < VULKAN_CACHE_FLUSH_PIPELINES) {",
+    "#ifdef PS5_NATIVE\n    // Recover a failed background serialization without racing the owner's\n    // non-atomic quota. The existing time gate still bounds retry frequency.\n    if (flush_worker_failed.exchange(false, std::memory_order_acq_rel)) {\n        pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;\n    }\n#endif\n    if (++pipelines_since_flush < VULKAN_CACHE_FLUSH_PIPELINES) {",
+    "F07 restore failed cache flush quota on GPU owner")
+apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
+    "            } catch (const std::exception& error) {\n                LOG_WARNING(Render_Vulkan, \"Deferred driver cache flush failed: {}\", error.what());\n            } catch (...) {\n                LOG_WARNING(Render_Vulkan, \"Deferred driver cache flush failed: unknown exception\");\n            }",
+    "            } catch (const std::exception& error) {\n#ifdef PS5_NATIVE\n                // Signal a new checkpoint, but only the GPU owner may update\n                // the ordinary pipeline build quota on its next call.\n                flush_worker_failed.store(true, std::memory_order_release);\n#endif\n                LOG_WARNING(Render_Vulkan, \"Deferred driver cache flush failed: {}\", error.what());\n            } catch (...) {\n#ifdef PS5_NATIVE\n                flush_worker_failed.store(true, std::memory_order_release);\n#endif\n                LOG_WARNING(Render_Vulkan, \"Deferred driver cache flush failed: unknown exception\");\n            }",
+    "F07 publish driver cache worker failure atomically")
