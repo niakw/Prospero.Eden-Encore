@@ -4416,3 +4416,29 @@ apply_reviewed_delta("vk_compute_pass_cost.cpp",
     "    using namespace VideoCommon::Accelerated;\n\n    const u32 MAX_BATCH_SLICES = (std::min)(z_count, image.info.size.depth);",
     "    using namespace VideoCommon::Accelerated;\n\n#ifdef PS5_NATIVE\n    // Reject malformed batches before allocating the BCn compute output or\n    // touching the descriptor ring. Preserve guest dirty state for retry.\n    if (swizzles.size() != 1 || swizzled.buffer == VK_NULL_HANDLE ||\n        z_count == 0 || z_start >= image.info.size.depth ||\n        z_count > image.info.size.depth - z_start) {\n        throw std::bad_alloc{};\n    }\n    const auto& input = swizzles[0];\n    // The descriptor below subtracts this offset from guest_size_bytes and\n    // adds it to the Vulkan buffer offset. Both operations must be valid.\n    // Do not compare against mapped_span: guest block-linear and linear\n    // staging byte counts can intentionally differ.\n    if (input.buffer_offset >= image.guest_size_bytes ||\n        input.buffer_offset > (~VkDeviceSize{0} - swizzled.offset)) {\n        throw std::bad_alloc{};\n    }\n#endif\n\n    const u32 MAX_BATCH_SLICES = (std::min)(z_count, image.info.size.depth);",
     "F07 reject native BCn3D invalid slice and descriptor offsets before allocation")
+
+# F07 P0.3: move BCn3D VkDescriptorSet allocator into the FIFO worker,
+# matching the other five native compute passes, without moving the
+# descriptor payload or changing desktop's original allocation order.
+apply_reviewed_delta("vk_compute_pass_cost.cpp",
+    "    const void* descriptor_data = compute_pass_descriptor_queue.UpdateData();\n    const VkDescriptorSet set = descriptor_allocator.Commit();\n\n    const u32 gx =",
+    "    const void* descriptor_data = compute_pass_descriptor_queue.UpdateData();\n#ifndef PS5_NATIVE\n    const VkDescriptorSet set = descriptor_allocator.Commit();\n#endif\n\n    const u32 gx =",
+    "F07 defer PS5 BCn3D descriptor set allocation from owner")
+
+
+# F07 P0.3: move BCn3D VkDescriptorSet allocator into the FIFO worker,
+# matching the other five native compute passes, without moving the
+# descriptor payload or changing desktop's original allocation order.
+apply_reviewed_delta("vk_compute_pass_cost.cpp",
+    "    scheduler.Record([this, set, descriptor_data, pc, gx, gy, gz, z_start, z_count,\n                      barrier_size, is_first_chunk, out_buffer, dst_image, aspect,\n                      image_width, image_height\n                      ](vk::CommandBuffer cmdbuf) {",
+    "#ifdef PS5_NATIVE\n    scheduler.Record([this, descriptor_data, pc, gx, gy, gz, z_start, z_count,\n#else\n    scheduler.Record([this, set, descriptor_data, pc, gx, gy, gz, z_start, z_count,\n#endif\n                      barrier_size, is_first_chunk, out_buffer, dst_image, aspect,\n                      image_width, image_height\n                      ](vk::CommandBuffer cmdbuf) {",
+    "F07 omit BCn3D descriptor set owner capture on native worker")
+
+
+# F07 P0.3: move BCn3D VkDescriptorSet allocator into the FIFO worker,
+# matching the other five native compute passes, without moving the
+# descriptor payload or changing desktop's original allocation order.
+apply_reviewed_delta("vk_compute_pass_cost.cpp",
+    "        if (dst_image == VK_NULL_HANDLE || out_buffer == VK_NULL_HANDLE) {\n            return;\n        }\n\n        device.GetLogical().UpdateDescriptorSet(set, *descriptor_template, descriptor_data);",
+    "        if (dst_image == VK_NULL_HANDLE || out_buffer == VK_NULL_HANDLE) {\n            return;\n        }\n\n#ifdef PS5_NATIVE\n        // Mirror the other compute passes: allocate the Vulkan descriptor set\n        // on the FIFO worker, outside the caller's texture-cache lock.\n        const VkDescriptorSet set = descriptor_allocator.Commit();\n#endif\n        device.GetLogical().UpdateDescriptorSet(set, *descriptor_template, descriptor_data);",
+    "F07 commit native BCn3D descriptor set on Vulkan worker")

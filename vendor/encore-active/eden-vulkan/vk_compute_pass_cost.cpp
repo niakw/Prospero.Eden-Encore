@@ -793,7 +793,9 @@ void BlockLinearUnswizzle3DPass::UnswizzleChunk(
                                            image.compute_unswizzle_buffer_size);
 
     const void* descriptor_data = compute_pass_descriptor_queue.UpdateData();
+#ifndef PS5_NATIVE
     const VkDescriptorSet set = descriptor_allocator.Commit();
+#endif
 
     const u32 gx = Common::DivCeil(blocks_x, 8u);
     const u32 gy = Common::DivCeil(blocks_y, 8u);
@@ -812,7 +814,11 @@ void BlockLinearUnswizzle3DPass::UnswizzleChunk(
     const u32 image_width = image.info.size.width;
     const u32 image_height = image.info.size.height;
 
+#ifdef PS5_NATIVE
+    scheduler.Record([this, descriptor_data, pc, gx, gy, gz, z_start, z_count,
+#else
     scheduler.Record([this, set, descriptor_data, pc, gx, gy, gz, z_start, z_count,
+#endif
                       barrier_size, is_first_chunk, out_buffer, dst_image, aspect,
                       image_width, image_height
                       ](vk::CommandBuffer cmdbuf) {
@@ -821,6 +827,11 @@ void BlockLinearUnswizzle3DPass::UnswizzleChunk(
             return;
         }
 
+#ifdef PS5_NATIVE
+        // Mirror the other compute passes: allocate the Vulkan descriptor set
+        // on the FIFO worker, outside the caller's texture-cache lock.
+        const VkDescriptorSet set = descriptor_allocator.Commit();
+#endif
         device.GetLogical().UpdateDescriptorSet(set, *descriptor_template, descriptor_data);
         cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_COMPUTE, *pipeline);
         cmdbuf.BindDescriptorSets(VK_PIPELINE_BIND_POINT_COMPUTE, *layout, 0, set, {});
