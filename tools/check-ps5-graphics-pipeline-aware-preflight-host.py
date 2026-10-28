@@ -7,15 +7,17 @@ import tempfile
 root=Path(__file__).resolve().parents[1]
 src=(root/"vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp").read_text()
 b=src.index("    GraphicsPipeline* pipeline{pipeline_cache.CurrentGraphicsPipeline()};")
-e=src.index("#ifdef PS5_NATIVE\n    for (unsigned preflight = 0;",b)
+e=src.index("#ifdef PS5_NATIVE\n    // Waiting on an eight-frame-old",b)
 selected=src[b:e]
 assert "pipeline->HasDescriptorEntries()" in selected
-assert selected.count("pipeline_cache.CurrentGraphicsPipeline()") == 2
+assert selected.count("pipeline_cache.CurrentGraphicsPipeline()") == 3
 assert "guest_descriptor_queue.PreflightGuestDraw(" in selected
+assert "if (preflight == 0 && !initial_descriptor_drain) break;" in selected
+assert "guest_descriptor_queue.PreflightExactGuestDraw(" in selected
 assert "pipeline->DescriptorEntryReservation()))" in selected
 assert selected.index("pipeline->HasDescriptorEntries()") < selected.index("PreflightGuestDraw(")
 assert selected.index("gpu_memory->FlushCaching();") > selected.index("PreflightGuestDraw(")
-assert selected.count("GraphicsDrawDrop::NoPipeline") == 2
+assert selected.count("GraphicsDrawDrop::NoPipeline") == 3
 header=(root/"vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h").read_text()
 assert header.count("bool HasDescriptorEntries() const noexcept") == 1
 assert "return num_descriptor_entries != 0;" in header
@@ -62,6 +64,17 @@ struct DescriptorQueue {
         assert(required_entries != 0 && required_entries < 0x400);
         ++checks;
         if (!full) return false;
+        full = false;
+        worker();
+        return true;
+    }
+    unsigned exact_checks{};
+    template <class F>
+    bool PreflightExactGuestDraw(F&& worker, std::size_t required_entries) {
+        assert(required_entries != 0 && required_entries < 0x400);
+        ++exact_checks;
+        if (!full) return false;
+        full = false;
         worker();
         return true;
     }
@@ -92,12 +105,14 @@ int main() {
     y.Test();
     assert(y.scheduler.waits == 1 && y.memory.flushes == 1);
     assert(y.pipeline_cache.selects == 2);
+    assert(y.guest_descriptor_queue.exact_checks == 1);
     Rasterizer z;
     z.pipeline_cache.selected = &textured;
     z.guest_descriptor_queue.full = true;
     z.pipeline_cache.after_drain = nullptr;
     z.Test();
     assert(z.scheduler.waits == 1 && z.pipeline_cache.selects == 2);
+    assert(z.guest_descriptor_queue.exact_checks == 1);
     Rasterizer n;
     n.pipeline_cache.selected = nullptr;
     n.Test();
@@ -106,6 +121,7 @@ int main() {
     unchanged.pipeline_cache.selected = &textured;
     unchanged.Test();
     assert(unchanged.guest_descriptor_queue.checks == 1);
+    assert(unchanged.guest_descriptor_queue.exact_checks == 0);
     assert(unchanged.scheduler.waits == 0 && unchanged.pipeline_cache.selects == 1);
 }
 """
