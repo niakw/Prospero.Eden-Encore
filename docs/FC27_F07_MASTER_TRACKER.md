@@ -578,3 +578,20 @@ Le témoin source-extrait couvre le cas où la vue propre apparaît avant ou
 après celle en décodage, ainsi que la reprise de l'accélération après
 publication. Cela garantit un choix conservateur, **pas** la fraîcheur
 observée du HUD ni un gain de performances sur console.
+
+
+## F07 P0.3/P0.4 — sélection framebuffer sans allocation sous mutex (28 octobre)
+
+Sur PS5, la sélection des vues de présentation conservait toutes les images
+admissibles dans un `small_vector<4>`, puis lançait un second parcours pour
+retrouver la dernière modification. Avec plus de quatre alias simultanés,
+le vecteur pouvait allouer sous `texture_cache.mutex`. La branche native
+conserve maintenant uniquement l'identifiant et le tick du candidat le plus
+récent pendant le premier parcours : **pas d'allocation de liste ni de second
+balayage**, à condition qu'une vue soit admissible. Les ticks identiques
+conservent le premier candidat, comme `std::ranges::max_element`. Tout
+`IsDecoding` correspondant continue d'imposer le repli vers les pixels
+invités, même après la rencontre d'une vue propre. Le desktop conserve
+strictement son ancienne sélection. Le témoin source-extrait C++ couvre
+l'ordre inversé, les égalités, les vues sales/absentes et sept alias en
+`-O0`/`-O2`. Optimisation structurelle, **gain de latence/FPS PS5 non mesuré**.

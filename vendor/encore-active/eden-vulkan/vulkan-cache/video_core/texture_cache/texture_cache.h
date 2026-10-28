@@ -1243,7 +1243,14 @@ std::pair<typename P::ImageView*, bool> TextureCache<P>::TryFindFramebufferImage
         return {};
     }
     const auto& image_map_ids = it->second;
+#ifdef PS5_NATIVE
+    // Keep the best admissible view during the scan: no small_vector growth or
+    // second pass while the compositor owns texture_cache.mutex.
+    ImageId freshest_id{};
+    bool freshest_found = false;
+#else
     boost::container::small_vector<ImageId, 4> valid_image_ids;
+#endif
     for (const ImageMapId map_id : image_map_ids) {
         const ImageMapView& map = slot_map_views[map_id];
         const ImageBase& image = slot_images[map.image_id];
@@ -1268,7 +1275,16 @@ std::pair<typename P::ImageView*, bool> TextureCache<P>::TryFindFramebufferImage
         if (image.image_view_ids.empty()) {
             continue;
         }
+#ifdef PS5_NATIVE
+        // Match ranges::max_element: the first candidate wins equal ticks.
+        if (!freshest_found ||
+            slot_images[freshest_id].modification_tick < image.modification_tick) {
+            freshest_id = map.image_id;
+            freshest_found = true;
+        }
+#else
         valid_image_ids.push_back(map.image_id);
+#endif
     }
 
     const auto view_format = [&]() {
@@ -1294,6 +1310,11 @@ std::pair<typename P::ImageView*, bool> TextureCache<P>::TryFindFramebufferImage
                               slot_images[image_id].IsRescaled());
     };
 
+#ifdef PS5_NATIVE
+    if (freshest_found) [[likely]] {
+        return GetImageViewForFramebuffer(freshest_id);
+    }
+#else
     if (valid_image_ids.size() == 1) [[likely]] {
         return GetImageViewForFramebuffer(valid_image_ids.front());
     }
@@ -1304,7 +1325,7 @@ std::pair<typename P::ImageView*, bool> TextureCache<P>::TryFindFramebufferImage
         });
         return GetImageViewForFramebuffer(*most_recent);
     }
-
+#endif
     return {};
 }
 
