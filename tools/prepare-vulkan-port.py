@@ -4147,3 +4147,18 @@ apply_reviewed_delta("vk_texture_cache_cost.cpp",
     "        total_size += bytes;\n    }\n#else\n    for (const auto& copy : copies) {",
     "        total_size += bytes;\n    }\n    // GetTemporaryBuffer indexes an array of 8*sizeof(size_t) buffers with\n    // ceil(log2(size)). Values above the highest power of two index the\n    // array one past its end even though size_t arithmetic did not overflow.\n    constexpr size_t scratch_max = size_t{1} << (std::numeric_limits<size_t>::digits - 1);\n    if (total_size > scratch_max) {\n        return;\n    }\n#else\n    for (const auto& copy : copies) {",
     "F07 reject scratch sizes outside Vulkan transient buffer slots")
+
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    constexpr size_t kMaxCompletedDecodesPerTick = 4;\n    size_t completed_decodes = 0;\n#endif",
+    "    constexpr size_t kMaxCompletedDecodesPerTick = 4;\n    size_t completed_decodes = 0;\n    // Keep every successfully submitted native texture ID in fixed storage:\n    // a rejected visibility barrier must invalidate the whole upload batch.\n    std::array<ImageId, kMaxCompletedDecodesPerTick> submitted_images{};\n    size_t submitted_count = 0;\n#endif",
+    "F07 track native async uploaded images for barrier rollback")
+
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        image.flags &= ~ImageFlagBits::IsDecoding;\n        has_uploads = true;\n        // The context owns async_decode->mutex. Unlock before destroying it.",
+    "        image.flags &= ~ImageFlagBits::IsDecoding;\n        has_uploads = true;\n#ifdef PS5_NATIVE\n        submitted_images[submitted_count++] = async_decode->image_id;\n#endif\n        // The context owns async_decode->mutex. Unlock before destroying it.",
+    "F07 remember every successful GPU texture upload ID")
+
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    if (has_uploads) {\n        runtime.InsertUploadMemoryBarrier();\n    }\n}",
+    "    if (has_uploads) {\n#ifdef PS5_NATIVE\n        try {\n#endif\n            runtime.InsertUploadMemoryBarrier();\n#ifdef PS5_NATIVE\n        } catch (...) {\n            // Re-upload current guest revisions after a rejected visibility\n            // barrier. All decoder contexts were unlocked/erased above.\n            for (size_t j = 0; j < submitted_count; ++j) {\n                const ImageId id = submitted_images[j];\n                Image& image = slot_images[id];\n                image.flags |= ImageFlagBits::CpuModified;\n                if (True(image.flags & ImageFlagBits::Tracked)) {\n                    UntrackImage(image, id);\n                }\n            }\n        }\n#endif\n    }\n}",
+    "F07 mark entire decoded texture batch dirty after barrier failure")

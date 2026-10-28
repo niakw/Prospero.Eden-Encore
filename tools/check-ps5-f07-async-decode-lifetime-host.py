@@ -32,7 +32,12 @@ assert "F07 async decoded Vulkan submission failure recovery" in generator
 assert method.index("image.UploadMemory(staging,") < method.index("} catch (...) {", method.index("image.UploadMemory(staging,"))
 assert "staging.mapped_span.size() < expected_size" in method
 assert method.index("staging.mapped_span.size() < expected_size") < method.index("std::memcpy(")
-assert method.count("image.flags |= ImageFlagBits::CpuModified;") == 3
+assert method.count("image.flags |= ImageFlagBits::CpuModified;") == 4
+assert "F07 mark entire decoded texture batch dirty after barrier failure" in generator
+assert "std::array<ImageId, kMaxCompletedDecodesPerTick> submitted_images{}" in method
+assert "submitted_images[submitted_count++] = async_decode->image_id" in method
+assert method.index("submitted_images[submitted_count++]") < method.index("runtime.InsertUploadMemoryBarrier()")
+assert "for (size_t j = 0; j < submitted_count; ++j)" in method
 assert method.index("lock.unlock();") < method.index("i = async_decodes.erase(i);")
 assert method.rindex("lock.unlock();") < method.rindex("i = async_decodes.erase(i);")
 assert "async_decode->decoded_data.size() != expected_size" in method
@@ -54,6 +59,7 @@ for delta in ("F07 async texture revision length guard",
 
 cpp = r"""
 #include <atomic>
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -108,13 +114,17 @@ struct AsyncDecodeContext{
 struct Runtime{
     unsigned staging_calls{},barriers{};
     unsigned reject_on_call{},short_on_call{};
+    bool fail_barrier{};
     Staging UploadStagingBuffer(std::size_t n){
         ++staging_calls;
         if (reject_on_call == staging_calls) throw std::bad_alloc{};
         if (short_on_call == staging_calls) return Staging(n - 1);
         return Staging(n);
     }
-    void InsertUploadMemoryBarrier(){++barriers;}
+    void InsertUploadMemoryBarrier(){
+        if(fail_barrier)throw std::runtime_error("mock upload barrier rejected");
+        ++barriers;
+    }
 };
 const std::vector<int>& FixSmallVectorADL(const std::vector<int>& v){return v;}
 template<class P>struct TextureCache{
@@ -270,6 +280,39 @@ int main(){
         assert(burst.slot_images[id].result[0]==id);
         assert(!True(burst.slot_images[id].flags&ImageFlagBits::IsDecoding));
     }
+    // Two valid uploads have been recorded but their final visibility barrier
+    // fails. BOTH images must be dirty/retryable; no decoding lock may leak.
+    TextureCache<int> failed_barrier;
+    failed_barrier.slot_images.resize(2);
+    for (std::size_t id=0;id<2;++id) {
+        failed_barrier.slot_images[id].size=4;
+        failed_barrier.slot_images[id].flags|=ImageFlagBits::IsDecoding;
+        failed_barrier.slot_images[id].flags|=ImageFlagBits::Tracked;
+        auto ctx=std::make_unique<AsyncDecodeContext>();
+        ctx->image_id=id;ctx->complete=true;
+        ctx->decoded_data={static_cast<std::uint8_t>(id),3,4,5};
+        failed_barrier.async_decodes.emplace_back(std::move(ctx));
+    }
+    failed_barrier.runtime.fail_barrier=true;
+    failed_barrier.TickAsyncDecode();
+    assert(failed_barrier.async_decodes.empty());
+    assert(failed_barrier.runtime.barriers==0 && failed_barrier.untracked==2);
+    for (std::size_t id=0;id<2;++id) {
+        assert(failed_barrier.slot_images[id].uploads==1);
+        assert(True(failed_barrier.slot_images[id].flags&ImageFlagBits::CpuModified));
+        assert(!True(failed_barrier.slot_images[id].flags&ImageFlagBits::Tracked));
+        assert(!True(failed_barrier.slot_images[id].flags&ImageFlagBits::IsDecoding));
+    }
+    failed_barrier.runtime.fail_barrier=false;
+    failed_barrier.slot_images[0].flags.bits=static_cast<std::uint32_t>(ImageFlagBits::IsDecoding);
+    auto retry=std::make_unique<AsyncDecodeContext>();
+    retry->image_id=0;retry->complete=true;retry->decoded_data={8,7,6,5};
+    failed_barrier.async_decodes.emplace_back(std::move(retry));
+    failed_barrier.TickAsyncDecode();
+    assert(failed_barrier.runtime.barriers==1);
+    assert(failed_barrier.slot_images[0].uploads==2);
+    assert(!True(failed_barrier.slot_images[0].flags&ImageFlagBits::CpuModified));
+    assert(!True(failed_barrier.slot_images[0].flags&ImageFlagBits::IsDecoding));
 }
 """
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
@@ -286,7 +329,7 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-async-lifetime-") as directory
         assert built.returncode==0,(optimization,built.stderr[-5000:])
         ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=20)
         assert ran.returncode==0,(optimization,ran.stdout,ran.stderr[-5000:])
-print("F07_ASYNC_TICK_LIFETIME_HOST_PASS unlock_before_erase=1 revision_size_guard=1 stale_same_size=1 stale_remapped_same_size=1 pending=1 staging_oom=1 short_span=1 failed_gpu_submission=1 retry=1 burst_quota_4=1 burst_11_in_3_ticks=1 O0=1 O2=1")
+print("F07_ASYNC_TICK_LIFETIME_HOST_PASS unlock_before_erase=1 revision_size_guard=1 stale_same_size=1 stale_remapped_same_size=1 pending=1 staging_oom=1 short_span=1 failed_gpu_submission=1 retry=1 burst_quota_4=1 burst_11_in_3_ticks=1 failed_barrier_dirty_batch=1 barrier_retry=1 O0=1 O2=1")
 
 
 # Extract the real queued native conversion lambda and execute both branches.
@@ -305,6 +348,7 @@ assert "async_decode->decoded_data.size() == 0 ||" in method
 
 worker_cpp = r"""
 #include <atomic>
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
