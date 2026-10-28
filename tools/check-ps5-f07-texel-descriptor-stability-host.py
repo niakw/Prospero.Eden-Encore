@@ -21,7 +21,7 @@ assert "F07 zero unused native texel descriptor payload bytes" in generator
 assert "F07 zero native image descriptor payload bytes for legacy and buffer reuse" in generator
 image_begin="    void AddSampledImage(VkImageView image_view, VkSampler sampler) {"
 image_end="\n\n    void AddBuffer(VkBuffer buffer,"
-assert header.count(image_begin)==header.count(image_end)==1
+assert header.count(image_begin)==1 and image_end in header[header.index(image_begin):]
 image_methods=header[header.index(image_begin):header.index(image_end,header.index(image_begin))]
 assert image_methods.count("std::memset(entry, 0, sizeof(*entry));")==2
 assert "if (use_descriptor_buffer)" not in image_methods
@@ -89,7 +89,7 @@ int main() {
         Queue images;
         images.use_descriptor_buffer=descriptor_buffer;
         for(std::size_t i=0;i<images.payload.size();++i) {
-            std::memset(&images.payload[i],(i%2) ? 0x5a : 0xa5,sizeof(images.payload[i]));
+            std::memset(reinterpret_cast<unsigned char*>(&images.payload[i]),\n                        (i%2) ? 0x5a : 0xa5,sizeof(images.payload[i]));
         }
         images.AddImage(0x123);
         images.AddImage(0x123);
