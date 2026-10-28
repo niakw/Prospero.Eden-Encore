@@ -4454,3 +4454,10 @@ apply_reviewed_delta("vk_compute_pass_cost.cpp",
     "        // Single barrier handles both buffer and image\n        cmdbuf.PipelineBarrier(\n            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,\n            VK_PIPELINE_STAGE_TRANSFER_BIT,\n            0,\n            nullptr, buffer_barrier, pre_barrier\n        );",
     "        // Single barrier handles both buffer and image.\n        // The previous batch can have been sampled by any graphics stage;\n        // match the GENERAL image read/write access in the native barrier.\n        cmdbuf.PipelineBarrier(\n#ifdef PS5_NATIVE\n            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,\n#else\n            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,\n#endif\n            VK_PIPELINE_STAGE_TRANSFER_BIT,\n            0,\n            nullptr, buffer_barrier, pre_barrier\n        );",
     "F07 synchronize native BCn 3D reused image before transfer")
+
+# F07 P0.4: never queue BCn 3D GPU chunks for an invalid output image.
+# Keep native rejection on the owner so async dirty state remains retryable.
+apply_reviewed_delta("vk_compute_pass_cost.cpp",
+    "    // Allocate or grow to cover this batch's slice count\n    image.AllocateComputeUnswizzleBuffer(MAX_BATCH_SLICES);\n\n    ASSERT(swizzles.size() == 1);",
+    "    // Allocate or grow to cover this batch's slice count\n    image.AllocateComputeUnswizzleBuffer(MAX_BATCH_SLICES);\n#ifdef PS5_NATIVE\n    // A failed destination image is not a successful async BCn upload.\n    // Reject on the GPU owner BEFORE queuing chunks; the async caller will\n    // retain the guest dirty flag and retry rather than acknowledge no pixels.\n    if (image.Handle() == VK_NULL_HANDLE ||\n        !image.compute_unswizzle_buffer ||\n        *image.compute_unswizzle_buffer == VK_NULL_HANDLE) {\n        throw std::bad_alloc{};\n    }\n#endif\n\n    ASSERT(swizzles.size() == 1);",
+    "F07 native reject null BCn3D destination before GPU upload")

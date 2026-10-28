@@ -7,6 +7,7 @@
 
 #include <array>
 #include <memory>
+#include <new>
 #include <numeric>
 #include <optional>
 #include <utility>
@@ -730,6 +731,16 @@ void BlockLinearUnswizzle3DPass::Unswizzle(
 
     // Allocate or grow to cover this batch's slice count
     image.AllocateComputeUnswizzleBuffer(MAX_BATCH_SLICES);
+#ifdef PS5_NATIVE
+    // A failed destination image is not a successful async BCn upload.
+    // Reject on the GPU owner BEFORE queuing chunks; the async caller will
+    // retain the guest dirty flag and retry rather than acknowledge no pixels.
+    if (image.Handle() == VK_NULL_HANDLE ||
+        !image.compute_unswizzle_buffer ||
+        *image.compute_unswizzle_buffer == VK_NULL_HANDLE) {
+        throw std::bad_alloc{};
+    }
+#endif
 
     ASSERT(swizzles.size() == 1);
     const auto& sw = swizzles[0];

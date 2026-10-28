@@ -263,3 +263,7 @@ Sur PS5 native, `BlockLinearUnswizzle3DPass::UnswizzleChunk` n'appelle plus `des
 ## P0.4 — cohérence du layout Vulkan entre lots de décompression BCn 3D
 
 `BlockLinearUnswizzle3DPass::UnswizzleChunk` terminait chaque copie par une transition de `TRANSFER_DST_OPTIMAL` vers `GENERAL`, mais le lot suivant utilisait encore `TRANSFER_DST_OPTIMAL` comme ancien layout. Sur PS5, les lots `z_start > 0` repartent désormais du layout `GENERAL` réellement publié et synchronisent les accès mémoire des commandes antérieures avant la copie. Le lot initial conserve la transition `UNDEFINED` ; le chemin desktop est inchangé. Un témoin C++ source-extrait vérifie la chaîne pré/post et les masques d'accès, O0/O2 avec UBSan. L'impact réel sur les textures et les temps GPU PS5 reste à confirmer.
+
+## P0.4 — refuser le résultat BCn 3D si l'image de destination est nulle
+
+Sur PS5 native, `BlockLinearUnswizzle3DPass::Unswizzle` vérifie immédiatement après l'allocation du buffer de sortie que `image.Handle()` et `compute_unswizzle_buffer` possèdent des handles Vulkan utilisables. Un handle nul déclenche `std::bad_alloc` **avant** toute demande de contexte ou publication de chunk compute : le traitement asynchrone existant peut ainsi laisser la texture invitée marquée sale pour une nouvelle tentative, plutôt que de considérer la copie comme effectuée alors que son callback aurait silencieusement abandonné. Le comportement desktop est inchangé. Nouveau témoin C++ source-extrait en PS5/desktop -O0/-O2/UBSan ; preuve matérielle FC 27 non obtenue.
