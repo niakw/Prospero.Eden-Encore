@@ -25,12 +25,15 @@ start = "    for (const ImageMapId map_id : image_map_ids) {"
 stop = "\n\n    const auto view_format ="
 assert method.count(start) == 1
 loop = method[method.index(start):method.index(stop,method.index(start))]
-assert loop.count("ImageFlagBits::Remapped | ImageFlagBits::CpuModified |") == 1
-assert loop.count("ImageFlagBits::IsDecoding") == 1
+assert loop.count("ImageFlagBits::Remapped | ImageFlagBits::CpuModified") == 1
+assert loop.count("if (True(image.flags & ImageFlagBits::IsDecoding)) {") == 1
+assert loop.index("if (True(image.flags & ImageFlagBits::IsDecoding)) {") < loop.index("ImageFlagBits::Remapped | ImageFlagBits::CpuModified")
+assert "return {};" in loop
 assert loop.index("if (image.cpu_addr != cpu_addr)") < loop.index("ImageFlagBits::Remapped | ImageFlagBits::CpuModified")
 assert loop.index("ImageFlagBits::Remapped | ImageFlagBits::CpuModified") < loop.index("if (image.image_view_ids.empty())")
 assert "F07 P0.4 accelerated present rejects remapped or CPU-dirty framebuffer" in generator
 assert "F07 P0.4 exclude asynchronously decoding accelerated framebuffer" in generator
+assert "F07 P0.4 prevent stale alternate framebuffer view during async decode" in generator
 display = raster.split("RasterizerVulkan::AccelerateDisplay(",1)[1].split("return info;",1)[0]
 assert "if (!image_view) {" in display
 assert display.count("gpu_memory->FlushCaching();") == 1
@@ -65,6 +68,9 @@ constexpr unsigned operator|(ImageFlagBits a,ImageFlagBits b) {
 constexpr unsigned operator|(unsigned a,ImageFlagBits b) {
     return a|static_cast<unsigned>(b);
 }
+constexpr unsigned operator&(unsigned a,ImageFlagBits b) {
+    return a&static_cast<unsigned>(b);
+}
 bool True(unsigned flags) { return flags != 0; }
 struct ImageMapView { int image_id{}; };
 struct ImageBase {
@@ -97,8 +103,13 @@ int main() {
     c.slot_images[7].flags=ImageFlagBits::Remapped|ImageFlagBits::CpuModified;
     // The old GPU view is stale while the fresh guest bytes are decoding.
     c.slot_images[6].flags=static_cast<unsigned>(ImageFlagBits::IsDecoding);
+    // The clean image precedes the decoding view: selecting it is stale.
     const auto clean=c.Run(guest);
-    assert((clean==std::vector<int>{1}));
+    assert(clean.empty());
+    // Likewise when an in-flight decode appears before the clean image.
+    c.image_map_ids={6,1,2,3,4,5,7};
+    assert(c.Run(guest).empty());
+    c.image_map_ids={1,2,3,4,5,6,7};
     c.slot_images[1].flags=static_cast<unsigned>(ImageFlagBits::Remapped);
     c.slot_images[6].flags=static_cast<unsigned>(ImageFlagBits::CpuModified);
     assert(c.Run(guest).empty());

@@ -563,3 +563,18 @@ propres restent accélérées ; aucune attente ni lecture d'horloge ajoutée.
 La source sélectionnée, la régénération stricte et le témoin C++ O0/O2
 couvrent ce passage. **À vérifier par CI sur le même SHA, puis en jeu :**
 ce correctif ne constitue pas une preuve de disparition du HUD retardé.
+
+
+## F07 P0.4 — aliases concurrents de framebuffer (28 octobre)
+
+Audit complémentaire du chemin de présentation accélérée : si plusieurs
+images correspondent à la même adresse invitée, écarter seulement l'image
+avec `IsDecoding` laisse une autre vue « propre » potentiellement ancienne.
+Le chemin PS5 interdit désormais **toute** sélection accélérée pour cette
+adresse tant qu'au moins une image correspondante décode de nouveaux pixels ;
+il prend la voie existante de chargement des octets invités. Les vues
+`Remapped` et `CpuModified` continuent à être filtrées individuellement.
+Le témoin source-extrait couvre le cas où la vue propre apparaît avant ou
+après celle en décodage, ainsi que la reprise de l'accélération après
+publication. Cela garantit un choix conservateur, **pas** la fraîcheur
+observée du HUD ni un gain de performances sur console.
