@@ -109,6 +109,15 @@ captures = []
 for module, changes in edits.items():
     current = (active / (module + '_cost.cpp')).read_text()
     previous = current
+    if module == 'vk_texture_cache':
+        # The newest image-initialization delta includes the moved copy
+        # capture installed by deferred_copy_edits. Undo this newest delta
+        # FIRST, while its exact moved-capture anchor still exists.
+        # Other F07 texture deltas do not overlap the deferred captures.
+        source_before, source_after, label = f07_texture_deltas[-1]
+        assert label == 'F07 native image initialized only after accepted upload record'
+        assert previous.count(source_after) == 1, ("native F07 upload commit drift", label)
+        previous = previous.replace(source_after, source_before, 1)
     for old, new, count in reversed(changes):
         assert previous.count(new) == count, (module, new)
         previous = previous.replace(new, old)
@@ -120,7 +129,8 @@ for module, changes in edits.items():
             assert previous.count(reviewed_fragment) == 1, (
                 "reviewed Vulkan image upload barrier moved", reviewed_fragment)
             previous = previous.replace(reviewed_fragment, pinned_fragment)
-        for source_before, source_after, label in reversed(f07_texture_deltas):
+        # The final delta was already undone before deferred-copy reversal.
+        for source_before, source_after, label in reversed(f07_texture_deltas[:-1]):
             assert previous.count(source_after) == 1, (
                 "native F07 BCn-3D generator delta drift", label)
             previous = previous.replace(source_after, source_before, 1)
