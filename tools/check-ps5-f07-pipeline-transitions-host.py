@@ -2,7 +2,7 @@
 """F07 PS5 hot transition memo: compile exact selected Next() in four host modes.
 
 A long overlay/scene transition list previously reread every prior full key on
-each repeated transition. Verify one-entry memo is a stable INDEX (not a vector
+each repeated transition. Verify two-entry memo uses stable INDICES (not a vector
 pointer), preserves misses, short lists, self transitions and appends, and does
 not affect non-PS5 builds. This is a CPU lookup optimization, not an FPS proof.
 """
@@ -19,8 +19,8 @@ end = "\n\n    [[nodiscard]] bool IsBuilt() const noexcept {"
 assert header.count(begin) == 1
 assert header.count(end) == 1
 selected = begin + header.split(begin, 1)[1].split(end, 1)[0]
-assert selected.count("hot_transition_index") == 4
-assert header.count("    size_t hot_transition_index{};") == 1
+assert selected.count("hot_transition_indices") >= 5
+assert header.count("    std::array<size_t, 2> hot_transition_indices{};") == 1
 assert "transition_source.count(transition_next_old) != 1" in generator
 assert "transition_source.replace(transition_next_old, transition_next_new, 1)" in generator
 assert "transition_member_old" in generator and "transition_member_new" in generator
@@ -69,7 +69,7 @@ struct GraphicsPipeline {
     FailPointerAppend<GraphicsPipelineCacheKey> transition_keys;
     FailPointerAppend<GraphicsPipeline*> transitions;
 #ifdef PS5_NATIVE
-    size_t hot_transition_index{};
+    std::array<size_t, 2> hot_transition_indices{};
 #endif
 """ + selected + r"""
     void AddTransition(GraphicsPipeline* other);
@@ -95,6 +95,26 @@ int main() {
         assert(GraphicsPipelineCacheKey::comparisons == 37);
 #endif
     }
+    // Prime two nonadjacent overlay/HUD targets in a 48-edge graph.
+    assert(source.Next(targets[46].key) == &targets[46]);
+    assert(source.Next(targets[35].key) == &targets[35]);
+    for (int r = 0; r < 2000; ++r) {
+        GraphicsPipelineCacheKey::comparisons = 0;
+        assert(source.Next(targets[35].key) == &targets[35]);
+#ifdef PS5_NATIVE
+        assert(GraphicsPipelineCacheKey::comparisons <= 3);
+#else
+        assert(GraphicsPipelineCacheKey::comparisons == 37);
+#endif
+        GraphicsPipelineCacheKey::comparisons = 0;
+        assert(source.Next(targets[46].key) == &targets[46]);
+#ifdef PS5_NATIVE
+        assert(GraphicsPipelineCacheKey::comparisons <= 3);
+#else
+        assert(GraphicsPipelineCacheKey::comparisons == 48);
+#endif
+    }
+    assert(source.Next(targets[35].key) == &targets[35]);
     // Misses never poison a valid memo; target order remains unchanged.
     assert(source.Next(GraphicsPipelineCacheKey{900}) == nullptr);
     GraphicsPipelineCacheKey::comparisons = 0;
@@ -162,4 +182,4 @@ with tempfile.TemporaryDirectory(prefix="encore-f07-transition-") as folder:
                             optimize, *define, str(path), "-o", str(exe)],
                            capture_output=True, text=True, check=True, timeout=40)
             subprocess.run([str(exe)], check=True, timeout=15)
-print("F07_GRAPHICS_TRANSITION_HOST_PASS native=1 desktop=1 O0=1 O2=1 order=1 miss=1 oom_rollback=1 nonfatal_both_vectors=1")
+print("F07_GRAPHICS_TRANSITION_HOST_PASS native=1 desktop=1 O0=1 O2=1 alternating_two_hot=1 order=1 miss=1 oom_rollback=1 nonfatal_both_vectors=1")
