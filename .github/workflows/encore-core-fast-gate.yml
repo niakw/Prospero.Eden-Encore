@@ -440,6 +440,7 @@ jobs:
           python3 -B tools/check-ps5-f07-unswizzle-slice-bounds-host.py
           python3 -B tools/check-ps5-f07-bcn-output-buffer-host.py
           python3 -B tools/check-ps5-f07-bcn-descriptor-capacity-host.py
+          python3 -B tools/check-ps5-f07-bcn-input-preflight-host.py
           python3 -B tools/check-ps5-f07-image-upload-record-rollback-host.py
           python3 -B tools/check-ps5-f07-graphics-descriptor-record-rollback-host.py
           python3 -B tools/check-ps5-f07-pipeline-transitions-host.py
