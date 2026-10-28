@@ -1172,13 +1172,51 @@ void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
     const VkImageAspectFlags src_aspect_mask = src.AspectMask();
     const VkImageAspectFlags dst_aspect_mask = dst.AspectMask();
 
+#ifdef PS5_NATIVE
+    // Do not divide by an invalid format width or truncate converted source
+    // coordinates before the scratch-size check. Conversion is calculated
+    // wide, but must still fit the signed offset and unsigned Vk extent.
+    const auto src_block_width = DefaultBlockWidth(src.info.format);
+    const auto dst_block_width = DefaultBlockWidth(dst.info.format);
+    if (src_block_width == 0 || dst_block_width == 0) {
+        return;
+    }
+    const auto bpp_in = BytesPerBlock(src.info.format) / src_block_width;
+    const auto bpp_out = BytesPerBlock(dst.info.format) / dst_block_width;
+    if (bpp_in == 0 || bpp_out == 0) {
+        return;
+    }
+    for (const auto& copy : copies) {
+        if (static_cast<s64>(copy.src_offset.x) < 0) {
+            return;
+        }
+        const u64 scaled_offset =
+            (static_cast<u64>(bpp_out) * static_cast<u64>(copy.src_offset.x)) / bpp_in;
+        const u64 scaled_width =
+            (static_cast<u64>(bpp_out) * copy.extent.width) / bpp_in;
+        if (scaled_offset > static_cast<u64>(
+                (std::numeric_limits<decltype(copy.src_offset.x)>::max)()) ||
+            scaled_width == 0 || scaled_width > static_cast<u64>(
+                (std::numeric_limits<decltype(copy.extent.width)>::max)())) {
+            return;
+        }
+    }
+#else
     const auto bpp_in = BytesPerBlock(src.info.format) / DefaultBlockWidth(src.info.format);
     const auto bpp_out = BytesPerBlock(dst.info.format) / DefaultBlockWidth(dst.info.format);
+#endif
     std::ranges::transform(copies, vk_in_copies.begin(),
                            [src_aspect_mask, bpp_in, bpp_out](const auto& copy) {
                                auto copy2 = copy;
+#ifdef PS5_NATIVE
+                               copy2.src_offset.x = static_cast<decltype(copy2.src_offset.x)>(
+                                   (static_cast<u64>(bpp_out) * static_cast<u64>(copy.src_offset.x)) / bpp_in);
+                               copy2.extent.width = static_cast<decltype(copy2.extent.width)>(
+                                   (static_cast<u64>(bpp_out) * copy.extent.width) / bpp_in);
+#else
                                copy2.src_offset.x = (bpp_out * copy.src_offset.x) / bpp_in;
                                copy2.extent.width = (bpp_out * copy.extent.width) / bpp_in;
+#endif
                                return MakeBufferImageCopy(copy2, true, src_aspect_mask);
                            });
     std::ranges::transform(copies, vk_out_copies.begin(), [dst_aspect_mask](const auto& copy) {
