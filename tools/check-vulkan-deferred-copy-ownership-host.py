@@ -28,10 +28,10 @@ upload_nodes = [n for n in ast.walk(oracle)
                     for t in n.targets)]
 assert len(upload_nodes) == 1
 upload_deltas = ast.literal_eval(upload_nodes[0].value)
-# Four transfer-barrier updates plus the independently reviewed native BCn-3D
-# constructor fix. Undo all five when verifying the older deferred-copy SHA.
+# Four transfer-barrier updates, the native BCn-3D constructor fix and the
+# two explicit unavailable-pass deltas. Undo all seven for the historical SHA.
 # Keep the historical fingerprint strict; do not recompute it from active code.
-assert len(upload_deltas) == 5
+assert len(upload_deltas) == 7
 assert sum("VK_KHR_image_format_list" in current for _, current in upload_deltas) == 1
 
 # This historical SHA is checked on the exact pre-deferred-copy source.

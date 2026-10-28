@@ -79,3 +79,7 @@ Sur PS5 native, une exception `std::bad_alloc` pendant le staging, la conversion
 ## P0.4 — staging synchrone incomplet
 
 La PS5 rejette maintenant un staging GPU vide ou trop court avant toute copie de pixels ou barrière. Le rollback existant préserve CpuModified pour une seconde tentative. Le témoin source-extrait exécute l'échec puis la reprise à O0/O2. Pas de validation console.
+
+## P0.4 — passage BCn 3D absent ou désactivé
+
+Une soumission BCn 3D sans passage compute disponible ne doit plus être silencieusement considérée comme terminée sur PS5 : `AccelerateImageUpload` signale une erreur explicite, que `TickAsyncUnswizzle` traite en restituant le staging différé, en conservant CpuModified et en libérant IsDecoding. Cela couvre aussi le changement de réglage après la création du runtime. Le comportement desktop reste identique. Un témoin C++ source-extrait teste les modes PS5/desktop O0/O2, le passage BCn valide et le chemin ASTC ; pixels réels/FPS non mesurés.

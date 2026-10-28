@@ -245,3 +245,103 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-bcn3d-constructor-") as folder
             ran = subprocess.run([str(exe)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-5000:])
 print("F07_BCN3D_PASS_UNSUPPORTED_IMAGE_FORMAT_LIST_PASS native=1 desktop=1 extension_on_off=1 setting_on_off=1 O0=1 O2=1")
+
+
+# BCn 3D: never mark an unavailable GPU compute upload as complete.
+# Compile the production runtime function, including PS5 and desktop branches.
+accel_start="void TextureCacheRuntime::AccelerateImageUpload("
+accel_end="\n}\n\nvoid TextureCacheRuntime::TransitionImageLayout("
+assert runtime_src.count(accel_start)==1
+assert accel_end in runtime_src[runtime_src.index(accel_start):]
+accel=runtime_src[runtime_src.index(accel_start):
+                  runtime_src.index(accel_end,runtime_src.index(accel_start))+2]
+assert "F07 native BCn 3D unavailable pass retry signal" in (
+    root/"tools/prepare-vulkan-port.py").read_text()
+assert "throw std::runtime_error" in accel
+assert accel.index("throw std::runtime_error") < accel.index(
+    "ASSERT(false &&", accel.index("if (!Settings::values.gpu_unswizzle_enabled"))
+accelerated_cpp=r"""
+#include <cassert>
+#include <cstdint>
+#include <optional>
+#include <span>
+#include <stdexcept>
+using u32=std::uint32_t;
+enum class ImageType {e2D,e3D};
+struct Image {
+    struct Info {int format{};ImageType type{ImageType::e3D};
+        struct Resources {int levels{1},layers{1};} resources;} info{};
+};
+struct StagingBufferRef {};
+namespace VideoCommon {struct SwizzleParameters {};}
+bool IsPixelFormatASTC(int fmt){return fmt==2;}
+bool IsPixelFormatBCn(int fmt){return fmt==1;}
+#define ASSERT(...) ((void)0)
+namespace Settings {
+struct Toggle {bool value{};bool GetValue()const{return value;}};
+struct Values {Toggle gpu_unswizzle_enabled;};
+inline Values values{};
+}
+struct Pass {
+    unsigned calls{};
+    void Assemble(Image&,const StagingBufferRef&,std::span<const VideoCommon::SwizzleParameters>) {
+        ++calls;
+    }
+    void Unswizzle(Image&,const StagingBufferRef&,
+                   std::span<const VideoCommon::SwizzleParameters>,u32,u32) {
+        ++calls;
+    }
+};
+struct TextureCacheRuntime {
+    std::optional<Pass> astc_decoder_pass;
+    std::optional<Pass> bl3d_unswizzle_pass;
+    void AccelerateImageUpload(Image&,const StagingBufferRef&,
+                               std::span<const VideoCommon::SwizzleParameters>,u32,u32);
+};
+""" + accel + r"""
+int main(){
+    Image image;image.info.format=1;
+    StagingBufferRef staging{};
+    TextureCacheRuntime cache;
+    Settings::values.gpu_unswizzle_enabled.value=true;
+    bool rejected=false;
+    try{cache.AccelerateImageUpload(image,staging,{},0,1);}
+    catch(const std::runtime_error&){rejected=true;}
+#ifdef PS5_NATIVE
+    assert(rejected);
+#else
+    assert(!rejected);
+#endif
+    cache.bl3d_unswizzle_pass.emplace();
+    cache.AccelerateImageUpload(image,staging,{},0,1);
+    assert(cache.bl3d_unswizzle_pass->calls==1);
+    Settings::values.gpu_unswizzle_enabled.value=false;
+    rejected=false;
+    try{cache.AccelerateImageUpload(image,staging,{},0,1);}
+    catch(const std::runtime_error&){rejected=true;}
+#ifdef PS5_NATIVE
+    assert(rejected);
+#else
+    assert(!rejected);
+#endif
+    Settings::values.gpu_unswizzle_enabled.value=true;
+    Image astc;astc.info.format=2;
+    cache.astc_decoder_pass.emplace();
+    cache.AccelerateImageUpload(astc,staging,{},0,0);
+    assert(cache.astc_decoder_pass->calls==1);
+}
+"""
+with tempfile.TemporaryDirectory(prefix="eden-f07-bcn3d-unavailable-") as folder:
+    source=Path(folder)/"unavailable.cpp"
+    source.write_text(accelerated_cpp)
+    for native in (False,True):
+        for opt in ("-O0","-O2"):
+            binary=Path(folder)/("unavailable"+opt[1:]+("-ps5" if native else "-desktop"))
+            command=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                     *(['-DPS5_NATIVE=1'] if native else []),
+                     str(source),"-o",str(binary)]
+            built=subprocess.run(command,capture_output=True,text=True,timeout=40)
+            assert built.returncode==0,(native,opt,built.stderr[-5000:])
+            result=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
+            assert result.returncode==0,(native,opt,result.stderr[-5000:])
+print("F07_BCN3D_PASS_UNAVAILABLE_SIGNAL_PASS missing_pass=1 settings_changed=1 valid_bc3d=1 astc=1 ps5=1 desktop=1 O0=1 O2=1")

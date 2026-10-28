@@ -4062,3 +4062,14 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));\n#ifdef PS5_NATIVE\n    staging_phase.Stop();",
     "#ifdef PS5_NATIVE\n    const size_t upload_size = MapSizeBytes(image);\n    auto staging = runtime.UploadStagingBuffer(upload_size);\n    if (staging.mapped_span.size_bytes() < upload_size) {\n        // No valid image bytes can be uploaded from an incomplete mapping.\n        // The existing rollback scope guard retains CpuModified for retry.\n        return;\n    }\n#else\n    auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));\n#endif\n#ifdef PS5_NATIVE\n    staging_phase.Stop();",
     "F07 reject short native sync upload staging")
+
+# F07 P0.4: native BCn-3D upload cannot complete without a compute pass.
+# The queued caller catches the failure and retains the CPU guest revision.
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "#include <optional>\n#include <span>",
+    "#include <optional>\n#include <stdexcept>\n#include <span>",
+    "F07 native BCn 3D unavailable pass exception include")
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "        if (IsPixelFormatBCn(image.info.format) && image.info.type == ImageType::e3D) {\n            ASSERT(false && \"GPU unswizzle is disabled for BCn 3D texture\");\n        }\n        ASSERT(false);\n        return;",
+    "        if (IsPixelFormatBCn(image.info.format) && image.info.type == ImageType::e3D) {\n#ifdef PS5_NATIVE\n            // Never silently acknowledge a BCn-3D upload with no compute\n            // pass. TickAsyncUnswizzle catches this and retries fresh pixels.\n            throw std::runtime_error(\"BCn 3D Vulkan unswizzle pass unavailable\");\n#else\n            ASSERT(false && \"GPU unswizzle is disabled for BCn 3D texture\");\n#endif\n        }\n        ASSERT(false);\n        return;",
+    "F07 native BCn 3D unavailable pass retry signal")

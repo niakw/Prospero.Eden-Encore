@@ -12,6 +12,7 @@
 #include <limits>
 #include <array>
 #include <optional>
+#include <stdexcept>
 #include <span>
 #include <memory>
 #include <utility>
@@ -3189,7 +3190,13 @@ void TextureCacheRuntime::AccelerateImageUpload(
 
     if (!Settings::values.gpu_unswizzle_enabled.GetValue() || !bl3d_unswizzle_pass) {
         if (IsPixelFormatBCn(image.info.format) && image.info.type == ImageType::e3D) {
+#ifdef PS5_NATIVE
+            // Never silently acknowledge a BCn-3D upload with no compute
+            // pass. TickAsyncUnswizzle catches this and retries fresh pixels.
+            throw std::runtime_error("BCn 3D Vulkan unswizzle pass unavailable");
+#else
             ASSERT(false && "GPU unswizzle is disabled for BCn 3D texture");
+#endif
         }
         ASSERT(false);
         return;
