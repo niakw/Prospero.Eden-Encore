@@ -36,8 +36,10 @@ assert "critical_memory : expected_memory" in projected
 assert "return usage < projected_stop;" in projected
 assert projected.count("::Eden::Performance::KeepDirtyTextures()") == 1
 assert "return NoteProjectedEviction(image);" in record
-assert record.count("return true;") == 1
+# One true ends a full batch; the PS5-only second true rejects invalid staging.
+assert record.count("return true;") == 2
 assert record.index("return NoteProjectedEviction(image);") < record.index("return true;")
+assert record.index("if (!map.buffer || map.mapped_span.size_bytes() < image.unswizzled_size_bytes)") < record.rindex("return true;")
 assert gc.count("return NoteProjectedEviction(image);") == 2
 assert "gc_downloads.size() == gc_prefetch_limit" in record
 assert "image.unswizzled_size_bytes > 32_MiB - bytes" in record
