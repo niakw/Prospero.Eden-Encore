@@ -1508,6 +1508,14 @@ void TextureCache<P>::PopAsyncFlushes() {
     if constexpr (IMPLEMENTS_ASYNC_DOWNLOADS) {
         const auto& download_ids = committed_downloads.front();
         if (download_ids.empty()) {
+#ifdef PS5_NATIVE
+            // An empty async batch can still own deferred staging handles
+            // after an interrupted DMA or an empty pair publication.
+            // StagingBufferRef is non-owning: dequeueing it is not a free.
+            for (auto& buffer : async_buffers.front()) {
+                runtime.FreeDeferredStagingBuffer(buffer);
+            }
+#endif
             committed_downloads.pop_front();
             async_buffers.pop_front();
             return;

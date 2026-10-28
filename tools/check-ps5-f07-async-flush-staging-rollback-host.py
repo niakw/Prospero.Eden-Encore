@@ -11,8 +11,17 @@ generator=(root/"tools/prepare-vulkan-port.py").read_text()
 start=source.index("void TextureCache<P>::CommitAsyncFlushes() {")
 end=source.index("\ntemplate <class P>",start+20)
 method=source[start:end]
+pop_start=source.index("void TextureCache<P>::PopAsyncFlushes() {",end)
+pop_end=source.index("\ntemplate <class P>",pop_start+20)
+pop=source[pop_start:pop_end]
+empty_start=pop.index("        if (download_ids.empty()) {")
+empty_end=pop.index("        auto download_map =",empty_start)
+empty_pop=pop[empty_start:empty_end]
 assert "F07 return deferred staging when async flush batch preparation fails" in generator
 assert "F07 rollback async download queue pair on second insertion failure" in generator
+assert "F07 release deferred staging from empty async download batch" in generator
+assert "runtime.FreeDeferredStagingBuffer(buffer);" in empty_pop
+assert empty_pop.index("runtime.FreeDeferredStagingBuffer(buffer);") < empty_pop.index("committed_downloads.pop_front();")
 assert "const size_t initial_staging_count = uncommitted_async_buffers.size();" in method
 assert "committed_downloads.emplace_back(std::move(uncommitted_downloads));" in method
 assert "uncommitted_async_buffers = std::move(async_buffers.back());" in method
@@ -96,12 +105,17 @@ template<class P> struct TextureCache {
             values.emplace_back(std::forward<T>(item));
         }
         bool empty() const {return values.empty();}
+        void pop_front() {values.pop_front();}
         std::size_t size() const {return values.size();}
         const std::vector<PendingDownload>& front() const {return values.front();}
     } committed_downloads;
     std::deque<std::vector<Staging>> async_buffers;
     Runtime runtime;
     void CommitAsyncFlushes();
+    void PopEmptyAsyncFlushes() {
+        const auto& download_ids = committed_downloads.front();
+__EMPTY_POP__
+    }
 };
 struct NativePolicy {};
 __METHOD__
@@ -171,9 +185,16 @@ int main() {
     empty_batch.CommitAsyncFlushes();
     assert(empty_batch.committed_downloads.size()==1 && empty_batch.async_buffers.size()==1);
     assert(empty_batch.async_buffers.front()[0].buffer==777);
+    empty_batch.PopEmptyAsyncFlushes();
+    assert(empty_batch.runtime.releases==1);
+    assert(empty_batch.committed_downloads.empty() && empty_batch.async_buffers.empty());
+    TextureCache<NativePolicy> harmless_empty;
+    harmless_empty.CommitAsyncFlushes();
+    harmless_empty.PopEmptyAsyncFlushes();
+    assert(harmless_empty.runtime.releases==0);
 #endif
 }
-""".replace("__METHOD__", "template<class P>\n" + method)
+""".replace("__METHOD__", "template<class P>\n" + method).replace("__EMPTY_POP__", empty_pop)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler,"C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="eden-f07-async-batch-") as dir:
