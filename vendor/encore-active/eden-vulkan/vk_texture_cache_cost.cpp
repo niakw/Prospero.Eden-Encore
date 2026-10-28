@@ -1212,6 +1212,13 @@ void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
         }
         total_size += bytes;
     }
+    // GetTemporaryBuffer indexes an array of 8*sizeof(size_t) buffers with
+    // ceil(log2(size)). Values above the highest power of two index the
+    // array one past its end even though size_t arithmetic did not overflow.
+    constexpr size_t scratch_max = size_t{1} << (std::numeric_limits<size_t>::digits - 1);
+    if (total_size > scratch_max) {
+        return;
+    }
 #else
     for (const auto& copy : copies) {
         total_size += copy.extent.width * copy.extent.height * copy.extent.depth * img_bpp;

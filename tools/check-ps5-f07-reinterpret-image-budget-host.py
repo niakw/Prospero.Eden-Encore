@@ -38,6 +38,9 @@ assert "if (total_size > max_size - bytes)" in size
 assert "width > max_size / height" in size
 assert "area > max_size / depth" in size
 assert "volume > max_size / img_bpp" in size
+assert "scratch_max = size_t{1} << (std::numeric_limits<size_t>::digits - 1)" in size
+assert "if (total_size > scratch_max)" in size
+assert "F07 reject scratch sizes outside Vulkan transient buffer slots" in generator
 assert size.index("#else\n    for (const auto& copy") > size.index("#ifdef PS5_NATIVE")
 assert size.index("const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);") > size.index("#endif")
 cpp=r"""
@@ -101,7 +104,16 @@ int main() {
 #ifdef PS5_NATIVE
     assert(product.calls==0);
 #endif
+    // A positive, non-overflowing size above the last scratch-array slot
+    // must also be rejected before GetTemporaryBuffer can index past it.
     Image one_byte{{1}};
+    Runtime above_slot;
+    above_slot.ReinterpretImage(one_byte,{{{max,max,1}}});
+#ifdef PS5_NATIVE
+    assert(above_slot.calls==0);
+#endif
+    // Keep an independent accumulative overflow witness in the source;
+    // the scratch slot ceiling normally rejects this sequence even earlier.
     Runtime aggregate;
     aggregate.ReinterpretImage(one_byte,{{{max,max,1}},{{max,max,1}}});
 #ifdef PS5_NATIVE
@@ -124,4 +136,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-vulkan-reinterpret-") as folde
             assert built.returncode==0,(native,opt,built.stderr[-6000:])
             ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
-print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 valid=1 desktop_original=1 O0=1 O2=1")
+print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 valid=1 desktop_original=1 O0=1 O2=1")
