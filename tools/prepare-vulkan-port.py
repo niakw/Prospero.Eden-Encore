@@ -4340,3 +4340,10 @@ apply_reviewed_delta("vulkan_rasterizer.cpp",
     "    const auto [buffer, offset] =\n        buffer_cache.ObtainBuffer(buffer_operand.address, buffer_size, sync_info, post_op);\n\n    const auto [image, copy]",
     "    const auto [buffer, offset] =\n        buffer_cache.ObtainBuffer(buffer_operand.address, buffer_size, sync_info, post_op);\n#ifdef PS5_NATIVE\n    // Guest size alone does not prove a valid GPU buffer handle.\n    if (!buffer || buffer->Handle() == VK_NULL_HANDLE) {\n        return false;\n    }\n#endif\n\n    const auto [image, copy]",
     "F07 DMA image reject null Vulkan handles")
+
+# F07 PS5: DMA clear sizes count u32 words and are already rejected by the
+# buffer cache. Refuse impossible counts before contending on its mutex.
+apply_reviewed_delta("vulkan_rasterizer.cpp",
+    "bool AccelerateDMA::BufferClear(GPUVAddr src_address, u64 amount, u32 value) {\n    std::scoped_lock lock{buffer_cache.mutex};\n    return buffer_cache.DMAClear(src_address, amount, value);\n}",
+    "bool AccelerateDMA::BufferClear(GPUVAddr src_address, u64 amount, u32 value) {\n#ifdef PS5_NATIVE\n    // The DMA clear count is in u32 words. Reject zero and oversized GPU\n    // fills before waiting for the guest buffer-cache mutex.\n    if (amount == 0 || amount > static_cast<u64>(~u32{0}) / sizeof(u32)) {\n        return false;\n    }\n#endif\n    std::scoped_lock lock{buffer_cache.mutex};\n    return buffer_cache.DMAClear(src_address, amount, value);\n}",
+    "F07 reject invalid DMA clear words before the buffer mutex")
