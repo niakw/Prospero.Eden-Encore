@@ -193,3 +193,74 @@ with tempfile.TemporaryDirectory(prefix="f07-optional-backlog-") as folder:
         assert run.returncode == 0, (optimization, run.stdout, run.stderr[-5000:])
 print("F07_OPTIONAL_BACKLOG_HOST_PASS max_pending=16 overflow_skipped=24 cancellation=8"
       " reject_no_leak=1 driver_failure=1 reuse=1 O0=1 O2=1")
+
+# The actual first-use builder must survive a rejected *optional* rebuild.
+# Extract its precise driver branch and compile the resulting caller.
+needle="            if (::Eden::DevVulkan::fast_first_pipelines && fast_first_runtime) {"
+assert source.count(needle)==1
+b=source.index(needle)
+builder=source[b:source.index("            if (pipeline_statistics && pipeline) {",b)]
+assert "F07 isolate optional optimizer enqueue rejection from initial pipeline build" in generator
+assert builder.index("MakePipeline(render_pass, VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT)") < builder.index(
+    "QueueOptimizedPipeline(render_pass)")
+assert "catch (const std::exception& error)" in builder and "catch (...)" in builder
+assert builder.count("QueueOptimizedPipeline(render_pass)") == 2
+builder_cpp = r"""
+#include <cassert>
+#include <stdexcept>
+#define LOG_WARNING(...) ((void)0)
+#define VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT 1
+using VkRenderPass=int;
+namespace Eden::DevVulkan {inline bool fast_first_pipelines=true;}
+struct FirstUse {
+    bool fast_first_runtime=true;
+    bool reject_queue=false;
+    bool reject_unknown=false;
+    bool first_built=false;
+    bool collected=false;
+    int queued{};
+    void MakePipeline(VkRenderPass,int=0) {first_built=true;}
+    void QueueOptimizedPipeline(VkRenderPass) {
+        ++queued;
+        if(reject_unknown)throw 7;
+        if(reject_queue)throw std::runtime_error("mock queue rejected");
+    }
+    void Build(VkRenderPass render_pass) {
+""" + builder + r"""
+        collected=first_built;
+    }
+};
+int main(){
+    for(bool unknown:{false,true}) {
+        FirstUse p;p.reject_queue=!unknown;p.reject_unknown=unknown;
+#ifdef PS5_NATIVE
+        p.Build(1);
+        assert(p.first_built&&p.collected&&p.queued==1);
+#else
+        bool threw=false;
+        try{p.Build(1);}catch(...){threw=true;}
+        assert(threw&&p.first_built&&!p.collected&&p.queued==1);
+#endif
+    }
+    FirstUse good;good.Build(2);
+    assert(good.first_built&&good.collected&&good.queued==1);
+    FirstUse direct;direct.fast_first_runtime=false;direct.Build(3);
+    assert(direct.first_built&&direct.collected&&direct.queued==0);
+}
+"""
+# A C++ range over {bool,bool} requires initializer_list in both builds.
+builder_cpp=builder_cpp.replace("#include <cassert>","#include <cassert>\n#include <initializer_list>")
+with tempfile.TemporaryDirectory(prefix="f07-optional-first-use-builder-") as folder:
+    p=Path(folder)/"first.cpp"
+    p.write_text(builder_cpp)
+    for native in (True,False):
+        for opt in ("-O0","-O2"):
+            exe=Path(folder)/("first"+opt[1:]+("-ps5" if native else "-desktop"))
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror"]
+            if native:cmd.append("-DPS5_NATIVE=1")
+            built=subprocess.run([*cmd,str(p),"-o",str(exe)],
+                                 capture_output=True,text=True,timeout=35)
+            assert built.returncode==0,(native,opt,built.stderr[-5000:])
+            ran=subprocess.run([str(exe)],capture_output=True,text=True,timeout=15)
+            assert ran.returncode==0,(native,opt,ran.stderr[-5000:])
+print("F07_OPTIONAL_BUILDER_FAILURE_ISOLATION_PASS first_use_ready=1 reject_known=1 reject_unknown=1 desktop_unchanged=1 O0=1 O2=1")
