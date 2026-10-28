@@ -3895,3 +3895,12 @@ apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
     "    } catch (...) {\n        transition_keys.pop_back();\n        throw;\n    }\n#else\n    transitions.push_back(transition);",
     "    } catch (...) {\n        // Transition memoization is optional. The primary graphics cache\n        // already owns the pipeline; a later lookup can use its slow path.\n        // Do not abort a guest draw solely because this edge could not fit.\n        transition_keys.pop_back();\n        return;\n    }\n#else\n    transitions.push_back(transition);",
     "F07 optional transition OOM no-throw fallback")
+
+# F07: the FIRST optional transition-vector append can also fail under
+# low memory. Ignore its allocation failure on native PS5 just like a failed
+# pointer append; neither failure should abort a draw when graphics_cache
+# already owns the target pipeline. Non-PS5 behavior remains unchanged.
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {\n    transition_keys.push_back(transition->key);\n#ifdef PS5_NATIVE\n    // Both arrays must describe the same transition index. An allocation",
+    "void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {\n#ifdef PS5_NATIVE\n    // Both appends are optional memoization. The canonical graphics cache\n    // already owns the target and will resolve a missing edge on demand.\n    try {\n        transition_keys.push_back(transition->key);\n    } catch (...) {\n        return;\n    }\n#else\n    transition_keys.push_back(transition->key);\n#endif\n#ifdef PS5_NATIVE\n    // Both arrays must describe the same transition index. An allocation",
+    "F07 optional transition first append OOM guard")

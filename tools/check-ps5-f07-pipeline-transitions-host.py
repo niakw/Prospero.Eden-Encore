@@ -33,6 +33,8 @@ append_method = source[source.index(append_begin):source.index(append_end,source
 assert "transition_keys.pop_back();" in append_method
 assert "F07 graphics transition append rollback" in generator
 assert "F07 optional transition OOM no-throw fallback" in generator
+assert "F07 optional transition first append OOM guard" in generator
+assert append_method.count("catch (...)") == 2
 assert "transition_keys.pop_back();\n        return;" in append_method
 
 cpp = r"""
@@ -64,7 +66,7 @@ struct GraphicsPipelineCacheKey {
 };
 struct GraphicsPipeline {
     GraphicsPipelineCacheKey key{};
-    std::vector<GraphicsPipelineCacheKey> transition_keys;
+    FailPointerAppend<GraphicsPipelineCacheKey> transition_keys;
     FailPointerAppend<GraphicsPipeline*> transitions;
 #ifdef PS5_NATIVE
     size_t hot_transition_index{};
@@ -135,6 +137,16 @@ int main() {
     resilient.AddTransition(&targets[1]);
     assert(resilient.transition_keys.size() == resilient.transitions.size());
     assert(resilient.Next(targets[1].key) == &targets[1]);
+    // Failure of the FIRST vector append must also return without throwing.
+    FailPointerAppend<GraphicsPipelineCacheKey>::reject_next = true;
+    resilient.AddTransition(&targets[2]);
+    assert(!FailPointerAppend<GraphicsPipelineCacheKey>::reject_next);
+    assert(resilient.transition_keys.size() == 2);
+    assert(resilient.transitions.size() == 2);
+    assert(resilient.Next(targets[2].key) == nullptr);
+    resilient.AddTransition(&targets[2]);
+    assert(resilient.transition_keys.size() == resilient.transitions.size());
+    assert(resilient.Next(targets[2].key) == &targets[2]);
 #endif
 }
 """
@@ -150,4 +162,4 @@ with tempfile.TemporaryDirectory(prefix="encore-f07-transition-") as folder:
                             optimize, *define, str(path), "-o", str(exe)],
                            capture_output=True, text=True, check=True, timeout=40)
             subprocess.run([str(exe)], check=True, timeout=15)
-print("F07_GRAPHICS_TRANSITION_HOST_PASS native=1 desktop=1 O0=1 O2=1 order=1 miss=1 oom_rollback=1 nonfatal=1")
+print("F07_GRAPHICS_TRANSITION_HOST_PASS native=1 desktop=1 O0=1 O2=1 order=1 miss=1 oom_rollback=1 nonfatal_both_vectors=1")
