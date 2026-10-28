@@ -448,6 +448,7 @@ jobs:
           python3 -B tools/check-ps5-f07-graphics-descriptor-record-rollback-host.py
           python3 -B tools/check-ps5-f07-pipeline-transitions-host.py
           python3 -B tools/check-ps5-f07-pipeline-publication-host.py
+          python3 -B tools/check-ps5-f07-scheduler-record-rollback-host.py
           python3 -B tools/check-ps5-f07-compute-ready-callback-host.py
           python3 -B tools/check-ps5-f07-compute-pair-profiling-host.py
           python3 -B tools/check-ps5-f07-compute-indirect-binding-host.py
