@@ -221,3 +221,7 @@ Dans `AccelerateDMA::DmaBufferImageCopy`, le produit `pitch × height` peut êtr
 ## P0.3 — handles Vulkan dans les transferts DMA et dispatchs indirects
 
 Les chemins PS5 `AccelerateDMA::DmaBufferImageCopy` et `RasterizerVulkan::DispatchCompute` refusent désormais un buffer invité inexistant ou un `VkBuffer` nul après `ObtainBuffer`. Le DMA peut alors revenir à son fallback logiciel et le dispatch indirect n'enregistre ni contexte ni barrière avec ce handle. Le comportement desktop est inchangé. Le générateur et la variante `guest-bridge` suivent le source actif ; tests source-extraits renforcés. Aucune mesure de FPS ou de fraîcheur HUD sur console n'est encore revendiquée.
+
+## P0.3 — DMA clear sans verrou pour les volumes impossibles
+
+`AccelerateDMA::BufferClear` évite désormais `buffer_cache.mutex` sur PS5 pour un nombre nul de mots `u32` ou pour une multiplication par quatre qui ne rentre pas dans le span `u32` de `FindBuffer`. Le contrôle est identique à celui de `BufferCache::DMAClear`, qui reste la validation sous verrou pour les demandes valides. Le chemin desktop conserve son ordre de traduction et de verrouillage. Test source-extrait prévu avec appels nuls, première valeur hors limite, dernière valeur valide et quatre variantes compilées en O0/O2 + UBSan. Aucun résultat console de frametime n'est déduit.

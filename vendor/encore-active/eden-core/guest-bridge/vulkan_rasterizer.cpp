@@ -1495,6 +1495,13 @@ AccelerateDMA::AccelerateDMA(BufferCache& buffer_cache_, TextureCache& texture_c
     : buffer_cache{buffer_cache_}, texture_cache{texture_cache_}, scheduler{scheduler_} {}
 
 bool AccelerateDMA::BufferClear(GPUVAddr src_address, u64 amount, u32 value) {
+#ifdef PS5_NATIVE
+    // The DMA clear count is in u32 words. Reject zero and oversized GPU
+    // fills before waiting for the guest buffer-cache mutex.
+    if (amount == 0 || amount > static_cast<u64>(~u32{0}) / sizeof(u32)) {
+        return false;
+    }
+#endif
     std::scoped_lock lock{buffer_cache.mutex};
     return buffer_cache.DMAClear(src_address, amount, value);
 }

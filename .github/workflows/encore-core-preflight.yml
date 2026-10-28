@@ -109,6 +109,7 @@ jobs:
           python3 -B tools/check-ps5-known-empty-graphics-descriptors-host.py
           python3 -B tools/check-ps5-compute-empty-descriptors-host.py
           python3 -B tools/check-ps5-dma-buffer-copy-span-host.py
+          python3 -B tools/check-ps5-f07-dma-clear-prelock-host.py
           python3 -B tools/check-ps5-f07-inline-dma-buffer-elision-host.py
           python3 -B tools/check-ps5-f07-dma-image-prelock-span-host.py
           python3 -B tools/check-ps5-empty-image-stage-host.py
