@@ -31,3 +31,7 @@
 ## Règles de clôture
 
 L'état d'une fonction peut être « relue sans changement », « corrigée et testée hôte », « intégrée/build 4/4 » ou « validée console ». Aucun de ces états n'est automatiquement la preuve que les 30 FPS sont stables, que le HUD est frais ou que les pauses/mi-temps ne bloquent plus. Une campagne PS5 commune, avec comparaison des retards >50/>100 ms, images réellement nouvelles et progression guest, reste nécessaire pour fermer les P0.
+
+## Revue ciblée P0.1 — nouveaux échecs de traduction après saturation du budget
+
+Les deux fonctions `CurrentGraphicsPipelineSlowPath` et `CurrentComputePipeline` sont modifiées dans le lot de reprise P0.1 : avec plus de 64 clés graphiques ou 32 clés compute ayant échoué, le nouvel échec obtient également **une tentative différée**. La carte de reprise reste plafonnée en recyclant la clé au délai `eligible_at` le plus ancien, sur le chemin **d'échec froid seulement**. Les clés rejetées par saturation restent sans nouvelle tentative ; il s'agit d'un compromis borné, pas d'un système de retries illimités. Les deux témoins C++ extraient le code réel, couvrent `-O0`/`-O2`, et démontrent la saturation ainsi que l'absence de tempête sur un même shader. Aucun chiffre FPS ou récupération HUD sur console n'est revendiqué.
