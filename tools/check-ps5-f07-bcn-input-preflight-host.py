@@ -53,7 +53,6 @@ struct Pass {
 int main() {
     Pass p;
     Image image{{{8}},128};
-    Staging staging{17,8};
     Swizzle valid[2]{{0},{8}};
     const auto run=[&](std::span<const Swizzle> sw,u32 z,u32 n,Staging sg=Staging{17,8}) {
         bool failed=false;
