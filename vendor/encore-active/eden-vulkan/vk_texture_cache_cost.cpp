@@ -1807,6 +1807,13 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
 
 void TextureCacheRuntime::CopyImageMSAA(Image& dst, Image& src,
                                         std::span<const VideoCommon::ImageCopy> copies) {
+#ifdef PS5_NATIVE
+    // A zero-region MSAA transfer cannot write any pixels. Avoid building
+    // depth/color helper pipelines and recording a useless Vulkan batch.
+    if (copies.empty()) {
+        return;
+    }
+#endif
     const bool msaa_to_non_msaa = src.info.num_samples > 1 && dst.info.num_samples == 1;
     const u32 num_samples = msaa_to_non_msaa ? src.info.num_samples : dst.info.num_samples;
     if (ENABLE_MSAA_RESOLVE_CONSUME && msaa_to_non_msaa && copies.size() == 1 &&

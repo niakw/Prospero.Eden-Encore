@@ -51,6 +51,17 @@ assert "if (copy_buffer == VK_NULL_HANDLE)" in size
 assert size.index("if (copy_buffer == VK_NULL_HANDLE)") < size.index("InvalidateResolveShadow(dst.Handle());")
 assert "F07 preserve resolve validity on rejected size-incompatible CopyImage" in generator
 assert "F07 skip empty size-compatible native Vulkan CopyImage without stale resolve" in generator
+assert "F07 skip empty native MSAA image copies before helper GPU dispatch" in generator
+msaa_start="void TextureCacheRuntime::CopyImageMSAA(Image& dst, Image& src,"
+assert source.count(msaa_start)==1
+msaa_source=source[source.index(msaa_start):]
+msaa_guard_start="#ifdef PS5_NATIVE\\n    // A zero-region MSAA transfer"
+msaa_end="    const bool msaa_to_non_msaa ="
+assert msaa_source.count(msaa_guard_start)==1 and msaa_source.count(msaa_end)==1
+msaa_guard=msaa_source[msaa_source.index(msaa_guard_start):msaa_source.index(msaa_end)]
+assert "if (copies.empty())" in msaa_guard
+assert msaa_guard.index("if (copies.empty())") < msaa_guard.index("return;")
+
 copy_start="void TextureCacheRuntime::CopyImage(Image& dst, Image& src,"
 copy_end="    // As per the size-compatible formats section of vulkan, copy manually via ReinterpretImage"
 assert source.count(copy_start)==source.count(copy_end)==1
@@ -108,6 +119,11 @@ __SOURCE_COPY_GUARD__
             ++direct_copies;
         }
     }
+    std::size_t msaa_copies{};
+    void CopyImageMSAA(const std::vector<ImageCopy>& copies) {
+__SOURCE_MSAA_GUARD__
+        ++msaa_copies;
+    }
 };
 int main() {
     Image normal{{4}};
@@ -140,6 +156,16 @@ int main() {
     assert(empty_compatible.calls==0 && empty_compatible.invalidates==1 &&
            empty_compatible.direct_copies==1);
 #endif
+    Runtime msaa_empty;
+    msaa_empty.CopyImageMSAA({});
+#ifdef PS5_NATIVE
+    assert(msaa_empty.msaa_copies==0);
+#else
+    assert(msaa_empty.msaa_copies==1);
+#endif
+    Runtime msaa_valid;
+    msaa_valid.CopyImageMSAA({{{4,5,1}}});
+    assert(msaa_valid.msaa_copies==1);
     Runtime mismatch;
     Image second_format{{8}};
     mismatch.CopyImage(normal,second_format,{{{4,5,1}}});
@@ -196,7 +222,7 @@ int main() {
     assert(aggregate.calls==0 && aggregate.invalidates==0);
 #endif
 }
-""".replace("__SOURCE_EMPTY_GUARD__",early).replace("__SOURCE_SIZE_GUARD__",size).replace("__SOURCE_COPY_GUARD__",copy_guard)
+""".replace("__SOURCE_EMPTY_GUARD__",early).replace("__SOURCE_SIZE_GUARD__",size).replace("__SOURCE_COPY_GUARD__",copy_guard).replace("__SOURCE_MSAA_GUARD__",msaa_guard)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler,"F07 reinterpret scratch witness needs C++20 compiler"
 with tempfile.TemporaryDirectory(prefix="eden-f07-vulkan-reinterpret-") as folder:
@@ -212,4 +238,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-vulkan-reinterpret-") as folde
             assert built.returncode==0,(native,opt,built.stderr[-6000:])
             ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
-print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 null_handle_not_submitted=1 copy_reinterpret_shadow=1 empty_copy_noop=1 valid=1 desktop_original=1 O0=1 O2=1")
+print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 null_handle_not_submitted=1 copy_reinterpret_shadow=1 empty_copy_noop=1 empty_msaa_noop=1 valid=1 desktop_original=1 O0=1 O2=1")

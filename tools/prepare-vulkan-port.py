@@ -4233,6 +4233,25 @@ apply_reviewed_delta("vk_texture_cache_cost.cpp",
     "    // ReinterpretImage owns invalidation",
     "F07 skip empty size-compatible native Vulkan CopyImage without stale resolve")
 
+# F07: empty MSAA copies are true no-ops; the helper's GPU pipeline
+# dispatch cannot mutate any destination pixels with no copy regions.
+# Preserve desktop's original path for source parity and diagnostics.
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "void TextureCacheRuntime::CopyImageMSAA(Image& dst, Image& src,\n"
+    "                                        std::span<const VideoCommon::ImageCopy> copies) {\n"
+    "    const bool msaa_to_non_msaa = src.info.num_samples > 1 && dst.info.num_samples == 1;",
+    "void TextureCacheRuntime::CopyImageMSAA(Image& dst, Image& src,\n"
+    "                                        std::span<const VideoCommon::ImageCopy> copies) {\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // A zero-region MSAA transfer cannot write any pixels. Avoid building\n"
+    "    // depth/color helper pipelines and recording a useless Vulkan batch.\n"
+    "    if (copies.empty()) {\n"
+    "        return;\n"
+    "    }\n"
+    "#endif\n"
+    "    const bool msaa_to_non_msaa = src.info.num_samples > 1 && dst.info.num_samples == 1;",
+    "F07 skip empty native MSAA image copies before helper GPU dispatch")
+
 # F07 P0.4: on PS5, a zero/invalid texture reinterpret must not mark the
 # existing MSAA resolve shadow stale. Move invalidation after scratch allocation
 # and bounds checks, retaining it before the actual Vulkan command recording.
