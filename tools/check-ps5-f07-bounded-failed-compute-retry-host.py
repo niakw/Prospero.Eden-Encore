@@ -27,10 +27,17 @@ assert "failed_compute_retries" not in pinned
 
 cpp = r"""
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <map>
 #include <memory>
+// Source-extracted compute retry probes use the production profiling guards.
+namespace Eden { namespace Performance {
+enum class CachePhase { ComputePipelineCreate };
+inline std::atomic_bool detailed_gpu_profile{false};
+struct CachePhaseTimer { CachePhaseTimer(CachePhase, bool) {} };
+}}
 class PipelineCache {
 public:
     struct ComputeRetryState {
