@@ -2240,8 +2240,27 @@ void TextureCache<P>::TickAsyncUnswizzle() {
         const u32 z_count = (std::min)(slices_to_process, image.info.size.depth - z_start);
 
         if (z_count > 0) {
+#ifdef PS5_NATIVE
+            try {
+#endif
             const auto uploads = FullUploadSwizzles(task.info);
             runtime.AccelerateImageUpload(image, task.staging_buffer, FixSmallVectorADL(uploads), z_start, z_count);
+#ifdef PS5_NATIVE
+            } catch (...) {
+                // Upload setup/recording may reject a batch. Submitted GPU
+                // commands keep their source alive through the deferred pool;
+                // reject the incomplete old revision and retry from guest data.
+                runtime.FreeDeferredStagingBuffer(task.staging_buffer);
+                image.flags |= ImageFlagBits::CpuModified;
+                if (True(image.flags & ImageFlagBits::Tracked)) {
+                    UntrackImage(image, task.image_id);
+                }
+                image.flags &= ~ImageFlagBits::IsDecoding;
+                unswizzle_queue.pop_front();
+                current_unswizzle_frame = 0u;
+                return;
+            }
+#endif
             task.last_submitted_offset += (static_cast<size_t>(z_count) * task.bytes_per_slice);
         }
     }

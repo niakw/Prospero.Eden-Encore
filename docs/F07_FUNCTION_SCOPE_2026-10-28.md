@@ -55,3 +55,7 @@ La construction PS5 de `TextureCacheRuntime` initialise aussi le passage compute
 ## P0.4 — échec pendant la soumission d’une image décodée
 
 En PS5 native, `TickAsyncDecode` intercepte désormais une exception du transfert `Image::UploadMemory` après la conversion asynchrone. Le contexte est relâché après déverrouillage, `IsDecoding` est effacé, la texture est détrackée et `CpuModified` est conservé pour un nouvel upload. Le staging ordinaire n’est pas libéré avec l’API différée (qui suppose une allocation `deferred`). Le témoin source-extrait force l’échec et vérifie la récupération au décodage suivant. Pas de preuve console/FPS.
+
+## P0.4 — rejet de soumission des lots BCn 3D
+
+Si `FullUploadSwizzles` ou `AccelerateImageUpload` échoue au cours d’un lot, la branche native abandonne la révision incomplète, restitue le staging en différé, conserve `CpuModified`, efface `IsDecoding`, détracke la texture et retire la tâche de la file. Le prochain upload peut reprendre sur les octets invités courants. Un harnais C++ source-extrait exécute les chemins échec et succès sous O0/O2. L’état de la console reste non mesuré.
