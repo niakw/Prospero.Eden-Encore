@@ -55,7 +55,7 @@ assert "F07 skip empty native MSAA image copies before helper GPU dispatch" in g
 msaa_start="void TextureCacheRuntime::CopyImageMSAA(Image& dst, Image& src,"
 assert source.count(msaa_start)==1
 msaa_source=source[source.index(msaa_start):]
-msaa_guard_start="#ifdef PS5_NATIVE\\n    // A zero-region MSAA transfer"
+msaa_guard_start="#ifdef PS5_NATIVE\n    // A zero-region MSAA transfer"
 msaa_end="    const bool msaa_to_non_msaa ="
 assert msaa_source.count(msaa_guard_start)==1 and msaa_source.count(msaa_end)==1
 msaa_guard=msaa_source[msaa_source.index(msaa_guard_start):msaa_source.index(msaa_end)]
