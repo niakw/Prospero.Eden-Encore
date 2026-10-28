@@ -9,6 +9,7 @@
 #include <array>
 #include "common/scope_exit.h"
 #include "performance.h"
+#include <cstring>
 #include <memory>
 #include <vector>
 
