@@ -173,3 +173,7 @@ Sur PS5, `CommitAsyncFlushes` peut réserver plusieurs buffers et publier d'abor
 ## P0.4 — vidage des lots asynchrones vides
 
 `PopAsyncFlushes` rend maintenant les handles du lot au pool différé avant de retirer une paire vide de files d'attente, sur PS5 uniquement. Le témoin C++ source-extrait vérifie qu'un handle DMA conservé à travers un échec de publication est rendu exactement une fois et qu'un lot réellement vide ne produit aucune libération. Pas de mesure console à ce stade.
+
+## P0.4 — protection du calcul de taille des lots asynchrones
+
+`CommitAsyncFlushes` additionnait les tailles alignées à 64 octets sans vérifier le débordement de `size_t`. Sur PS5, les deux opérations (alignement et somme) sont désormais vérifiées **avant** la demande de staging. En cas de dépassement, `std::bad_alloc` laisse le lot en attente pour le traitement d'erreur habituel au lieu de créer un buffer Vulkan sous-dimensionné. Le témoin C++ source-extrait couvre les deux débordements, O0/O2, sans modifier le chemin desktop.

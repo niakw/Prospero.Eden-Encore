@@ -20,6 +20,10 @@ empty_pop=pop[empty_start:empty_end]
 assert "F07 return deferred staging when async flush batch preparation fails" in generator
 assert "F07 rollback async download queue pair on second insertion failure" in generator
 assert "F07 release deferred staging from empty async download batch" in generator
+assert "F07 guard overflow before async swizzle staging allocation" in generator
+assert "if (bytes > max_bytes - 63)" in method
+assert "if (aligned_bytes > max_bytes - total_size_bytes)" in method
+assert method.index("if (bytes > max_bytes - 63)") < method.index("runtime.DownloadStagingBuffer(total_size_bytes, true)")
 assert "runtime.FreeDeferredStagingBuffer(buffer);" in empty_pop
 assert empty_pop.index("runtime.FreeDeferredStagingBuffer(buffer);") < empty_pop.index("committed_downloads.pop_front();")
 assert "const size_t initial_staging_count = uncommitted_async_buffers.size();" in method
@@ -36,6 +40,7 @@ cpp=r"""
 #include <cstdint>
 #include <deque>
 #include <new>
+#include <limits>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -192,6 +197,26 @@ int main() {
     harmless_empty.CommitAsyncFlushes();
     harmless_empty.PopEmptyAsyncFlushes();
     assert(harmless_empty.runtime.releases==0);
+    // No host staging request or async queue mutation when aligning a
+    // hostile 3D byte count would wrap size_t.
+    const auto max_size=(std::numeric_limits<std::size_t>::max)();
+    auto align_overflow=MakeCache();
+    align_overflow.slot_images[0].unswizzled_size_bytes=max_size-31;
+    caught=false;
+    try{align_overflow.CommitAsyncFlushes();}catch(const std::bad_alloc&){caught=true;}
+    assert(caught && align_overflow.runtime.requests==0);
+    assert(align_overflow.runtime.releases==0);
+    assert(align_overflow.uncommitted_downloads.size()==2);
+    assert(align_overflow.committed_downloads.empty() && align_overflow.async_buffers.empty());
+    // Each image fits alone, but their aligned aggregate cannot fit.
+    auto sum_overflow=MakeCache();
+    sum_overflow.slot_images[0].unswizzled_size_bytes=max_size-127;
+    caught=false;
+    try{sum_overflow.CommitAsyncFlushes();}catch(const std::bad_alloc&){caught=true;}
+    assert(caught && sum_overflow.runtime.requests==0);
+    assert(sum_overflow.runtime.releases==0);
+    assert(sum_overflow.uncommitted_downloads.size()==2);
+    assert(sum_overflow.committed_downloads.empty() && sum_overflow.async_buffers.empty());
 #endif
 }
 """.replace("__METHOD__", "template<class P>\n" + method).replace("__EMPTY_POP__", empty_pop)
