@@ -206,3 +206,104 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-stale-unswizzle-") as d:
             assert run.returncode==0,(opt,native,run.stdout,run.stderr[-5000:])
 print("F07_UNSWIZZLE_STALE_HOST_PASS native_cancel=1 uninitialized=1"
       " remap=1 deferred_staging=1 desktop_unchanged=1 idle_reset=1 queued_throttle=1 O0=1 O2=1")
+
+# P0.4: compile the actual native batch-submit branch, including exceptions.
+method = active[active.index(method_start):active.index(
+    "\n}\n\ntemplate <class P>\nbool TextureCache<P>::ScaleUp", active.index(method_start))]
+tag = "        if (z_count > 0) {"
+begin = method.index(tag)
+close = "        }\n    }\n\n    // Check if complete"
+assert close in method[begin:]
+block = method[begin:method.index(close, begin)+len("        }\n")]
+assert "F07 failed 3D GPU upload dispatch recovery" in generator
+assert "runtime.FreeDeferredStagingBuffer(task.staging_buffer);" in block
+assert block.index("runtime.AccelerateImageUpload") < block.index("catch (...)")
+assert block.index("image.flags |= ImageFlagBits::CpuModified;") < block.index(
+    "unswizzle_queue.pop_front();")
+cpp_failure = r"""
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <deque>
+#include <stdexcept>
+#include <vector>
+using u32 = std::uint32_t;
+enum class ImageFlagBits : unsigned {CpuModified=1, Tracked=2, IsDecoding=4};
+unsigned operator~(ImageFlagBits f){return ~static_cast<unsigned>(f);}
+struct Flags {
+    unsigned bits{};
+    Flags& operator|=(ImageFlagBits f){bits|=static_cast<unsigned>(f);return *this;}
+    Flags& operator&=(unsigned bits_){bits&=bits_;return *this;}
+};
+unsigned operator&(Flags f,ImageFlagBits b){return f.bits&static_cast<unsigned>(b);}
+bool True(unsigned a){return a!=0;}
+struct Image {Flags flags{};};
+struct Staging {bool allocated{true};};
+struct Task {
+    std::size_t image_id{},last_submitted_offset{},bytes_per_slice{16};
+    int info{};
+    Staging staging_buffer{};
+};
+struct Runtime {
+    bool fail{};
+    unsigned submissions{},frees{};
+    void FreeDeferredStagingBuffer(Staging& s) {
+        assert(s.allocated);s.allocated=false;++frees;
+    }
+    void AccelerateImageUpload(Image&,Staging&,const std::vector<int>&,u32,u32) {
+        ++submissions;
+        if(fail)throw std::runtime_error("mock GPU record rejected");
+    }
+};
+const std::vector<int>& FixSmallVectorADL(const std::vector<int>& v) {return v;}
+struct Cache {
+    std::deque<Task> unswizzle_queue;
+    std::vector<Image> slot_images{1};
+    Runtime runtime;
+    unsigned current_unswizzle_frame{3},untracked{};
+    std::vector<int> FullUploadSwizzles(int) {return {1};}
+    void UntrackImage(Image& image,std::size_t) {
+        assert(True(image.flags&ImageFlagBits::Tracked));
+        image.flags &= ~ImageFlagBits::Tracked;++untracked;
+    }
+    void Submit(u32 z_start,u32 z_count) {
+        auto& task=unswizzle_queue.front();
+        auto& image=slot_images[task.image_id];
+""" + block + r"""
+    }
+};
+int main() {
+    Cache failed;
+    failed.unswizzle_queue.push_back({});
+    failed.slot_images[0].flags|=ImageFlagBits::IsDecoding;
+    failed.slot_images[0].flags|=ImageFlagBits::Tracked;
+    failed.runtime.fail=true;
+    failed.Submit(0,4);
+    assert(failed.unswizzle_queue.empty() && failed.runtime.frees==1);
+    assert(failed.runtime.submissions==1 && failed.current_unswizzle_frame==0);
+    assert(failed.untracked==1);
+    assert(True(failed.slot_images[0].flags & ImageFlagBits::CpuModified));
+    assert(!True(failed.slot_images[0].flags & ImageFlagBits::IsDecoding));
+    assert(!True(failed.slot_images[0].flags & ImageFlagBits::Tracked));
+    Cache recovered;
+    recovered.unswizzle_queue.push_back({});
+    recovered.slot_images[0].flags|=ImageFlagBits::IsDecoding;
+    recovered.Submit(2,3);
+    assert(recovered.unswizzle_queue.front().last_submitted_offset==48);
+    assert(recovered.runtime.submissions==1 && recovered.runtime.frees==0);
+    assert(recovered.current_unswizzle_frame==3);
+}
+"""
+with tempfile.TemporaryDirectory(prefix="eden-f07-3d-dispatch-failure-") as d:
+    p=Path(d)/"batch.cpp"
+    p.write_text(cpp_failure)
+    for opt in ("-O0","-O2"):
+        exe=Path(d)/("batch"+opt[1:])
+        built=subprocess.run([compiler,"-std=c++20",opt,"-DPS5_NATIVE=1",
+                              "-Wall","-Wextra","-Werror","-fsanitize=undefined",
+                              "-fno-sanitize-recover=all",str(p),"-o",str(exe)],
+                             capture_output=True,text=True,timeout=40)
+        assert built.returncode==0,(opt,built.stderr[-5000:])
+        ran=subprocess.run([str(exe)],capture_output=True,text=True,timeout=15)
+        assert ran.returncode==0,(opt,ran.stderr[-5000:])
+print("F07_3D_UPLOAD_FAILURE_RECOVERY_PASS freed=1 dirty=1 pending_cleared=1 retry=1 O0=1 O2=1")
