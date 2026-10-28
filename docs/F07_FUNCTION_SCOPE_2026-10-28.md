@@ -43,3 +43,7 @@ Les fonctions GraphicsPipeline::ConfigureDraw et ComputePipeline::Configure ont 
 ## P0.1 — diagnostic à froid lors d'une exception de shader
 
 La branche native de `CreateGraphicsPipeline(ShaderPools&, ...)` ne réanalyse plus les CFG et n'écrit plus de dumps `.ash` après une exception de traduction lorsque `dump_guest_shaders` est désactivé. Cette reconstruction est facultative et survient sur le GPU owner. L'option explicite restaure le diagnostic ; un échec secondaire du CFG ou de l'écriture est contenu sans masquer l'erreur shader d'origine. Le témoin hôte extrait ce handler exact en desktop/PS5, O0/O2. Ce correctif n'accélère pas les traductions réussies et ne constitue pas de preuve FPS console.
+
+## P0.1 — refus de mise en file d’une sauvegarde de cache driver
+
+La sauvegarde Vulkan différée conserve désormais le quota de pipelines atteint lorsqu’un `QueueWork` est refusé (exception connue ou inconnue). Le verrou `flush_in_flight` est libéré comme auparavant, et la fenêtre temporelle de limitation reste active : le premier nouvel appel après cette fenêtre peut réessayer sans exiger 128 compilations supplémentaires. Le témoin source-extrait vérifie le refus, l’absence de tempête de retry et la reprise du flush. La récupération d’une exception **dans** le worker n’est pas traitée par ce changement ; les tests console restent nécessaires.

@@ -1123,9 +1123,13 @@ void PipelineCache::QueueVulkanPipelineCacheFlush() {
         });
     } catch (const std::exception& error) {
         flush_in_flight.store(false, std::memory_order_release);
+        // Keep this checkpoint due for a later retry, without bypassing the
+        // existing time gate if the serializer is temporarily unavailable.
+        pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;
         LOG_WARNING(Render_Vulkan, "Deferred cache flush queue rejected: {}", error.what());
     } catch (...) {
         flush_in_flight.store(false, std::memory_order_release);
+        pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;
         LOG_WARNING(Render_Vulkan, "Deferred cache flush queue rejected: unknown exception");
     }
 }
