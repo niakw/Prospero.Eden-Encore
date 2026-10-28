@@ -357,6 +357,7 @@ read_from=src.index(read_start)
 assert read_end in src[read_from:]
 budget_fragment=src[read_from:src.index(read_end,read_from)]
 assert "F07 bound oversized BCn 3D slice reads per native frame" in generator
+assert "F07 preserve BCn 3D read progress when budget is zero" in generator
 assert budget_fragment.count("copy_amount = task.bytes_per_slice;") == 1
 assert "#ifdef PS5_NATIVE" in budget_fragment
 assert "copy_amount = (std::min)(swizzle_chunk_size, remaining);" in budget_fragment
@@ -394,6 +395,15 @@ int main(){
 #else
     assert(probe.Compute(64*MiB)==32*MiB);
 #endif
+    Probe zero_budget{0};
+    task.bytes_per_slice=64*MiB;
+#ifdef PS5_NATIVE
+    assert(zero_budget.Compute(128*MiB)==64*MiB);
+    assert(zero_budget.Compute(32*MiB)==32*MiB);
+#else
+    assert(zero_budget.Compute(128*MiB)==64*MiB);
+    assert(zero_budget.Compute(32*MiB)==64*MiB);
+#endif
 }
 """
 budget_cpp=budget_cpp.replace("#include <cstddef>", "#include <cstddef>\n#include <initializer_list>")
@@ -409,4 +419,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-bcn3d-read-budget-") as folder
             assert built.returncode==0,(native,opt,built.stderr[-5000:])
             result=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert result.returncode==0,(native,opt,result.stderr[-5000:])
-print("F07_BCN3D_READ_BUDGET_PASS max_read_16mib=1 incomplete_slice_staged=1 desktop_original=1 O0=1 O2=1")
+print("F07_BCN3D_READ_BUDGET_PASS max_read_16mib=1 incomplete_slice_staged=1 zero_budget_progress=1 desktop_original=1 O0=1 O2=1")

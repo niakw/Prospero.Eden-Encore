@@ -2244,7 +2244,12 @@ void TextureCache<P>::TickAsyncUnswizzle() {
                 // One BCn-3D slice can exceed the per-frame read budget.
                 // Stage a partial slice; dispatch still waits until a full
                 // slice is ready. Do not copy >budget under texture mutex.
-                copy_amount = (std::min)(swizzle_chunk_size, remaining);
+                // A zero budget can occur if GPU unswizzle is toggled
+                // after cache construction. Retain forward progress instead
+                // of pinning IsDecoding forever on a zero-byte read.
+                copy_amount = swizzle_chunk_size != 0
+                    ? (std::min)(swizzle_chunk_size, remaining)
+                    : (std::min)(task.bytes_per_slice, remaining);
 #else
                 copy_amount = task.bytes_per_slice;
 #endif
