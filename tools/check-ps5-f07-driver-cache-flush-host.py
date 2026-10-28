@@ -18,6 +18,8 @@ end="\n\nGraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {"
 assert source.count(begin)==1 and source.count(end)==1
 method=begin+source.split(begin,1)[1].split(end,1)[0]
 assert method.count("flush_in_flight.store(false, std::memory_order_release)") == 2
+assert "pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;" in method
+assert method.count("pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;") == 2
 assert "struct ReleaseFlush" in method and "catch (const std::exception& error)" in method
 assert "f07_flush_old" in generator and "f07_flush_new" in generator
 assert "shader_source.count(f07_flush_old) != 1" in generator
@@ -88,6 +90,16 @@ int main() {
     queue.serialization_thread.throw_enqueue=true;
     queue.QueueVulkanPipelineCacheFlush();
     assert(!queue.flush_in_flight.load());
+    // A failed QueueWork must preserve the build budget for retry, while
+    // the minimum interval still prevents a rejection storm each frame.
+    assert(queue.pipelines_since_flush==VULKAN_CACHE_FLUSH_PIPELINES);
+    queue.serialization_thread.throw_enqueue=false;
+    queue.QueueVulkanPipelineCacheFlush();
+    assert(queue.last_cache_size.load()==0);
+    assert(queue.pipelines_since_flush==VULKAN_CACHE_FLUSH_PIPELINES+1);
+    queue.last_flush-=std::chrono::seconds(31);
+    queue.QueueVulkanPipelineCacheFlush();
+    assert(queue.pipelines_since_flush==0 && queue.last_cache_size.load()==128);
 }
 """
 compiler=shutil.which("clang++") or shutil.which("g++")
@@ -100,4 +112,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-flush-") as directory:
         subprocess.run([compiler,"-std=c++20","-pthread",mode,"-Wall","-Wextra","-Werror",
                         str(file),"-o",str(exe)],check=True,capture_output=True,text=True,timeout=40)
         subprocess.run([str(exe)],check=True,timeout=15)
-print("F07_DRIVER_CACHE_FLUSH_HOST_PASS normal=1 failed_save=1 failed_read=1 failed_enqueue=1 budget=1")
+print("F07_DRIVER_CACHE_FLUSH_HOST_PASS normal=1 failed_save=1 failed_read=1 failed_enqueue=1 retry_after_cooldown=1 budget=1")
