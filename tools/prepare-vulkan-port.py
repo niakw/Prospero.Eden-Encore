@@ -4211,6 +4211,28 @@ apply_reviewed_delta("vk_texture_cache_cost.cpp",
     "#endif",
     "F07 preserve resolve validity on rejected size-incompatible CopyImage")
 
+# F07: a zero-region, size-compatible image copy is a true no-op.
+# Skip invalidating the MSAA resolve and enqueuing an empty Vulkan barrier.
+# Size-incompatible calls construct a whole-image region even if copies is empty.
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "void TextureCacheRuntime::CopyImage(Image& dst, Image& src,\n"
+    "                                    std::span<const VideoCommon::ImageCopy> copies) {\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // ReinterpretImage owns invalidation",
+    "void TextureCacheRuntime::CopyImage(Image& dst, Image& src,\n"
+    "                                    std::span<const VideoCommon::ImageCopy> copies) {\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // A compatible-format copy with zero regions records no image writes.\n"
+    "    // Preserve the resolved shadow and avoid an empty Vulkan command batch.\n"
+    "    // Size-INcompatible calls still reinterpret the whole image independently\n"
+    "    // of the supplied region list, so they must not take this return.\n"
+    "    if (copies.empty() &&\n"
+    "        BytesPerBlock(src.info.format) == BytesPerBlock(dst.info.format)) {\n"
+    "        return;\n"
+    "    }\n"
+    "    // ReinterpretImage owns invalidation",
+    "F07 skip empty size-compatible native Vulkan CopyImage without stale resolve")
+
 # F07 P0.4: on PS5, a zero/invalid texture reinterpret must not mark the
 # existing MSAA resolve shadow stale. Move invalidation after scratch allocation
 # and bounds checks, retaining it before the actual Vulkan command recording.

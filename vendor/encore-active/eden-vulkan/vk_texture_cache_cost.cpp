@@ -1676,6 +1676,14 @@ bool TextureCacheRuntime::IsFormatScalable(PixelFormat format) {
 void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
                                     std::span<const VideoCommon::ImageCopy> copies) {
 #ifdef PS5_NATIVE
+    // A compatible-format copy with zero regions records no image writes.
+    // Preserve the resolved shadow and avoid an empty Vulkan command batch.
+    // Size-INcompatible calls still reinterpret the whole image independently
+    // of the supplied region list, so they must not take this return.
+    if (copies.empty() &&
+        BytesPerBlock(src.info.format) == BytesPerBlock(dst.info.format)) {
+        return;
+    }
     // ReinterpretImage owns invalidation after validating its copy and scratch
     // buffer. Do not stale the old MSAA resolve when it rejects the operation.
     if (ENABLE_MSAA_RESOLVE_CONSUME &&
