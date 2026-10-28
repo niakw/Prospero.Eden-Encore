@@ -113,7 +113,8 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     native_vk_guard = "if (!buffer || buffer->Handle() == VK_NULL_HANDLE)"
     assert raster.count(native_vk_guard) == 2, "compute/DMA Vulkan handle guard drift"
     assert raster.count("if (!draw_buffer)") == 1, "counted draw buffer guard drift"
-    dispatch = raster.split("void RasterizerVulkan::DispatchCompute() {", 1)[1]
+    dispatch = raster.split("void RasterizerVulkan::DispatchCompute() {", 1)[1].split(
+        "void RasterizerVulkan::ResetCounter(", 1)[0]
     assert dispatch.count(native_vk_guard) == 1, "compute indirect VkBuffer guard drift"
     dma = raster.split("bool AccelerateDMA::DmaBufferImageCopy(", 1)[1].split(
         "bool AccelerateDMA::ImageToBuffer(", 1)[0]
