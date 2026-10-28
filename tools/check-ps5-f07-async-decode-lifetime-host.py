@@ -27,6 +27,10 @@ assert method.count("i = async_decodes.erase(i);") == 2
 assert method.index("lock.unlock();") < method.index("i = async_decodes.erase(i);")
 assert method.rindex("lock.unlock();") < method.rindex("i = async_decodes.erase(i);")
 assert "async_decode->decoded_data.size() != expected_size" in method
+assert "F07 atomic unfinished texture decode polling" in generator
+assert "async_decode->complete.load(std::memory_order_acquire)" in method
+assert method.index("async_decode->complete.load(std::memory_order_acquire)") < method.index(
+    "std::unique_lock lock{async_decode->mutex};")
 assert "True(image.flags & ImageFlagBits::CpuModified)" in method
 assert "True(image.flags & ImageFlagBits::Remapped)" in method
 assert method.index("True(image.flags & ImageFlagBits::Remapped)") < method.index("std::memcpy(")
@@ -40,6 +44,7 @@ for delta in ("F07 async texture revision length guard",
     assert delta in generator
 
 cpp = r"""
+#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -50,8 +55,9 @@ cpp = r"""
 #include <vector>
 using ImageId=std::size_t;
 struct CheckedMutex {
+    inline static unsigned lock_calls{};
     bool held{};
-    void lock(){assert(!held);held=true;}
+    void lock(){assert(!held);held=true;++lock_calls;}
     void unlock(){assert(held);held=false;}
     ~CheckedMutex(){assert(!held && "decode mutex destroyed while still locked");}
 };
@@ -83,7 +89,7 @@ struct AsyncDecodeContext{
     std::vector<std::uint8_t> decoded_data;
     std::vector<int> copies;
     CheckedMutex mutex;
-    bool complete{};
+    std::atomic_bool complete{false};
 };
 struct Runtime{
     unsigned staging_calls{},barriers{};
@@ -137,7 +143,10 @@ int main(){
     cache.async_decodes.emplace_back(std::move(ready));
     cache.async_decodes.emplace_back(std::move(stale_same_size));
     cache.async_decodes.emplace_back(std::move(stale_remapped));
+    const unsigned locks_before_first_tick = CheckedMutex::lock_calls;
     cache.TickAsyncDecode();
+    // Four completed tasks consume the mutex; the pending one does not.
+    assert(CheckedMutex::lock_calls == locks_before_first_tick + 4);
     assert(cache.async_decodes.size()==1 && !cache.async_decodes[0]->complete);
     assert(True(cache.slot_images[1].flags&ImageFlagBits::CpuModified));
     assert(!True(cache.slot_images[1].flags&ImageFlagBits::Tracked));
@@ -157,6 +166,7 @@ int main(){
     assert(cache.untracked==3);
     cache.async_decodes.front()->complete=true;
     cache.TickAsyncDecode();
+    assert(CheckedMutex::lock_calls == locks_before_first_tick + 5);
     assert(cache.async_decodes.empty() && cache.runtime.barriers==2);
 }
 """

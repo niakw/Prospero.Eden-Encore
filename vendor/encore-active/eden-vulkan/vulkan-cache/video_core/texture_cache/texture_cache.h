@@ -1993,11 +1993,21 @@ void TextureCache<P>::TickAsyncDecode() {
     auto i = async_decodes.begin();
     while (i != async_decodes.end()) {
         auto* async_decode = i->get();
+#ifdef PS5_NATIVE
+        // The worker publishes decoded bytes with the atomic completion flag.
+        // Poll unfinished decodes without contending on its mutex each frame.
+        if (!async_decode->complete.load(std::memory_order_acquire)) {
+            ++i;
+            continue;
+        }
+#endif
         std::unique_lock lock{async_decode->mutex};
+#ifndef PS5_NATIVE
         if (!async_decode->complete) {
             ++i;
             continue;
         }
+#endif
         Image& image = slot_images[async_decode->image_id];
 #ifdef PS5_NATIVE
         // A texture may have been remapped or resized while decode was queued.

@@ -3871,3 +3871,10 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        if (async_decode->decoded_data.size() != expected_size ||\n            True(image.flags & ImageFlagBits::CpuModified) ||",
     "        if (async_decode->decoded_data.size() == 0 ||\n            async_decode->decoded_data.size() != expected_size ||\n            True(image.flags & ImageFlagBits::CpuModified) ||",
     "F07 reject zero-length failed decode completion")
+
+# F07 P0.3: avoid per-frame worker mutex acquisition for an incomplete decode.
+# Keep the existing completion mutex and pending branch for desktop builds.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        auto* async_decode = i->get();\n        std::unique_lock lock{async_decode->mutex};\n        if (!async_decode->complete) {\n            ++i;\n            continue;\n        }",
+    "        auto* async_decode = i->get();\n#ifdef PS5_NATIVE\n        // The worker publishes decoded bytes with the atomic completion flag.\n        // Poll unfinished decodes without contending on its mutex each frame.\n        if (!async_decode->complete.load(std::memory_order_acquire)) {\n            ++i;\n            continue;\n        }\n#endif\n        std::unique_lock lock{async_decode->mutex};\n#ifndef PS5_NATIVE\n        if (!async_decode->complete) {\n            ++i;\n            continue;\n        }\n#endif",
+    "F07 atomic unfinished texture decode polling")
