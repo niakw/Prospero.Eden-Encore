@@ -602,7 +602,10 @@ void TextureCache<P>::CheckFeedbackLoop(std::span<const ImageViewInOut> views) {
                 u32 color_slots = rt_active_mask & ((1u << NUM_RT) - 1);
                 while (color_slots) {
                     const u32 slot = std::countr_zero(color_slots);
-                    is_continue |= view.id == render_targets.color_buffer_ids[slot];
+                    if (view.id == render_targets.color_buffer_ids[slot]) {
+                        is_continue = true;
+                        break;
+                    }
                     color_slots &= color_slots - 1;
                 }
 #else
@@ -623,7 +626,10 @@ void TextureCache<P>::CheckFeedbackLoop(std::span<const ImageViewInOut> views) {
                 u32 color_slots = rt_active_mask & ((1u << NUM_RT) - 1);
                 while (color_slots) {
                     const u32 slot = std::countr_zero(color_slots);
-                    is_continue |= view_image_id == rt_image_id[slot];
+                    if (view_image_id == rt_image_id[slot]) {
+                        is_continue = true;
+                        break;
+                    }
                     color_slots &= color_slots - 1;
                 }
 #else
