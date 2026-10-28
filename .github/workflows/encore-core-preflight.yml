@@ -27,6 +27,8 @@ on:
       - 'docs/EDEN_NATIVE_CONFIG_METADATA_REVIEW_2026-10-21.md'
       - '.github/workflows/encore-core-fast-gate.yml'
       - '.github/workflows/encore-core-preflight.yml'
+      # Run all native witnesses when the paired security contract changes.
+      - '.github/workflows/codeql-advanced.yml'
       # The preflight audits neutral step descriptions across ALL workflows,
       # including this authentic-readme screenshot producer.
       - '.github/workflows/launcher-readme-home-screenshot.yml'
