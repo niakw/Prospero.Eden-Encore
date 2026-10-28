@@ -243,3 +243,7 @@ Sur PS5 native, `Image::UploadMemory` ne publie plus `initialized = true` avant 
 ## P0.4 — ne pas mémoriser un descripteur de HUD avant un draw enregistré
 
 Pour les descripteurs Vulkan classiques (ni push descriptors, ni descriptor buffer), `GraphicsPipeline::ConfigureDraw` ne publie plus la dernière empreinte de payload avant que `scheduler.Record` ait accepté la commande. Sur PS5 native, un refus laisse donc la dernière empreinte réellement soumise et force la réémission du descripteur modifié au dessin suivant. Les buffers de descripteurs et le chemin desktop restent inchangés. Le témoin C++ extrait les deux blocs réels, teste refus, reprise, payload identique/changé et layout vide à O0/O2 sous UBSan. L'effet sur les HUD FC 27 reste à confirmer sur PS5.
+
+## P0.4 — scratch de réinterprétation avec handle Vulkan nul
+
+Sur PS5 native, `ReinterpretImage` refuse désormais un scratch `VkBuffer` nul renvoyé par `GetTemporaryBuffer` après validation de la taille. Ce refus intervient **avant** l'invalidation du resolve MSAA et avant l'enregistrement des commandes Vulkan. Le chemin desktop est conservé ; le générateur et l'oracle historique des captures appliquent ou inversent strictement le nouveau delta. Le témoin de taille/resolve existant injecte un buffer nul avec une taille valide et compare PS5/desktop en O0/O2, sans prétendre prouver le rendu FC 27 sur console.

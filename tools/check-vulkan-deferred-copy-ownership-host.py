@@ -53,6 +53,7 @@ f07_texture_labels = (
     'F07 PS5 transactional BCn 3D compute output buffer',
     'F07 reject null native BCn 3D output buffer handle',
     'F07 native image initialized only after accepted upload record',
+    'F07 reject null native image reinterpret scratch handle',
 )
 f07_texture_deltas = []
 for statement in tree.body:
@@ -114,8 +115,9 @@ for module, changes in edits.items():
         # capture installed by deferred_copy_edits. Undo this newest delta
         # FIRST, while its exact moved-capture anchor still exists.
         # Other F07 texture deltas do not overlap the deferred captures.
-        source_before, source_after, label = f07_texture_deltas[-1]
-        assert label == 'F07 native image initialized only after accepted upload record'
+        source_before, source_after, label = next(
+            (old, new, name) for old, new, name in f07_texture_deltas
+            if name == 'F07 native image initialized only after accepted upload record')
         assert previous.count(source_after) == 1, ("native F07 upload commit drift", label)
         previous = previous.replace(source_after, source_before, 1)
     for old, new, count in reversed(changes):
@@ -129,8 +131,11 @@ for module, changes in edits.items():
             assert previous.count(reviewed_fragment) == 1, (
                 "reviewed Vulkan image upload barrier moved", reviewed_fragment)
             previous = previous.replace(reviewed_fragment, pinned_fragment)
-        # The final delta was already undone before deferred-copy reversal.
-        for source_before, source_after, label in reversed(f07_texture_deltas[:-1]):
+        # The upload-commit delta was already undone before deferred-copy
+        # reversal. Later unrelated guards can be added without moving it.
+        for source_before, source_after, label in reversed(f07_texture_deltas):
+            if label == 'F07 native image initialized only after accepted upload record':
+                continue
             assert previous.count(source_after) == 1, (
                 "native F07 BCn-3D generator delta drift", label)
             previous = previous.replace(source_after, source_before, 1)

@@ -4393,3 +4393,10 @@ apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
     "    });\n    return true;\n}\n\n\nnamespace {\n#ifdef PS5_NATIVE\n// Only first-use pipelines are mandatory.",
     "    });\n#ifdef PS5_NATIVE\n    // Descriptor-set updates are encoded by the Vulkan worker. If Record\n    // throws before accepting the draw, retaining the old memo forces the\n    // next HUD draw to publish its changed descriptors instead of reusing\n    // an unsubmitted descriptor set.\n    if (descriptor_set_layout && !uses_push_descriptor && !uses_descriptor_buffer &&\n        update_descriptors) {\n        const auto* const entries = static_cast<const DescriptorUpdateEntry*>(descriptor_data);\n        if (num_descriptor_entries != 0) {\n            last_descriptor_payload.assign(entries, entries + num_descriptor_entries);\n        } else {\n            last_descriptor_payload.clear();\n        }\n    }\n#endif\n    return true;\n}\n\n\nnamespace {\n#ifdef PS5_NATIVE\n// Only first-use pipelines are mandatory.",
     "F07 publish PS5 legacy descriptor memo after accepted Vulkan draw")
+
+# F07 P0.4: a null VkBuffer from the transient image-reinterpret pool is
+# NOT a valid scratch copy. Keep the destination resolve intact on rejection.
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "    const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);\n#ifdef PS5_NATIVE\n    // A rejected reinterpretation does not alter the destination image.",
+    "    const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);\n#ifdef PS5_NATIVE\n    // A mapped scratch allocation can still contain a null Vulkan handle.\n    // Reject before invalidating the resolve or enqueueing any GPU copies.\n    if (copy_buffer == VK_NULL_HANDLE) {\n        return;\n    }\n    // A rejected reinterpretation does not alter the destination image.",
+    "F07 reject null native image reinterpret scratch handle")

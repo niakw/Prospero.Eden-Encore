@@ -46,6 +46,9 @@ assert method.index("const VkBuffer copy_buffer = GetTemporaryBuffer(total_size)
     "#ifdef PS5_NATIVE\n    // A rejected reinterpretation does not alter")
 assert method.index("InvalidateResolveShadow(dst.Handle());", method.index("const VkBuffer copy_buffer")) < method.index("scheduler.RequestOutsideRenderPassOperationContext();")
 assert "F07 reject scratch sizes outside Vulkan transient buffer slots" in generator
+assert "F07 reject null native image reinterpret scratch handle" in generator
+assert "if (copy_buffer == VK_NULL_HANDLE)" in size
+assert size.index("if (copy_buffer == VK_NULL_HANDLE)") < size.index("InvalidateResolveShadow(dst.Handle());")
 assert size.index("#else\n    for (const auto& copy") > size.index("#ifdef PS5_NATIVE")
 assert size.index("const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);") > size.index("#endif")
 cpp=r"""
@@ -57,6 +60,7 @@ cpp=r"""
 using u32=std::uint32_t;
 using VkBuffer=std::size_t;
 using VkImage=std::size_t;
+constexpr VkBuffer VK_NULL_HANDLE=0;
 inline constexpr bool ENABLE_MSAA_RESOLVE_CONSUME=true;
 struct Extent {u32 width{},height{},depth{};};
 struct ImageCopy {Extent extent{};};
@@ -66,6 +70,7 @@ u32 BytesPerBlock(u32 format) {return format;}
 struct Runtime {
     std::size_t calls{},last_size{};
     std::size_t invalidates{};
+    bool null_scratch{};
     void InvalidateResolveShadow(VkImage image) {assert(image==73);++invalidates;}
     VkBuffer GetTemporaryBuffer(std::size_t bytes) {
 #ifdef PS5_NATIVE
@@ -73,7 +78,7 @@ struct Runtime {
 #endif
         ++calls;
         last_size=bytes;
-        return bytes;
+        return null_scratch ? VK_NULL_HANDLE : bytes;
     }
     void ReinterpretImage(Image& dst,const std::vector<ImageCopy>& copies) {
 #ifndef PS5_NATIVE
@@ -97,6 +102,14 @@ int main() {
     valid.ReinterpretImage(normal,{{{4,5,1}},{{4,1,2}}});
     assert(valid.calls==1 && valid.last_size==112);
     assert(valid.invalidates==1);
+    Runtime rejected_handle;
+    rejected_handle.null_scratch=true;
+    rejected_handle.ReinterpretImage(normal,{{{4,5,1}}});
+#ifdef PS5_NATIVE
+    assert(rejected_handle.calls==1 && rejected_handle.invalidates==0);
+#else
+    assert(rejected_handle.calls==1 && rejected_handle.invalidates==1);
+#endif
     Image invalid_format{{0}};
     Runtime invalid;
     invalid.ReinterpretImage(invalid_format,{{{4,5,1}}});
@@ -149,4 +162,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-vulkan-reinterpret-") as folde
             assert built.returncode==0,(native,opt,built.stderr[-6000:])
             ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
-print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 valid=1 desktop_original=1 O0=1 O2=1")
+print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 null_handle_not_submitted=1 valid=1 desktop_original=1 O0=1 O2=1")

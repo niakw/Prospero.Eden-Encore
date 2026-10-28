@@ -1280,6 +1280,11 @@ void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
 #endif
     const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);
 #ifdef PS5_NATIVE
+    // A mapped scratch allocation can still contain a null Vulkan handle.
+    // Reject before invalidating the resolve or enqueueing any GPU copies.
+    if (copy_buffer == VK_NULL_HANDLE) {
+        return;
+    }
     // A rejected reinterpretation does not alter the destination image.
     // Invalidate its resolved shadow only after native validation and
     // scratch allocation succeeded, before submitting Vulkan commands.
