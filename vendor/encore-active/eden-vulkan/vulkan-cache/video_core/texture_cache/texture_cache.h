@@ -2069,6 +2069,11 @@ void TextureCache<P>::TickAsyncDecode() {
 template <class P>
 void TextureCache<P>::TickAsyncUnswizzle() {
     if (unswizzle_queue.empty()) {
+#ifdef PS5_NATIVE
+        // Do not carry the prior batch's 4-frame cooldown across an idle
+        // period. A future texture is a fresh request, not a queued batch.
+        current_unswizzle_frame = 0u;
+#endif
         return;
     }
 
@@ -2160,7 +2165,31 @@ void TextureCache<P>::TickAsyncUnswizzle() {
         task.bytes_per_slice = static_cast<size_t>(stride) * aligned_height;
 #endif
 #ifdef PS5_NATIVE
-        task.staging_buffer = runtime.UploadStagingBuffer(task.total_size, true);
+        // A rejected/short staging allocation must not pin IsDecoding or
+        // permit guest DMA reads into an incomplete mapped GPU upload.
+        auto staging = [&]() -> decltype(runtime.UploadStagingBuffer(task.total_size, true)) {
+            try {
+                return runtime.UploadStagingBuffer(task.total_size, true);
+            } catch (...) {
+                return {};
+            }
+        }();
+        if (staging.mapped_span.size() < task.total_size) {
+            // A valid deferred buffer may have been returned with a short
+            // mapping. Release it through the existing GPU-tick mechanism.
+            if (staging.buffer) {
+                runtime.FreeDeferredStagingBuffer(staging);
+            }
+            image.flags |= ImageFlagBits::CpuModified;
+            if (True(image.flags & ImageFlagBits::Tracked)) {
+                UntrackImage(image, task.image_id);
+            }
+            image.flags &= ~ImageFlagBits::IsDecoding;
+            unswizzle_queue.pop_front();
+            current_unswizzle_frame = 0u;
+            return;
+        }
+        task.staging_buffer = staging;
 #endif
         task.last_submitted_offset = 0;
         task.initialized = true;
@@ -2208,8 +2237,14 @@ void TextureCache<P>::TickAsyncUnswizzle() {
         image.flags &= ~ImageFlagBits::IsDecoding;
         unswizzle_queue.pop_front();
 
+#ifdef PS5_NATIVE
+        // Throttle back-to-back queued uploads, not a later newly queued
+        // texture after an otherwise empty GPU frame.
+        current_unswizzle_frame = unswizzle_queue.empty() ? 0u : 4u;
+#else
         // Wait 4 frames to process the next entry
         current_unswizzle_frame = 4u;
+#endif
     }
 }
 

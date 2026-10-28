@@ -38,6 +38,15 @@ assert fragment.index("unswizzle_queue.pop_front();") < fragment.index(
 assert fragment.count("#ifndef PS5_NATIVE") == 1
 assert "FreeDeferredStagingBuffer(task.staging_buffer)" not in pinned_prefix
 assert "F07 cancel stale GPU unswizzle with deferred staging and native cooldown" in generator
+assert "F07 reset idle unswizzle cooldown" in generator
+assert "F07 throttle only queued unswizzle batches" in generator
+assert "current_unswizzle_frame = 0u;" in fragment.split("return;", 1)[0]
+finish_start = "    if (is_final_batch && all_slices_submitted) {"
+finish_end = "\n}\n\ntemplate <class P>\nbool TextureCache<P>::ScaleUp"
+assert src_finish := active.find(finish_start, active.find(method_start))
+assert finish_end in active[src_finish:]
+finish_fragment = active[src_finish:active.index(finish_end,src_finish)]
+assert "unswizzle_queue.empty() ? 0u : 4u" in finish_fragment
 
 cpp = r"""
 #include <cassert>
@@ -86,10 +95,17 @@ template<class P> struct TextureCache {
         ++untracked;
     }
     void TickAsyncUnswizzle();
+    void CompleteUnswizzle(bool is_final_batch,bool all_slices_submitted);
 };
 template<class P>
 """ + compiled_fragment + r"""
     ++reached_normal;
+}
+template <class P>
+void TextureCache<P>::CompleteUnswizzle(bool is_final_batch,bool all_slices_submitted) {
+    PendingUnswizzle& task=unswizzle_queue.front();
+    Image& image=slot_images[task.image_id];
+""" + finish_fragment + r"""
 }
 void Submit(TextureCache<int>& c,ImageId id,bool allocated,bool dirty,bool remapped,bool tracked) {
     c.unswizzle_queue.push_back({id,allocated,{allocated}});
@@ -133,6 +149,13 @@ int main(){
     c.current_unswizzle_frame=0;
     c.TickAsyncUnswizzle();
     assert(c.reached_normal==2 && c.unswizzle_queue.size()==1);
+    c.unswizzle_queue.clear();
+    c.current_unswizzle_frame=4;
+    c.TickAsyncUnswizzle();
+    assert(c.current_unswizzle_frame==0);
+    Submit(c,4,true,false,false,false);
+    c.TickAsyncUnswizzle();
+    assert(c.reached_normal==3);
 #else
     Submit(c,0,true,true,false,true);
     c.current_unswizzle_frame=3;
@@ -142,6 +165,25 @@ int main(){
     c.current_unswizzle_frame=0;
     c.TickAsyncUnswizzle();
     assert(c.reached_normal==1);
+    c.unswizzle_queue.clear();
+    c.current_unswizzle_frame=4;
+    c.TickAsyncUnswizzle();
+    assert(c.current_unswizzle_frame==4);
+#endif
+    TextureCache<int> finished;
+    finished.slot_images.resize(2);
+    Submit(finished,0,true,false,false,false);
+    Submit(finished,1,true,false,false,false);
+    finished.CompleteUnswizzle(true,true);
+    assert(finished.unswizzle_queue.size()==1);
+    assert(finished.current_unswizzle_frame==4);
+    finished.CompleteUnswizzle(true,true);
+    assert(finished.unswizzle_queue.empty());
+    assert(finished.runtime.deferred_free==2);
+#ifdef PS5_NATIVE
+    assert(finished.current_unswizzle_frame==0);
+#else
+    assert(finished.current_unswizzle_frame==4);
 #endif
 }
 """
@@ -162,4 +204,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-stale-unswizzle-") as d:
             run=subprocess.run([str(exe)],capture_output=True,text=True,timeout=15)
             assert run.returncode==0,(opt,native,run.stdout,run.stderr[-5000:])
 print("F07_UNSWIZZLE_STALE_HOST_PASS native_cancel=1 uninitialized=1"
-      " remap=1 deferred_staging=1 desktop_unchanged=1 O0=1 O2=1")
+      " remap=1 deferred_staging=1 desktop_unchanged=1 idle_reset=1 queued_throttle=1 O0=1 O2=1")
