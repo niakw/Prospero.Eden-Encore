@@ -46,8 +46,8 @@ assert "return NoteProjectedEviction(image);" in record
 assert "gc_downloads.emplace_back(id, map);" in record
 assert record.index("gc_downloads.emplace_back") < record.index("image.DownloadMemory")
 assert "F07 reject failed or undersized dirty GC prefetch staging" in generator
-assert "map.mapped_span.size_bytes() < image.unswizzled_size_bytes" in record
-assert record.index("map.mapped_span.size_bytes() < image.unswizzled_size_bytes") < record.index("gc_downloads.emplace_back")
+assert "if (!map.buffer || map.mapped_span.size_bytes() < image.unswizzled_size_bytes)" in record
+assert record.index("if (!map.buffer || map.mapped_span.size_bytes() < image.unswizzled_size_bytes)") < record.index("gc_downloads.emplace_back")
 assert "if (map.buffer) runtime.FreeDeferredStagingBuffer(map);" in record
 assert "if (remaining == 0 || scanned >= max_scanned) return true;" in gc
 assert "if (count_visits) --remaining;" in gc
