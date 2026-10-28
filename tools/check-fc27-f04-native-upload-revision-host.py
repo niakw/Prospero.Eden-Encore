@@ -102,6 +102,7 @@ struct Buffer {
 struct Staging {
     std::shared_ptr<std::vector<u8>> data;
     std::span<u8> mapped_span;
+    bool buffer{true};
     explicit Staging(std::size_t n):data(std::make_shared<std::vector<u8>>(n)),mapped_span(*data){}
 };
 struct Image {
@@ -153,10 +154,12 @@ struct Runtime {
     bool can_upload_msaa=true;
     bool reject_staging{};
     bool short_staging{};
+    bool null_staging{};
     Staging UploadStagingBuffer(std::size_t n) {
         ++allocations;
         if(reject_staging)throw std::bad_alloc{};
         Staging s{short_staging?n-1:n};
+        s.buffer=!null_staging;
         last_stage=s.data;
         return s;
     }
@@ -362,6 +365,23 @@ int main(){
     assert(image.uploads==7 && cache.runtime.barriers==7);
     assert(image.device_bytes==cache.runtime.expected);
     assert(False(image.flags & ImageFlagBits::CpuModified));
+    // A full mapped CPU span with an invalid Vulkan handle cannot publish the
+    // texture. The guest revision must remain dirty until the next attempt.
+    for(unsigned i=0;i<64;++i)m.bytes[image.gpu_addr+i]=static_cast<u8>(0x80+i);
+    Changed(image);
+    cache.runtime.expected=Data(m,image.gpu_addr);
+    cache.runtime.null_staging=true;
+    const auto before_null_uploads=image.uploads;
+    const auto before_null_barriers=cache.runtime.barriers;
+    cache.RefreshContents(image,0);
+    assert(image.uploads==before_null_uploads && cache.runtime.barriers==before_null_barriers);
+    assert(True(image.flags & ImageFlagBits::CpuModified));
+    assert(False(image.flags & ImageFlagBits::Tracked));
+    cache.runtime.null_staging=false;
+    cache.RefreshContents(image,0);
+    assert(image.uploads==8 && cache.runtime.barriers==8);
+    assert(image.device_bytes==cache.runtime.expected);
+    assert(False(image.flags & ImageFlagBits::CpuModified));
     // Enabling GPU 3D unswizzle after constructing a CPU-only cache must not
     // queue a zero-progress task: use the ordinary synchronous refresh.
     image.info.type=ImageType::e3D;
@@ -371,17 +391,17 @@ int main(){
     Changed(image);
     cache.runtime.expected=Data(m,image.gpu_addr);
     cache.RefreshContents(image,0);
-    assert(cache.async_unswizzle==0 && image.uploads==8);
-    assert(cache.runtime.barriers==8);
+    assert(cache.async_unswizzle==0 && image.uploads==9);
+    assert(cache.runtime.barriers==9);
     cache.swizzle_chunk_size=16;
     cache.swizzle_slices_per_batch=128;
     Changed(image);
     cache.RefreshContents(image,0);
-    assert(cache.async_unswizzle==1 && image.uploads==8);
+    assert(cache.async_unswizzle==1 && image.uploads==9);
     Settings::values.gpu_unswizzle_enabled.value=false;
     std::puts("F04_NATIVE_TEXTURE_UPLOAD_REVISION_PASS ordinary=2 converted=1 "
               "accelerated=1 async=1 msaa_transition=1 barriers=4 "
-              "registration_failure_recovered=1 staging_oom_recovered=1 short_mapping_recovered=1 runtime_unswizzle_toggle_guard=1 scope=source_extracted_host_mock_staging_no_gpu");
+              "registration_failure_recovered=1 staging_oom_recovered=1 short_mapping_recovered=1 null_handle_recovered=1 runtime_unswizzle_toggle_guard=1 scope=source_extracted_host_mock_staging_no_gpu");
 }
 """.replace("__METHODS__",method)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
