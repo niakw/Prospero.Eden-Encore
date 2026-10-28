@@ -4400,3 +4400,10 @@ apply_reviewed_delta("vk_texture_cache_cost.cpp",
     "    const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);\n#ifdef PS5_NATIVE\n    // A rejected reinterpretation does not alter the destination image.",
     "    const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);\n#ifdef PS5_NATIVE\n    // A mapped scratch allocation can still contain a null Vulkan handle.\n    // Reject before invalidating the resolve or enqueueing any GPU copies.\n    if (copy_buffer == VK_NULL_HANDLE) {\n        return;\n    }\n    // A rejected reinterpretation does not alter the destination image.",
     "F07 reject null native image reinterpret scratch handle")
+
+# F07 P0.3: BCn 3D uses precisely two storage-buffer descriptors. Do not
+# reserve a third entry (and potentially drain the worker) on PS5.
+apply_reviewed_delta("vk_compute_pass_cost.cpp",
+    "    compute_pass_descriptor_queue.Acquire(scheduler, 3);\n    compute_pass_descriptor_queue.AddBuffer(swizzled.buffer,",
+    "#ifdef PS5_NATIVE\n    // The BCn 3D pass has exactly two storage-buffer bindings. Reserving\n    // three entries can force an unnecessary queue drain when the cursor\n    // is near its frame limit, under texture-cache synchronization.\n    compute_pass_descriptor_queue.Acquire(scheduler, 2);\n#else\n    compute_pass_descriptor_queue.Acquire(scheduler, 3);\n#endif\n    compute_pass_descriptor_queue.AddBuffer(swizzled.buffer,",
+    "F07 reserve exact two native BCn3D compute descriptors")

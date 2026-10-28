@@ -247,3 +247,7 @@ Pour les descripteurs Vulkan classiques (ni push descriptors, ni descriptor buff
 ## P0.4 — scratch de réinterprétation avec handle Vulkan nul
 
 Sur PS5 native, `ReinterpretImage` refuse désormais un scratch `VkBuffer` nul renvoyé par `GetTemporaryBuffer` après validation de la taille. Ce refus intervient **avant** l'invalidation du resolve MSAA et avant l'enregistrement des commandes Vulkan. Le chemin desktop est conservé ; le générateur et l'oracle historique des captures appliquent ou inversent strictement le nouveau delta. Le témoin de taille/resolve existant injecte un buffer nul avec une taille valide et compare PS5/desktop en O0/O2, sans prétendre prouver le rendu FC 27 sur console.
+
+## P0.3 — réservation exacte des descripteurs BCn 3D
+
+`BlockLinearUnswizzle3DPass::UnswizzleChunk` déclarait deux bindings storage-buffer et écrivait deux entrées, mais appelait `Acquire(scheduler, 3)`. Sur PS5 native, l'acquisition réserve désormais les **deux entrées réellement utilisées**, évitant un `WaitWorker` prématuré lorsque la file approche de sa limite. Le chemin desktop conserve la réservation historique de trois entrées. Le nouveau témoin C++ extrait le vrai bloc de production, vérifie les deux handles et leurs tailles, puis compare le nombre de drains natif/desktop dans une file bornée, avec -O0/-O2 et UBSan. Gain de frametime réel à confirmer sur console.
