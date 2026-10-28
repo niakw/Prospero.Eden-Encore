@@ -163,3 +163,77 @@ with tempfile.TemporaryDirectory(prefix="encore-empty-graphics-stage-") as tmp:
                         str(p),"-o",str(exe)],check=True,timeout=30)
         subprocess.run([str(exe)],check=True,timeout=10)
         print("ENCORE_EMPTY_GRAPHICS_STAGE_HOST_PASS",opt)
+
+
+# F07 P0.4: unlike a pure loop, FillImageViews() resets the global
+# deletion/retry latch on *every* call, including an empty graphics pass.
+# Compute preserves this contract already. Use the exact selected graphics
+# call block and compile zero/populated/zero transitions at O0 and O2.
+texture_header=(root/"vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text()
+fill_start=texture_header.index("void TextureCache<P>::FillImageViews(")
+fill_end=texture_header.index("void TextureCache<P>::CheckFeedbackLoop(",fill_start)
+fill_source=texture_header[fill_start:fill_end]
+assert fill_source.index("has_deleted_images = false;") < fill_source.index("for (ImageViewInOut& view : views)")
+draw_start=src.index("bool GraphicsPipeline::ConfigureImpl(")
+draw_end=src.index("bool GraphicsPipeline::ConfigureDraw(",draw_start)
+draw_source=src[draw_start:draw_end]
+image_start=draw_source.index("    // FillImageViews resets the image-deletion/retry latch")
+image_end=draw_source.index("\n\n    ::Eden::Performance::CachePhaseTimer bind_texture_phase",image_start)
+image_call=draw_source[image_start:image_end]
+assert image_call.count("texture_cache.FillImageViews(")==1
+assert "if (!views.empty())" not in image_call
+assert "CachePhase::TextureFillImageViews" in image_call
+assert "FillImageViews resets the image-deletion/retry latch" in (root/"tools/check-vendored-vulkan-fork.py").read_text()
+empty_views_cpp=r"""
+#include <cassert>
+#include <span>
+#include <vector>
+struct ImageViewInOut { int id{}; };
+namespace Eden::Performance {
+enum class CachePhase { TextureFillImageViews };
+struct CachePhaseTimer { explicit CachePhaseTimer(CachePhase) noexcept {} };
+}
+struct TextureCache {
+    bool has_deleted_images{true};
+    unsigned calls{}, lookups{};
+    void FillImageViews(std::span<ImageViewInOut> views, bool compute, bool blacklist) {
+        assert(!compute && !blacklist);
+        ++calls;
+        has_deleted_images = false;
+        for (auto& view : views) { ++lookups; view.id = 11; }
+    }
+};
+struct Graphics {
+    TextureCache texture_cache;
+    std::vector<ImageViewInOut> views;
+    static constexpr bool has_images = false;
+    void Configure() {
+""" + image_call + r"""
+    }
+};
+int main() {
+    Graphics g;
+    g.Configure();
+    assert(!g.texture_cache.has_deleted_images && g.texture_cache.calls==1);
+    g.texture_cache.has_deleted_images=true;
+    g.views.resize(2);
+    g.Configure();
+    assert(!g.texture_cache.has_deleted_images && g.texture_cache.calls==2);
+    assert(g.texture_cache.lookups==2 && g.views[0].id==11);
+    g.texture_cache.has_deleted_images=true;
+    g.views.clear();
+    g.Configure();
+    assert(!g.texture_cache.has_deleted_images && g.texture_cache.calls==3);
+    assert(g.texture_cache.lookups==2);
+}
+"""
+with tempfile.TemporaryDirectory(prefix="encore-graphics-empty-latch-") as tmp:
+    p=Path(tmp)/"view.cpp"
+    p.write_text(empty_views_cpp)
+    for opt in ("-O0","-O2"):
+        exe=Path(tmp)/("view"+opt[1:])
+        subprocess.run(["c++","-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                        "-fsanitize=undefined",str(p),"-o",str(exe)],
+                       check=True,timeout=30,capture_output=True,text=True)
+        subprocess.run([str(exe)],check=True,timeout=10)
+        print("ENCORE_F07_EMPTY_GRAPHICS_VIEW_LATCH_PASS",opt)
