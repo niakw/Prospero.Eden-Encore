@@ -180,3 +180,9 @@ Les vérifications de staging citées plus haut imposent **handle Vulkan réel E
 ## Consolidation 38 fonctions — 2026-10-28
 
 **38/38 décisions de revue source consignées.** La fermeture des 38 revues ne signifie ni 38 patchs, ni 38 gains de performances, ni 38 validations CI ou console. Le code nouveau et concret de ce passage est la synchronisation du compteur de préchargement shader sur `407ad36`; les autres protections inventoriées préexistaient et sont maintenues. La prochaine étape est B5 : comparer la source générée, compiler les témoins hôte et effectuer les quatre gates sur le **même SHA métier**, puis lancer une seule campagne console FC 27/BOTW. Le défaut P0 de traduction froide synchrone et les blocages HUD/pause restent ouverts tant que les mesures ne les ferment pas. Sans ces preuves, ne pas présenter F07 comme terminé.
+
+## B5 — remise en marche des validations et build complet
+
+- L'exécution fast gate `40783674481` sur le correctif métier `407ad36` a échoué dans le témoin `tools/check-vulkan-deferred-copy-ownership-host.py` : la portion réelle `RecordWithUploadBuffer` appelle désormais `InvalidateState`, absent de la classe minimale du harnais. Il s'agissait d'une erreur de compilation du **témoin**, non d'un défaut PS5 observé.
+- Correctif `3384977ae8c0a296ea5a755d29fcba369962a217` : le harnais expose la méthode d'invalidation et vérifie aussi le double refus `CommandChunk::Record`, son signalement et une commande valide après récupération. Fast gate `40784547280`, prévalidation `40784547410` et sécurité : laisser la CI déterminer leurs résultats ; ne jamais les présumer verts.
+- Ce checkpoint [full-build] déclenche une **compilation native authentique** du même arbre moteur après ce correctif de test, sans nouvelle divergence des sources ou du générateur Vulkan. Le paquet reste non qualifié tant que la CI et un essai FC 27/BOTW sur console ne l'ont pas confirmé.
