@@ -425,6 +425,7 @@ jobs:
           python3 -B tools/check-ps5-f07-async-dma-rollback-host.py
           python3 -B tools/check-ps5-f07-async-flush-staging-rollback-host.py
           python3 -B tools/check-ps5-f07-memory-pressure-sampling-host.py
+          python3 -B tools/check-ps5-f07-feedback-active-color-slots-host.py
           python3 -B tools/check-ps5-f07-pop-async-transaction-host.py
           python3 -B tools/check-ps5-f07-unswizzle-stale-revision-host.py
           python3 -B tools/check-ps5-f07-unswizzle-slice-bounds-host.py
