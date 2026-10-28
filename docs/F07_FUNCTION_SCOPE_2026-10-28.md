@@ -115,3 +115,5 @@ Dans `RunGarbageCollector`, le calcul `DirtyEvictions()` pouvait appeler la sond
 ## P0.4 — taille des copies de réinterprétation Vulkan
 
 Le rendu natif PS5 abandonne les réinterprétations sans copie, avant toute invalidation de shadow ou demande d'un buffer temporaire de taille zéro. Pour les copies non vides, la taille du buffer intermédiaire est désormais calculée en `size_t` avec contrôles explicites des dimensions nulles, des multiplications et de l'addition cumulée ; un format invalide ou un débordement est rejeté sans enregistrer la commande. Le chemin desktop demeure inchangé. Un témoin C++ extrait vérifie une copie valide, plusieurs copies, dimensions nulles, multiplications et somme débordantes sous UBSan O0/O2. Le résultat GPU réel reste à vérifier sur console.
+
+**Contrôle supplémentaire F07 :** `GetTemporaryBuffer` dispose de `8*sizeof(size_t)` cases, chacune correspondant à une puissance de deux. La réinterprétation PS5 refuse maintenant toute taille totale supérieure à la plus haute case, même en l'absence de débordement `size_t`. Le témoin inclut une seule copie géante arithmétiquement représentable mais au-delà du tableau de scratch buffers.
