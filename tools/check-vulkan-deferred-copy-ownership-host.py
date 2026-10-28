@@ -45,6 +45,7 @@ f07_texture_labels = (
     'F07 reject empty native Vulkan reinterpret image copies',
     'F07 validate native Vulkan reinterpret scratch byte budget',
     'F07 reject scratch sizes outside Vulkan transient buffer slots',
+    'F07 validate native reinterpret pixel ratios before coordinate conversion',
 )
 f07_texture_deltas = []
 for statement in tree.body:
