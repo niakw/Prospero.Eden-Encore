@@ -897,11 +897,13 @@ void BlockLinearUnswizzle3DPass::UnswizzleChunk(
         };
 
         // Single barrier handles both buffer and image.
-        // The previous batch can have been sampled by any graphics stage;
-        // match the GENERAL image read/write access in the native barrier.
+        // A new image starts UNDEFINED: its compute output is the only
+        // dependency. A reused Z batch may have been sampled by graphics,
+        // and still needs the full GENERAL read/write synchronization.
         cmdbuf.PipelineBarrier(
 #ifdef PS5_NATIVE
-            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            is_first_chunk ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT :
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 #else
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 #endif
