@@ -15,7 +15,7 @@ pop_start=source.index("void TextureCache<P>::PopAsyncFlushes() {",end)
 pop_end=source.index("\ntemplate <class P>",pop_start+20)
 pop=source[pop_start:pop_end]
 empty_start=pop.index("        if (download_ids.empty()) {")
-empty_end=pop.index("        auto download_map =",empty_start)
+empty_end=pop.index("\n#ifdef PS5_NATIVE\n        // Keep staging queued",empty_start)
 empty_pop=pop[empty_start:empty_end]
 assert "F07 return deferred staging when async flush batch preparation fails" in generator
 assert "F07 rollback async download queue pair on second insertion failure" in generator
