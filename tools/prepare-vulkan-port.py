@@ -3022,6 +3022,15 @@ apply_reviewed_delta(
     "        if (image.cpu_addr != cpu_addr) {\n            continue;\n        }\n#ifdef PS5_NATIVE\n        // A remapped image or one dirtied by guest CPU writes cannot be\n        // sampled as an unchanged accelerated display framebuffer. Fall back\n        // to the guest-memory upload until its Vulkan image is refreshed.\n        // Clean GPU-authored images keep the zero-copy presentation path.\n        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {\n            continue;\n        }\n#endif\n        if (image.image_view_ids.empty()) {",
     'F07 P0.4 accelerated present rejects remapped or CPU-dirty framebuffer')
 
+# F07 P0.4: CPU dirty is cleared when asynchronous decode is enqueued.
+# Until that decode uploads its new bytes, accelerated display must not
+# reuse the previous GPU image; prefer the regular raw framebuffer route.
+apply_reviewed_delta(
+    'vulkan-cache/video_core/texture_cache/texture_cache.h',
+    "        // Clean GPU-authored images keep the zero-copy presentation path.\n        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {",
+    "        // An in-flight asynchronous decode has not published its new pixels.\n        // Clean GPU-authored images keep the zero-copy presentation path.\n        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified |\n                                ImageFlagBits::IsDecoding))) {",
+    'F07 P0.4 exclude asynchronously decoding accelerated framebuffer')
+
 # F07 P0.4: composite can be the first GPU consumer after a guest
 # memory remap. Flush queued mapping invalidations ahead of the texture
 # mutex, matching DrawTexture's lock ordering. This keeps the newly selected

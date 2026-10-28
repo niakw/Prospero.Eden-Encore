@@ -550,3 +550,16 @@ bindings admis restent inchangés. La reproduction strictement épinglée
 et les témoins O0/O2 sont mis à jour, y compris la reconstruction de
 l'empreinte historique des copies différées. Ce changement ne prouve
 aucun gain de FPS ou de fraîcheur HUD sur console.
+
+## F07 P0.4 — exclusion d'un framebuffer en décodage asynchrone (28 octobre)
+
+Le filtre de présentation accélérée écartait déjà les images remappées ou
+marquées `CpuModified`. Or cette marque est effacée dès la mise en file d'un
+décodage asynchrone : l'image Vulkan précédente pouvait alors être sélectionnée
+pendant que le nouveau contenu restait `IsDecoding`. Le chemin PS5 exclut
+aussi les candidats en cours de décodage et emploie le téléchargement normal
+du framebuffer invité jusqu'à la disponibilité de l'image. Les images GPU
+propres restent accélérées ; aucune attente ni lecture d'horloge ajoutée.
+La source sélectionnée, la régénération stricte et le témoin C++ O0/O2
+couvrent ce passage. **À vérifier par CI sur le même SHA, puis en jeu :**
+ce correctif ne constitue pas une preuve de disparition du HUD retardé.

@@ -1254,8 +1254,10 @@ std::pair<typename P::ImageView*, bool> TextureCache<P>::TryFindFramebufferImage
         // A remapped image or one dirtied by guest CPU writes cannot be
         // sampled as an unchanged accelerated display framebuffer. Fall back
         // to the guest-memory upload until its Vulkan image is refreshed.
+        // An in-flight asynchronous decode has not published its new pixels.
         // Clean GPU-authored images keep the zero-copy presentation path.
-        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {
+        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified |
+                                ImageFlagBits::IsDecoding))) {
             continue;
         }
 #endif
