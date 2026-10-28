@@ -3073,51 +3073,6 @@ apply_reviewed_delta(
     "        // A dirty or remapped sibling at the SAME guest address also\n        // invalidates older clean accelerated candidates. CPU guest bytes\n        // must win until all conflicting cache images have been refreshed.\n        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {\n            return {};\n        }",
     'F07 P0.4 prevent stale sibling framebuffer on CPU write or remap')
 
-# F07 P0.3: reuse same-generation compute descriptor payload without
-# reading guest bytes before paired cache synchronization. Desktop unchanged.
-apply_reviewed_delta(
-    "include/video_core/renderer_vulkan/vk_compute_pipeline.h",
-    "#include <mutex>\n",
-    "#include <mutex>\n#include <vector>\n",
-    "F07 compute header vector")
-
-apply_reviewed_delta(
-    "include/video_core/renderer_vulkan/vk_compute_pipeline.h",
-    "    [[nodiscard]] VkDeviceSize DescriptorRingPreflightSize() const noexcept {\n        // Unlike graphics, every descriptor-buffer compute dispatch allocates.\n        return uses_descriptor_buffer ? descriptor_buffer_layout.size : 0;\n    }",
-    "    [[nodiscard]] VkDeviceSize DescriptorRingPreflightSize() const noexcept {\n        // Only pre-drain guaranteed allocations; same-size changed data\n        // retains Allocate's normal fallback inside Configure.\n        return uses_descriptor_buffer &&\n                       (!last_descriptor_buffer_valid ||\n                        last_descriptor_buffer_generation !=\n                            descriptor_buffer_ring.CurrentGeneration() ||\n                        last_descriptor_payload.size() != num_descriptor_entries)\n                   ? descriptor_buffer_layout.size : 0;\n    }",
-    "F07 compute ring reuse preflight")
-
-apply_reviewed_delta(
-    "include/video_core/renderer_vulkan/vk_compute_pipeline.h",
-    "    u32 num_descriptor_entries{};\n#ifdef PS5_NATIVE\n    size_t num_image_elements{};",
-    "    u32 num_descriptor_entries{};\n#ifdef PS5_NATIVE\n    // The last uploaded snapshot is valid only in its own ring generation.\n    std::vector<DescriptorUpdateEntry> last_descriptor_payload;\n    VkDeviceSize last_descriptor_buffer_offset{};\n    u32 last_descriptor_buffer_chunk{};\n    u64 last_descriptor_buffer_generation{};\n    bool last_descriptor_buffer_valid{};\n    size_t num_image_elements{};",
-    "F07 compute descriptor snapshot fields")
-
-apply_reviewed_delta(
-    "vk_compute_pipeline_cost.cpp",
-    "void ComputePipeline::PreflightDescriptorScratch() {\n    // No guest texture/cache data is consulted here: counts are immutable.",
-    "void ComputePipeline::PreflightDescriptorScratch() {\n    // Reserve on the GPU owner, before the paired guest cache mutexes.\n    // Compare guest payload bytes only after their normal synchronization.\n    if (uses_descriptor_buffer &&\n        last_descriptor_payload.capacity() < num_descriptor_entries) {\n        last_descriptor_payload.reserve(num_descriptor_entries);\n    }\n    // No guest texture/cache data is consulted here: counts are immutable.",
-    "F07 compute descriptor snapshot preflight")
-
-apply_reviewed_delta(
-    "vk_compute_pipeline_cost.cpp",
-    "    const DescriptorUpdateEntry* const descriptor_data{guest_descriptor_queue.UpdateData()};\n    VkDeviceSize descriptor_buffer_offset{};\n    u32 descriptor_buffer_chunk{};\n    if (uses_descriptor_buffer) {\n        const DescriptorBufferRing::Allocation alloc{\n            descriptor_buffer_ring.Allocate(scheduler, descriptor_buffer_layout.size)};\n        if (!alloc.host) {\n            LOG_DEBUG(Render_Vulkan, \"Failed to reserve descriptor memory, skipping dispatch\");\n            return false;\n        }\n        WriteDescriptorBuffer(device, descriptor_buffer_layout, descriptor_data, alloc.host);\n        descriptor_buffer_offset = alloc.offset;\n        descriptor_buffer_chunk = alloc.chunk;\n    }\n\n",
-    "    const DescriptorUpdateEntry* const descriptor_data{guest_descriptor_queue.UpdateData()};\n    VkDeviceSize descriptor_buffer_offset{};\n    u32 descriptor_buffer_chunk{};\n    if (uses_descriptor_buffer) {\n#ifdef PS5_NATIVE\n        // Same payload and generation: keep the previously uploaded bytes,\n        // extending the GPU ring tick without another allocation or upload.\n        const bool reuse_allocation =\n            last_descriptor_buffer_valid &&\n            last_descriptor_buffer_generation == descriptor_buffer_ring.CurrentGeneration() &&\n            last_descriptor_payload.size() == num_descriptor_entries &&\n            (num_descriptor_entries == 0 ||\n             std::memcmp(last_descriptor_payload.data(), descriptor_data,\n                         num_descriptor_entries * sizeof(DescriptorUpdateEntry)) == 0);\n        if (reuse_allocation) {\n            descriptor_buffer_offset = last_descriptor_buffer_offset;\n            descriptor_buffer_chunk = last_descriptor_buffer_chunk;\n            descriptor_buffer_ring.TouchFrame(scheduler);\n        } else\n#endif\n        {\n            const DescriptorBufferRing::Allocation alloc{\n                descriptor_buffer_ring.Allocate(scheduler, descriptor_buffer_layout.size)};\n            if (!alloc.host) {\n                LOG_DEBUG(Render_Vulkan, \"Failed to reserve descriptor memory, skipping dispatch\");\n                return false;\n            }\n            WriteDescriptorBuffer(device, descriptor_buffer_layout, descriptor_data, alloc.host);\n            descriptor_buffer_offset = alloc.offset;\n            descriptor_buffer_chunk = alloc.chunk;\n#ifdef PS5_NATIVE\n            last_descriptor_buffer_offset = alloc.offset;\n            last_descriptor_buffer_chunk = alloc.chunk;\n            last_descriptor_buffer_generation = alloc.generation;\n            if (num_descriptor_entries != 0) {\n                last_descriptor_payload.assign(descriptor_data,\n                                               descriptor_data + num_descriptor_entries);\n            } else {\n                last_descriptor_payload.clear();\n            }\n            last_descriptor_buffer_valid = true;\n#endif\n        }\n    }\n\n",
-    "F07 compute descriptor payload fast reuse")
-
-apply_reviewed_delta(
-    "vulkan_rasterizer.cpp",
-    "    // Compute always allocates new descriptor-buffer space for a dispatch.\n    // Drain only necessary GPU fences while neither guest cache is locked.",
-    "    // Compute reuses same-generation identical descriptor payloads.\n    // Pre-drain guaranteed allocations, not uncertain changed payloads,\n    // while neither guest cache is locked.",
-    "F07 compute preflight comment")
-
-# F07: descriptor equality uses std::memcmp; do not rely on transitive includes.
-apply_reviewed_delta(
-    'vk_compute_pipeline_cost.cpp',
-    "#include <memory>\n#include <vector>",
-    "#include <cstring>\n#include <memory>\n#include <vector>",
-    'F07 compute explicit cstring descriptor compare include')
-
 # F07 P0.4: composite can be the first GPU consumer after a guest
 # memory remap. Flush queued mapping invalidations ahead of the texture
 # mutex, matching DrawTexture's lock ordering. This keeps the newly selected
@@ -3857,3 +3812,48 @@ apply_reviewed_delta("vk_buffer_cache_cost.cpp",
     "    const u32 binding_count = max_binding - min_binding;\n    boost::container::static_vector<VkBuffer, VideoCommon::NUM_VERTEX_BUFFERS> buffer_handles(bindings.buffers.size());\n    for (u32 i = 0; i < bindings.buffers.size(); ++i) {",
     "    const u32 binding_count = max_binding - min_binding;\n#ifdef PS5_NATIVE\n    // Do not resolve or allocate handles for indices the device cannot bind.\n    // Both buffer-cache producers keep all host vectors aligned to the range.\n    // Reject malformed input before a deferred Vulkan command can read it.\n    if (bindings.buffers.size() < binding_count ||\n        bindings.offsets.size() < binding_count ||\n        bindings.sizes.size() < binding_count ||\n        bindings.strides.size() < binding_count) {\n        return;\n    }\n    const u32 handle_count = binding_count;\n#else\n    const u32 handle_count = static_cast<u32>(bindings.buffers.size());\n#endif\n    boost::container::static_vector<VkBuffer, VideoCommon::NUM_VERTEX_BUFFERS> buffer_handles(handle_count);\n    for (u32 i = 0; i < handle_count; ++i) {",
     "F07 trim vertex handles after device limit clamp")
+
+# F07 P0.3: reuse same-generation compute descriptor payload without
+# reading guest bytes before paired cache synchronization. Desktop unchanged.
+apply_reviewed_delta(
+    "include/video_core/renderer_vulkan/vk_compute_pipeline.h",
+    "#include <mutex>\n",
+    "#include <mutex>\n#include <vector>\n",
+    "F07 compute header vector")
+
+apply_reviewed_delta(
+    "include/video_core/renderer_vulkan/vk_compute_pipeline.h",
+    "    [[nodiscard]] VkDeviceSize DescriptorRingPreflightSize() const noexcept {\n        // Unlike graphics, every descriptor-buffer compute dispatch allocates.\n        return uses_descriptor_buffer ? descriptor_buffer_layout.size : 0;\n    }",
+    "    [[nodiscard]] VkDeviceSize DescriptorRingPreflightSize() const noexcept {\n        // Only pre-drain guaranteed allocations; same-size changed data\n        // retains Allocate's normal fallback inside Configure.\n        return uses_descriptor_buffer &&\n                       (!last_descriptor_buffer_valid ||\n                        last_descriptor_buffer_generation !=\n                            descriptor_buffer_ring.CurrentGeneration() ||\n                        last_descriptor_payload.size() != num_descriptor_entries)\n                   ? descriptor_buffer_layout.size : 0;\n    }",
+    "F07 compute ring reuse preflight")
+
+apply_reviewed_delta(
+    "include/video_core/renderer_vulkan/vk_compute_pipeline.h",
+    "    u32 num_descriptor_entries{};\n#ifdef PS5_NATIVE\n    size_t num_image_elements{};",
+    "    u32 num_descriptor_entries{};\n#ifdef PS5_NATIVE\n    // The last uploaded snapshot is valid only in its own ring generation.\n    std::vector<DescriptorUpdateEntry> last_descriptor_payload;\n    VkDeviceSize last_descriptor_buffer_offset{};\n    u32 last_descriptor_buffer_chunk{};\n    u64 last_descriptor_buffer_generation{};\n    bool last_descriptor_buffer_valid{};\n    size_t num_image_elements{};",
+    "F07 compute descriptor snapshot fields")
+
+apply_reviewed_delta(
+    "vk_compute_pipeline_cost.cpp",
+    "void ComputePipeline::PreflightDescriptorScratch() {\n    // No guest texture/cache data is consulted here: counts are immutable.",
+    "void ComputePipeline::PreflightDescriptorScratch() {\n    // Reserve on the GPU owner, before the paired guest cache mutexes.\n    // Compare guest payload bytes only after their normal synchronization.\n    if (uses_descriptor_buffer &&\n        last_descriptor_payload.capacity() < num_descriptor_entries) {\n        last_descriptor_payload.reserve(num_descriptor_entries);\n    }\n    // No guest texture/cache data is consulted here: counts are immutable.",
+    "F07 compute descriptor snapshot preflight")
+
+apply_reviewed_delta(
+    "vk_compute_pipeline_cost.cpp",
+    "    const DescriptorUpdateEntry* const descriptor_data{guest_descriptor_queue.UpdateData()};\n    VkDeviceSize descriptor_buffer_offset{};\n    u32 descriptor_buffer_chunk{};\n    if (uses_descriptor_buffer) {\n        const DescriptorBufferRing::Allocation alloc{\n            descriptor_buffer_ring.Allocate(scheduler, descriptor_buffer_layout.size)};\n        if (!alloc.host) {\n            LOG_DEBUG(Render_Vulkan, \"Failed to reserve descriptor memory, skipping dispatch\");\n            return false;\n        }\n        WriteDescriptorBuffer(device, descriptor_buffer_layout, descriptor_data, alloc.host);\n        descriptor_buffer_offset = alloc.offset;\n        descriptor_buffer_chunk = alloc.chunk;\n    }\n\n",
+    "    const DescriptorUpdateEntry* const descriptor_data{guest_descriptor_queue.UpdateData()};\n    VkDeviceSize descriptor_buffer_offset{};\n    u32 descriptor_buffer_chunk{};\n    if (uses_descriptor_buffer) {\n#ifdef PS5_NATIVE\n        // Same payload and generation: keep the previously uploaded bytes,\n        // extending the GPU ring tick without another allocation or upload.\n        const bool reuse_allocation =\n            last_descriptor_buffer_valid &&\n            last_descriptor_buffer_generation == descriptor_buffer_ring.CurrentGeneration() &&\n            last_descriptor_payload.size() == num_descriptor_entries &&\n            (num_descriptor_entries == 0 ||\n             std::memcmp(last_descriptor_payload.data(), descriptor_data,\n                         num_descriptor_entries * sizeof(DescriptorUpdateEntry)) == 0);\n        if (reuse_allocation) {\n            descriptor_buffer_offset = last_descriptor_buffer_offset;\n            descriptor_buffer_chunk = last_descriptor_buffer_chunk;\n            descriptor_buffer_ring.TouchFrame(scheduler);\n        } else\n#endif\n        {\n            const DescriptorBufferRing::Allocation alloc{\n                descriptor_buffer_ring.Allocate(scheduler, descriptor_buffer_layout.size)};\n            if (!alloc.host) {\n                LOG_DEBUG(Render_Vulkan, \"Failed to reserve descriptor memory, skipping dispatch\");\n                return false;\n            }\n            WriteDescriptorBuffer(device, descriptor_buffer_layout, descriptor_data, alloc.host);\n            descriptor_buffer_offset = alloc.offset;\n            descriptor_buffer_chunk = alloc.chunk;\n#ifdef PS5_NATIVE\n            last_descriptor_buffer_offset = alloc.offset;\n            last_descriptor_buffer_chunk = alloc.chunk;\n            last_descriptor_buffer_generation = alloc.generation;\n            if (num_descriptor_entries != 0) {\n                last_descriptor_payload.assign(descriptor_data,\n                                               descriptor_data + num_descriptor_entries);\n            } else {\n                last_descriptor_payload.clear();\n            }\n            last_descriptor_buffer_valid = true;\n#endif\n        }\n    }\n\n",
+    "F07 compute descriptor payload fast reuse")
+
+apply_reviewed_delta(
+    "vulkan_rasterizer.cpp",
+    "    // Compute always allocates new descriptor-buffer space for a dispatch.\n    // Drain only necessary GPU fences while neither guest cache is locked.",
+    "    // Compute reuses same-generation identical descriptor payloads.\n    // Pre-drain guaranteed allocations, not uncertain changed payloads,\n    // while neither guest cache is locked.",
+    "F07 compute preflight comment")
+
+# F07: descriptor equality uses std::memcmp; do not rely on transitive includes.
+apply_reviewed_delta(
+    'vk_compute_pipeline_cost.cpp',
+    "#include <memory>\n#include <vector>",
+    "#include <cstring>\n#include <memory>\n#include <vector>",
+    'F07 compute explicit cstring descriptor compare include')
