@@ -47,3 +47,7 @@ La branche native de `CreateGraphicsPipeline(ShaderPools&, ...)` ne réanalyse p
 ## P0.1 — refus de mise en file d’une sauvegarde de cache driver
 
 La sauvegarde Vulkan différée conserve désormais le quota de pipelines atteint lorsqu’un `QueueWork` est refusé (exception connue ou inconnue). Le verrou `flush_in_flight` est libéré comme auparavant, et la fenêtre temporelle de limitation reste active : le premier nouvel appel après cette fenêtre peut réessayer sans exiger 128 compilations supplémentaires. Le témoin source-extrait vérifie le refus, l’absence de tempête de retry et la reprise du flush. La récupération d’une exception **dans** le worker n’est pas traitée par ce changement ; les tests console restent nécessaires.
+
+## P0.4 — extension de formats d’images absente
+
+La construction PS5 de `TextureCacheRuntime` initialise aussi le passage compute BCn 3D lorsque le pilote ne fournit pas `VK_KHR_image_format_list` : ce traitement de buffers n’utilise pas cette extension. Auparavant, le constructeur quittait avant la création du passage alors que `RefreshContents` pouvait continuer à placer ces textures dans la file GPU, avec risque de validation sans image transférée. La branche desktop reste inchangée. Le témoin compile la branche exacte en mode PS5/desktop O0/O2 et l’oracle de sources reconstruit ce delta. Pas de preuve console ni de gain FPS revendiqués.

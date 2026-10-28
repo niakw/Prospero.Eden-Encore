@@ -154,6 +154,10 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     upload_path = actual["vk_texture_cache_cost.cpp"]
     upload_source = upload_path.read_text()
     upload_deltas = (
+    # F07 P0.4: a device without image-format-list still needs its optional
+    # BCn 3D compute-buffer pass to complete native asynchronous uploads.
+    ("    if (!device.IsKhrImageFormatListSupported()) {\n        return;\n    }",
+     "    if (!device.IsKhrImageFormatListSupported()) {\n#ifdef PS5_NATIVE\n        // BCn 3D unswizzle is a compute-buffer pass; it does not require\n        // VK_KHR_image_format_list. Without a pass here, native queued 3D\n        // uploads can be marked complete without ever submitting pixels.\n        if (Settings::values.gpu_unswizzle_enabled.GetValue()) {\n            bl3d_unswizzle_pass.emplace(device, scheduler, descriptor_pool,\n                                       staging_buffer_pool, compute_pass_descriptor_queue);\n        }\n#endif\n        return;\n    }"),
     ("VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;\n    static constexpr VkAccessFlags READ_ACCESS_FLAGS",
      "VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;\n    static constexpr VkAccessFlags READ_ACCESS_FLAGS"),
     ("VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;\n\n    //  Compute exact mip/layer range being written to",

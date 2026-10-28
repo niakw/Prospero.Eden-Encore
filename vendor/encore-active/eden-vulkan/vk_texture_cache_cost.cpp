@@ -965,6 +965,15 @@ TextureCacheRuntime::TextureCacheRuntime(const Device& device_, Scheduler& sched
                                   compute_pass_descriptor_queue, memory_allocator);
     }
     if (!device.IsKhrImageFormatListSupported()) {
+#ifdef PS5_NATIVE
+        // BCn 3D unswizzle is a compute-buffer pass; it does not require
+        // VK_KHR_image_format_list. Without a pass here, native queued 3D
+        // uploads can be marked complete without ever submitting pixels.
+        if (Settings::values.gpu_unswizzle_enabled.GetValue()) {
+            bl3d_unswizzle_pass.emplace(device, scheduler, descriptor_pool,
+                                       staging_buffer_pool, compute_pass_descriptor_queue);
+        }
+#endif
         return;
     }
     for (size_t index_a = 0; index_a < VideoCore::Surface::MaxPixelFormat; index_a++) {
