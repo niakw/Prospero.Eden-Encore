@@ -4461,3 +4461,10 @@ apply_reviewed_delta("vk_compute_pass_cost.cpp",
     "    // Allocate or grow to cover this batch's slice count\n    image.AllocateComputeUnswizzleBuffer(MAX_BATCH_SLICES);\n\n    ASSERT(swizzles.size() == 1);",
     "    // Allocate or grow to cover this batch's slice count\n    image.AllocateComputeUnswizzleBuffer(MAX_BATCH_SLICES);\n#ifdef PS5_NATIVE\n    // A failed destination image is not a successful async BCn upload.\n    // Reject on the GPU owner BEFORE queuing chunks; the async caller will\n    // retain the guest dirty flag and retry rather than acknowledge no pixels.\n    if (image.Handle() == VK_NULL_HANDLE ||\n        !image.compute_unswizzle_buffer ||\n        *image.compute_unswizzle_buffer == VK_NULL_HANDLE) {\n        throw std::bad_alloc{};\n    }\n#endif\n\n    ASSERT(swizzles.size() == 1);",
     "F07 native reject null BCn3D destination before GPU upload")
+
+# F07 P0.4: make the native bad_alloc signal's header explicit in the
+# generated compute-pass TU instead of relying on a transitive include.
+apply_reviewed_delta("vk_compute_pass_cost.cpp",
+    "#include <memory>\n#include <numeric>",
+    "#include <memory>\n#include <new>\n#include <numeric>",
+    "F07 explicitly include std bad_alloc for native BCn3D output preflight")
