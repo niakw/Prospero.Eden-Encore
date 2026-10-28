@@ -213,3 +213,7 @@ Dans `TextureCache::CheckFeedbackLoop`, la recherche des alias de vues couleur e
 ## P0.3 — arrêt anticipé des recherches d’alias couleur (feedback profondeur)
 
 Lorsque le HUD échantillonne une vue liée à une pièce jointe couleur active, `CheckFeedbackLoop` cesse maintenant l’examen des autres pièces jointes dès la première égalité (ID de vue ou ID d’image). Cela évite jusqu’à sept comparaisons supplémentaires sur un rendu comportant huit attachments. Les autres cas, y compris la recherche de vrais feedbacks profondeur, le masque de couleurs et la variante desktop, sont inchangés. Le témoin source-extrait conserve l’exhaustivité des 256 masques, ajoute un compteur de comparaisons sur les deux chemins et s’exécute sous `-O0`/`-O2` avec UBSan.
+
+## P0.3 — transfert DMA image invalidé avant les mutex GPU
+
+Dans `AccelerateDMA::DmaBufferImageCopy`, le produit `pitch × height` peut être testé avant de prendre les deux mutex `buffer_cache`/`texture_cache` : un transfert natif nul ou supérieur au span u32 de BufferCache ne doit plus attendre ces verrous pour être refusé. Le chemin desktop préserve l'ordre précédent, les transferts PS5 valides conservent leur pipeline de préparation et les variantes rasterizer M07 restent synchronisées. Un témoin source-extrait vérifie les deux directions et les cas nul, hors limite et valide en C++20 sous -O0/-O2 avec UBSan.
