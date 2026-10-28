@@ -263,3 +263,64 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-async-decode-") as directory:
 print("F07_ASYNC_DECODE_ADMISSION_PASS prepare=1 enqueue=1 previous_decode=1 unswizzle=1 O0=1 O2=1")
 
 print("F07_UPLOAD_ROLLBACK_HOST_PASS O0=1 O2=1 exception_stages=3 success=1")
+
+# The native staging guard below is extracted verbatim from RefreshContents,
+# compiled in both optimization modes, and exercised with a Vulkan-null
+# buffer whose CPU mapping appears full (as well as short/valid mappings).
+native_start = "    const size_t upload_size = MapSizeBytes(image);"
+native_stop = "#else\n    auto staging = runtime.UploadStagingBuffer"
+native_block = body[body.index(native_start):
+                    body.index(native_stop, body.index(native_start))]
+assert "if (!staging.buffer || staging.mapped_span.size_bytes() < upload_size)" in native_block
+staging_cpp = r"""
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <span>
+#include <vector>
+struct Image {std::size_t size{8};};
+std::size_t MapSizeBytes(const Image& image){return image.size;}
+struct Map {std::size_t buffer{};std::span<std::uint8_t> mapped_span{};};
+struct Runtime {
+    Map next{};
+    Map UploadStagingBuffer(std::size_t){return next;}
+};
+struct Cache {
+    Runtime runtime{};
+    unsigned uploads{};
+    void Refresh(Image& image) {
+__NATIVE_BLOCK__
+        ++uploads;
+    }
+};
+int main() {
+    std::vector<std::uint8_t> bytes(8);
+    Image image{};
+    Cache cache{};
+    cache.runtime.next = {0,{bytes.data(),bytes.size()}};
+    cache.Refresh(image);
+    assert(cache.uploads==0);
+    cache.runtime.next = {1,{bytes.data(),bytes.size()-1}};
+    cache.Refresh(image);
+    assert(cache.uploads==0);
+    cache.runtime.next = {};
+    cache.Refresh(image);
+    assert(cache.uploads==0);
+    cache.runtime.next = {1,{bytes.data(),bytes.size()}};
+    cache.Refresh(image);
+    assert(cache.uploads==1);
+}
+""".replace("__NATIVE_BLOCK__",native_block)
+with tempfile.TemporaryDirectory(prefix="eden-f07-native-staging-handle-") as directory:
+    path=Path(directory)/"staging.cpp"
+    path.write_text(staging_cpp)
+    for opt in ("-O0","-O2"):
+        exe=Path(directory)/("staging"+opt[1:])
+        built=subprocess.run([compiler,"-std=c++20",opt,"-Wall","-Wextra",
+                              "-Werror","-fsanitize=undefined",
+                              "-fno-sanitize-recover=all",str(path),"-o",str(exe)],
+                             capture_output=True,text=True,timeout=40)
+        assert built.returncode==0,(opt,built.stderr[-6000:])
+        ran=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
+        assert ran.returncode==0,(opt,ran.stderr[-5000:])
+print("F07_SYNC_STAGING_HANDLE_PASS null_full=1 short=1 empty=1 valid=1 O0=1 O2=1")
