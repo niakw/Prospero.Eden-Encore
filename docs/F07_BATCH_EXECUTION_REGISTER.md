@@ -82,16 +82,31 @@ These source-level decisions are not a claim of complete optimization or green C
 ### B3 — P0.3 : coût sous verrous, progression GPU/CPU, présentation (9)
 Fichiers : `vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp` (6) et `vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp` (3). Ne pas traiter le miroir guest comme preuve du rendu final.
 
-- [ ] 18 `RasterizerVulkan::PrepareDraw` — pair-lock, prévalidation descriptor/scheduler, fast path des draws sans descriptor, zéro perte d'état.
-- [ ] 19 `RasterizerVulkan::DispatchCompute` — buffer indirect non nul, préallocation, pair-lock et rendez-vous worker.
-- [ ] 20 `RasterizerVulkan::OnCPUWrite` — invalidation de pages, aliases et textures après écriture CPU, pas d'ancien HUD réutilisé.
-- [ ] 21 `RasterizerVulkan::AccelerateDisplay` — choix d'une frame réellement produite, texture fraîche et aucune présentation fantôme.
-- [ ] 22 `RasterizerVulkan::TickFrame` — nettoyage/éviction, pression mémoire et pas de travail synchrone lourd sous verrou inutile.
-- [ ] 23 `RasterizerVulkan::FlushWork` — ordre GPU, frontières des batchs, absence de wait durable sans nouveau progrès.
-- [ ] 24 `guest-bridge::RasterizerVulkan::PrepareDraw` — cohérence native/backport et mêmes préconditions de cache/descriptor.
-- [ ] 25 `guest-bridge::RasterizerVulkan::DispatchCompute` — alignement du dispatch guest, mémoire et ordre des barrières.
-- [ ] 26 `guest-bridge::RasterizerVulkan::OnCPUWrite` — invalidation guest complète et traçage de l'écriture jusqu'au cache GPU.
+- [x] 18 `RasterizerVulkan::PrepareDraw` — pair-lock, prévalidation descriptor/scheduler, fast path des draws sans descriptor, zéro perte d'état.
+- [x] 19 `RasterizerVulkan::DispatchCompute` — buffer indirect non nul, préallocation, pair-lock et rendez-vous worker.
+- [x] 20 `RasterizerVulkan::OnCPUWrite` — invalidation de pages, aliases et textures après écriture CPU, pas d'ancien HUD réutilisé.
+- [x] 21 `RasterizerVulkan::AccelerateDisplay` — choix d'une frame réellement produite, texture fraîche et aucune présentation fantôme.
+- [x] 22 `RasterizerVulkan::TickFrame` — nettoyage/éviction, pression mémoire et pas de travail synchrone lourd sous verrou inutile.
+- [x] 23 `RasterizerVulkan::FlushWork` — ordre GPU, frontières des batchs, absence de wait durable sans nouveau progrès.
+- [x] 24 `guest-bridge::RasterizerVulkan::PrepareDraw` — cohérence native/backport et mêmes préconditions de cache/descriptor.
+- [x] 25 `guest-bridge::RasterizerVulkan::DispatchCompute` — alignement du dispatch guest, mémoire et ordre des barrières.
+- [x] 26 `guest-bridge::RasterizerVulkan::OnCPUWrite` — invalidation guest complète et traçage de l'écriture jusqu'au cache GPU.
 
+**B3 — 9/9 décisions de revue source, mesures de frame toujours ouvertes.**
+
+| N° | Fonction | Décision / risque |
+|---:|---|---|
+| 18 | Native PrepareDraw | Garde existante conservée, pas de changement spéculatif : Preflight scheduler and exact guest descriptors before pair-lock, reselect shader after waits; descriptor-free path avoids legacy queue. Rare fallback under lock still exists. |
+| 19 | Native DispatchCompute | Garde existante conservée, pas de changement spéculatif : Null indirect buffer guard and prevalidation before cache pair, descriptor preflight and compute timing probes; false dispatch drop remains observable. |
+| 20 | Native OnCPUWrite | Garde existante conservée, pas de changement spéculatif : Buffer/image page evidence guards independent cache locks, shader invalidation remains on non-short-circuit path. Early return of buffer-cache owner preserved, requires runtime proof. |
+| 21 | Native AccelerateDisplay | Garde existante conservée, pas de changement spéculatif : Flushes guest invalidations before selecting the framebuffer under texture lock; cache rejects stale/dirty aliases in underlying selection function. FPS/real HUD unproven. |
+| 22 | Native TickFrame | Garde existante conservée, pas de changement spéculatif : Resource ticks sequenced, texture/buffer tick each under their mutex; GC memory sampling exists. Actual frame-window cost still needs console. |
+| 23 | Native FlushWork | Garde existante conservée, pas de changement spéculatif : Dispatch mask maintains FIFO, forced flush at 512 draws; no safe order change justified without trace. |
+| 24 | Guest PrepareDraw | Garde existante conservée, pas de changement spéculatif : Mirrors native preflight path in guest-bridge source; integration mirror is not evidence of PS5 rendering. |
+| 25 | Guest DispatchCompute | Garde existante conservée, pas de changement spéculatif : Mirrors native descriptor preflight/dispatch ordering; preserve explicit indirect buffer validity and barrier semantics. |
+| 26 | Guest OnCPUWrite | Garde existante conservée, pas de changement spéculatif : Separate deferred guest-write branch intentionally differs from native; do not blindly copy native path, verify deferred flush on console. |
+
+Le chemin `guest-bridge` est audité séparément du renderer PS5; les temps de cache-pair, de progression worker et de présentation ne peuvent pas être certifiés par simple inspection.
 **Porte B3 :** distinguer frame non produite, commande non enregistrée, worker bloqué et image répétée ; corréler temps >50/100 ms, sans sacrifier la cohérence.
 
 ### B4 — P0.4 : textures, upload et fraîcheur HUD (12)
@@ -126,7 +141,7 @@ Fichiers : `vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cac
 | B0 — registre + correction générateur du scheduler | **Intégré dans le commit qui ajoute ce fichier** | Réconciliation du `#include <new>` à vérifier par CI, échec précédent #40782741133 identifié | B1 P0.1 01→07 |
 | B1 — shader/cache | **7/7 décisions source; CI/console ouvertes** | Réessais 64/32, priorité premier usage, prewarm 8 ; correction mutex `407ad36` | Gate hôte puis mesures console ; ne pas rouvrir sans échec observé |
 | B2 — pipelines/descripteurs | **10/10 décisions source; CI/console ouvertes** | Scratch preflight, FIFO wait, rollback Record, ring/tick et quota optimiseur inspectés | CI groupée puis qualifier les attentes fallback réellement coûteuses sur console |
-| B3 — rasterizer/guest | **À traiter** | Pair-lock/preflight et tests dispersés existants | Clore les 9 décisions |
+| B3 — rasterizer/guest | **9/9 décisions source; mesures console ouvertes** | Preflight, pair-lock, writes guest, frame, FIFO audités ; miroir distinct | Traces >50/>100 ms, progression guest et captures HUD |
 | B4 — textures/HUD | **À traiter** | Nombreuses gardes async/readback/BCn déjà intégrées | Clore les 12 décisions |
 | B5 — gates groupés + console | **Bloqué par B1–B4** | Build natif sur SHA unique, puis test physique FC27/BOTW | Fermer ou rouvrir par preuve |
 
@@ -136,7 +151,7 @@ Fichiers : `vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cac
 
 ## F07 checkpoint — 2026-10-28
 
-- Source decision count: B1 7/7; B2 10/10; B3 0/9; B4 0/12. The resulting 21 remaining checks are audit decisions, not 21 proven defects. These remaining 31 are audit decisions, not 31 proven defects.
+- Source decision count: B1 7/7; B2 10/10; B3 9/9; B4 0/12. The remaining 12 checks are audit decisions, not 12 proven defects. These remaining 31 are audit decisions, not 31 proven defects.
 - Business code commit: `407ad36ef5207d4fef964074241cb197fb153248`. Fork generator and selected Vulkan source were changed together, with host witness updated.
 - CI checks not yet proven green on `407ad36`; no console FPS or HUD freshness proof. No PR or secondary branch created.
 - Next: B2 08–17 source review, targeted regressions, then B3/B4, followed by one coherent four-gate/console campaign.
