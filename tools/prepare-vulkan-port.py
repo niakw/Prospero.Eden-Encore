@@ -4056,3 +4056,9 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    barrier_phase.Stop();\n    upload_completed = true;\n#endif\n}",
     "    barrier_phase.Stop();\n    upload_completed = true;\n    } catch (const std::bad_alloc&) {\n        // A transient staging/CPU conversion OOM must not abort the GPU owner.\n        // The existing scope guard untracks and keeps the revision dirty.\n        return;\n    }\n#endif\n}",
     "F07 dirty native sync texture retry after bad allocation")
+
+# F07 P0.4: reject short non-deferred sync staging before any image transfer.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));\n#ifdef PS5_NATIVE\n    staging_phase.Stop();",
+    "#ifdef PS5_NATIVE\n    const size_t upload_size = MapSizeBytes(image);\n    auto staging = runtime.UploadStagingBuffer(upload_size);\n    if (staging.mapped_span.size_bytes() < upload_size) {\n        // No valid image bytes can be uploaded from an incomplete mapping.\n        // The existing rollback scope guard retains CpuModified for retry.\n        return;\n    }\n#else\n    auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));\n#endif\n#ifdef PS5_NATIVE\n    staging_phase.Stop();",
+    "F07 reject short native sync upload staging")

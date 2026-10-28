@@ -75,3 +75,7 @@ Après une erreur de sérialisation ou une exception pendant la lecture du cache
 ## P0.4 — manque de mémoire pendant l’upload synchrone
 
 Sur PS5 native, une exception `std::bad_alloc` pendant le staging, la conversion ou la soumission synchrone laisse `CpuModified` pour le prochain passage et n'interrompt pas le rendu. Le garde de restauration existant détache l'image ; la barrière n'est jamais publiée comme succès sur le chemin en échec. Le témoin F04 C++ source-extrait injecte un échec d'allocation suivi d'un transfert réussi de la nouvelle révision. Les autres catégories d'erreurs restent visibles. Pas de preuve console.
+
+## P0.4 — staging synchrone incomplet
+
+La PS5 rejette maintenant un staging GPU vide ou trop court avant toute copie de pixels ou barrière. Le rollback existant préserve CpuModified pour une seconde tentative. Le témoin source-extrait exécute l'échec puis la reprise à O0/O2. Pas de validation console.
