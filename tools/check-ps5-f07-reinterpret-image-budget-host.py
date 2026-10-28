@@ -26,7 +26,7 @@ assert source.count(method_start) == source.count(method_end) == 1
 start=source.index(method_start)
 method=source[start:source.index(method_end,start)]
 early_start="#ifdef PS5_NATIVE\n    // An empty reinterpret has no image pixels"
-early_end="    if (ENABLE_MSAA_RESOLVE_CONSUME)"
+early_end="#ifndef PS5_NATIVE\n    if (ENABLE_MSAA_RESOLVE_CONSUME)"
 assert method.count(early_start)==method.count(early_end)==1
 early=method[method.index(early_start):method.index(early_end)]
 body_start="    const u32 img_bpp = BytesPerBlock(dst.info.format);"
