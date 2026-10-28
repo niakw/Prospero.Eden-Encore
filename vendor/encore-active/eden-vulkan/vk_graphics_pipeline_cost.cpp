@@ -424,7 +424,20 @@ GraphicsPipeline::GraphicsPipeline(
             Validate();
             if (::Eden::DevVulkan::fast_first_pipelines && fast_first_runtime) {
                 MakePipeline(render_pass, VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT);
+#ifdef PS5_NATIVE
+                // This speculative rebuild is not required by the first-use
+                // pipeline. Admission/OOM failures must not turn an already
+                // valid gameplay pipeline into a failed builder invocation.
+                try {
+                    QueueOptimizedPipeline(render_pass);
+                } catch (const std::exception& error) {
+                    LOG_WARNING(Render_Vulkan, "Optional pipeline rebuild queue rejected: {}", error.what());
+                } catch (...) {
+                    LOG_WARNING(Render_Vulkan, "Optional pipeline rebuild queue rejected: unknown exception");
+                }
+#else
                 QueueOptimizedPipeline(render_pass);
+#endif
             } else {
                 MakePipeline(render_pass);
             }

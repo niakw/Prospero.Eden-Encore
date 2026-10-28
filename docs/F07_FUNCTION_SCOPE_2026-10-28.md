@@ -63,3 +63,7 @@ Si `FullUploadSwizzles` ou `AccelerateImageUpload` échoue au cours d’un lot, 
 ## P0.4 — lecture mémoire invitée échouée durant un lot BCn 3D
 
 Le chemin PS5 natif de `TickAsyncUnswizzle` capture les exceptions de `GpuMemory::ReadBlock` même lorsqu'une portion du staging a déjà été remplie. Il libère en différé la source des lots GPU antérieurs, conserve `CpuModified`, libère `IsDecoding` et retire le travail incomplet. Un témoin C++ source-extrait force l'échec initial, l'échec après une lecture partielle, le succès et la reprise sous O0/O2. La branche desktop reste inchangée ; aucun FPS réel n'est déduit.
+
+## P0.2 — échec d’une compilation optimisée facultative
+
+Une exception d’admission/OOM dans `QueueOptimizedPipeline` ne doit pas déclencher le gestionnaire critique de construction initiale après que `MakePipeline` a déjà publié le pipeline rapide. L’appelant PS5 absorbe les refus connus ou inconnus de la file facultative et laisse se poursuivre la collecte statistique. Le test C++ source-extrait vérifie le pipeline initial, les deux exceptions et le chemin direct en PS5 et desktop sous O0/O2. Le worker optimisé garde sa logique antérieure de libération des quotas ; aucun gain FPS console n’est affirmé.
