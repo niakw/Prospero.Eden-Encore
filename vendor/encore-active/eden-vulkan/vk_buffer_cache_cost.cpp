@@ -544,6 +544,13 @@ void BufferCacheRuntime::ClearBuffer(VkBuffer dest_buffer, u32 offset, size_t si
     if (dest_buffer == VK_NULL_HANDLE) {
         return;
     }
+#ifdef PS5_NATIVE
+    // A zero-length fill has no memory side effects and is invalid for
+    // vkCmdFillBuffer. Do not record a transfer or its redundant barriers.
+    if (size == 0) {
+        return;
+    }
+#endif
     static constexpr VkMemoryBarrier READ_BARRIER{
         .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
         .pNext = nullptr,
