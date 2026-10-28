@@ -139,6 +139,9 @@ struct Layout { VkDeviceSize size{16}; };
 struct DescriptorUpdateEntry { u64 bits{}; };
 struct Pipeline {
     DescriptorBufferRing& descriptor_buffer_ring;
+    // Explicitly initialize the sole required dependency. Keep -Werror
+    // enabled, including Clang's missing-field-initializers warning.
+    explicit Pipeline(DescriptorBufferRing& ring) : descriptor_buffer_ring(ring) {}
     bool last_descriptor_buffer_valid{};
     u64 last_descriptor_buffer_generation{};
     std::vector<DescriptorUpdateEntry> last_descriptor_payload;
