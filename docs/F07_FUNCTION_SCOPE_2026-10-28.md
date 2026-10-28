@@ -99,3 +99,7 @@ Auparavant, si une tranche BCn 3D dépassait `swizzle_chunk_size`, `TickAsyncUns
 `TickAsyncDecode` finalise désormais au maximum quatre contextes terminés par passage sur PS5. Les autres restent en file avec leur `IsDecoding` intact jusqu'au tick suivant, sans perdre leurs octets décodés. Chaque tick conserve sa barrière GPU unique s'il a transféré une ou plusieurs textures. Le test source-extrait exerce aussi une rafale de onze textures en trois ticks, ainsi que les refus de staging, les révisions CPU périmées et une soumission rejetée. Cette borne s'applique au nombre de contextes, pas au temps absolu d'un upload individuel. Aucun gain FPS console n'est encore mesuré.
 
 Le test `check-ps5-f07-texture-upload-rollback-host.py` est également réaligné sur l'allocation `upload_size` du correctif de staging court, afin de supprimer son ancienne recherche d'ancre devenue invalide.
+
+## P0.4 — activation tardive de l'unswizzle GPU
+
+Si l'option GPU BCn 3D est activée après la construction du cache alors que les paramètres `swizzle_chunk_size` et `swizzle_slices_per_batch` sont nuls, l'upload passe par le chemin CPU synchrone au lieu de créer une tâche asynchrone impossible à terminer. Une tâche existante avec budget nul est annulée en différé avec `CpuModified` préservé et `IsDecoding` effacé. Les témoins source-extraits couvrent les deux budgets nuls et l'admission une fois les paramètres valides. La fluidité en jeu reste à mesurer.

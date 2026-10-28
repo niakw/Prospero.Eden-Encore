@@ -4101,3 +4101,14 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        if (!async_decode->complete.load(std::memory_order_acquire)) {\n            ++i;\n            continue;\n        }\n#endif\n        std::unique_lock lock{async_decode->mutex};",
     "        if (!async_decode->complete.load(std::memory_order_acquire)) {\n            ++i;\n            continue;\n        }\n        if (completed_decodes == kMaxCompletedDecodesPerTick) {\n            break;\n        }\n        ++completed_decodes;\n#endif\n        std::unique_lock lock{async_decode->mutex};",
     "F07 bounded ready decode completion under texture lock")
+
+# F07: do not queue native BCn-3D GPU unswizzle when the optional setting
+# was enabled after cache creation but chunk/slice budgets remain zero.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    if (gpu_unswizzle_enabled &&\n        IsPixelFormatBCn(image.info.format) &&",
+    "    if (gpu_unswizzle_enabled &&\n#ifdef PS5_NATIVE\n        // Live GPU setting can enable unswizzle after cache construction;\n        // zero-sized chunks or batches cannot submit any GPU slices.\n        swizzle_chunk_size != 0 && swizzle_slices_per_batch != 0 &&\n#endif\n        IsPixelFormatBCn(image.info.format) &&",
+    "F07 reject uninitialized BCn 3D async queue budgets")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    if (True(image.flags & (ImageFlagBits::CpuModified | ImageFlagBits::Remapped))) {",
+    "    if (True(image.flags & (ImageFlagBits::CpuModified | ImageFlagBits::Remapped)) ||\n        swizzle_chunk_size == 0 || swizzle_slices_per_batch == 0) {",
+    "F07 retire queued BCn 3D image when budget is zero")
