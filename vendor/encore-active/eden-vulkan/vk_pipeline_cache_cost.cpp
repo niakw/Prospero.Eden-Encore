@@ -942,7 +942,12 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
                 callback(VideoCore::LoadCallbackStage::Build, state.built, state.total);
             }
         });
-        ++state.total;
+        // Workers read total while holding state.mutex. Publish reader
+        // increments under the same lock to avoid a cache-prewarm data race.
+        {
+            std::scoped_lock count_lock{state.mutex};
+            ++state.total;
+        }
 #ifdef PS5_NATIVE
         if (state.total == kStartupPrewarmPipelines)
             startup_reader.request_stop();
@@ -1008,7 +1013,12 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
                 callback(VideoCore::LoadCallbackStage::Build, state.built, state.total);
             }
         });
-        ++state.total;
+        // Workers read total while holding state.mutex. Publish reader
+        // increments under the same lock to avoid a cache-prewarm data race.
+        {
+            std::scoped_lock count_lock{state.mutex};
+            ++state.total;
+        }
 #ifdef PS5_NATIVE
         if (state.total == kStartupPrewarmPipelines)
             startup_reader.request_stop();

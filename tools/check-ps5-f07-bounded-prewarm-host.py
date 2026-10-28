@@ -20,6 +20,13 @@ end="\nvoid PipelineCache::QueueVulkanPipelineCacheFlush()"
 method=begin+shader.split(begin,1)[1].split(end,1)[0]
 assert shader.count(begin)==1 and shader.count(end)==1
 assert method.count("++state.total;")==2
+# Counter writes must synchronize with progress reads in both worker callbacks.
+assert method.count("std::scoped_lock count_lock{state.mutex};") == 2
+assert method.count("++state.total;") == 2
+assert method.count("        }\n#ifdef PS5_NATIVE\n        if (state.total == kStartupPrewarmPipelines)") == 2
+assert 'shader_source.count(f07_prewarm_total_old) != 2' in gen
+assert 'shader_source = shader_source.replace(f07_prewarm_total_old, f07_prewarm_total_new)' in gen
+
 assert method.count("if (state.total == kStartupPrewarmPipelines)")==2
 assert method.count("startup_reader.request_stop();")==2
 assert "constexpr size_t kStartupPrewarmPipelines = 8;" in method
