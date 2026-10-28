@@ -1336,6 +1336,21 @@ int main(int argc, char** argv) {
         Settings::values.memory_layout_mode = Settings::MemoryLayout::Memory_4Gb;
         [[maybe_unused]] int dev_vertex_input = -1;
         Eden::DevVulkan::static_vertex_input = true; // do not leak A/B settings to the next title
+#if defined(PS5_NATIVE) && !defined(EDEN_DEV_PROFILE)
+        // Shipping native release keeps fast-first enabled unless the operator
+        // explicitly disables it for a single A/B comparison. Read only this
+        // narrow override from the persistent app config; do not enable the
+        // development-only dev-settings parser in a retail package.
+        Eden::DevVulkan::ResetForTitle();
+        {
+            std::ifstream pipeline_option(
+                std::filesystem::path{Eden::ConfigDir()} / "fast-pipelines.txt");
+            std::string selected;
+            if (pipeline_option >> selected && selected == "off") {
+                Eden::DevVulkan::fast_first_pipelines = false;
+            }
+        }
+#endif
 #ifdef EDEN_DEV_PROFILE
         // A one-game A/B override must NEVER silently become the next game's
         // effective performance policy. Reset the other development-only

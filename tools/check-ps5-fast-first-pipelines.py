@@ -290,3 +290,65 @@ with tempfile.TemporaryDirectory(prefix="encore-f07-fast-first-default-") as d:
                                     capture_output=True, text=True, timeout=15)
             assert "FAST_FIRST_DEFAULT_PROFILE_PASS" in result.stdout
             print("FAST_FIRST_DEFAULT_PROFILE_PASS", label, optimization)
+
+
+# The dev A/B parser is compiled out of shipping native release. Keep one
+# narrow, file-backed opt-out for the newly enabled default, without opening
+# the general development switches in retail packages.
+const_main = (root / "headless/main.cpp").read_text()
+release_start = "#if defined(PS5_NATIVE) && !defined(EDEN_DEV_PROFILE)\n        // Shipping native release keeps fast-first enabled"
+assert const_main.count(release_start) == 1
+start = const_main.index(release_start)
+stop = const_main.index("\n#endif", start) + len("\n#endif")
+release_override = const_main[start:stop]
+assert 'std::filesystem::path{Eden::ConfigDir()} / "fast-pipelines.txt"' in release_override
+assert 'pipeline_option >> selected && selected == "off"' in release_override
+assert "Eden::DevVulkan::ResetForTitle();" in release_override
+assert release_override.index("ResetForTitle();") < release_override.index("pipeline_option >>")
+retail_probe = r"""
+#include <cassert>
+#include <filesystem>
+#include <fstream>
+#include <string>
+#include "headless/dev_vulkan.h"
+std::filesystem::path test_root;
+namespace Eden {
+std::string ConfigDir() { return test_root.string(); }
+}
+void ReadProfile() {
+""" + release_override + r"""
+}
+int main(int argc, char** argv) {
+    assert(argc == 2);
+    test_root = argv[1];
+    using namespace Eden::DevVulkan;
+    ReadProfile();
+    assert(fast_first_pipelines);
+    {
+        std::ofstream out(test_root / "fast-pipelines.txt");
+        out << "off\n";
+    }
+    ReadProfile();
+    assert(!fast_first_pipelines);
+    {
+        std::ofstream out(test_root / "fast-pipelines.txt");
+        out << "on\n";
+    }
+    ReadProfile();
+    assert(fast_first_pipelines);
+    std::filesystem::remove(test_root / "fast-pipelines.txt");
+    ReadProfile();
+    assert(fast_first_pipelines);
+}
+"""
+with tempfile.TemporaryDirectory(prefix="encore-f07-retail-fast-optout-") as d:
+    program = Path(d) / "retail.cpp"
+    program.write_text(retail_probe)
+    for optimization in ("-O0", "-O2"):
+        binary = Path(d) / ("retail" + optimization[1:])
+        subprocess.run(["c++", "-std=c++20", "-DPS5_NATIVE=1", optimization,
+                        "-Wall", "-Wextra", "-Werror", "-I", str(root),
+                        str(program), "-o", str(binary)],
+                       check=True, capture_output=True, text=True, timeout=40)
+        subprocess.run([str(binary), d], check=True, timeout=15)
+        print("FAST_FIRST_RELEASE_OVERRIDE_PASS", optimization)
