@@ -4182,3 +4182,12 @@ apply_reviewed_delta("vk_texture_cache_cost.cpp",
     "    const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);\n    const VkImage dst_image = dst.Handle();",
     "    const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);\n#ifdef PS5_NATIVE\n    // A rejected reinterpretation does not alter the destination image.\n    // Invalidate its resolved shadow only after native validation and\n    // scratch allocation succeeded, before submitting Vulkan commands.\n    if (ENABLE_MSAA_RESOLVE_CONSUME) {\n        InvalidateResolveShadow(dst.Handle());\n    }\n#endif\n    const VkImage dst_image = dst.Handle();",
     "F07 invalidate native reinterpret resolve after scratch allocation")
+
+# F07 P0.3: under the GPU cache lock, a deferred GC readback may receive a
+# short/failed staging allocation. Do not publish that as copied guest data:
+# release a partial deferred map and stop speculative admission while leaving
+# the authoritative Cleanup path, its GPU Finish and eviction order unchanged.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "                auto map = runtime.DownloadStagingBuffer(image.unswizzled_size_bytes, true);\n                // The pinned StagingBufferRef is a POD handle, not a RAII",
+    "#ifdef PS5_NATIVE\n                // A short staging map or an allocation failure is NOT a GPU\n                // copy. Do not record a readback into unmapped memory or\n                // advertise it to Cleanup as prefetched. The ordinary\n                // eviction path may retry after the staged batch finishes.\n                auto map = [&]() -> decltype(runtime.DownloadStagingBuffer(image.unswizzled_size_bytes, true)) {\n                    try {\n                        return runtime.DownloadStagingBuffer(image.unswizzled_size_bytes, true);\n                    } catch (...) {\n                        return {};\n                    }\n                }();\n                if (map.mapped_span.size_bytes() < image.unswizzled_size_bytes) {\n                    if (map.buffer) runtime.FreeDeferredStagingBuffer(map);\n                    return true;\n                }\n#else\n                auto map = runtime.DownloadStagingBuffer(image.unswizzled_size_bytes, true);\n#endif\n                // The pinned StagingBufferRef is a POD handle, not a RAII",
+    "F07 reject failed or undersized dirty GC prefetch staging")

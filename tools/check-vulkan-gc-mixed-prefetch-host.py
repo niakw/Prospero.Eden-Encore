@@ -45,6 +45,10 @@ assert "image.unswizzled_size_bytes > 32_MiB)" in record
 assert "return NoteProjectedEviction(image);" in record
 assert "gc_downloads.emplace_back(id, map);" in record
 assert record.index("gc_downloads.emplace_back") < record.index("image.DownloadMemory")
+assert "F07 reject failed or undersized dirty GC prefetch staging" in generator
+assert "map.mapped_span.size_bytes() < image.unswizzled_size_bytes" in record
+assert record.index("map.mapped_span.size_bytes() < image.unswizzled_size_bytes") < record.index("gc_downloads.emplace_back")
+assert "if (map.buffer) runtime.FreeDeferredStagingBuffer(map);" in record
 assert "if (remaining == 0 || scanned >= max_scanned) return true;" in gc
 assert "if (count_visits) --remaining;" in gc
 assert "if (!count_visits) --remaining;" in gc
@@ -84,6 +88,7 @@ cpp = r"""
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <new>
 #include <span>
 #include <type_traits>
 #include <utility>
@@ -101,6 +106,7 @@ constexpr std::size_t operator""_MiB(unsigned long long size) {
 namespace Vulkan {
 struct StagingBufferRef {
     std::size_t index{};
+    std::size_t buffer{};
     std::span<std::uint8_t> mapped_span;
 };
 static_assert(std::is_trivially_copyable_v<StagingBufferRef>);
@@ -108,16 +114,19 @@ struct TextureCacheRuntime {
     std::size_t issued{}, completed{}, finishes{}, freed{};
     std::vector<std::unique_ptr<std::uint8_t[]>> storage;
     std::vector<bool> deferred;
+    bool short_first{}, throw_first{};
     StagingBufferRef DownloadStagingBuffer(std::size_t size, bool is_deferred = false) {
         assert(is_deferred);
+        if (throw_first) {throw_first=false;throw std::bad_alloc{};}
         storage.push_back(std::make_unique<std::uint8_t[]>(size));
         deferred.push_back(true);
         ++issued;
-        return {issued, {storage.back().get(), size}};
+        if(short_first) {short_first=false;return {issued,issued,{storage.back().get(),size-1}};}
+        return {issued,issued,{storage.back().get(),size}};
     }
     void Finish() { completed = issued; ++finishes; }
     void FreeDeferredStagingBuffer(StagingBufferRef& ref) {
-        assert(ref.index > 0 && ref.index <= completed);
+        assert(ref.index > 0 && ref.index <= issued);
         assert(deferred[ref.index - 1]);
         deferred[ref.index - 1] = false;
         ++freed;
@@ -159,8 +168,11 @@ struct Scenario {
     void Test(std::size_t expected, std::vector<ImageId> ids,
               std::size_t eviction_budget = 40,
               u64 initial_usage = 1000_MiB,
-              std::size_t expected_scanned = 0) {
+              std::size_t expected_scanned = 0,
+              bool short_first=false, bool throw_first=false) {
         Vulkan::TextureCacheRuntime runtime;
+        runtime.short_first=short_first;
+        runtime.throw_first=throw_first;
 __PRODUCTION_DECLARATION__
         std::size_t bytes = 0;
         u64 usage = initial_usage;
@@ -189,7 +201,7 @@ __PRODUCTION_RECORD__
             if (scan_one()) break;
             assert(bytes <= 32_MiB);
             assert(gc_downloads.size() <= gc_prefetch_limit);
-            assert(runtime.freed == 0);
+            assert(runtime.freed == (short_first ? 1u : 0u));
         }
         assert(scanned <= 8192);
         if (expected_scanned != 0) assert(scanned == expected_scanned);
@@ -206,7 +218,9 @@ __PRODUCTION_RECORD__
             runtime.FreeDeferredStagingBuffer(ref);
         }
         gc_downloads.clear();
-        assert(runtime.freed == expected && runtime.issued == expected);
+        const auto rejected=short_first ? 1u : 0u;
+        assert(runtime.freed == expected + rejected);
+        assert(runtime.issued == expected + rejected);
         assert(runtime.finishes == (expected ? 1u : 0u));
     }
 };
@@ -327,6 +341,14 @@ int main() {
         }
         Scenario(std::move(images)).Test(40, std::move(ids));
     }
+#ifdef PS5_NATIVE
+    // Short mappings and thrown staging requests must stop speculative
+    // downloads before recording GPU copies; real Cleanup can retry.
+    Scenario({ImageFor(0,true),ImageFor(1,true)}).Test(
+        0,{},40,1000_MiB,1,true,false);
+    Scenario({ImageFor(0,true),ImageFor(1,true)}).Test(
+        0,{},40,1000_MiB,1,false,true);
+#endif
     {
         std::vector<Image> images;
         std::vector<ImageId> ids;
@@ -345,11 +367,15 @@ with tempfile.TemporaryDirectory(prefix="eden-vulkan-mixed-gc-") as temp:
     path = Path(temp) / "gc.cpp"
     executable = Path(temp) / "gc"
     path.write_text(cpp, encoding="utf-8")
-    subprocess.run([compiler, "-std=c++20", "-O1", "-g", "-Wall", "-Wextra",
-                    "-Werror", "-fsanitize=address,undefined",
-                    "-fno-sanitize-recover=all", "-I", str(root / "headless"),
-                    *boost_flags, str(path), "-o", str(executable)],
-                   check=True, timeout=120)
-    subprocess.run([str(executable)], check=True, timeout=180)
+    for native in (False,True):
+        binary=Path(temp)/("gc-ps5" if native else "gc-desktop")
+        subprocess.run([compiler, "-std=c++20", "-O1", "-g", "-Wall", "-Wextra",
+                        "-Werror", "-fsanitize=address,undefined",
+                        "-fno-sanitize-recover=all",
+                        *(['-DPS5_NATIVE=1'] if native else []),
+                        "-I", str(root / "headless"),
+                        *boost_flags, str(path), "-o", str(binary)],
+                       check=True, timeout=120)
+        subprocess.run([str(binary)], check=True, timeout=180)
 print("PASS literal Vulkan mixed-GC scan: clean pressure projection, skips, 20/40 batch, 32MiB, fenced release ASan/UBSan")
 print("No Sony PS5 SDK, driver or frame-time measurements")

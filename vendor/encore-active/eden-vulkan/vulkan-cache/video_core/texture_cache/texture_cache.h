@@ -259,7 +259,25 @@ void TextureCache<P>::RunGarbageCollector() {
                 // Full descriptor/byte capacity is a true batch boundary.
                 if (gc_downloads.size() == gc_prefetch_limit ||
                     image.unswizzled_size_bytes > 32_MiB - bytes) return true;
+#ifdef PS5_NATIVE
+                // A short staging map or an allocation failure is NOT a GPU
+                // copy. Do not record a readback into unmapped memory or
+                // advertise it to Cleanup as prefetched. The ordinary
+                // eviction path may retry after the staged batch finishes.
+                auto map = [&]() -> decltype(runtime.DownloadStagingBuffer(image.unswizzled_size_bytes, true)) {
+                    try {
+                        return runtime.DownloadStagingBuffer(image.unswizzled_size_bytes, true);
+                    } catch (...) {
+                        return {};
+                    }
+                }();
+                if (map.mapped_span.size_bytes() < image.unswizzled_size_bytes) {
+                    if (map.buffer) runtime.FreeDeferredStagingBuffer(map);
+                    return true;
+                }
+#else
                 auto map = runtime.DownloadStagingBuffer(image.unswizzled_size_bytes, true);
+#endif
                 // The pinned StagingBufferRef is a POD handle, not a RAII
                 // owner. The pool tracks deferred lifetime until FreeDeferred.
                 gc_downloads.emplace_back(id, map);
