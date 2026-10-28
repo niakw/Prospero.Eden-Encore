@@ -189,3 +189,7 @@ Dans `UpdateDescriptorQueue::AddTexelBuffer`, le handle Vulkan occupait 8 octets
 ## P0.3 — réutilisation des descripteurs image sur le chemin PS5 legacy
 
 Les deux écritures `AddSampledImage` et `AddImage` initialisent désormais l'entrée entière sur PS5, même si le périphérique utilise des descriptor sets classiques plutôt que `VK_EXT_descriptor_buffer`. Ces octets participent à la comparaison des payloads de `ConfigureDraw` et de `Configure` ; une image identique ne doit plus provoquer de mise à jour par différence d'octets de padding. Le test source-extrait existant couvre désormais images, samplers et vues texel, avec et sans descriptor buffers, en `-O0`/`-O2`. Aucun gain FPS n'est inféré avant mesure console.
+
+## P0.4 — reprise transactionnelle du vidage des lectures asynchrones
+
+`PopAsyncFlushes` déplaçait les handles hors de la file avant les `SwizzleImage` et `WriteBlockUnsafe`. Une exception pouvait laisser une file d'identifiants non vide avec son staging déplacé, entraînant une nouvelle tentative invalide. Sur PS5, le lot conserve maintenant ses handles d'origine et ne mémorise que les offsets de lecture (petit tableau inline jusqu'à quatre buffers). Les retours différés sont préparés avant toute écriture invitée et annulés sur échec ; les slots DMA ne sont effacés qu'après une consommation réussie. Le chemin desktop d'origine reste en place. Un témoin source-extrait vérifie refus de swizzle, refus DMA, staging invalide, retry et publication unique. Aucune preuve de disparition de freeze sur console à ce stade.
