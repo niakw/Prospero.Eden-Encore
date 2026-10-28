@@ -418,6 +418,7 @@ jobs:
           python3 -B tools/check-ps5-f07-cold-stalls-host.py
           python3 -B tools/check-ps5-f07-texture-upload-rollback-host.py
           python3 -B tools/check-ps5-f07-async-decode-lifetime-host.py
+          python3 -B tools/check-ps5-f07-gc-dirty-eviction-rollback-host.py
           python3 -B tools/check-ps5-f07-unswizzle-stale-revision-host.py
           python3 -B tools/check-ps5-f07-unswizzle-slice-bounds-host.py
           python3 -B tools/check-ps5-f07-pipeline-transitions-host.py
