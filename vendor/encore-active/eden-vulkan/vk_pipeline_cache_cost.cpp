@@ -803,6 +803,13 @@ ComputePipeline* PipelineCache::CurrentComputePipeline() {
     const auto [pair, is_new]{compute_cache.try_emplace(key)};
     auto& pipeline{pair->second};
     if (is_new) {
+#ifdef PS5_NATIVE
+        // P0.1: time every cold compute CPU translation and driver enqueue.
+        // The asynchronous Vulkan pipeline wait is reported separately.
+        ::Eden::Performance::CachePhaseTimer first_use_compute_cost{
+            ::Eden::Performance::CachePhase::ComputePipelineCreate,
+            ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
+#endif
         pipeline = CreateComputePipeline(key, shader);
 #ifdef PS5_NATIVE
         if (!pipeline) {
@@ -833,6 +840,9 @@ ComputePipeline* PipelineCache::CurrentComputePipeline() {
             // Mark before translation: persistent failure must never spin
             // within repeated compute dispatches.
             failed->second.attempted = true;
+            ::Eden::Performance::CachePhaseTimer retry_compute_cost{
+                ::Eden::Performance::CachePhase::ComputePipelineCreate,
+                ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
             pipeline = CreateComputePipeline(key, shader);
             // A consumed retry cannot repeat: the null compute_cache entry
             // is no longer marked retryable. Recycle its 32-key budget slot.

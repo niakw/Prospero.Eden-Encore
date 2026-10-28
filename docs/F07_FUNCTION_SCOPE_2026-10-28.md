@@ -225,3 +225,7 @@ Les chemins PS5 `AccelerateDMA::DmaBufferImageCopy` et `RasterizerVulkan::Dispat
 ## P0.3 — DMA clear sans verrou pour les volumes impossibles
 
 `AccelerateDMA::BufferClear` évite désormais `buffer_cache.mutex` sur PS5 pour un nombre nul de mots `u32` ou pour une multiplication par quatre qui ne rentre pas dans le span `u32` de `FindBuffer`. Le contrôle est identique à celui de `BufferCache::DMAClear`, qui reste la validation sous verrou pour les demandes valides. Le chemin desktop conserve son ordre de traduction et de verrouillage. Test source-extrait prévu avec appels nuls, première valeur hors limite, dernière valeur valide et quatre variantes compilées en O0/O2 + UBSan. Aucun résultat console de frametime n'est déduit.
+
+## P0.1 — coût total du premier pipeline compute (diagnostic)
+
+Une nouvelle phase `compute_pipeline_create` mesure la création CPU d'un pipeline compute lorsqu'une clé manque au cache, ainsi que sa tentative différée de reprise. Elle se distingue du temps `compute_pipeline_wait` passé à attendre le worker Vulkan : la traduction CFG/IR/SPIR-V et la préparation du shader restent synchrones. Les deux chronomètres sont activés uniquement par Detailed Logging, et le chemin desktop n'acquiert aucun nouveau timer. Le générateur du port et un témoin C++ source-extrait sur PS5/desktop O0/O2 garantissent la synchronisation. **Il s'agit d'une attribution de coût, et non d'un gain de FPS déjà mesuré.**
