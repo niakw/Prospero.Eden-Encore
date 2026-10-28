@@ -12,6 +12,10 @@ start=source.index("void TextureCache<P>::CommitAsyncFlushes() {")
 end=source.index("\ntemplate <class P>",start+20)
 method=source[start:end]
 assert "F07 return deferred staging when async flush batch preparation fails" in generator
+assert "F07 rollback async download queue pair on second insertion failure" in generator
+assert "const size_t initial_staging_count = uncommitted_async_buffers.size();" in method
+assert "committed_downloads.emplace_back(std::move(uncommitted_downloads));" in method
+assert "uncommitted_async_buffers = std::move(async_buffers.back());" in method
 assert "if (!staging_transferred) runtime.FreeDeferredStagingBuffer(download_map);" in method
 assert method.index("uncommitted_async_buffers.emplace_back(download_map);") < method.index("staging_transferred = true;")
 assert "auto download_map = runtime.DownloadStagingBuffer(total_size_bytes, true);" in method
@@ -81,7 +85,20 @@ template<class P> struct TextureCache {
     std::vector<Image> slot_images;
     std::vector<PendingDownload> uncommitted_downloads;
     std::vector<Staging> uncommitted_async_buffers;
-    std::deque<std::vector<PendingDownload>> committed_downloads;
+    struct CommittedQueue {
+        std::deque<std::vector<PendingDownload>> values;
+        bool reject_next{};
+        template<class T> void emplace_back(T&& item) {
+            if (reject_next) {
+                reject_next=false;
+                throw std::bad_alloc{};
+            }
+            values.emplace_back(std::forward<T>(item));
+        }
+        bool empty() const {return values.empty();}
+        std::size_t size() const {return values.size();}
+        const std::vector<PendingDownload>& front() const {return values.front();}
+    } committed_downloads;
     std::deque<std::vector<Staging>> async_buffers;
     Runtime runtime;
     void CommitAsyncFlushes();
@@ -127,6 +144,33 @@ int main() {
     partial.CommitAsyncFlushes();
     assert(partial.runtime.releases==1);
     assert(partial.committed_downloads.size()==1);
+    // A second deque allocation can fail after async_buffers accepted its
+    // matching vector. Both queues must remain aligned and retryable.
+    auto pair_failure=MakeCache();
+    pair_failure.committed_downloads.reject_next=true;
+    caught=false;
+    try{pair_failure.CommitAsyncFlushes();}catch(const std::bad_alloc&){caught=true;}
+    assert(caught && pair_failure.runtime.releases==1);
+    assert(pair_failure.committed_downloads.empty() && pair_failure.async_buffers.empty());
+    assert(pair_failure.uncommitted_downloads.size()==2);
+    assert(pair_failure.uncommitted_async_buffers.empty());
+    pair_failure.CommitAsyncFlushes();
+    assert(pair_failure.committed_downloads.size()==1);
+    assert(pair_failure.async_buffers.size()==1 && pair_failure.async_buffers.front().size()==1);
+    // An empty pending batch may still have staged DMA sources; failed
+    // publication must never release or orphan those earlier buffers.
+    TextureCache<NativePolicy> empty_batch;
+    empty_batch.uncommitted_async_buffers.push_back({777,0});
+    empty_batch.committed_downloads.reject_next=true;
+    caught=false;
+    try{empty_batch.CommitAsyncFlushes();}catch(const std::bad_alloc&){caught=true;}
+    assert(caught && empty_batch.runtime.releases==0);
+    assert(empty_batch.committed_downloads.empty() && empty_batch.async_buffers.empty());
+    assert(empty_batch.uncommitted_async_buffers.size()==1);
+    assert(empty_batch.uncommitted_async_buffers.front().buffer==777);
+    empty_batch.CommitAsyncFlushes();
+    assert(empty_batch.committed_downloads.size()==1 && empty_batch.async_buffers.size()==1);
+    assert(empty_batch.async_buffers.front()[0].buffer==777);
 #endif
 }
 """.replace("__METHOD__", "template<class P>\n" + method)

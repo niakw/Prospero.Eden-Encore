@@ -164,3 +164,8 @@ Dans `DownloadImageIntoBuffer`, une allocation de staging GPU refusée pouvait l
 ## P0.4 — staging d'un lot de lectures asynchrones
 
 `CommitAsyncFlushes` réserve un staging différé pour plusieurs textures, puis enregistre les commandes avant de ranger le handle. Si l'enregistrement ou l'ajout à la file échoue, un `SCOPE_EXIT` natif restitue maintenant la réservation au pool différé. Les téléchargements non validés restent en file pour un éventuel nouvel essai : aucun signal de réussite n'est fabriqué. Le témoin C++ source-extrait compare succès, échec de la seconde copie, récupération et refus d'allocation, sous O0/O2 en natif et sur desktop. Cela sécurise la durée de vie d'une ressource ; ce n'est pas une preuve de gain FPS.
+
+
+## P0.4 — publication atomique de deux files de téléchargements asynchrones
+
+Sur PS5, `CommitAsyncFlushes` peut réserver plusieurs buffers et publier d'abord `async_buffers`, puis `committed_downloads`. Si la seconde file rejette son insertion, le premier élément est maintenant retiré, les sources DMA déjà en attente sont conservées et seul le staging de swizzle créé pour ce lot est restitué en différé. Le cas d'un lot vide est aligné sur la même procédure. Le témoin source-extrait force l'exception au second `emplace_back`, la reprise et un lot vide possédant déjà un buffer DMA. Validation console non effectuée.

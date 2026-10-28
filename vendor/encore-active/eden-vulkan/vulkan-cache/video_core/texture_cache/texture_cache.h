@@ -1408,12 +1408,30 @@ void TextureCache<P>::CommitAsyncFlushes() {
     if constexpr (IMPLEMENTS_ASYNC_DOWNLOADS) {
         auto& download_ids = uncommitted_downloads;
         if (download_ids.empty()) {
+#ifndef PS5_NATIVE
             committed_downloads.emplace_back(std::move(uncommitted_downloads));
             uncommitted_downloads.clear();
             async_buffers.emplace_back(std::move(uncommitted_async_buffers));
             uncommitted_async_buffers.clear();
             return;
+#endif
+            // Native empty batches use the same atomic pair-publication below.
         }
+#ifdef PS5_NATIVE
+        // Already-enqueued DMA staging belongs to its existing pending slots.
+        // Only the extra swizzle batch allocated below may be discarded on
+        // failed publication; never lose or duplicate earlier DMA reservations.
+        const size_t initial_staging_count = uncommitted_async_buffers.size();
+        bool batch_published = false;
+        SCOPE_EXIT {
+            if (!batch_published) {
+                while (uncommitted_async_buffers.size() > initial_staging_count) {
+                    runtime.FreeDeferredStagingBuffer(uncommitted_async_buffers.back());
+                    uncommitted_async_buffers.pop_back();
+                }
+            }
+        };
+#endif
         size_t total_size_bytes = 0;
         size_t last_async_buffer_id = uncommitted_async_buffers.size();
         bool any_none_dma = false;
@@ -1451,8 +1469,26 @@ void TextureCache<P>::CommitAsyncFlushes() {
 #endif
         }
 
+#ifdef PS5_NATIVE
+        // Publish the buffers and their identifiers as one logical pair.
+        // A rejected second deque insertion must restore the first queue
+        // before allowing another batch to reuse these staging indices.
+        async_buffers.emplace_back(std::move(uncommitted_async_buffers));
+        try {
+            committed_downloads.emplace_back(std::move(uncommitted_downloads));
+        } catch (...) {
+            uncommitted_async_buffers = std::move(async_buffers.back());
+            async_buffers.pop_back();
+            throw;
+        }
+        batch_published = true;
+        uncommitted_async_buffers.clear();
+        uncommitted_downloads.clear();
+        return;
+#else
         async_buffers.emplace_back(std::move(uncommitted_async_buffers));
         uncommitted_async_buffers.clear();
+#endif
     }
     committed_downloads.emplace_back(std::move(uncommitted_downloads));
     uncommitted_downloads.clear();
