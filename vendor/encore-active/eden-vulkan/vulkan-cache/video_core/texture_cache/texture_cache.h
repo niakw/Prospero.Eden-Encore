@@ -1437,8 +1437,24 @@ void TextureCache<P>::CommitAsyncFlushes() {
         bool any_none_dma = false;
         for (PendingDownload& download_info : download_ids) {
             if (download_info.is_swizzle) {
+#ifdef PS5_NATIVE
+                // Both 64-byte alignment and batch accumulation must fit in
+                // size_t BEFORE staging allocation. An overflow would make a
+                // mapped buffer look large enough for a smaller, wrapped batch.
+                const size_t bytes = slot_images[download_info.object_id].unswizzled_size_bytes;
+                constexpr size_t max_bytes = (std::numeric_limits<size_t>::max)();
+                if (bytes > max_bytes - 63) {
+                    throw std::bad_alloc{};
+                }
+                const size_t aligned_bytes = Common::AlignUp(bytes, size_t{64});
+                if (aligned_bytes > max_bytes - total_size_bytes) {
+                    throw std::bad_alloc{};
+                }
+                total_size_bytes += aligned_bytes;
+#else
                 total_size_bytes +=
                     Common::AlignUp(slot_images[download_info.object_id].unswizzled_size_bytes, 64);
+#endif
                 any_none_dma = true;
                 download_info.async_buffer_id = last_async_buffer_id;
             }
