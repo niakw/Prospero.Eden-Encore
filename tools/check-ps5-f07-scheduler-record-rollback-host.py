@@ -18,6 +18,8 @@ assert "InvalidateState();" in method
 assert "if (!chunk->Record(command)) {" in method
 assert "throw std::bad_alloc{};" in method
 assert "F07 reject native scheduler second record refusal after rollover" in generator
+assert "F07 include bad_alloc declaration for native rejected scheduler rollover" in generator
+assert "#include <new>" in header
 assert method.index("} catch (...) {") > method.index("(void)chunk->Record(command)")
 assert "F07 invalidate native Vulkan binding memo after rejected record" in generator
 start=implementation.index("void Scheduler::InvalidateState() {")

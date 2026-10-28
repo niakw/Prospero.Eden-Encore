@@ -4499,3 +4499,10 @@ apply_reviewed_delta("include/video_core/renderer_vulkan/vk_scheduler.h",
     "        DispatchWork();\n        (void)chunk->Record(command);\n#ifdef PS5_NATIVE\n        } catch (...) {",
     "        DispatchWork();\n#ifdef PS5_NATIVE\n        // Even after rollover the new chunk can refuse the command.\n        // Never treat a missing draw/descriptor upload as successfully queued.\n        if (!chunk->Record(command)) {\n            throw std::bad_alloc{};\n        }\n#else\n        (void)chunk->Record(command);\n#endif\n#ifdef PS5_NATIVE\n        } catch (...) {",
     "F07 reject native scheduler second record refusal after rollover")
+
+# F07 native scheduler failure path references std::bad_alloc explicitly.
+# Keep the regenerated pinned Vulkan header identical to the shipped fork.
+apply_reviewed_delta("include/video_core/renderer_vulkan/vk_scheduler.h",
+    "#include <memory>\n",
+    "#include <memory>\n#include <new>\n",
+    "F07 include bad_alloc declaration for native rejected scheduler rollover")
