@@ -4347,3 +4347,14 @@ apply_reviewed_delta("vulkan_rasterizer.cpp",
     "bool AccelerateDMA::BufferClear(GPUVAddr src_address, u64 amount, u32 value) {\n    std::scoped_lock lock{buffer_cache.mutex};\n    return buffer_cache.DMAClear(src_address, amount, value);\n}",
     "bool AccelerateDMA::BufferClear(GPUVAddr src_address, u64 amount, u32 value) {\n#ifdef PS5_NATIVE\n    // The DMA clear count is in u32 words. Reject zero and oversized GPU\n    // fills before waiting for the guest buffer-cache mutex.\n    if (amount == 0 || amount > static_cast<u64>(~u32{0}) / sizeof(u32)) {\n        return false;\n    }\n#endif\n    std::scoped_lock lock{buffer_cache.mutex};\n    return buffer_cache.DMAClear(src_address, amount, value);\n}",
     "F07 reject invalid DMA clear words before the buffer mutex")
+
+# F07 P0.1: record complete cold compute CPU translation, separately from
+# Vulkan worker wait. Detailed Logging only; no hot-path clock sampling.
+apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
+    "    if (is_new) {\n        pipeline = CreateComputePipeline(key, shader);\n#ifdef PS5_NATIVE\n        if (!pipeline) {",
+    "    if (is_new) {\n#ifdef PS5_NATIVE\n        // P0.1: time every cold compute CPU translation and driver enqueue.\n        // The asynchronous Vulkan pipeline wait is reported separately.\n        ::Eden::Performance::CachePhaseTimer first_use_compute_cost{\n            ::Eden::Performance::CachePhase::ComputePipelineCreate,\n            ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};\n#endif\n        pipeline = CreateComputePipeline(key, shader);\n#ifdef PS5_NATIVE\n        if (!pipeline) {",
+    "F07 detailed CPU timing for cold compute first use")
+apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
+    "            failed->second.attempted = true;\n            pipeline = CreateComputePipeline(key, shader);\n            // A consumed retry",
+    "            failed->second.attempted = true;\n            ::Eden::Performance::CachePhaseTimer retry_compute_cost{\n                ::Eden::Performance::CachePhase::ComputePipelineCreate,\n                ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};\n            pipeline = CreateComputePipeline(key, shader);\n            // A consumed retry",
+    "F07 detailed CPU timing for delayed compute retry")

@@ -419,6 +419,7 @@ jobs:
           python3 -B tools/audit-eden-progress-state.py
           python3 -B tools/check-ps5-release-saved-diagnostics-host.py
           python3 -B tools/check-ps5-f07-cold-stalls-host.py
+          python3 -B tools/check-ps5-f07-compute-cold-timing-host.py
           python3 -B tools/check-ps5-f07-texture-upload-rollback-host.py
           python3 -B tools/check-ps5-f07-async-decode-lifetime-host.py
           python3 -B tools/check-ps5-f07-gc-dirty-eviction-rollback-host.py

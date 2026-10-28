@@ -207,7 +207,7 @@ enum class CachePhase : unsigned {
     RefreshRenderTargets, CheckFeedbackLoop, CommitGraphicsDraw, DescriptorRingFinish, DescriptorRingPreflight,
     GuestWriteBufferWait, GuestWriteBufferWork, GuestWriteTextureWait,
     GuestWriteTextureWork, GuestWriteShaderInvalidate,
-    GraphicsPipelineCreate, GraphicsShaderEnvironment, ShaderPoolReset, ShaderCfg, ShaderIr,
+    GraphicsPipelineCreate, ComputePipelineCreate, GraphicsShaderEnvironment, ShaderPoolReset, ShaderCfg, ShaderIr,
     ShaderSpirv, ShaderModule, GraphicsPipelineWait, ComputePipelineWait,
     TextureUploadStaging, TextureUploadContents,
     TextureUploadBarrier,
