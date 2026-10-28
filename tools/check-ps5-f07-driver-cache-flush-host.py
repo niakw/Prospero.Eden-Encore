@@ -19,7 +19,15 @@ assert source.count(begin)==1 and source.count(end)==1
 method=begin+source.split(begin,1)[1].split(end,1)[0]
 assert method.count("flush_in_flight.store(false, std::memory_order_release)") == 2
 assert "pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;" in method
-assert method.count("pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;") == 2
+# Three independent owner-thread restore sites: atomic worker-failure handoff,
+# ordinary enqueue exception and unknown enqueue exception. The worker must
+# never write the non-atomic counter directly.
+assert method.count("pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;") == 3
+owner_handoff = method.split("flush_worker_failed.exchange(false, std::memory_order_acq_rel)", 1)[1].split("#endif", 1)[0]
+assert owner_handoff.count("pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;") == 1
+assert method.split("serialization_thread.QueueWork(", 1)[1].split("    } catch (const std::exception& error) {", 1)[0].count(
+    "pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;") == 0
+assert method.count("flush_in_flight.store(false, std::memory_order_release);") == 2
 assert "struct ReleaseFlush" in method and "catch (const std::exception& error)" in method
 assert "flush_worker_failed.exchange(false, std::memory_order_acq_rel)" in method
 assert method.count("flush_worker_failed.store(true, std::memory_order_release)") == 2
