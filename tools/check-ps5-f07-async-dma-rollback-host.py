@@ -123,7 +123,7 @@ int main() {
     assert(failed_submission.runtime.releases==1);
 #endif
 }
-""".replace("__METHOD__",method)
+""".replace("__METHOD__", "template<class P>\n" + method)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler,"C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="eden-f07-async-dma-") as folder:
