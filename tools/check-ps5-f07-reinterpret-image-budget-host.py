@@ -43,7 +43,7 @@ assert "if (total_size > scratch_max)" in size
 assert "F07 defer native reinterpret resolve invalidation until valid allocation" in generator
 assert "F07 invalidate native reinterpret resolve after scratch allocation" in generator
 assert method.index("const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);") < method.index(
-    "#ifdef PS5_NATIVE\n    // A rejected reinterpretation does not alter")
+    "#ifdef PS5_NATIVE\n    // A mapped scratch allocation")
 assert method.index("InvalidateResolveShadow(dst.Handle());", method.index("const VkBuffer copy_buffer")) < method.index("scheduler.RequestOutsideRenderPassOperationContext();")
 assert "F07 reject scratch sizes outside Vulkan transient buffer slots" in generator
 assert "F07 reject null native image reinterpret scratch handle" in generator
