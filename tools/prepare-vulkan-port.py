@@ -4073,3 +4073,12 @@ apply_reviewed_delta("vk_texture_cache_cost.cpp",
     "        if (IsPixelFormatBCn(image.info.format) && image.info.type == ImageType::e3D) {\n            ASSERT(false && \"GPU unswizzle is disabled for BCn 3D texture\");\n        }\n        ASSERT(false);\n        return;",
     "        if (IsPixelFormatBCn(image.info.format) && image.info.type == ImageType::e3D) {\n#ifdef PS5_NATIVE\n            // Never silently acknowledge a BCn-3D upload with no compute\n            // pass. TickAsyncUnswizzle catches this and retries fresh pixels.\n            throw std::runtime_error(\"BCn 3D Vulkan unswizzle pass unavailable\");\n#else\n            ASSERT(false && \"GPU unswizzle is disabled for BCn 3D texture\");\n#endif\n        }\n        ASSERT(false);\n        return;",
     "F07 native BCn 3D unavailable pass retry signal")
+
+# F07 P0.3: oversized BCn 3D slices must not bypass the configured
+# per-frame guest read budget while the GPU owner holds texture_cache.mutex.
+# Partial staging is safe: the existing bytes_ready/slice-count guard
+# submits only complete slices. Desktop behavior is retained.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        if (remaining > swizzle_chunk_size) {\n            copy_amount = (copy_amount / task.bytes_per_slice) * task.bytes_per_slice;\n            if (copy_amount == 0) copy_amount = task.bytes_per_slice;\n        }",
+    "        if (remaining > swizzle_chunk_size) {\n            copy_amount = (copy_amount / task.bytes_per_slice) * task.bytes_per_slice;\n            if (copy_amount == 0) {\n#ifdef PS5_NATIVE\n                // One BCn-3D slice can exceed the per-frame read budget.\n                // Stage a partial slice; dispatch still waits until a full\n                // slice is ready. Do not copy >budget under texture mutex.\n                copy_amount = (std::min)(swizzle_chunk_size, remaining);\n#else\n                copy_amount = task.bytes_per_slice;\n#endif\n            }\n        }",
+    "F07 bound oversized BCn 3D slice reads per native frame")

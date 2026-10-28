@@ -345,3 +345,68 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-bcn3d-unavailable-") as folder
             result=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert result.returncode==0,(native,opt,result.stderr[-5000:])
 print("F07_BCN3D_PASS_UNAVAILABLE_SIGNAL_PASS missing_pass=1 settings_changed=1 valid_bc3d=1 astc=1 ps5=1 desktop=1 O0=1 O2=1")
+
+
+# F07 P0.3: compile the actual per-frame BCn-3D read-budget arithmetic.
+# GPU uploads require complete slices, but guest reads may stage an oversized
+# slice incrementally instead of monopolizing texture_cache.mutex.
+read_start="        size_t copy_amount = (std::min)(swizzle_chunk_size, remaining);"
+read_end="\n#ifdef PS5_NATIVE\n        try {"
+assert src.count(read_start)==1
+read_from=src.index(read_start)
+assert read_end in src[read_from:]
+budget_fragment=src[read_from:src.index(read_end,read_from)]
+assert "F07 bound oversized BCn 3D slice reads per native frame" in generator
+assert budget_fragment.count("copy_amount = task.bytes_per_slice;") == 1
+assert "#ifdef PS5_NATIVE" in budget_fragment
+assert "copy_amount = (std::min)(swizzle_chunk_size, remaining);" in budget_fragment
+budget_cpp=r"""
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+struct Task {std::size_t bytes_per_slice{};} task;
+struct Probe {
+    std::size_t swizzle_chunk_size{};
+    std::size_t Compute(std::size_t remaining) const {
+""" + budget_fragment + r"""
+        return copy_amount;
+    }
+};
+int main(){
+    constexpr std::size_t MiB=1024u*1024u;
+    Probe probe{16*MiB};
+    task.bytes_per_slice=64*MiB;
+    for (std::size_t remaining:{128*MiB,112*MiB,64*MiB,48*MiB,32*MiB}) {
+        const auto amount=probe.Compute(remaining);
+#ifdef PS5_NATIVE
+        assert(amount==16*MiB);
+#else
+        assert(amount==64*MiB);
+#endif
+    }
+    assert(probe.Compute(8*MiB)==8*MiB);
+    task.bytes_per_slice=4*MiB;
+    assert(probe.Compute(32*MiB)==16*MiB);
+    task.bytes_per_slice=32*MiB;
+#ifdef PS5_NATIVE
+    assert(probe.Compute(64*MiB)==16*MiB);
+#else
+    assert(probe.Compute(64*MiB)==32*MiB);
+#endif
+}
+"""
+budget_cpp=budget_cpp.replace("#include <cstddef>", "#include <cstddef>\n#include <initializer_list>")
+with tempfile.TemporaryDirectory(prefix="eden-f07-bcn3d-read-budget-") as folder:
+    source=Path(folder)/"budget.cpp"
+    source.write_text(budget_cpp)
+    for opt in ("-O0","-O2"):
+        for native in (False,True):
+            binary=Path(folder)/("budget"+opt[1:]+("-ps5" if native else "-desktop"))
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                 *(['-DPS5_NATIVE=1'] if native else []),str(source),"-o",str(binary)]
+            built=subprocess.run(cmd,capture_output=True,text=True,timeout=40)
+            assert built.returncode==0,(native,opt,built.stderr[-5000:])
+            result=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
+            assert result.returncode==0,(native,opt,result.stderr[-5000:])
+print("F07_BCN3D_READ_BUDGET_PASS max_read_16mib=1 incomplete_slice_staged=1 desktop_original=1 O0=1 O2=1")
