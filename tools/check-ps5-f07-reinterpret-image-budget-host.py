@@ -155,7 +155,7 @@ int main() {
 #ifdef PS5_NATIVE
     assert(mismatch_rejected.invalidates==0);  // valid previous resolve survives
 #else
-    assert(mismatch_rejected.invalidates==1);
+    assert(mismatch_rejected.invalidates==2);  // pinned desktop outer + inner invalidation
 #endif
     Runtime direct;
     direct.CopyImage(normal,normal,{{{4,5,1}}});
