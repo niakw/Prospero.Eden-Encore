@@ -4407,3 +4407,12 @@ apply_reviewed_delta("vk_compute_pass_cost.cpp",
     "    compute_pass_descriptor_queue.Acquire(scheduler, 3);\n    compute_pass_descriptor_queue.AddBuffer(swizzled.buffer,",
     "#ifdef PS5_NATIVE\n    // The BCn 3D pass has exactly two storage-buffer bindings. Reserving\n    // three entries can force an unnecessary queue drain when the cursor\n    // is near its frame limit, under texture-cache synchronization.\n    compute_pass_descriptor_queue.Acquire(scheduler, 2);\n#else\n    compute_pass_descriptor_queue.Acquire(scheduler, 3);\n#endif\n    compute_pass_descriptor_queue.AddBuffer(swizzled.buffer,",
     "F07 reserve exact two native BCn3D compute descriptors")
+
+# F07 P0.4: reject invalid BCn3D Z ranges and offset arithmetic before
+# allocating compute scratch or acquiring GPU descriptors. The staging map
+# may be packed and smaller than the padded guest memory span; do NOT use
+# it as the guest descriptor bound. Desktop preserves the pinned behavior.
+apply_reviewed_delta("vk_compute_pass_cost.cpp",
+    "    using namespace VideoCommon::Accelerated;\n\n    const u32 MAX_BATCH_SLICES = (std::min)(z_count, image.info.size.depth);",
+    "    using namespace VideoCommon::Accelerated;\n\n#ifdef PS5_NATIVE\n    // Reject malformed batches before allocating the BCn compute output or\n    // touching the descriptor ring. Preserve guest dirty state for retry.\n    if (swizzles.size() != 1 || swizzled.buffer == VK_NULL_HANDLE ||\n        z_count == 0 || z_start >= image.info.size.depth ||\n        z_count > image.info.size.depth - z_start) {\n        throw std::bad_alloc{};\n    }\n    const auto& input = swizzles[0];\n    // The descriptor below subtracts this offset from guest_size_bytes and\n    // adds it to the Vulkan buffer offset. Both operations must be valid.\n    // Do not compare against mapped_span: guest block-linear and linear\n    // staging byte counts can intentionally differ.\n    if (input.buffer_offset >= image.guest_size_bytes ||\n        input.buffer_offset > (~VkDeviceSize{0} - swizzled.offset)) {\n        throw std::bad_alloc{};\n    }\n#endif\n\n    const u32 MAX_BATCH_SLICES = (std::min)(z_count, image.info.size.depth);",
+    "F07 reject native BCn3D invalid slice and descriptor offsets before allocation")

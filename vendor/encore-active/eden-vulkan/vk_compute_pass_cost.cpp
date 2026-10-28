@@ -707,6 +707,25 @@ void BlockLinearUnswizzle3DPass::Unswizzle(
 {
     using namespace VideoCommon::Accelerated;
 
+#ifdef PS5_NATIVE
+    // Reject malformed batches before allocating the BCn compute output or
+    // touching the descriptor ring. Preserve guest dirty state for retry.
+    if (swizzles.size() != 1 || swizzled.buffer == VK_NULL_HANDLE ||
+        z_count == 0 || z_start >= image.info.size.depth ||
+        z_count > image.info.size.depth - z_start) {
+        throw std::bad_alloc{};
+    }
+    const auto& input = swizzles[0];
+    // The descriptor below subtracts this offset from guest_size_bytes and
+    // adds it to the Vulkan buffer offset. Both operations must be valid.
+    // Do not compare against mapped_span: guest block-linear and linear
+    // staging byte counts can intentionally differ.
+    if (input.buffer_offset >= image.guest_size_bytes ||
+        input.buffer_offset > (~VkDeviceSize{0} - swizzled.offset)) {
+        throw std::bad_alloc{};
+    }
+#endif
+
     const u32 MAX_BATCH_SLICES = (std::min)(z_count, image.info.size.depth);
 
     // Allocate or grow to cover this batch's slice count
