@@ -3887,3 +3887,11 @@ apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
     "void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {\n    transition_keys.push_back(transition->key);\n    transitions.push_back(transition);\n}",
     "void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {\n    transition_keys.push_back(transition->key);\n#ifdef PS5_NATIVE\n    // Both arrays must describe the same transition index. An allocation\n    // failure while appending the pointer must not leave an orphaned key:\n    // Next() would later index past transitions and corrupt a guest draw.\n    try {\n        transitions.push_back(transition);\n    } catch (...) {\n        transition_keys.pop_back();\n        throw;\n    }\n#else\n    transitions.push_back(transition);\n#endif\n}",
     "F07 graphics transition append rollback")
+
+# F07 P0.2: a fast transition edge is optional metadata, not the pipeline.
+# Failure to append it must leave both vectors aligned AND not abort the
+# active draw: CurrentGraphicsPipeline can use its canonical graphics cache.
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "    } catch (...) {\n        transition_keys.pop_back();\n        throw;\n    }\n#else\n    transitions.push_back(transition);",
+    "    } catch (...) {\n        // Transition memoization is optional. The primary graphics cache\n        // already owns the pipeline; a later lookup can use its slow path.\n        // Do not abort a guest draw solely because this edge could not fit.\n        transition_keys.pop_back();\n        return;\n    }\n#else\n    transitions.push_back(transition);",
+    "F07 optional transition OOM no-throw fallback")

@@ -32,6 +32,8 @@ assert source.count(append_begin) == source.count(append_end) == 1
 append_method = source[source.index(append_begin):source.index(append_end,source.index(append_begin))]
 assert "transition_keys.pop_back();" in append_method
 assert "F07 graphics transition append rollback" in generator
+assert "F07 optional transition OOM no-throw fallback" in generator
+assert "transition_keys.pop_back();\n        return;" in append_method
 
 cpp = r"""
 #include <algorithm>
@@ -122,13 +124,10 @@ int main() {
     resilient.key.value = -12;
     resilient.AddTransition(&targets[0]);
     FailPointerAppend<GraphicsPipeline*>::reject_next = true;
-    bool rejected = false;
-    try {
-        resilient.AddTransition(&targets[1]);
-    } catch (const std::bad_alloc&) {
-        rejected = true;
-    }
-    assert(rejected);
+    // The optional transition memo failed, but the draw path must not throw.
+    // The canonical graphics-cache lookup remains available on the next draw.
+    resilient.AddTransition(&targets[1]);
+    assert(!FailPointerAppend<GraphicsPipeline*>::reject_next);
     assert(resilient.transition_keys.size() == resilient.transitions.size());
     assert(resilient.transition_keys.size() == 1);
     assert(resilient.Next(targets[1].key) == nullptr);
@@ -151,4 +150,4 @@ with tempfile.TemporaryDirectory(prefix="encore-f07-transition-") as folder:
                             optimize, *define, str(path), "-o", str(exe)],
                            capture_output=True, text=True, check=True, timeout=40)
             subprocess.run([str(exe)], check=True, timeout=15)
-print("F07_GRAPHICS_TRANSITION_HOST_PASS native=1 desktop=1 O0=1 O2=1 order=1 miss=1 oom_rollback=1")
+print("F07_GRAPHICS_TRANSITION_HOST_PASS native=1 desktop=1 O0=1 O2=1 order=1 miss=1 oom_rollback=1 nonfatal=1")
