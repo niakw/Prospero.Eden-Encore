@@ -106,7 +106,15 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     for old, new in native_guards:
         assert raster.count(old) == 1, "pinned Vulkan indirect draw moved"
         raster = raster.replace(old, new)
-    assert raster.count("if (!buffer)") == raster.count("if (!draw_buffer)") == 1
+    # The pinned-draw override supplies one missing-buffer guard, while the
+    # generator now supplies a second one in DispatchCompute. Preserve both
+    # without silently allowing duplicate guards in either source method.
+    assert raster.count("if (!buffer)") == 2, "draw+compute null buffer guard drift"
+    assert raster.count("if (!draw_buffer)") == 1, "counted draw buffer guard drift"
+    dispatch = raster.split("void RasterizerVulkan::DispatchCompute() {", 1)[1]
+    assert dispatch.count("if (!buffer)") == 1, "compute indirect null buffer guard drift"
+    assert "if (!buffer)" in raster.split("void RasterizerVulkan::DrawIndirect() {", 1)[1].split(
+        "void RasterizerVulkan::DispatchCompute() {", 1)[0], "draw indirect guard drift"
     raster_path.write_text(raster)
     # Native GPU hot-path deltas are audited against the pinned generated
     # Vulkan source. Reconstruct exactly; never silently accept another drift.
