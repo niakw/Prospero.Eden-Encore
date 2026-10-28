@@ -156,3 +156,7 @@ Les deux admissions natives qui restaient fondées uniquement sur la taille des 
 ## P0.4 — validation globale du staging de lecture Vulkan
 
 Le runtime PS5 refuse désormais une allocation de readback dont le `VkBuffer` est nul ou dont la zone mappée est plus petite que la taille demandée. Cela sécurise également le chemin de lot de 40 images, conservé à l'octet près dans l'oracle historique. En cas de mapping court et d'allocation différée valide, le runtime libère ce staging avant de signaler `std::bad_alloc`; la récupération du GC et la restauration du drapeau `GpuModified` restent applicables. Le témoin C++ source-extrait contrôle le comportement natif et desktop sous O0/O2, pour les buffers valides, nuls, trop courts et les exceptions. Aucun bénéfice FPS console n'est revendiqué.
+
+## P0.4 — rollback de téléchargement DMA asynchrone
+
+Dans `DownloadImageIntoBuffer`, une allocation de staging GPU refusée pouvait laisser une entrée `PendingDownload` et un `BufferDownload` enregistrés alors que le transfert DMA n'avait jamais été soumis. Sur PS5, le chemin abandonne maintenant ces deux entrées si la préparation ou `Image::DownloadMemory` échoue, et rend en différé tout staging déjà réservé. Le contexte d'erreur continue à remonter à l'appelant : aucun téléchargement raté n'est présenté comme réussi. La branche desktop conserve ses instructions d'origine. Un test C++ extrait de la méthode vérifie succès, refus de staging, et échec de soumission en PS5/desktop O0/O2.

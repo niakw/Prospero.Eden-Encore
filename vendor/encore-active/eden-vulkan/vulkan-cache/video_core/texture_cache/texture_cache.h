@@ -1637,10 +1637,41 @@ void TextureCache<P>::DownloadImageIntoBuffer(typename TextureCache<P>::Image* i
     if constexpr (IMPLEMENTS_ASYNC_DOWNLOADS) {
         const BufferDownload new_buffer_download{address, size};
         auto slot = slot_buffer_downloads.insert(new_buffer_download);
+#ifdef PS5_NATIVE
+        // If staging or command submission fails, the DMA must not remain
+        // registered as a completed/pending guest-memory download.
+        bool pending_recorded = false;
+        bool staging_recorded = false;
+        bool download_submitted = false;
+        SCOPE_EXIT {
+            if (!download_submitted) {
+                if (staging_recorded) {
+                    runtime.FreeDeferredStagingBuffer(uncommitted_async_buffers.back());
+                    uncommitted_async_buffers.pop_back();
+                }
+                if (pending_recorded) uncommitted_downloads.pop_back();
+                slot_buffer_downloads.erase(slot);
+            }
+        };
+#endif
         const PendingDownload new_download{false, uncommitted_async_buffers.size(), slot};
         uncommitted_downloads.emplace_back(new_download);
+#ifdef PS5_NATIVE
+        pending_recorded = true;
+#endif
         auto download_map = runtime.DownloadStagingBuffer(size, true);
+#ifdef PS5_NATIVE
+        try {
+            uncommitted_async_buffers.emplace_back(download_map);
+        } catch (...) {
+            // A non-owning staging handle still needs a deferred pool return.
+            runtime.FreeDeferredStagingBuffer(download_map);
+            throw;
+        }
+        staging_recorded = true;
+#else
         uncommitted_async_buffers.emplace_back(download_map);
+#endif
         std::array buffers{
             buffer,
             download_map.buffer,
@@ -1650,6 +1681,9 @@ void TextureCache<P>::DownloadImageIntoBuffer(typename TextureCache<P>::Image* i
             download_map.offset,
         };
         image->DownloadMemory(buffers, buffer_offsets, copies);
+#ifdef PS5_NATIVE
+        download_submitted = true;
+#endif
     } else {
         image->DownloadMemory(buffer, buffer_offset, copies);
     }
