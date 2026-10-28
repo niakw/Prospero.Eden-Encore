@@ -11,6 +11,13 @@ make_dist = (root / "tools/ci/make-dist.py").read_text()
 assert "tools/ci/diagnose-image-repro.py" in make_dist
 assert "if repro_digest != image_digest:" in make_dist
 assert "raise SystemExit(f'FFPFSC reproducibility check failed:" in make_dist
+assert "image.replace(repro)" in make_dist
+assert "str(app), str(image)], check=True)" in make_dist
+assert "image.unlink(missing_ok=True)" in make_dist
+assert "repro.replace(image)" in make_dist
+assert make_dist.index("image.replace(repro)") < make_dist.index(
+    "repro_digest = hashlib.sha256(image.read_bytes()).hexdigest()") < make_dist.index(
+    "repro.replace(image)")
 
 with tempfile.TemporaryDirectory(prefix="encore-pfs-diff-") as tmp:
     left = Path(tmp) / "a.ffpfsc"
