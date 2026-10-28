@@ -19,6 +19,13 @@ guard = body[i:body.index("#endif\n", i) + len("#endif\n")]
 assert "if (!upload_completed)" in guard
 assert body.index("bool upload_completed = false;") < body.index("TrackImage(image, image_id);")
 assert body.count("upload_completed = true;") == 4
+assert "F07 contain native sync texture allocation failure at upload entry" in gen
+assert "F07 dirty native sync texture retry after bad allocation" in gen
+assert body.count("catch (const std::bad_alloc&)") == 1
+assert body.index("try {", body.index("runtime.UploadStagingBuffer(MapSizeBytes(image))")-75) < body.index(
+    "runtime.UploadStagingBuffer(MapSizeBytes(image))")
+assert body.index("upload_completed = true;",body.index("runtime.InsertUploadMemoryBarrier();")) < body.index(
+    "catch (const std::bad_alloc&)")
 for branch in ("runtime.TransitionImageLayout(image);",
                "QueueAsyncDecode(image, image_id);",
                "QueueAsyncUnswizzle(image, image_id);"):

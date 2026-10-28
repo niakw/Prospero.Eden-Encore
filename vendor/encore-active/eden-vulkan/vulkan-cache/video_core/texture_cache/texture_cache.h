@@ -1669,6 +1669,9 @@ void TextureCache<P>::RefreshContents(Image& image, ImageId image_id) {
     ::Eden::Performance::CachePhaseTimer staging_phase{
         ::Eden::Performance::CachePhase::TextureUploadStaging};
 #endif
+#ifdef PS5_NATIVE
+    try {
+#endif
     auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));
 #ifdef PS5_NATIVE
     staging_phase.Stop();
@@ -1685,6 +1688,11 @@ void TextureCache<P>::RefreshContents(Image& image, ImageId image_id) {
 #ifdef PS5_NATIVE
     barrier_phase.Stop();
     upload_completed = true;
+    } catch (const std::bad_alloc&) {
+        // A transient staging/CPU conversion OOM must not abort the GPU owner.
+        // The existing scope guard untracks and keeps the revision dirty.
+        return;
+    }
 #endif
 }
 

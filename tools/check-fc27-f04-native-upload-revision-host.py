@@ -145,8 +145,10 @@ struct Runtime {
     std::shared_ptr<std::vector<u8>> last_stage;
     std::array<u8,64> expected{};
     bool can_upload_msaa=true;
+    bool reject_staging{};
     Staging UploadStagingBuffer(std::size_t n) {
         ++allocations;
+        if(reject_staging)throw std::bad_alloc{};
         Staging s{n};
         last_stage=s.data;
         return s;
@@ -322,9 +324,24 @@ int main(){
     cache.RefreshContents(image,0);
     assert(image.uploads==5 && cache.runtime.barriers==5);
     assert(False(image.flags & ImageFlagBits::CpuModified));
+    for(unsigned i=0;i<64;++i)m.bytes[image.gpu_addr+i]=static_cast<u8>(0x60+i);
+    Changed(image);
+    cache.runtime.expected=Data(m,image.gpu_addr);
+    cache.runtime.reject_staging=true;
+    const auto before_uploads=image.uploads;
+    const auto before_barriers=cache.runtime.barriers;
+    cache.RefreshContents(image,0);
+    assert(image.uploads==before_uploads && cache.runtime.barriers==before_barriers);
+    assert(True(image.flags & ImageFlagBits::CpuModified));
+    assert(False(image.flags & ImageFlagBits::Tracked));
+    cache.runtime.reject_staging=false;
+    cache.RefreshContents(image,0);
+    assert(image.uploads==6 && cache.runtime.barriers==6);
+    assert(image.device_bytes==cache.runtime.expected);
+    assert(False(image.flags & ImageFlagBits::CpuModified));
     std::puts("F04_NATIVE_TEXTURE_UPLOAD_REVISION_PASS ordinary=2 converted=1 "
               "accelerated=1 async=1 msaa_transition=1 barriers=4 "
-              "registration_failure_recovered=1 scope=source_extracted_host_mock_staging_no_gpu");
+              "registration_failure_recovered=1 staging_oom_recovered=1 scope=source_extracted_host_mock_staging_no_gpu");
 }
 """.replace("__METHODS__",method)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")

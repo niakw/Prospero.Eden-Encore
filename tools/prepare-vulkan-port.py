@@ -4045,3 +4045,14 @@ apply_reviewed_delta("vk_pipeline_cache_cost.cpp",
     "            } catch (const std::exception& error) {\n                LOG_WARNING(Render_Vulkan, \"Deferred driver cache flush failed: {}\", error.what());\n            } catch (...) {\n                LOG_WARNING(Render_Vulkan, \"Deferred driver cache flush failed: unknown exception\");\n            }",
     "            } catch (const std::exception& error) {\n#ifdef PS5_NATIVE\n                // Signal a new checkpoint, but only the GPU owner may update\n                // the ordinary pipeline build quota on its next call.\n                flush_worker_failed.store(true, std::memory_order_release);\n#endif\n                LOG_WARNING(Render_Vulkan, \"Deferred driver cache flush failed: {}\", error.what());\n            } catch (...) {\n#ifdef PS5_NATIVE\n                flush_worker_failed.store(true, std::memory_order_release);\n#endif\n                LOG_WARNING(Render_Vulkan, \"Deferred driver cache flush failed: unknown exception\");\n            }",
     "F07 publish driver cache worker failure atomically")
+
+# F07 P0.4: a transient PS5 staging/CPU conversion allocation exception
+# must unwind via the existing dirty-image rollback instead of aborting.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));\n#ifdef PS5_NATIVE\n    staging_phase.Stop();",
+    "#ifdef PS5_NATIVE\n    try {\n#endif\n    auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));\n#ifdef PS5_NATIVE\n    staging_phase.Stop();",
+    "F07 contain native sync texture allocation failure at upload entry")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    barrier_phase.Stop();\n    upload_completed = true;\n#endif\n}",
+    "    barrier_phase.Stop();\n    upload_completed = true;\n    } catch (const std::bad_alloc&) {\n        // A transient staging/CPU conversion OOM must not abort the GPU owner.\n        // The existing scope guard untracks and keeps the revision dirty.\n        return;\n    }\n#endif\n}",
+    "F07 dirty native sync texture retry after bad allocation")
