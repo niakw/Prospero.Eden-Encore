@@ -1649,6 +1649,11 @@ void TextureCache<P>::RefreshContents(Image& image, ImageId image_id) {
     const bool gpu_unswizzle_enabled = Settings::values.gpu_unswizzle_enabled.GetValue();
 
     if (gpu_unswizzle_enabled &&
+#ifdef PS5_NATIVE
+        // Live GPU setting can enable unswizzle after cache construction;
+        // zero-sized chunks or batches cannot submit any GPU slices.
+        swizzle_chunk_size != 0 && swizzle_slices_per_batch != 0 &&
+#endif
         IsPixelFormatBCn(image.info.format) &&
         image.info.type == ImageType::e3D &&
         image.info.resources.levels == 1 &&
@@ -2137,7 +2142,8 @@ void TextureCache<P>::TickAsyncUnswizzle() {
     // This task may span several frames. A new CPU write or guest remap
     // invalidates its staged bytes even when texture dimensions do not change.
     // Abandon the old content before dispatching another GPU upload batch.
-    if (True(image.flags & (ImageFlagBits::CpuModified | ImageFlagBits::Remapped))) {
+    if (True(image.flags & (ImageFlagBits::CpuModified | ImageFlagBits::Remapped)) ||
+        swizzle_chunk_size == 0 || swizzle_slices_per_batch == 0) {
         if (task.initialized) {
             // Previously submitted batches may still be on the GPU worker.
             // Return their source buffer using the EXISTING deferred free.

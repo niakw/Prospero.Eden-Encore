@@ -33,6 +33,8 @@ assert fragment.count("FreeDeferredStagingBuffer(task.staging_buffer);") == 1
 assert fragment.index("ImageFlagBits::CpuModified | ImageFlagBits::Remapped") < fragment.index(
     "#ifdef PS5_NATIVE\n    if(current_unswizzle_frame > 0)")
 assert fragment.count("unswizzle_queue.pop_front();") == 1
+assert "swizzle_chunk_size == 0 || swizzle_slices_per_batch == 0" in fragment
+assert "F07 retire queued BCn 3D image when budget is zero" in generator
 assert fragment.index("unswizzle_queue.pop_front();") < fragment.index(
     "#ifdef PS5_NATIVE\n    if(current_unswizzle_frame > 0)")
 assert fragment.count("#ifndef PS5_NATIVE") == 1
@@ -89,6 +91,7 @@ template<class P> struct TextureCache {
     std::deque<PendingUnswizzle> unswizzle_queue;
     std::vector<Image> slot_images;
     unsigned current_unswizzle_frame{}, reached_normal{}, untracked{};
+    std::size_t swizzle_chunk_size{16}, swizzle_slices_per_batch{128};
     Runtime runtime;
     void UntrackImage(Image& img,ImageId){
         assert(True(img.flags & ImageFlagBits::Tracked));
@@ -157,6 +160,25 @@ int main(){
     Submit(c,4,true,false,false,false);
     c.TickAsyncUnswizzle();
     assert(c.reached_normal==3);
+    // A queued task with lost runtime budget must abandon old bytes,
+    // return deferred staging and clear the pending decode flag.
+    TextureCache<int> unavailable;
+    unavailable.slot_images.resize(2);
+    unavailable.swizzle_chunk_size=0;
+    Submit(unavailable,0,true,false,false,true);
+    unavailable.current_unswizzle_frame=3;
+    unavailable.TickAsyncUnswizzle();
+    assert(unavailable.unswizzle_queue.empty() && unavailable.runtime.deferred_free==1);
+    assert(unavailable.current_unswizzle_frame==0 && unavailable.untracked==1);
+    assert(True(unavailable.slot_images[0].flags&ImageFlagBits::CpuModified));
+    assert(!True(unavailable.slot_images[0].flags&ImageFlagBits::IsDecoding));
+    unavailable.swizzle_chunk_size=16;
+    unavailable.swizzle_slices_per_batch=0;
+    Submit(unavailable,1,false,false,false,false);
+    unavailable.TickAsyncUnswizzle();
+    assert(unavailable.unswizzle_queue.empty() && unavailable.runtime.deferred_free==1);
+    assert(True(unavailable.slot_images[1].flags&ImageFlagBits::CpuModified));
+    assert(!True(unavailable.slot_images[1].flags&ImageFlagBits::IsDecoding));
 #else
     Submit(c,0,true,true,false,true);
     c.current_unswizzle_frame=3;
@@ -204,7 +226,7 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-stale-unswizzle-") as d:
             assert result.returncode==0,(opt,native,result.stderr[-5000:])
             run=subprocess.run([str(exe)],capture_output=True,text=True,timeout=15)
             assert run.returncode==0,(opt,native,run.stdout,run.stderr[-5000:])
-print("F07_UNSWIZZLE_STALE_HOST_PASS native_cancel=1 uninitialized=1"
+print("F07_UNSWIZZLE_STALE_HOST_PASS native_cancel=1 uninitialized=1 zero_budget_recovery=1"
       " remap=1 deferred_staging=1 desktop_unchanged=1 idle_reset=1 queued_throttle=1 O0=1 O2=1")
 
 # P0.4: compile the actual native batch-submit branch, including exceptions.

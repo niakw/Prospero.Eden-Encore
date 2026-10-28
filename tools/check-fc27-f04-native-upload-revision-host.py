@@ -32,6 +32,9 @@ assert "ConvertImage(unswizzle_data_buffer" in method
 assert "image.UploadMemory(staging, copies);" in method
 assert method.count("image.flags &= ~ImageFlagBits::CpuModified;")==1
 assert "QueueAsyncDecode(image, image_id);" in method
+assert "swizzle_chunk_size != 0 && swizzle_slices_per_batch != 0" in method
+assert "F07 reject uninitialized BCn 3D async queue budgets" in (
+    ROOT/"tools/prepare-vulkan-port.py").read_text()
 assert "staging.mapped_span.size_bytes() < upload_size" in method
 assert method.index("staging.mapped_span.size_bytes() < upload_size") < method.index("UploadImageContents(image, staging);")
 assert "F07 reject short native sync upload staging" in (ROOT/"tools/prepare-vulkan-port.py").read_text()
@@ -189,7 +192,7 @@ struct CachePhaseTimer {
 }
 #define LOG_WARNING(...) ((void)0)
 #define HW_GPU 0
-bool IsPixelFormatBCn(unsigned){return false;}
+bool IsPixelFormatBCn(unsigned fmt){return fmt==42;}
 std::size_t MapSizeBytes(const Image& image){return image.unswizzled_size_bytes;}
 std::vector<int> FullUploadSwizzles(const Info&){return {1};}
 template<class T> T FixSmallVectorADL(T t){return t;}
@@ -212,6 +215,7 @@ template<class P> struct TextureCache {
     Runtime runtime{};
     Buffer swizzle_data_buffer,unswizzle_data_buffer;
     std::size_t gpu_unswizzle_maxsize=65536;
+    std::size_t swizzle_chunk_size{}, swizzle_slices_per_batch{};
     unsigned tracked=0,async_decode=0,async_unswizzle=0,untrack_count=0;
     bool fail_track=false;
     void TrackImage(Image& img,ImageId){
@@ -358,9 +362,26 @@ int main(){
     assert(image.uploads==7 && cache.runtime.barriers==7);
     assert(image.device_bytes==cache.runtime.expected);
     assert(False(image.flags & ImageFlagBits::CpuModified));
+    // Enabling GPU 3D unswizzle after constructing a CPU-only cache must not
+    // queue a zero-progress task: use the ordinary synchronous refresh.
+    image.info.type=ImageType::e3D;
+    image.info.format=42;
+    cache.gpu_unswizzle_maxsize=0;
+    Settings::values.gpu_unswizzle_enabled.value=true;
+    Changed(image);
+    cache.runtime.expected=Data(m,image.gpu_addr);
+    cache.RefreshContents(image,0);
+    assert(cache.async_unswizzle==0 && image.uploads==8);
+    assert(cache.runtime.barriers==8);
+    cache.swizzle_chunk_size=16;
+    cache.swizzle_slices_per_batch=128;
+    Changed(image);
+    cache.RefreshContents(image,0);
+    assert(cache.async_unswizzle==1 && image.uploads==8);
+    Settings::values.gpu_unswizzle_enabled.value=false;
     std::puts("F04_NATIVE_TEXTURE_UPLOAD_REVISION_PASS ordinary=2 converted=1 "
               "accelerated=1 async=1 msaa_transition=1 barriers=4 "
-              "registration_failure_recovered=1 staging_oom_recovered=1 short_mapping_recovered=1 scope=source_extracted_host_mock_staging_no_gpu");
+              "registration_failure_recovered=1 staging_oom_recovered=1 short_mapping_recovered=1 runtime_unswizzle_toggle_guard=1 scope=source_extracted_host_mock_staging_no_gpu");
 }
 """.replace("__METHODS__",method)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
