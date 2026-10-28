@@ -424,6 +424,7 @@ jobs:
           python3 -B tools/check-ps5-f07-pipeline-publication-host.py
           python3 -B tools/check-ps5-f07-compute-ready-callback-host.py
           python3 -B tools/check-ps5-f07-compute-pair-profiling-host.py
+          python3 -B tools/check-ps5-f07-compute-indirect-binding-host.py
           python3 -B tools/check-ps5-compute-shader-handoff-host.py
           python3 -B tools/check-ps5-f07-compute-translation-priority-host.py
           python3 -B tools/check-ps5-f07-driver-cache-flush-host.py
