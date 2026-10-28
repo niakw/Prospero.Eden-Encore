@@ -147,3 +147,8 @@ Les téléchargements anticipés du GC et les uploads synchrones refusent désor
 ## P0.4 — handles invalides après décompression asynchrone
 
 Les deux admissions natives qui restaient fondées uniquement sur la taille des octets mappés (`TickAsyncDecode` et `TickAsyncUnswizzle`) rejettent maintenant aussi un handle GPU nul. Le décodeur conserve `CpuModified` et libère `IsDecoding` ; le chemin 3D retire la tâche incomplète, restitue le staging seulement s'il possède un buffer, et laisse le retry reconstruire les pixels. Les mêmes substitutions sont intégrées au générateur et aux témoins C++ avec injection du cas handle nul + mapping complet. Pas de mesure console.
+
+
+## P0.4 — préserver le drapeau GPU sale après un readback interrompu
+
+`TextureCache::DownloadMemory` effaçait `GpuModified` avant d'enregistrer et de publier les copies Vulkan. Sur PS5, la liste des images est construite **avant** l'effacement du bit correspondant. Un garde de sortie restaure les drapeaux des images touchées pendant un déroulement d'exception, y compris si un premier lot avait déjà été copié. Le chemin ordinaire et le contenu de l'oracle historique du batch restent identiques ; une nouvelle preuve C++ source-extraite couvre succès, exception pendant l'énumération, échec après préparation et images exclues. La protection contre un staging incomplet/nul relève des gardes dédiés de chaque opération ; elle ne prouve pas que toutes les soumissions GPU ont réussi sur PS5.
