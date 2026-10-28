@@ -142,3 +142,8 @@ Lorsque `PrefetchDownloads` ne fournit pas de copie, `Cleanup` déclenche un té
 ## P0.3/P0.4 — handles Vulkan nuls malgré un mapping complet
 
 Les téléchargements anticipés du GC et les uploads synchrones refusent désormais sur PS5 native un buffer Vulkan nul même si le mapping expose assez d'octets. Le GC ne planifie aucune copie spéculative invalide ; l'upload conserve CpuModified pour réessayer. Le générateur du port garde ces deux gardes. Les tests source-extraits reproduisent explicitement le cas handle nul / mapping complet, en plus du staging court, du refus et du succès, sous compilation hôte. Aucune amélioration du frametime FC27 n'est déduite de ces tests.
+
+
+## P0.4 — handles invalides après décompression asynchrone
+
+Les deux admissions natives qui restaient fondées uniquement sur la taille des octets mappés (`TickAsyncDecode` et `TickAsyncUnswizzle`) rejettent maintenant aussi un handle GPU nul. Le décodeur conserve `CpuModified` et libère `IsDecoding` ; le chemin 3D retire la tâche incomplète, restitue le staging seulement s'il possède un buffer, et laisse le retry reconstruire les pixels. Les mêmes substitutions sont intégrées au générateur et aux témoins C++ avec injection du cas handle nul + mapping complet. Pas de mesure console.
