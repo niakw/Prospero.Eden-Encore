@@ -39,6 +39,8 @@ on:
       - 'tools/check-ps5-fast-first-pipelines.py'
       - 'tools/check-ps5-pipeline-fairness.py'
       - '.github/workflows/encore-core-preflight.yml'
+      # Security policy changes must invalidate the same-SHA core proof.
+      - '.github/workflows/codeql-advanced.yml'
       - 'vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp'
       - 'tools/check-deferred-native-bridge-contract.py'
       # The deferred bridge gate reads these pinned CMake fixtures directly.
