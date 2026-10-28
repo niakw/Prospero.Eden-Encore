@@ -938,6 +938,14 @@ void RasterizerVulkan::DispatchCompute() {
         const auto post_op = VideoCommon::ObtainBufferOperation::DiscardWrite;
         const auto [buffer, offset] =
             buffer_cache.ObtainBuffer(*indirect_address, 12, sync_info, post_op);
+#ifdef PS5_NATIVE
+        // A guest indirect-command address can become unmapped after a
+        // shader/descriptor remap. Reject the missing binding before Vulkan
+        // barriers or a worker lambda captures buffer->Handle().
+        if (!buffer) {
+            return;
+        }
+#endif
         scheduler.RequestOutsideRenderPassOperationContext();
         if (::Eden::DevVulkan::compute_barriers) {
             scheduler.Record([](vk::CommandBuffer cmdbuf) {

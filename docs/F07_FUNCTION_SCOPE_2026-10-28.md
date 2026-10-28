@@ -107,3 +107,7 @@ Si l'option GPU BCn 3D est activée après la construction du cache alors que le
 ## P0.3 — sondages mémoire évités pendant le nettoyage des textures propres
 
 Dans `RunGarbageCollector`, le calcul `DirtyEvictions()` pouvait appeler la sonde directe de mémoire graphique avant de découvrir que la texture LRU n'avait aucun téléchargement GPU à effectuer. Ce sondage peut accéder au noyau et se répéter jusqu'au plafond existant de 8 192 visites, sous `texture_cache.mutex`. Le test et le garde sont inversés : seuls les candidats ayant réellement besoin d'un download consultent la sonde. Les décisions concernant les textures sales, coûteuses et le mode d'éviction agressif restent les mêmes. Le témoin C++ source-extrait vérifie 1 000 entrées propres sans sonde et les scénarios sales/agressifs en O0/O2. La mesure du frametime en console reste à effectuer.
+
+## P0.3 — vérification de la liaison du buffer compute indirect
+
+`DispatchCompute` utilisait `buffer->Handle()` après `ObtainBuffer` sans vérifier que le buffer indirect était disponible. Sur PS5, un retour nul provoquait une déréférence invalide après les revalidations des descripteurs et sous les deux verrous de caches. Le chemin natif refuse maintenant le dispatch avant de demander un contexte de rendu ou d'enregistrer une barrière. Le chemin desktop reste inchangé ; le dispatch indirect valide conserve son ordre et ses barrières. Un test C++ source-extrait doit vérifier buffer manquant/valide, pipeline non lié, et les modes PS5/desktop `-O0` et `-O2`. Aucun gain FPS console n'est présumé.

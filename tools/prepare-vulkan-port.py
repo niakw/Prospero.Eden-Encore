@@ -4120,3 +4120,11 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) || (!DirtyEvictions() && must_download)) {",
     "        // A clean image has no guest readback. Do not query PS5 direct-memory\n        // pressure for it: the memory probe may be kernel-backed, and this\n        // entire LRU sweep runs under texture_cache.mutex.\n        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||\n            (must_download && !DirtyEvictions())) {",
     "F07 skip texture GC memory pressure probes for clean LRU entries")
+
+# F07 P0.3: a missing guest compute-indirect buffer must not be dereferenced
+# or recorded under the paired texture/buffer cache mutexes on PS5. This is
+# the same fail-closed contract as the existing draw-indirect guard.
+apply_reviewed_delta("vulkan_rasterizer.cpp",
+    "        const auto [buffer, offset] =\n            buffer_cache.ObtainBuffer(*indirect_address, 12, sync_info, post_op);\n        scheduler.RequestOutsideRenderPassOperationContext();",
+    "        const auto [buffer, offset] =\n            buffer_cache.ObtainBuffer(*indirect_address, 12, sync_info, post_op);\n#ifdef PS5_NATIVE\n        // A guest indirect-command address can become unmapped after a\n        // shader/descriptor remap. Reject the missing binding before Vulkan\n        // barriers or a worker lambda captures buffer->Handle().\n        if (!buffer) {\n            return;\n        }\n#endif\n        scheduler.RequestOutsideRenderPassOperationContext();",
+    "F07 reject unmapped indirect compute buffer before Vulkan commands")
