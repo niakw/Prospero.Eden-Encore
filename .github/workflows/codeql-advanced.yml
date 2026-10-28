@@ -14,6 +14,14 @@ on:
       - 'third_party/**'
       - 'fixtures/**'
       - 'vendor/encore-active/**'
+      # Versioned source-review contracts are verified by the native gates;
+      # keep security analysis on the same immutable SHA when they change.
+      - 'docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json'
+      - 'docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md'
+      # Versioned source-review contracts are verified by the native gates;
+      # keep security analysis on the same immutable SHA when they change.
+      - 'docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json'
+      - 'docs/EDEN_NATIVE_STARTUP_DIAGNOSTIC_REVIEW_2026-10-21.md'
   pull_request:
     branches: [dev/ps5-sparse-jit]
     paths:
