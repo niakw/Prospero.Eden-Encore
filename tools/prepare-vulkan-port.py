@@ -3111,6 +3111,13 @@ apply_reviewed_delta(
     "    // Compute reuses same-generation identical descriptor payloads.\n    // Pre-drain guaranteed allocations, not uncertain changed payloads,\n    // while neither guest cache is locked.",
     "F07 compute preflight comment")
 
+# F07: descriptor equality uses std::memcmp; do not rely on transitive includes.
+apply_reviewed_delta(
+    'vk_compute_pipeline_cost.cpp',
+    "#include <memory>\n#include <vector>",
+    "#include <cstring>\n#include <memory>\n#include <vector>",
+    'F07 compute explicit cstring descriptor compare include')
+
 # F07 P0.4: composite can be the first GPU consumer after a guest
 # memory remap. Flush queued mapping invalidations ahead of the texture
 # mutex, matching DrawTexture's lock ordering. This keeps the newly selected

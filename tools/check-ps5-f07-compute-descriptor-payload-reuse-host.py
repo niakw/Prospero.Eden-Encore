@@ -85,6 +85,7 @@ int main(){
     Pipeline p; p.last_descriptor_payload.reserve(2);
     assert(p.Run()); assert(p.descriptor_buffer_ring.count==1);
     const auto first=p.used_offset;
+    (void)first; // Desktop still compiles with -Werror; only native reuses.
     assert(p.Run());
 #ifdef PS5_NATIVE
     assert(p.descriptor_buffer_ring.count==1 && p.descriptor_buffer_ring.touched==1);
