@@ -8,6 +8,7 @@
 
 #include <limits>
 #ifdef PS5_NATIVE
+#include <exception>
 #include <new>
 #endif
 #include <optional>
@@ -1023,12 +1024,31 @@ void TextureCache<P>::DownloadMemory(DAddr cpu_addr, size_t size) {
     }
 
     boost::container::small_vector<ImageId, 16> images;
+#ifdef PS5_NATIVE
+    // DownloadMemory can fail after clearing GPU-dirty state but before guest
+    // pixels are published. Restore every touched image on unwinding, even
+    // when an earlier staged image was already copied successfully.
+    const int uncaught_before_readback = std::uncaught_exceptions();
+    SCOPE_EXIT {
+        if (std::uncaught_exceptions() > uncaught_before_readback) {
+            for (const ImageId id : images) {
+                slot_images[id].flags |= ImageFlagBits::GpuModified;
+            }
+        }
+    };
+#endif
     ForEachImageInRegion(cpu_addr, size, [this, &images](ImageId image_id, ImageBase& image) {
         if (!IsDownloadable(image)) {
             return;
         }
+#ifdef PS5_NATIVE
+        // The list can allocate: track the image BEFORE clearing its flag.
+        images.push_back(image_id);
+        image.flags &= ~ImageFlagBits::GpuModified;
+#else
         image.flags &= ~ImageFlagBits::GpuModified;
         images.push_back(image_id);
+#endif
     });
     if (images.empty()) {
         return;

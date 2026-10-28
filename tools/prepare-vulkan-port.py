@@ -4203,3 +4203,16 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "#include <limits>\n#include <optional>",
     "#include <limits>\n#ifdef PS5_NATIVE\n#include <new>\n#endif\n#include <optional>",
     "F07 declare bad alloc for native dirty GC rollback")
+
+
+# F07 P0.4: an authoritative DownloadMemory failure must not leave the
+# guest-visible GPU-dirty bit cleared, including after partial readbacks.
+# Keep the historical Vulkan batching oracle byte-identical.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    boost::container::small_vector<ImageId, 16> images;\n    ForEachImageInRegion(cpu_addr, size, [this, &images](ImageId image_id, ImageBase& image) {\n        if (!IsDownloadable(image)) {\n            return;\n        }\n        image.flags &= ~ImageFlagBits::GpuModified;\n        images.push_back(image_id);\n    });",
+    "    boost::container::small_vector<ImageId, 16> images;\n#ifdef PS5_NATIVE\n    // DownloadMemory can fail after clearing GPU-dirty state but before guest\n    // pixels are published. Restore every touched image on unwinding, even\n    // when an earlier staged image was already copied successfully.\n    const int uncaught_before_readback = std::uncaught_exceptions();\n    SCOPE_EXIT {\n        if (std::uncaught_exceptions() > uncaught_before_readback) {\n            for (const ImageId id : images) {\n                slot_images[id].flags |= ImageFlagBits::GpuModified;\n            }\n        }\n    };\n#endif\n    ForEachImageInRegion(cpu_addr, size, [this, &images](ImageId image_id, ImageBase& image) {\n        if (!IsDownloadable(image)) {\n            return;\n        }\n#ifdef PS5_NATIVE\n        // The list can allocate: track the image BEFORE clearing its flag.\n        images.push_back(image_id);\n        image.flags &= ~ImageFlagBits::GpuModified;\n#else\n        image.flags &= ~ImageFlagBits::GpuModified;\n        images.push_back(image_id);\n#endif\n    });",
+    "F07 restore GPU dirty image flags on readback exception")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "#ifdef PS5_NATIVE\n#include <new>",
+    "#ifdef PS5_NATIVE\n#include <exception>\n#include <new>",
+    "F07 include uncaught exception counter for readback rollback")
