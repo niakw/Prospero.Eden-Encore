@@ -115,4 +115,80 @@ with tempfile.TemporaryDirectory(prefix="f07-dma-image-prelock-") as folder:
             assert build.returncode==0,(native,opt,build.stderr[-4000:])
             result=subprocess.run([str(exe)],capture_output=True,text=True,timeout=15)
             assert result.returncode==0,(native,opt,result.stderr[-4000:])
+
+# Execute the exact DMA acquisition/handle guard from the active source. A
+# valid guest buffer can still have no Vulkan allocation on PS5.
+first="    static constexpr auto sync_info = VideoCommon::ObtainBufferSynchronize::FullSynchronize;"
+last="    const auto [image, copy] = texture_cache.DmaBufferImageCopy("
+def extract_guard(src):
+    begin=src.index(needle)
+    return src[src.index(first,begin):src.index(last,begin)]
+guard_code=extract_guard(source)
+assert guard_code==extract_guard(variant)
+assert guard_code.count("if (!buffer || buffer->Handle() == VK_NULL_HANDLE)") == 1
+cpp_guard=r"""
+#include <cassert>
+#include <cstdint>
+#include <utility>
+#include <initializer_list>
+using u32=std::uint32_t;
+using u64=std::uint64_t;
+inline constexpr int VK_NULL_HANDLE=0;
+namespace VideoCommon {
+enum class ObtainBufferSynchronize { FullSynchronize };
+enum class ObtainBufferOperation { DoNothing, MarkAsWritten };
+}
+struct Buffer {int handle{9};int Handle()const{return handle;}};
+struct BufferCache {
+    Buffer* active{};
+    std::pair<Buffer*,u32> ObtainBuffer(u64,u32,
+        VideoCommon::ObtainBufferSynchronize,VideoCommon::ObtainBufferOperation){
+        return {active,0};
+    }
+};
+struct Driver {
+    Buffer stored{};
+    BufferCache buffer_cache{};
+    template<bool IS_IMAGE_UPLOAD> bool Check(bool present,int handle) {
+        stored.handle=handle;
+        buffer_cache.active=present?&stored:nullptr;
+        struct Operand {u64 address{};} buffer_operand{12};
+        const u32 buffer_size=48;
+""" + guard_code + r"""
+        (void)offset;
+        return true;
+    }
+};
+int main(){
+    for (bool upload:{true,false}) {
+        const auto check=[&](bool present,int handle){
+            Driver driver;
+            return upload?driver.Check<true>(present,handle):
+                          driver.Check<false>(present,handle);
+        };
+#ifdef PS5_NATIVE
+        assert(!check(false,9));
+        assert(!check(true,VK_NULL_HANDLE));
+#endif
+        assert(check(true,9));
+    }
+}
+"""
+with tempfile.TemporaryDirectory(prefix="f07-dma-handle-") as folder:
+    src=Path(folder)/"guard.cpp"
+    src.write_text(cpp_guard)
+    for opt in ("-O0","-O2"):
+        for native in (True,False):
+            exe=Path(folder)/(("native" if native else "desktop")+opt[1:])
+            flags=["-DPS5_NATIVE=1"] if native else []
+            build=subprocess.run(
+                [compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                 "-fsanitize=undefined","-fno-sanitize-recover=all",
+                 *flags,str(src),"-o",str(exe)],
+                capture_output=True,text=True,timeout=45)
+            assert build.returncode==0,(native,opt,build.stderr[-6000:])
+            run=subprocess.run([str(exe)],capture_output=True,text=True,timeout=15)
+            assert run.returncode==0,(native,opt,run.stderr[-5000:])
+print("F07_DMA_IMAGE_HANDLE_PASS ps5_null_pointer=1 ps5_null_vk_handle=1 both_directions=1 desktop_valid=1 O0=1 O2=1 UBSan=1")
+
 print("F07_DMA_IMAGE_PRELOCK_SPAN_PASS native=1 desktop=1 O0=1 O2=1 zero=1 overflow=1 valid=1 paired_mutex_skipped=1")
