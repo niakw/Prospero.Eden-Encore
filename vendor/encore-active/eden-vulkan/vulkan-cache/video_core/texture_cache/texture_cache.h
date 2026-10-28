@@ -2023,6 +2023,10 @@ void TextureCache<P>::TickAsyncDecode() {
     // frame. Work not processed this tick retains its decode context.
     constexpr size_t kMaxCompletedDecodesPerTick = 4;
     size_t completed_decodes = 0;
+    // Keep every successfully submitted native texture ID in fixed storage:
+    // a rejected visibility barrier must invalidate the whole upload batch.
+    std::array<ImageId, kMaxCompletedDecodesPerTick> submitted_images{};
+    size_t submitted_count = 0;
 #endif
     auto i = async_decodes.begin();
     while (i != async_decodes.end()) {
@@ -2113,12 +2117,32 @@ void TextureCache<P>::TickAsyncDecode() {
 #endif
         image.flags &= ~ImageFlagBits::IsDecoding;
         has_uploads = true;
+#ifdef PS5_NATIVE
+        submitted_images[submitted_count++] = async_decode->image_id;
+#endif
         // The context owns async_decode->mutex. Unlock before destroying it.
         lock.unlock();
         i = async_decodes.erase(i);
     }
     if (has_uploads) {
-        runtime.InsertUploadMemoryBarrier();
+#ifdef PS5_NATIVE
+        try {
+#endif
+            runtime.InsertUploadMemoryBarrier();
+#ifdef PS5_NATIVE
+        } catch (...) {
+            // Re-upload current guest revisions after a rejected visibility
+            // barrier. All decoder contexts were unlocked/erased above.
+            for (size_t j = 0; j < submitted_count; ++j) {
+                const ImageId id = submitted_images[j];
+                Image& image = slot_images[id];
+                image.flags |= ImageFlagBits::CpuModified;
+                if (True(image.flags & ImageFlagBits::Tracked)) {
+                    UntrackImage(image, id);
+                }
+            }
+        }
+#endif
     }
 }
 
