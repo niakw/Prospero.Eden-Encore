@@ -729,14 +729,19 @@ void BlockLinearUnswizzle3DPass::Unswizzle(
 
     const u32 MAX_BATCH_SLICES = (std::min)(z_count, image.info.size.depth);
 
+#ifdef PS5_NATIVE
+    // A null destination must not allocate an otherwise wasted device-local
+    // decompression buffer. Reject before ANY Vulkan output allocation.
+    if (image.Handle() == VK_NULL_HANDLE) {
+        throw std::bad_alloc{};
+    }
+#endif
     // Allocate or grow to cover this batch's slice count
     image.AllocateComputeUnswizzleBuffer(MAX_BATCH_SLICES);
 #ifdef PS5_NATIVE
-    // A failed destination image is not a successful async BCn upload.
-    // Reject on the GPU owner BEFORE queuing chunks; the async caller will
-    // retain the guest dirty flag and retry rather than acknowledge no pixels.
-    if (image.Handle() == VK_NULL_HANDLE ||
-        !image.compute_unswizzle_buffer ||
+    // Allocation can still return a null output handle. Reject before
+    // queueing a no-op GPU callback, retaining dirty guest pixels for retry.
+    if (!image.compute_unswizzle_buffer ||
         *image.compute_unswizzle_buffer == VK_NULL_HANDLE) {
         throw std::bad_alloc{};
     }
