@@ -49,6 +49,15 @@ assert "F07 reject scratch sizes outside Vulkan transient buffer slots" in gener
 assert "F07 reject null native image reinterpret scratch handle" in generator
 assert "if (copy_buffer == VK_NULL_HANDLE)" in size
 assert size.index("if (copy_buffer == VK_NULL_HANDLE)") < size.index("InvalidateResolveShadow(dst.Handle());")
+assert "F07 preserve resolve validity on rejected size-incompatible CopyImage" in generator
+copy_start="void TextureCacheRuntime::CopyImage(Image& dst, Image& src,"
+copy_end="    // As per the size-compatible formats section of vulkan, copy manually via ReinterpretImage"
+assert source.count(copy_start)==source.count(copy_end)==1
+copy_method=source[source.index(copy_start):]
+copy_guard=copy_method[copy_method.index("{")+1:copy_method.index(copy_end)]
+assert "BytesPerBlock(src.info.format) == BytesPerBlock(dst.info.format)" in copy_guard
+assert "#else\\n    if (ENABLE_MSAA_RESOLVE_CONSUME)" in copy_guard
+assert copy_guard.index("BytesPerBlock(src.info.format)") < copy_guard.index("#else")
 assert size.index("#else\n    for (const auto& copy") > size.index("#ifdef PS5_NATIVE")
 assert size.index("const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);") > size.index("#endif")
 cpp=r"""
@@ -69,7 +78,7 @@ struct Image {ImageInfo info{}; VkImage Handle() const {return 73;} };
 u32 BytesPerBlock(u32 format) {return format;}
 struct Runtime {
     std::size_t calls{},last_size{};
-    std::size_t invalidates{};
+    std::size_t invalidates{},direct_copies{};
     bool null_scratch{};
     void InvalidateResolveShadow(VkImage image) {assert(image==73);++invalidates;}
     VkBuffer GetTemporaryBuffer(std::size_t bytes) {
@@ -87,6 +96,14 @@ struct Runtime {
 __SOURCE_EMPTY_GUARD__
 __SOURCE_SIZE_GUARD__
         static_cast<void>(copy_buffer);
+    }
+    void CopyImage(Image& dst, Image& src, const std::vector<ImageCopy>& copies) {
+__SOURCE_COPY_GUARD__
+        if (BytesPerBlock(src.info.format) != BytesPerBlock(dst.info.format)) {
+            ReinterpretImage(dst, copies);
+        } else {
+            ++direct_copies;
+        }
     }
 };
 int main() {
@@ -110,6 +127,26 @@ int main() {
 #else
     assert(rejected_handle.calls==1 && rejected_handle.invalidates==1);
 #endif
+    Runtime mismatch;
+    Image second_format{{8}};
+    mismatch.CopyImage(normal,second_format,{{{4,5,1}}});
+    assert(mismatch.calls==1 && mismatch.last_size==80);
+#ifdef PS5_NATIVE
+    assert(mismatch.invalidates==1);
+#else
+    assert(mismatch.invalidates==2);  // pinned desktop double invalidation
+#endif
+    Runtime mismatch_rejected;
+    mismatch_rejected.null_scratch=true;
+    mismatch_rejected.CopyImage(normal,second_format,{{{4,5,1}}});
+#ifdef PS5_NATIVE
+    assert(mismatch_rejected.invalidates==0);  // valid previous resolve survives
+#else
+    assert(mismatch_rejected.invalidates==1);
+#endif
+    Runtime direct;
+    direct.CopyImage(normal,normal,{{{4,5,1}}});
+    assert(direct.direct_copies==1 && direct.calls==0 && direct.invalidates==1);
     Image invalid_format{{0}};
     Runtime invalid;
     invalid.ReinterpretImage(invalid_format,{{{4,5,1}}});
@@ -146,7 +183,7 @@ int main() {
     assert(aggregate.calls==0 && aggregate.invalidates==0);
 #endif
 }
-""".replace("__SOURCE_EMPTY_GUARD__",early).replace("__SOURCE_SIZE_GUARD__",size)
+""".replace("__SOURCE_EMPTY_GUARD__",early).replace("__SOURCE_SIZE_GUARD__",size).replace("__SOURCE_COPY_GUARD__",copy_guard)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler,"F07 reinterpret scratch witness needs C++20 compiler"
 with tempfile.TemporaryDirectory(prefix="eden-f07-vulkan-reinterpret-") as folder:
@@ -162,4 +199,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-vulkan-reinterpret-") as folde
             assert built.returncode==0,(native,opt,built.stderr[-6000:])
             ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
-print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 null_handle_not_submitted=1 valid=1 desktop_original=1 O0=1 O2=1")
+print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 null_handle_not_submitted=1 copy_reinterpret_shadow=1 valid=1 desktop_original=1 O0=1 O2=1")

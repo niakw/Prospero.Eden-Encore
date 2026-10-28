@@ -4185,6 +4185,32 @@ apply_reviewed_delta("vk_texture_cache_cost.cpp",
     "#ifdef PS5_NATIVE\n    // Do not divide by an invalid format width or truncate converted source\n    // coordinates before the scratch-size check. Conversion is calculated\n    // wide, but must still fit the signed offset and unsigned Vk extent.\n    const auto src_block_width = DefaultBlockWidth(src.info.format);\n    const auto dst_block_width = DefaultBlockWidth(dst.info.format);\n    if (src_block_width == 0 || dst_block_width == 0) {\n        return;\n    }\n    const auto bpp_in = BytesPerBlock(src.info.format) / src_block_width;\n    const auto bpp_out = BytesPerBlock(dst.info.format) / dst_block_width;\n    if (bpp_in == 0 || bpp_out == 0) {\n        return;\n    }\n    for (const auto& copy : copies) {\n        if (static_cast<s64>(copy.src_offset.x) < 0) {\n            return;\n        }\n        const u64 scaled_offset =\n            (static_cast<u64>(bpp_out) * static_cast<u64>(copy.src_offset.x)) / bpp_in;\n        const u64 scaled_width =\n            (static_cast<u64>(bpp_out) * copy.extent.width) / bpp_in;\n        if (scaled_offset > static_cast<u64>(\n                (std::numeric_limits<decltype(copy.src_offset.x)>::max)()) ||\n            scaled_width == 0 || scaled_width > static_cast<u64>(\n                (std::numeric_limits<decltype(copy.extent.width)>::max)())) {\n            return;\n        }\n    }\n#else\n    const auto bpp_in = BytesPerBlock(src.info.format) / DefaultBlockWidth(src.info.format);\n    const auto bpp_out = BytesPerBlock(dst.info.format) / DefaultBlockWidth(dst.info.format);\n#endif\n    std::ranges::transform(copies, vk_in_copies.begin(),\n                           [src_aspect_mask, bpp_in, bpp_out](const auto& copy) {\n                               auto copy2 = copy;\n#ifdef PS5_NATIVE\n                               copy2.src_offset.x = static_cast<decltype(copy2.src_offset.x)>(\n                                   (static_cast<u64>(bpp_out) * static_cast<u64>(copy.src_offset.x)) / bpp_in);\n                               copy2.extent.width = static_cast<decltype(copy2.extent.width)>(\n                                   (static_cast<u64>(bpp_out) * copy.extent.width) / bpp_in);\n#else\n                               copy2.src_offset.x = (bpp_out * copy.src_offset.x) / bpp_in;\n                               copy2.extent.width = (bpp_out * copy.extent.width) / bpp_in;\n#endif\n                               return MakeBufferImageCopy(copy2, true, src_aspect_mask);\n                           });",
     "F07 validate native reinterpret pixel ratios before coordinate conversion")
 
+# F07: CopyImage can delegate a size-incompatible copy to ReinterpretImage,
+# which rejects invalid staging before changing destination pixels. The outer
+# copy must not invalidate the MSAA resolve first; the delegated method owns
+# invalidation after successful scratch admission. Desktop stays unchanged.
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "void TextureCacheRuntime::CopyImage(Image& dst, Image& src,\n"
+    "                                    std::span<const VideoCommon::ImageCopy> copies) {\n"
+    "    if (ENABLE_MSAA_RESOLVE_CONSUME) {\n"
+    "        InvalidateResolveShadow(dst.Handle());\n"
+    "    }",
+    "void TextureCacheRuntime::CopyImage(Image& dst, Image& src,\n"
+    "                                    std::span<const VideoCommon::ImageCopy> copies) {\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // ReinterpretImage owns invalidation after validating its copy and scratch\n"
+    "    // buffer. Do not stale the old MSAA resolve when it rejects the operation.\n"
+    "    if (ENABLE_MSAA_RESOLVE_CONSUME &&\n"
+    "        BytesPerBlock(src.info.format) == BytesPerBlock(dst.info.format)) {\n"
+    "        InvalidateResolveShadow(dst.Handle());\n"
+    "    }\n"
+    "#else\n"
+    "    if (ENABLE_MSAA_RESOLVE_CONSUME) {\n"
+    "        InvalidateResolveShadow(dst.Handle());\n"
+    "    }\n"
+    "#endif",
+    "F07 preserve resolve validity on rejected size-incompatible CopyImage")
+
 # F07 P0.4: on PS5, a zero/invalid texture reinterpret must not mark the
 # existing MSAA resolve shadow stale. Move invalidation after scratch allocation
 # and bounds checks, retaining it before the actual Vulkan command recording.
