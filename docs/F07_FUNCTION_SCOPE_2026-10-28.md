@@ -87,3 +87,7 @@ Une soumission BCn 3D sans passage compute disponible ne doit plus être silenci
 ## F07 — reprise après erreur de l'oracle
 
 Le rejet du passage BCn 3D absent est déjà appliqué par le générateur ; l'oracle le rejouait à tort une seconde fois. Deux doublons sont supprimés sans relâcher la comparaison octet par octet, tandis que les cinq deltas historiques restent strictement vérifiés.
+
+## P0.3 — lecture d'une tranche BCn 3D plus large que le budget de frame
+
+Auparavant, si une tranche BCn 3D dépassait `swizzle_chunk_size`, `TickAsyncUnswizzle` forçait la lecture d'une tranche entière sous le verrou texture, par exemple 64 Mio malgré un budget de 16 Mio. Sur PS5 native, la lecture d'une tranche est désormais découpée en morceaux au plus égaux au budget. La soumission compute reste conditionnée à une tranche complète via `bytes_ready` ; la révision stale/remappée conserve son mécanisme d'annulation. Le témoin C++ extrait l'arithmétique exacte avec tranches 4/32/64 Mio et PS5/desktop O0/O2. Aucun gain en frametime console n'est revendiqué avant mesure.

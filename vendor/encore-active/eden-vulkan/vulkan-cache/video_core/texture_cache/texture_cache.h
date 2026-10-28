@@ -2239,7 +2239,16 @@ void TextureCache<P>::TickAsyncUnswizzle() {
 
         if (remaining > swizzle_chunk_size) {
             copy_amount = (copy_amount / task.bytes_per_slice) * task.bytes_per_slice;
-            if (copy_amount == 0) copy_amount = task.bytes_per_slice;
+            if (copy_amount == 0) {
+#ifdef PS5_NATIVE
+                // One BCn-3D slice can exceed the per-frame read budget.
+                // Stage a partial slice; dispatch still waits until a full
+                // slice is ready. Do not copy >budget under texture mutex.
+                copy_amount = (std::min)(swizzle_chunk_size, remaining);
+#else
+                copy_amount = task.bytes_per_slice;
+#endif
+            }
         }
 
 #ifdef PS5_NATIVE
