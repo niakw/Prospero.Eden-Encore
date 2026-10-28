@@ -863,8 +863,9 @@ void RasterizerVulkan::DispatchCompute() {
     }
 #endif
 #ifdef PS5_NATIVE
-    // Compute always allocates new descriptor-buffer space for a dispatch.
-    // Drain only necessary GPU fences while neither guest cache is locked.
+    // Compute reuses same-generation identical descriptor payloads.
+    // Pre-drain guaranteed allocations, not uncertain changed payloads,
+    // while neither guest cache is locked.
     // Worker drains can publish guest shader/descriptor invalidations.
     for (unsigned preflight = 0; preflight != 2; ++preflight) {
         if (!pipeline->HasDescriptorEntries() ||
