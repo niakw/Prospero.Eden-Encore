@@ -638,11 +638,10 @@ bool GraphicsPipeline::ConfigureImpl(bool is_indexed) {
     ASSERT(views.size() == num_image_elements);
     ASSERT(samplers.size() == num_textures);
     stage_texture_phase.Stop();
-    // The empty image set cannot resolve, retire or rescale any view.
-    // Preserve render-target refresh and feedback-loop processing below.
-    if (!views.empty()) {
-        ::Eden::Performance::CachePhaseTimer cost{
-            ::Eden::Performance::CachePhase::TextureFillImageViews};
+    // FillImageViews resets the image-deletion/retry latch even for no images.
+    // Keep that state transition for graphics as for compute; no TIC is resolved.
+    { ::Eden::Performance::CachePhaseTimer cost{
+        ::Eden::Performance::CachePhase::TextureFillImageViews};
         texture_cache.FillImageViews(std::span(views.data(), views.size()), false,
                                      Spec::has_images);
     }
