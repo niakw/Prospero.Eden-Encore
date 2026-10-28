@@ -2118,7 +2118,7 @@ void TextureCache<P>::TickAsyncDecode() {
                 return {};
             }
         }();
-        if (staging.mapped_span.size() < expected_size) {
+        if (!staging.buffer || staging.mapped_span.size() < expected_size) {
             image.flags &= ~ImageFlagBits::IsDecoding;
             image.flags |= ImageFlagBits::CpuModified;
             if (True(image.flags & ImageFlagBits::Tracked)) {
@@ -2292,7 +2292,7 @@ void TextureCache<P>::TickAsyncUnswizzle() {
                 return {};
             }
         }();
-        if (staging.mapped_span.size() < task.total_size) {
+        if (!staging.buffer || staging.mapped_span.size() < task.total_size) {
             // A valid deferred buffer may have been returned with a short
             // mapping. Release it through the existing GPU-tick mechanism.
             if (staging.buffer) {

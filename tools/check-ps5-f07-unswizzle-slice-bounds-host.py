@@ -28,7 +28,7 @@ assert block.index("task.total_size % task.bytes_per_slice") < block.index(
 assert "std::numeric_limits<size_t>::max()" in block
 assert "runtime.FreeDeferredStagingBuffer(task.staging_buffer);" not in block
 assert "task.staging_buffer = staging;" in block
-assert "staging.mapped_span.size() < task.total_size" in block
+assert "if (!staging.buffer || staging.mapped_span.size() < task.total_size)" in block
 assert "runtime.FreeDeferredStagingBuffer(staging);" in block
 assert "F07 3D unswizzle staging OOM and short mapping recovery" in generator
 assert "image.flags |= ImageFlagBits::CpuModified;" in block
@@ -71,12 +71,12 @@ struct Task {
 };
 struct Runtime {
     unsigned deferred{},allocations{};
-    bool fail{},short_mapping{};
+    bool fail{},short_mapping{},null_buffer{};
     Task::Staging UploadStagingBuffer(std::size_t size,bool deferred_){
         assert(size!=0 && deferred_);
         ++allocations;
         if(fail) throw std::bad_alloc{};
-        return {true,{short_mapping?size-1:size},true};
+        return {true,{short_mapping?size-1:size},!null_buffer};
     }
     void FreeDeferredStagingBuffer(Task::Staging& s){
         assert(s.allocated && s.buffer);
@@ -100,14 +100,15 @@ struct Cache {
         ++accepted;
     }
 };
-void StagingFailure(bool short_mapping) {
+void StagingFailure(bool short_mapping, bool null_handle=false) {
     Cache c;
     c.unswizzle_queue.push_back({.image_id=0,.total_size=64,.staging_buffer={false}});
     c.slot_images[0].info.size.depth=1;
     c.slot_images[0].flags|=ImageFlagBits::IsDecoding;
     c.slot_images[0].flags|=ImageFlagBits::Tracked;
-    c.runtime.fail=!short_mapping;
+    c.runtime.fail=!short_mapping && !null_handle;
     c.runtime.short_mapping=short_mapping;
+    c.runtime.null_buffer=null_handle;
     c.Check(4,16,1);
     assert(c.accepted==0 && c.unswizzle_queue.empty());
     assert(c.runtime.allocations==1);
@@ -133,6 +134,7 @@ void Invalid(std::size_t total,u32 width,u32 block,u32 height,u32 depth,bool tra
 int main(){
     StagingFailure(false);
     StagingFailure(true);
+    StagingFailure(false,true); // Null VkBuffer despite a full mapped span
     Invalid(64,0,16,1,1,true);                      // zero stride, no division
     Invalid(64,1,0,1,1,false);                      // zero block size
     Invalid(8,2,16,1,1,true);                       // slice > staging

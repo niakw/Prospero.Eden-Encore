@@ -30,7 +30,7 @@ assert method.count("i = async_decodes.erase(i);") == 4
 assert "F07 async decoded staging allocation failure and short span recovery" in generator
 assert "F07 async decoded Vulkan submission failure recovery" in generator
 assert method.index("image.UploadMemory(staging,") < method.index("} catch (...) {", method.index("image.UploadMemory(staging,"))
-assert "staging.mapped_span.size() < expected_size" in method
+assert "if (!staging.buffer || staging.mapped_span.size() < expected_size)" in method
 assert method.index("staging.mapped_span.size() < expected_size") < method.index("std::memcpy(")
 assert method.count("image.flags |= ImageFlagBits::CpuModified;") == 4
 assert "F07 mark entire decoded texture batch dirty after barrier failure" in generator
@@ -90,8 +90,9 @@ bool True(std::uint32_t n){return n!=0;}
 struct Staging{
     std::vector<std::uint8_t> bytes;
     std::span<std::uint8_t> mapped_span;
+    bool buffer{};
     Staging() = default;
-    explicit Staging(std::size_t n):bytes(n),mapped_span(bytes){}
+    explicit Staging(std::size_t n):bytes(n),mapped_span(bytes),buffer(true){}
 };
 struct Image{
     Flags flags{};
@@ -113,12 +114,13 @@ struct AsyncDecodeContext{
 };
 struct Runtime{
     unsigned staging_calls{},barriers{};
-    unsigned reject_on_call{},short_on_call{};
+    unsigned reject_on_call{},short_on_call{},null_on_call{};
     bool fail_barrier{};
     Staging UploadStagingBuffer(std::size_t n){
         ++staging_calls;
         if (reject_on_call == staging_calls) throw std::bad_alloc{};
         if (short_on_call == staging_calls) return Staging(n - 1);
+        if (null_on_call == staging_calls) {auto invalid=Staging(n); invalid.buffer=false; return invalid;}
         return Staging(n);
     }
     void InsertUploadMemoryBarrier(){
@@ -142,6 +144,25 @@ template<class P>struct TextureCache{
 };
 """ + method + r"""
 int main(){
+    // The map can expose a full CPU span but contain no Vulkan VkBuffer.
+    // Such an upload must keep CpuModified for the next refresh.
+    TextureCache<int> invalid_handle;
+    invalid_handle.slot_images.resize(1);
+    invalid_handle.slot_images[0].size=4;
+    invalid_handle.slot_images[0].flags|=ImageFlagBits::IsDecoding;
+    invalid_handle.slot_images[0].flags|=ImageFlagBits::Tracked;
+    auto invalid_ctx=std::make_unique<AsyncDecodeContext>();
+    invalid_ctx->image_id=0; invalid_ctx->complete=true;
+    invalid_ctx->decoded_data={1,2,3,4};
+    invalid_handle.async_decodes.emplace_back(std::move(invalid_ctx));
+    invalid_handle.runtime.null_on_call=1;
+    invalid_handle.TickAsyncDecode();
+    assert(invalid_handle.async_decodes.empty());
+    assert(invalid_handle.slot_images[0].uploads==0);
+    assert(invalid_handle.runtime.barriers==0);
+    assert(True(invalid_handle.slot_images[0].flags&ImageFlagBits::CpuModified));
+    assert(!True(invalid_handle.slot_images[0].flags&ImageFlagBits::IsDecoding));
+    assert(!True(invalid_handle.slot_images[0].flags&ImageFlagBits::Tracked));
     TextureCache<int> cache;
     cache.slot_images.resize(8);
     for(auto& image:cache.slot_images){
