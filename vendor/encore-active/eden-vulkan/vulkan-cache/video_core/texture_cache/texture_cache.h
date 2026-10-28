@@ -305,7 +305,11 @@ void TextureCache<P>::RunGarbageCollector() {
             return false;
         }
         const bool must_download = IsDownloadable(image) && False(image.flags & ImageFlagBits::BadOverlap);
-        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) || (!DirtyEvictions() && must_download)) {
+        // A clean image has no guest readback. Do not query PS5 direct-memory
+        // pressure for it: the memory probe may be kernel-backed, and this
+        // entire LRU sweep runs under texture_cache.mutex.
+        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||
+            (must_download && !DirtyEvictions())) {
             ++skipped;
             return false;
         }

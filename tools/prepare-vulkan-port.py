@@ -4112,3 +4112,11 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    if (True(image.flags & (ImageFlagBits::CpuModified | ImageFlagBits::Remapped))) {",
     "    if (True(image.flags & (ImageFlagBits::CpuModified | ImageFlagBits::Remapped)) ||\n        swizzle_chunk_size == 0 || swizzle_slices_per_batch == 0) {",
     "F07 retire queued BCn 3D image when budget is zero")
+
+# F07 P0.3: the GC's native direct-memory probe must run only for a dirty
+# eviction candidate. Avoid up to 8192 kernel-backed probes for clean entries
+# while holding texture_cache.mutex. No change to dirty eviction decisions.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) || (!DirtyEvictions() && must_download)) {",
+    "        // A clean image has no guest readback. Do not query PS5 direct-memory\n        // pressure for it: the memory probe may be kernel-backed, and this\n        // entire LRU sweep runs under texture_cache.mutex.\n        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||\n            (must_download && !DirtyEvictions())) {",
+    "F07 skip texture GC memory pressure probes for clean LRU entries")
