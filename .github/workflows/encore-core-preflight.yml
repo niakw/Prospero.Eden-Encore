@@ -471,6 +471,7 @@ jobs:
           python3 -B tools/check-ps5-descriptor-queue-preflight.py
           python3 -B tools/check-ps5-compute-guest-descriptor-preflight-host.py
           python3 -B tools/check-ps5-compute-descriptor-ring-preflight-host.py
+          python3 -B tools/check-ps5-f07-compute-descriptor-payload-reuse-host.py
           python3 -B tools/check-ps5-quad-strip-draw-count-host.py
           python3 -B tools/check-ps5-draw-texture-guest-invalidation-host.py
           python3 -B tools/check-ps5-clear-scissor-overflow-host.py

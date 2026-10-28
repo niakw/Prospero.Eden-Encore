@@ -9,6 +9,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+#include <vector>
 
 #include "common/common_types.h"
 #include "common/thread_worker.h"
@@ -66,8 +67,14 @@ public:
         return num_descriptor_entries != 0 ? num_descriptor_entries : 0x400;
     }
     [[nodiscard]] VkDeviceSize DescriptorRingPreflightSize() const noexcept {
-        // Unlike graphics, every descriptor-buffer compute dispatch allocates.
-        return uses_descriptor_buffer ? descriptor_buffer_layout.size : 0;
+        // Only pre-drain guaranteed allocations; same-size changed data
+        // retains Allocate's normal fallback inside Configure.
+        return uses_descriptor_buffer &&
+                       (!last_descriptor_buffer_valid ||
+                        last_descriptor_buffer_generation !=
+                            descriptor_buffer_ring.CurrentGeneration() ||
+                        last_descriptor_payload.size() != num_descriptor_entries)
+                   ? descriptor_buffer_layout.size : 0;
     }
 #endif
     bool IsBound() const noexcept {
@@ -83,6 +90,12 @@ private:
     u64 shader_hash{};
     u32 num_descriptor_entries{};
 #ifdef PS5_NATIVE
+    // The last uploaded snapshot is valid only in its own ring generation.
+    std::vector<DescriptorUpdateEntry> last_descriptor_payload;
+    VkDeviceSize last_descriptor_buffer_offset{};
+    u32 last_descriptor_buffer_chunk{};
+    u64 last_descriptor_buffer_generation{};
+    bool last_descriptor_buffer_valid{};
     size_t num_image_elements{};
     size_t num_textures{};
 #endif

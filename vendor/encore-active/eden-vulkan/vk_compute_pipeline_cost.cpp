@@ -247,6 +247,12 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
 
 #ifdef PS5_NATIVE
 void ComputePipeline::PreflightDescriptorScratch() {
+    // Reserve on the GPU owner, before the paired guest cache mutexes.
+    // Compare guest payload bytes only after their normal synchronization.
+    if (uses_descriptor_buffer &&
+        last_descriptor_payload.capacity() < num_descriptor_entries) {
+        last_descriptor_payload.reserve(num_descriptor_entries);
+    }
     // No guest texture/cache data is consulted here: counts are immutable.
     // Skip the slot currently owned by a nested Configure invocation.
     auto& scratch = compute_descriptor_scratch.in_use
@@ -447,15 +453,45 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
     VkDeviceSize descriptor_buffer_offset{};
     u32 descriptor_buffer_chunk{};
     if (uses_descriptor_buffer) {
-        const DescriptorBufferRing::Allocation alloc{
-            descriptor_buffer_ring.Allocate(scheduler, descriptor_buffer_layout.size)};
-        if (!alloc.host) {
-            LOG_DEBUG(Render_Vulkan, "Failed to reserve descriptor memory, skipping dispatch");
-            return false;
+#ifdef PS5_NATIVE
+        // Same payload and generation: keep the previously uploaded bytes,
+        // extending the GPU ring tick without another allocation or upload.
+        const bool reuse_allocation =
+            last_descriptor_buffer_valid &&
+            last_descriptor_buffer_generation == descriptor_buffer_ring.CurrentGeneration() &&
+            last_descriptor_payload.size() == num_descriptor_entries &&
+            (num_descriptor_entries == 0 ||
+             std::memcmp(last_descriptor_payload.data(), descriptor_data,
+                         num_descriptor_entries * sizeof(DescriptorUpdateEntry)) == 0);
+        if (reuse_allocation) {
+            descriptor_buffer_offset = last_descriptor_buffer_offset;
+            descriptor_buffer_chunk = last_descriptor_buffer_chunk;
+            descriptor_buffer_ring.TouchFrame(scheduler);
+        } else
+#endif
+        {
+            const DescriptorBufferRing::Allocation alloc{
+                descriptor_buffer_ring.Allocate(scheduler, descriptor_buffer_layout.size)};
+            if (!alloc.host) {
+                LOG_DEBUG(Render_Vulkan, "Failed to reserve descriptor memory, skipping dispatch");
+                return false;
+            }
+            WriteDescriptorBuffer(device, descriptor_buffer_layout, descriptor_data, alloc.host);
+            descriptor_buffer_offset = alloc.offset;
+            descriptor_buffer_chunk = alloc.chunk;
+#ifdef PS5_NATIVE
+            last_descriptor_buffer_offset = alloc.offset;
+            last_descriptor_buffer_chunk = alloc.chunk;
+            last_descriptor_buffer_generation = alloc.generation;
+            if (num_descriptor_entries != 0) {
+                last_descriptor_payload.assign(descriptor_data,
+                                               descriptor_data + num_descriptor_entries);
+            } else {
+                last_descriptor_payload.clear();
+            }
+            last_descriptor_buffer_valid = true;
+#endif
         }
-        WriteDescriptorBuffer(device, descriptor_buffer_layout, descriptor_data, alloc.host);
-        descriptor_buffer_offset = alloc.offset;
-        descriptor_buffer_chunk = alloc.chunk;
     }
 
     const bool bind_descriptor_buffer{
