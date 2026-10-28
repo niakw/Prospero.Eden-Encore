@@ -122,6 +122,9 @@ __SOURCE_COPY_GUARD__
     std::size_t msaa_copies{};
     void CopyImageMSAA(const std::vector<ImageCopy>& copies) {
 __SOURCE_MSAA_GUARD__
+        // The pinned desktop has no MSAA no-op guard; retain its call,
+        // but mark this reduced fixture's otherwise-unused parameter.
+        static_cast<void>(copies);
         ++msaa_copies;
     }
 };
