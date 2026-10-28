@@ -612,3 +612,8 @@ du nouveau, y compris avec un alias sale sans vue. Le desktop conserve
 son comportement. Aucun résultat de fraîcheur HUD ni de FPS **console**
 n'est revendiqué ; le correctif peut ajouter des uploads quand des alias
 sales coexistent avec un framebuffer GPU plus récent, à qualifier en jeu.
+
+
+## F07 P0.3 — compute descriptor-buffer reuse, 28 octobre
+
+La source compute allouait un nouveau bloc de descripteurs à **chaque** dispatch, même à contenu identique. PS5 réutilise maintenant le précédent offset/chunk seulement si son contenu, sa taille et la génération du ring correspondent ; `TouchFrame` conserve la durée de vie de la soumission. Le contenu est comparé après acquisition des caches, avec capacité réservée avant les deux mutex. Un changement de valeur/génération ou un échec d'allocation conserve la voie normale. La prévalidation fait un `Finish` anticipé seulement en cas de nouvelle allocation **garantie** ; une modification non prévisible suit l'ancien fallback. Desktop inchangé. Témoin source-extrait C++ O0/O2 : réutilisation native, desktop original, échec attendu du chemin précédent et reprise après allocation refusée. Aucun gain FC27 sur console revendiqué.

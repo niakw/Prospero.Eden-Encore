@@ -10,6 +10,7 @@ root = Path(__file__).resolve().parents[1]
 active = root / "vendor/encore-active/eden-vulkan"
 ring = (active / "vulkan_descriptor_buffer.cpp").read_text()
 compute_pipeline = (active / "vk_compute_pipeline_cost.cpp").read_text()
+compute_header = (active / "include/video_core/renderer_vulkan/vk_compute_pipeline.h").read_text()
 raster = (active / "vulkan_rasterizer.cpp").read_text()
 gen = (root / "tools/prepare-vulkan-port.py").read_text()
 workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
@@ -45,10 +46,12 @@ assert "DescriptorRingPreflightSize() const noexcept" in new
 assert "DescriptorEntryReservation() const noexcept" in new
 assert "return uses_descriptor_buffer ? descriptor_buffer_layout.size : 0;" in new
 assert "#ifdef PS5_NATIVE" in new
-getter=methods(new,"[[nodiscard]] VkDeviceSize DescriptorRingPreflightSize() const noexcept")
+getter=methods(compute_header,"[[nodiscard]] VkDeviceSize DescriptorRingPreflightSize() const noexcept")
 reservation=methods(new,"[[nodiscard]] size_t DescriptorEntryReservation() const noexcept")
 assert "descriptor_buffer_ring.Allocate(scheduler, descriptor_buffer_layout.size)" in compute_pipeline
-assert "reuse_allocation" not in compute_pipeline
+assert "reuse_allocation" in compute_pipeline
+assert "F07 compute descriptor payload fast reuse" in gen
+assert "F07 compute ring reuse preflight" in gen
 
 compute=raster.split("void RasterizerVulkan::DispatchCompute() {",1)[1].split(
     "\nvoid RasterizerVulkan::ResetCounter(",1)[0]
@@ -85,8 +88,8 @@ assert compute.index("SCOPE_EXIT { SyncProbe") < compute.index(pair)
 # The pinned transformation and the final native source-preserving
 # rewrite both mention this guarantee. Check the compiler-selected TU
 # exactly once instead of relying on a count inside the Python oracle.
-assert gen.count("Compute always allocates new descriptor-buffer space") >= 1
-assert compute.count("Compute always allocates new descriptor-buffer space") == 1
+assert gen.count("F07 compute preflight comment") == 1
+assert compute.count("Compute reuses same-generation identical descriptor payloads.") == 1
 assert "python3 -B tools/check-ps5-compute-descriptor-ring-preflight-host.py" in workflow
 
 frame=methods(ring,"bool DescriptorBufferRing::PreflightFrameReuse(")
@@ -133,7 +136,12 @@ struct DescriptorBufferRing {
     bool frame_reused{};
 };
 struct Layout { VkDeviceSize size{16}; };
+struct DescriptorUpdateEntry { u64 bits{}; };
 struct Pipeline {
+    DescriptorBufferRing& descriptor_buffer_ring;
+    bool last_descriptor_buffer_valid{};
+    u64 last_descriptor_buffer_generation{};
+    std::vector<DescriptorUpdateEntry> last_descriptor_payload;
     bool uses_descriptor_buffer{true};
     Layout descriptor_buffer_layout{};
     size_t num_descriptor_entries{8};
@@ -145,9 +153,14 @@ __CAPACITY__
 __ALLOCATE__
 int main() {
     Scheduler s;
-    Pipeline p;
     DescriptorBufferRing r;
+    Pipeline p{r};
     assert(p.DescriptorRingPreflightSize()==16);
+    p.last_descriptor_buffer_valid=true;
+    p.last_descriptor_buffer_generation=r.CurrentGeneration();
+    p.last_descriptor_payload.resize(p.num_descriptor_entries);
+    assert(p.DescriptorRingPreflightSize()==0);
+    p.last_descriptor_buffer_valid=false;
     assert(p.DescriptorEntryReservation()==8);
     // Spare capacity should not cause any early fence wait.
     assert(!r.PreflightFrameReuse(s));
@@ -165,7 +178,7 @@ int main() {
     assert(r.Allocate(s,p.DescriptorRingPreflightSize()).host);
     cache_locks_held=false;
     assert(s.waits_under_lock==0&&s.waits==1);
-    // Last chunk full: compute always allocates, so Finish can move out.
+    // No valid snapshot: full-ring allocation is guaranteed and pre-drained.
     r.chunk_cursor=1; r.cursor=96;
     assert(r.PreflightCapacity(s,p.DescriptorRingPreflightSize()));
     assert(s.finishes==1&&r.generation==9&&r.cursor==0&&r.chunk_cursor==0);
