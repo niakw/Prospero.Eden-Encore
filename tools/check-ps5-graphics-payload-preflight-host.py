@@ -52,7 +52,7 @@ configure = NATIVE[NATIVE.index("bool GraphicsPipeline::ConfigureDraw("):]
 record_at = configure.index("    scheduler.Record([this, descriptor_data")
 assert configure.count("last_descriptor_payload.assign(entries, entries + num_descriptor_entries)") == 3
 assert configure.index("#ifndef PS5_NATIVE") < record_at
-assert configure.index("#ifdef PS5_NATIVE\\n    // Descriptor-set updates are encoded") > record_at
+assert configure.index("#ifdef PS5_NATIVE\n    // Descriptor-set updates are encoded") > record_at
 
 # Recreate the exact previous selected preflight from the reviewed delta.
 snapshot_guard = """
