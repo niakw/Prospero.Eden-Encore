@@ -100,6 +100,11 @@ buffer_snapshot=gfx[buffer_start:buffer_end]
 set_start=gfx.index("        if (update_descriptors) {",update_start)
 set_end=gfx.index("\n    }\n    scheduler.Record(",set_start)
 set_snapshot=gfx[set_start:set_end]
+# This fixture embeds only the legacy desktop branch inside a small C++ mock.
+# The real PS5 memo lives after scheduler.Record. Do not extract the closing
+# #endif without its opening #ifndef into the standalone SaveSet method.
+assert set_snapshot.endswith("\n#endif")
+set_snapshot=set_snapshot.removesuffix("\n#endif")
 assert "(num_descriptor_entries == 0 ||" in reuse_stmt
 assert "(num_descriptor_entries != 0 &&" in update_stmt
 assert buffer_snapshot.count("last_descriptor_payload.clear();")==1
@@ -107,7 +112,7 @@ assert set_snapshot.count("last_descriptor_payload.clear();")==1
 # Descriptor-buffer, desktop legacy and PS5 post-Record snapshots must
 # each preserve the empty-vector guard.
 assert gfx.count("last_descriptor_payload.assign(entries, entries + num_descriptor_entries);")==3
-assert "#ifndef PS5_NATIVE" in set_snapshot
+assert "#ifndef PS5_NATIVE" in gfx[gfx.index("bool GraphicsPipeline::ConfigureDraw("):set_start]
 assert "#ifdef PS5_NATIVE\n    // Descriptor-set updates are encoded" in gfx
 assert gfx.index("    scheduler.Record([this, descriptor_data", set_start) < gfx.rindex(
     "last_descriptor_payload.assign(entries, entries + num_descriptor_entries);")
