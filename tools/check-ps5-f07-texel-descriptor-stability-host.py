@@ -89,7 +89,8 @@ int main() {
         Queue images;
         images.use_descriptor_buffer=descriptor_buffer;
         for(std::size_t i=0;i<images.payload.size();++i) {
-            std::memset(reinterpret_cast<unsigned char*>(&images.payload[i]),\n                        (i%2) ? 0x5a : 0xa5,sizeof(images.payload[i]));
+            std::memset(reinterpret_cast<unsigned char*>(&images.payload[i]),
+                        (i%2) ? 0x5a : 0xa5,sizeof(images.payload[i]));
         }
         images.AddImage(0x123);
         images.AddImage(0x123);
