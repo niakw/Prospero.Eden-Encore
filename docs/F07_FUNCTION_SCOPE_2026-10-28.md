@@ -160,3 +160,7 @@ Le runtime PS5 refuse désormais une allocation de readback dont le `VkBuffer` e
 ## P0.4 — rollback de téléchargement DMA asynchrone
 
 Dans `DownloadImageIntoBuffer`, une allocation de staging GPU refusée pouvait laisser une entrée `PendingDownload` et un `BufferDownload` enregistrés alors que le transfert DMA n'avait jamais été soumis. Sur PS5, le chemin abandonne maintenant ces deux entrées si la préparation ou `Image::DownloadMemory` échoue, et rend en différé tout staging déjà réservé. Le contexte d'erreur continue à remonter à l'appelant : aucun téléchargement raté n'est présenté comme réussi. La branche desktop conserve ses instructions d'origine. Un test C++ extrait de la méthode vérifie succès, refus de staging, et échec de soumission en PS5/desktop O0/O2.
+
+## P0.4 — staging d'un lot de lectures asynchrones
+
+`CommitAsyncFlushes` réserve un staging différé pour plusieurs textures, puis enregistre les commandes avant de ranger le handle. Si l'enregistrement ou l'ajout à la file échoue, un `SCOPE_EXIT` natif restitue maintenant la réservation au pool différé. Les téléchargements non validés restent en file pour un éventuel nouvel essai : aucun signal de réussite n'est fabriqué. Le témoin C++ source-extrait compare succès, échec de la seconde copie, récupération et refus d'allocation, sous O0/O2 en natif et sur desktop. Cela sécurise la durée de vie d'une ressource ; ce n'est pas une preuve de gain FPS.

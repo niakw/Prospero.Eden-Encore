@@ -1428,6 +1428,15 @@ void TextureCache<P>::CommitAsyncFlushes() {
 
         if (any_none_dma) {
             auto download_map = runtime.DownloadStagingBuffer(total_size_bytes, true);
+#ifdef PS5_NATIVE
+            // The pinned staging handle does not own its pool reservation.
+            // If command recording or queue growth fails, keep this buffer
+            // GPU-safe in the deferred pool and leave the commit retryable.
+            bool staging_transferred = false;
+            SCOPE_EXIT {
+                if (!staging_transferred) runtime.FreeDeferredStagingBuffer(download_map);
+            };
+#endif
             for (const PendingDownload& download_info : download_ids) {
                 if (download_info.is_swizzle) {
                     Image& image = slot_images[download_info.object_id];
@@ -1437,6 +1446,9 @@ void TextureCache<P>::CommitAsyncFlushes() {
                 }
             }
             uncommitted_async_buffers.emplace_back(download_map);
+#ifdef PS5_NATIVE
+            staging_transferred = true;
+#endif
         }
 
         async_buffers.emplace_back(std::move(uncommitted_async_buffers));
