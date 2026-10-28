@@ -217,3 +217,7 @@ Lorsque le HUD échantillonne une vue liée à une pièce jointe couleur active,
 ## P0.3 — transfert DMA image invalidé avant les mutex GPU
 
 Dans `AccelerateDMA::DmaBufferImageCopy`, le produit `pitch × height` peut être testé avant de prendre les deux mutex `buffer_cache`/`texture_cache` : un transfert natif nul ou supérieur au span u32 de BufferCache ne doit plus attendre ces verrous pour être refusé. Le chemin desktop préserve l'ordre précédent, les transferts PS5 valides conservent leur pipeline de préparation et les variantes rasterizer M07 restent synchronisées. Un témoin source-extrait vérifie les deux directions et les cas nul, hors limite et valide en C++20 sous -O0/-O2 avec UBSan.
+
+## P0.3 — handles Vulkan dans les transferts DMA et dispatchs indirects
+
+Les chemins PS5 `AccelerateDMA::DmaBufferImageCopy` et `RasterizerVulkan::DispatchCompute` refusent désormais un buffer invité inexistant ou un `VkBuffer` nul après `ObtainBuffer`. Le DMA peut alors revenir à son fallback logiciel et le dispatch indirect n'enregistre ni contexte ni barrière avec ce handle. Le comportement desktop est inchangé. Le générateur et la variante `guest-bridge` suivent le source actif ; tests source-extraits renforcés. Aucune mesure de FPS ou de fraîcheur HUD sur console n'est encore revendiquée.

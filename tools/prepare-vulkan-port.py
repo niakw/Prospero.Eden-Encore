@@ -4327,3 +4327,16 @@ apply_reviewed_delta("vulkan_rasterizer.cpp",
     "    std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};\n    const auto image_id = texture_cache.DmaImageId(image_operand, IS_IMAGE_UPLOAD);\n    if (image_id == VideoCommon::NULL_IMAGE_ID) {\n        return false;\n    }\n    // Widen before multiplying, then respect the u32 buffer-cache span.\n    const u64 buffer_size_wide = static_cast<u64>(buffer_operand.pitch) * buffer_operand.height;\n    if (buffer_size_wide > static_cast<u64>(~u32{0})) {\n        return false;\n    }\n    const u32 buffer_size = static_cast<u32>(buffer_size_wide);",
     "#ifdef PS5_NATIVE\n    // Invalid DMA images have no buffer-cache allocation or GPU work.\n    // Reject them before the paired guest cache mutexes, so HUD bursts\n    // cannot queue behind an unrelated texture update for a no-op copy.\n    const u64 checked_bytes = static_cast<u64>(buffer_operand.pitch) * buffer_operand.height;\n    if (checked_bytes == 0 || checked_bytes > static_cast<u64>(~u32{0})) {\n        return false;\n    }\n#endif\n    std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};\n    const auto image_id = texture_cache.DmaImageId(image_operand, IS_IMAGE_UPLOAD);\n    if (image_id == VideoCommon::NULL_IMAGE_ID) {\n        return false;\n    }\n#ifdef PS5_NATIVE\n    const u32 buffer_size = static_cast<u32>(checked_bytes);\n#else\n    // Widen before multiplying, then respect the u32 buffer-cache span.\n    const u64 buffer_size_wide = static_cast<u64>(buffer_operand.pitch) * buffer_operand.height;\n    if (buffer_size_wide > static_cast<u64>(~u32{0})) {\n        return false;\n    }\n    const u32 buffer_size = static_cast<u32>(buffer_size_wide);\n#endif",
     "F07 native DMA image byte guard before paired cache mutex")
+
+# F07 native DMA and compute-indirect must refuse null Vulkan handles, even
+# when their guest buffer objects and requested spans are valid.
+
+apply_reviewed_delta("vulkan_rasterizer.cpp",
+    "        if (!buffer) {\n            return;\n        }\n#endif\n        scheduler.RequestOutsideRenderPassOperationContext();",
+    "        if (!buffer || buffer->Handle() == VK_NULL_HANDLE) {\n            return;\n        }\n#endif\n        scheduler.RequestOutsideRenderPassOperationContext();",
+    "F07 compute indirect reject null Vulkan handles")
+
+apply_reviewed_delta("vulkan_rasterizer.cpp",
+    "    const auto [buffer, offset] =\n        buffer_cache.ObtainBuffer(buffer_operand.address, buffer_size, sync_info, post_op);\n\n    const auto [image, copy]",
+    "    const auto [buffer, offset] =\n        buffer_cache.ObtainBuffer(buffer_operand.address, buffer_size, sync_info, post_op);\n#ifdef PS5_NATIVE\n    // Guest size alone does not prove a valid GPU buffer handle.\n    if (!buffer || buffer->Handle() == VK_NULL_HANDLE) {\n        return false;\n    }\n#endif\n\n    const auto [image, copy]",
+    "F07 DMA image reject null Vulkan handles")
