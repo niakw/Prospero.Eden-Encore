@@ -168,7 +168,16 @@ public:
     }
 
     void AddTexelBuffer(VkBufferView texel_buffer) {
+#ifdef PS5_NATIVE
+        // Descriptor snapshots are compared byte-for-byte on later draws.
+        // A texel view fills only the first union field: stale padding from
+        // a previous descriptor otherwise defeats payload reuse on the HUD.
+        auto* const entry = payload_cursor++;
+        std::memset(entry, 0, sizeof(*entry));
+        entry->texel_buffer = texel_buffer;
+#else
         *(payload_cursor++) = texel_buffer;
+#endif
     }
 
     void AddTexelBuffer(VkBufferView texel_buffer, VkDeviceAddress base_address,
