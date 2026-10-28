@@ -145,6 +145,7 @@ struct Cache {
 struct Rig {
     Pipeline empty{0}, one{1}, many{2048};
     Pipeline* pipeline{};
+    bool initial_descriptor_drain{true}; // Isolated graph-loop witness starts after a real drain.
     Queue guest_descriptor_queue;
     Scheduler scheduler;
     GpuMemory memory;
