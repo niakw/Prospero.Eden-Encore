@@ -2121,12 +2121,18 @@ void Image::AllocateComputeUnswizzleBuffer(u32 max_slices) {
         .pQueueFamilyIndices = nullptr,
     };
 
-    // The previous buffer remains valid if the allocator rejects growth.
-    // Publish its NEW size only after Vulkan returned a replacement handle.
+#ifdef PS5_NATIVE
+    // Allocation can return an empty Vulkan handle without throwing. Never
+    // publish a fictitious grown capacity or discard the old valid buffer.
+    auto replacement = runtime->memory_allocator.CreateBuffer(ci, MemoryUsage::DeviceLocal);
+    if (!replacement) {
+        throw std::bad_alloc{};
+    }
+    compute_unswizzle_buffer = std::move(replacement);
+    compute_unswizzle_buffer_size = required_size;
+#else
     compute_unswizzle_buffer =
         runtime->memory_allocator.CreateBuffer(ci, MemoryUsage::DeviceLocal);
-#ifdef PS5_NATIVE
-    compute_unswizzle_buffer_size = required_size;
 #endif
     has_compute_unswizzle_buffer = true;
 }
