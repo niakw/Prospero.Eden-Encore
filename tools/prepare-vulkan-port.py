@@ -4468,3 +4468,10 @@ apply_reviewed_delta("vk_compute_pass_cost.cpp",
     "#include <memory>\n#include <numeric>",
     "#include <memory>\n#include <new>\n#include <numeric>",
     "F07 explicitly include std bad_alloc for native BCn3D output preflight")
+
+# F07 P0.3/P0.4: reject a null image BEFORE allocating BCn 3D scratch,
+# then check the output handle after the allocation. No change to desktop.
+apply_reviewed_delta("vk_compute_pass_cost.cpp",
+    "    const u32 MAX_BATCH_SLICES = (std::min)(z_count, image.info.size.depth);\n\n    // Allocate or grow to cover this batch's slice count\n    image.AllocateComputeUnswizzleBuffer(MAX_BATCH_SLICES);\n#ifdef PS5_NATIVE\n    // A failed destination image is not a successful async BCn upload.\n    // Reject on the GPU owner BEFORE queuing chunks; the async caller will\n    // retain the guest dirty flag and retry rather than acknowledge no pixels.\n    if (image.Handle() == VK_NULL_HANDLE ||\n        !image.compute_unswizzle_buffer ||\n        *image.compute_unswizzle_buffer == VK_NULL_HANDLE) {\n        throw std::bad_alloc{};\n    }\n#endif\n\n    ASSERT(swizzles.size() == 1);",
+    "    const u32 MAX_BATCH_SLICES = (std::min)(z_count, image.info.size.depth);\n\n#ifdef PS5_NATIVE\n    // A null destination must not allocate an otherwise wasted device-local\n    // decompression buffer. Reject before ANY Vulkan output allocation.\n    if (image.Handle() == VK_NULL_HANDLE) {\n        throw std::bad_alloc{};\n    }\n#endif\n    // Allocate or grow to cover this batch's slice count\n    image.AllocateComputeUnswizzleBuffer(MAX_BATCH_SLICES);\n#ifdef PS5_NATIVE\n    // Allocation can still return a null output handle. Reject before\n    // queueing a no-op GPU callback, retaining dirty guest pixels for retry.\n    if (!image.compute_unswizzle_buffer ||\n        *image.compute_unswizzle_buffer == VK_NULL_HANDLE) {\n        throw std::bad_alloc{};\n    }\n#endif\n\n    ASSERT(swizzles.size() == 1);",
+    "F07 avoid wasted BCn3D output allocation for null native image")
