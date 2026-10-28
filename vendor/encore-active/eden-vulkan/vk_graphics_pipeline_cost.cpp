@@ -475,7 +475,19 @@ GraphicsPipeline::GraphicsPipeline(
 
 void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {
     transition_keys.push_back(transition->key);
+#ifdef PS5_NATIVE
+    // Both arrays must describe the same transition index. An allocation
+    // failure while appending the pointer must not leave an orphaned key:
+    // Next() would later index past transitions and corrupt a guest draw.
+    try {
+        transitions.push_back(transition);
+    } catch (...) {
+        transition_keys.pop_back();
+        throw;
+    }
+#else
     transitions.push_back(transition);
+#endif
 }
 
 #ifdef PS5_NATIVE

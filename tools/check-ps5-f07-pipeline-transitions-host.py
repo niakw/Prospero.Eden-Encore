@@ -25,13 +25,33 @@ assert "transition_source.count(transition_next_old) != 1" in generator
 assert "transition_source.replace(transition_next_old, transition_next_new, 1)" in generator
 assert "transition_member_old" in generator and "transition_member_new" in generator
 assert "std::vector<GraphicsPipeline*> transitions;" in header
+source = (root / "vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp").read_text()
+append_begin = "void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {"
+append_end = "\n\n#ifdef PS5_NATIVE\nvoid GraphicsPipeline::PreflightDescriptorScratch() {"
+assert source.count(append_begin) == source.count(append_end) == 1
+append_method = source[source.index(append_begin):source.index(append_end,source.index(append_begin))]
+assert "transition_keys.pop_back();" in append_method
+assert "F07 graphics transition append rollback" in generator
 
 cpp = r"""
 #include <algorithm>
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <new>
 #include <vector>
+template <class T>
+class FailPointerAppend : public std::vector<T> {
+public:
+    static inline bool reject_next{};
+    void push_back(const T& element) {
+        if (reject_next) {
+            reject_next = false;
+            throw std::bad_alloc{};
+        }
+        std::vector<T>::push_back(element);
+    }
+};
 struct GraphicsPipelineCacheKey {
     int value{};
     static inline std::size_t comparisons = 0;
@@ -43,16 +63,14 @@ struct GraphicsPipelineCacheKey {
 struct GraphicsPipeline {
     GraphicsPipelineCacheKey key{};
     std::vector<GraphicsPipelineCacheKey> transition_keys;
-    std::vector<GraphicsPipeline*> transitions;
+    FailPointerAppend<GraphicsPipeline*> transitions;
 #ifdef PS5_NATIVE
     size_t hot_transition_index{};
 #endif
 """ + selected + r"""
-    void AddTransition(GraphicsPipeline* other) {
-        transition_keys.push_back(other->key);
-        transitions.push_back(other);
-    }
+    void AddTransition(GraphicsPipeline* other);
 };
+""" + append_method + r"""
 int main() {
     GraphicsPipeline source{};
     source.key.value = -1;
@@ -96,6 +114,29 @@ int main() {
     assert(small.Next(targets[0].key) == &targets[0]);
     assert(small.Next(targets[1].key) == &targets[1]);
     assert(small.Next(targets[2].key) == nullptr);
+#ifdef PS5_NATIVE
+    // Reproduce a real second-vector allocation failure AFTER the key was
+    // appended. The original source kept an orphaned key and Next() could
+    // read transitions[index] past its end; both arrays must remain aligned.
+    GraphicsPipeline resilient{};
+    resilient.key.value = -12;
+    resilient.AddTransition(&targets[0]);
+    FailPointerAppend<GraphicsPipeline*>::reject_next = true;
+    bool rejected = false;
+    try {
+        resilient.AddTransition(&targets[1]);
+    } catch (const std::bad_alloc&) {
+        rejected = true;
+    }
+    assert(rejected);
+    assert(resilient.transition_keys.size() == resilient.transitions.size());
+    assert(resilient.transition_keys.size() == 1);
+    assert(resilient.Next(targets[1].key) == nullptr);
+    assert(resilient.Next(targets[0].key) == &targets[0]);
+    resilient.AddTransition(&targets[1]);
+    assert(resilient.transition_keys.size() == resilient.transitions.size());
+    assert(resilient.Next(targets[1].key) == &targets[1]);
+#endif
 }
 """
 compiler = shutil.which("clang++") or shutil.which("g++")
@@ -110,4 +151,4 @@ with tempfile.TemporaryDirectory(prefix="encore-f07-transition-") as folder:
                             optimize, *define, str(path), "-o", str(exe)],
                            capture_output=True, text=True, check=True, timeout=40)
             subprocess.run([str(exe)], check=True, timeout=15)
-print("F07_GRAPHICS_TRANSITION_HOST_PASS native=1 desktop=1 O0=1 O2=1 order=1 miss=1")
+print("F07_GRAPHICS_TRANSITION_HOST_PASS native=1 desktop=1 O0=1 O2=1 order=1 miss=1 oom_rollback=1")
