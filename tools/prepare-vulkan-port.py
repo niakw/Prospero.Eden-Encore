@@ -3857,3 +3857,17 @@ apply_reviewed_delta(
     "#include <memory>\n#include <vector>",
     "#include <cstring>\n#include <memory>\n#include <vector>",
     'F07 compute explicit cstring descriptor compare include')
+
+
+# F07 P0.4: a background texture conversion can fail AFTER queue admission.
+# Keep its worker alive and publish a zero-length completion sentinel. The
+# native TickAsyncDecode then retires the stale context and re-dirties the
+# guest image instead of keeping IsDecoding forever or uploading partial data.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    auto func = [out_size, copies, info = image.info,\n                 input = std::move(local_unswizzle_data_buffer),\n                 async_decode = decode_ptr]() mutable {\n        async_decode->decoded_data.resize_destructive(out_size);\n        std::span copies_span{copies.data(), copies.size()};\n        ConvertImage(input, info, async_decode->decoded_data, copies_span);\n\n        // TODO: Do we need this lock?\n        std::unique_lock lock{async_decode->mutex};\n        async_decode->copies = std::move(copies);\n        async_decode->complete = true;\n    };",
+    "    auto func = [out_size, copies, info = image.info,\n                 input = std::move(local_unswizzle_data_buffer),\n                 async_decode = decode_ptr]() mutable {\n#ifdef PS5_NATIVE\n        try {\n#endif\n            async_decode->decoded_data.resize_destructive(out_size);\n            std::span copies_span{copies.data(), copies.size()};\n            ConvertImage(input, info, async_decode->decoded_data, copies_span);\n\n            std::unique_lock lock{async_decode->mutex};\n            async_decode->copies = std::move(copies);\n            async_decode->complete = true;\n#ifdef PS5_NATIVE\n        } catch (...) {\n            // Preserve worker liveness after a conversion/allocation failure.\n            // A zero-length completed decode is a retryable failed revision;\n            // TickAsyncDecode drops it without uploading partial HUD pixels.\n            std::unique_lock lock{async_decode->mutex};\n            async_decode->decoded_data.resize_destructive(0);\n            async_decode->complete = true;\n        }\n#endif\n    };",
+    "F07 async decode worker exception handoff")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        if (async_decode->decoded_data.size() != expected_size ||\n            True(image.flags & ImageFlagBits::CpuModified) ||",
+    "        if (async_decode->decoded_data.size() == 0 ||\n            async_decode->decoded_data.size() != expected_size ||\n            True(image.flags & ImageFlagBits::CpuModified) ||",
+    "F07 reject zero-length failed decode completion")
