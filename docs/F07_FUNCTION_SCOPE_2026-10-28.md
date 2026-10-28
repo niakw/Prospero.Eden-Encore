@@ -111,3 +111,7 @@ Dans `RunGarbageCollector`, le calcul `DirtyEvictions()` pouvait appeler la sond
 ## P0.3 — vérification de la liaison du buffer compute indirect
 
 `DispatchCompute` utilisait `buffer->Handle()` après `ObtainBuffer` sans vérifier que le buffer indirect était disponible. Sur PS5, un retour nul provoquait une déréférence invalide après les revalidations des descripteurs et sous les deux verrous de caches. Le chemin natif refuse maintenant le dispatch avant de demander un contexte de rendu ou d'enregistrer une barrière. Le chemin desktop reste inchangé ; le dispatch indirect valide conserve son ordre et ses barrières. Un test C++ source-extrait doit vérifier buffer manquant/valide, pipeline non lié, et les modes PS5/desktop `-O0` et `-O2`. Aucun gain FPS console n'est présumé.
+
+## P0.4 — taille des copies de réinterprétation Vulkan
+
+Le rendu natif PS5 abandonne les réinterprétations sans copie, avant toute invalidation de shadow ou demande d'un buffer temporaire de taille zéro. Pour les copies non vides, la taille du buffer intermédiaire est désormais calculée en `size_t` avec contrôles explicites des dimensions nulles, des multiplications et de l'addition cumulée ; un format invalide ou un débordement est rejeté sans enregistrer la commande. Le chemin desktop demeure inchangé. Un témoin C++ extrait vérifie une copie valide, plusieurs copies, dimensions nulles, multiplications et somme débordantes sous UBSan O0/O2. Le résultat GPU réel reste à vérifier sur console.
