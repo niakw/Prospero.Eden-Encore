@@ -2711,6 +2711,16 @@ if shader_source.count(f07_environment_old) != 1:
     raise RuntimeError("F07 graphics shader environment timing anchor drift")
 shader_source = shader_source.replace(f07_environment_old, f07_environment_new, 1)
 
+# F07 B1: reader and workers share the prewarm progress counter.
+# A worker may acquire state.mutex to inspect state.total before the
+# disk reader has finished enqueueing. Keep both writes under that mutex.
+# The stop token remains reader-only and is requested outside the lock.
+f07_prewarm_total_old = "        ++state.total;\n#ifdef PS5_NATIVE\n        if (state.total == kStartupPrewarmPipelines)\n            startup_reader.request_stop();\n#endif\n    }};"
+f07_prewarm_total_new = "        // Workers read total while holding state.mutex. Publish reader\n        // increments under the same lock to avoid a cache-prewarm data race.\n        {\n            std::scoped_lock count_lock{state.mutex};\n            ++state.total;\n        }\n#ifdef PS5_NATIVE\n        if (state.total == kStartupPrewarmPipelines)\n            startup_reader.request_stop();\n#endif\n    }};"
+if shader_source.count(f07_prewarm_total_old) != 2:
+    raise RuntimeError("F07 prewarm progress mutex anchor drift")
+shader_source = shader_source.replace(f07_prewarm_total_old, f07_prewarm_total_new)
+
 shader_output = output / 'vk_pipeline_cache_cost.cpp'
 if not shader_output.exists() or shader_output.read_text() != shader_source:
     shader_output.write_text(shader_source)
