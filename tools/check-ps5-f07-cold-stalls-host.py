@@ -144,4 +144,131 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-cold-stalls-") as d:
              *defines, str(source), "-o", str(binary)], check=True, timeout=45
         )
         subprocess.run([str(binary)], check=True, timeout=15)
+
+# P0.1: compile the EXACT source-derived graphics shader failure handler.
+# In quiet PS5 mode it must not reconstruct CFGs or write .ash files.
+# Developer opt-in still dumps; secondary diagnostic exceptions are contained.
+catch_anchor = "} catch (const Shader::Exception& exception) {"
+function_anchor = "std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(\n    ShaderPools& pools"
+start = pipeline.index(catch_anchor, pipeline.index(function_anchor))
+end = pipeline.index("\n}\n\nstd::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline()", start) + 2
+catch_fragment = pipeline[start:end]
+assert catch_fragment.count("env.Dump(hash, key.unique_hashes[index]);") == 1
+assert "if (Settings::values.dump_guest_shaders)" in catch_fragment
+assert "Failed shader diagnostic dump:" in catch_fragment
+assert "F07 PS5 skip duplicate CFG and dumps after shader exception unless opted in" in gen
+
+shader_exception_fixture = r"""
+#include <array>
+#include <atomic>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <span>
+#include <stdexcept>
+#include <utility>
+using u32 = std::uint32_t;
+using u64 = std::uint64_t;
+unsigned errors{}, warnings{}, built_cfgs{}, dumps{}, hashes{};
+bool fail_cfg{}, fail_dump{};
+namespace Settings {
+struct Values { bool dump_guest_shaders{}; };
+inline Values values{};
+}
+namespace Maxwell { inline constexpr std::size_t MaxShaderProgram = 6; }
+namespace Shader {
+struct Exception : std::runtime_error { using std::runtime_error::runtime_error; };
+struct ProgramHeader { u64 bytes[2]; };
+struct Environment {
+    u64 StartAddress() const { return 32; }
+    void Dump(u64, u64) {
+        ++dumps;
+        if (fail_dump) throw std::runtime_error("mock disk failure");
+    }
+};
+namespace Maxwell::Flow {
+struct CFG {
+    CFG(Shader::Environment&, int&, u32, bool) {
+        ++built_cfgs;
+        if (fail_cfg) throw std::runtime_error("mock CFG failure");
+    }
+};
+}
+}
+namespace Eden::Performance {
+enum class CachePhase { ShaderCfg };
+inline std::atomic_bool detailed_gpu_profile{false};
+struct CachePhaseTimer {
+    CachePhaseTimer(CachePhase, bool){}
+    void Stop() {}
+};
+struct Timer {};
+inline std::optional<Timer> VulkanTimer(unsigned) {
+    return std::optional<Timer>{std::in_place};
+}
+}
+#define LOG_ERROR(...) do { ++errors; } while(false)
+#define LOG_WARNING(...) do { ++warnings; } while(false)
+struct GraphicsPipeline {};
+struct ShaderPools { int flow_block{}; };
+struct Key {
+    std::array<u64, 6> unique_hashes{11, 22, 0, 0, 0, 0};
+    u64 Hash() const { ++hashes; return 33; }
+};
+std::unique_ptr<GraphicsPipeline> Probe(
+    ShaderPools& pools, const Key& key,
+    std::span<Shader::Environment* const> envs) try {
+    throw Shader::Exception("original shader exception");
+""" + catch_fragment + r"""
+int main() {
+    ShaderPools pools{};
+    Key key{};
+    Shader::Environment first{}, second{};
+    std::array<Shader::Environment*, 2> stages{&first, &second};
+    const auto reset = [] {
+        errors = warnings = built_cfgs = dumps = hashes = 0;
+        fail_cfg = fail_dump = false;
+    };
+    reset();
+    Settings::values.dump_guest_shaders = false;
+    assert(!Probe(pools, key, stages));
+#ifdef PS5_NATIVE
+    assert(errors == 1 && warnings == 0);
+    assert(built_cfgs == 0 && dumps == 0 && hashes == 0);
+#else
+    assert(errors == 1 && built_cfgs == 2 && dumps == 2 && hashes == 1);
+#endif
+    reset();
+    Settings::values.dump_guest_shaders = true;
+    assert(!Probe(pools, key, stages));
+    assert(errors == 1 && warnings == 0 && built_cfgs == 2 && dumps == 2);
+#ifdef PS5_NATIVE
+    reset();
+    fail_cfg = true;
+    assert(!Probe(pools, key, stages));
+    assert(errors == 1 && warnings == 1 && built_cfgs == 1 && dumps == 0);
+    reset();
+    fail_dump = true;
+    assert(!Probe(pools, key, stages));
+    assert(errors == 1 && warnings == 1 && built_cfgs == 1 && dumps == 1);
+#endif
+}
+"""
+with tempfile.TemporaryDirectory(prefix="eden-f07-shader-failure-dump-") as directory:
+    source_file = Path(directory) / "shader_failure.cpp"
+    source_file.write_text(shader_exception_fixture)
+    for defines in ([], ["-DPS5_NATIVE=1"]):
+        for opt in ("-O0", "-O2"):
+            binary = Path(directory) / ("failure" + opt[1:] +
+                                        ("-native" if defines else "-desktop"))
+            command = [compiler, "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+                       *defines, str(source_file), "-o", str(binary)]
+            built = subprocess.run(command, capture_output=True, text=True, timeout=40)
+            assert built.returncode == 0, (command, built.stderr[-5000:])
+            ran = subprocess.run([str(binary)], capture_output=True, text=True, timeout=15)
+            assert ran.returncode == 0, (defines, opt, ran.stderr[-5000:])
+print("F07_SHADER_FAILURE_DUMP_HOST_PASS quiet_no_second_cfg=1 opt_in=1 diagnostic_fail_safe=1 native=1 desktop=1 O0=1 O2=1")
+
 print("PASS F07 pinned generator + native pipeline event timing + texture stage attribution")

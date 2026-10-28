@@ -1355,6 +1355,13 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         render_pass_cache, key, std::move(modules), infos);
 
 } catch (const Shader::Exception& exception) {
+#ifdef PS5_NATIVE
+    // Failed first-use shaders can be retried. Do not rebuild their CFGs or
+    // write .ash dumps on the normal quiet PS5 path: this is optional debug
+    // work on the same GPU-owner thread that already failed translation.
+    if (Settings::values.dump_guest_shaders) {
+        try {
+#endif
     auto hash = key.Hash();
     size_t env_index{0};
     for (size_t index = 0; index < Maxwell::MaxShaderProgram; ++index) {
@@ -1374,6 +1381,16 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         cfg_stage_cost.Stop();
         env.Dump(hash, key.unique_hashes[index]);
     }
+#ifdef PS5_NATIVE
+        } catch (const std::exception& dump_error) {
+            // Preserve the original shader failure even if the diagnostic
+            // CFG pass or the dump file itself fails.
+            LOG_WARNING(Render_Vulkan, "Failed shader diagnostic dump: {}", dump_error.what());
+        } catch (...) {
+            LOG_WARNING(Render_Vulkan, "Failed shader diagnostic dump: unknown exception");
+        }
+    }
+#endif
     LOG_ERROR(Render_Vulkan, "{}", exception.what());
     return nullptr;
 }
