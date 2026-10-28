@@ -3041,6 +3041,28 @@ apply_reviewed_delta(
     "        // Another image for this same guest address can still be clean but\n        // older. While ANY matching image decodes new pixels, no accelerated\n        // candidate can prove freshness. Upload guest bytes for this frame.\n        if (True(image.flags & ImageFlagBits::IsDecoding)) {\n            return {};\n        }\n        // Clean GPU-authored images keep the zero-copy presentation path.\n        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {\n            continue;\n        }",
     'F07 P0.4 prevent stale alternate framebuffer view during async decode')
 
+# F07 P0.4: on PS5 select the newest usable framebuffer view during the
+# already-required candidate scan. This removes vector growth and a second
+# traversal under texture_cache.mutex, preserving first-wins ties and the
+# decoding/dirty-address fallback. Desktop retains the original algorithm.
+apply_reviewed_delta(
+    'vulkan-cache/video_core/texture_cache/texture_cache.h',
+    "    const auto& image_map_ids = it->second;\n    boost::container::small_vector<ImageId, 4> valid_image_ids;\n    for (const ImageMapId map_id : image_map_ids) {",
+    "    const auto& image_map_ids = it->second;\n#ifdef PS5_NATIVE\n    // Keep the best admissible view during the scan: no small_vector growth or\n    // second pass while the compositor owns texture_cache.mutex.\n    ImageId freshest_id{};\n    bool freshest_found = false;\n#else\n    boost::container::small_vector<ImageId, 4> valid_image_ids;\n#endif\n    for (const ImageMapId map_id : image_map_ids) {",
+    'F07 P0.4 framebuffer single-pass candidate declaration')
+
+apply_reviewed_delta(
+    'vulkan-cache/video_core/texture_cache/texture_cache.h',
+    "        valid_image_ids.push_back(map.image_id);\n    }\n\n    const auto view_format =",
+    "#ifdef PS5_NATIVE\n        // Match ranges::max_element: the first candidate wins equal ticks.\n        if (!freshest_found ||\n            slot_images[freshest_id].modification_tick < image.modification_tick) {\n            freshest_id = map.image_id;\n            freshest_found = true;\n        }\n#else\n        valid_image_ids.push_back(map.image_id);\n#endif\n    }\n\n    const auto view_format =",
+    'F07 P0.4 framebuffer single-pass admission')
+
+apply_reviewed_delta(
+    'vulkan-cache/video_core/texture_cache/texture_cache.h',
+    "    if (valid_image_ids.size() == 1) [[likely]] {\n        return GetImageViewForFramebuffer(valid_image_ids.front());\n    }\n\n    if (valid_image_ids.size() > 0) [[unlikely]] {\n        auto most_recent = std::ranges::max_element(valid_image_ids, [&](auto a, auto b) {\n            return slot_images[a].modification_tick < slot_images[b].modification_tick;\n        });\n        return GetImageViewForFramebuffer(*most_recent);\n    }\n\n    return {};\n}",
+    "#ifdef PS5_NATIVE\n    if (freshest_found) [[likely]] {\n        return GetImageViewForFramebuffer(freshest_id);\n    }\n#else\n    if (valid_image_ids.size() == 1) [[likely]] {\n        return GetImageViewForFramebuffer(valid_image_ids.front());\n    }\n\n    if (valid_image_ids.size() > 0) [[unlikely]] {\n        auto most_recent = std::ranges::max_element(valid_image_ids, [&](auto a, auto b) {\n            return slot_images[a].modification_tick < slot_images[b].modification_tick;\n        });\n        return GetImageViewForFramebuffer(*most_recent);\n    }\n#endif\n    return {};\n}",
+    'F07 P0.4 framebuffer single-pass first-tie selection')
+
 # F07 P0.4: composite can be the first GPU consumer after a guest
 # memory remap. Flush queued mapping invalidations ahead of the texture
 # mutex, matching DrawTexture's lock ordering. This keeps the newly selected
