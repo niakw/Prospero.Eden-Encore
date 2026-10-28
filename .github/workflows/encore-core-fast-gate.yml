@@ -35,6 +35,10 @@ on:
       - 'tools/check-ps5-f07-cold-stalls-host.py'
       - 'tools/check-ps5-f07-pipeline-transitions-host.py'
       - 'tools/check-ps5-f07-*.py'
+      - 'tools/check-ps5-known-empty-graphics-descriptors-host.py'
+      - 'tools/check-ps5-graphics-payload-preflight-host.py'
+      # A change to the gate itself must also rerun the gate.
+      - '.github/workflows/encore-core-fast-gate.yml'
       # The first-use/optimization lifetime harnesses also gate source changes.
       - 'tools/check-ps5-fast-first-pipelines.py'
       - 'tools/check-ps5-pipeline-fairness.py'
