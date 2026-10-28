@@ -56,7 +56,7 @@ assert source.count(copy_start)==source.count(copy_end)==1
 copy_method=source[source.index(copy_start):]
 copy_guard=copy_method[copy_method.index("{")+1:copy_method.index(copy_end)]
 assert "BytesPerBlock(src.info.format) == BytesPerBlock(dst.info.format)" in copy_guard
-assert "#else\\n    if (ENABLE_MSAA_RESOLVE_CONSUME)" in copy_guard
+assert copy_guard.count("#else") == 1 and "if (ENABLE_MSAA_RESOLVE_CONSUME)" in copy_guard
 assert copy_guard.index("BytesPerBlock(src.info.format)") < copy_guard.index("#else")
 assert size.index("#else\n    for (const auto& copy") > size.index("#ifdef PS5_NATIVE")
 assert size.index("const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);") > size.index("#endif")
