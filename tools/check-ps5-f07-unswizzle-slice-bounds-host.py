@@ -170,3 +170,78 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-unswizzle-bounds-") as folder:
         assert run.returncode==0,(opt,run.stdout,run.stderr[-6000:])
 print("F07_UNSWIZZLE_SLICE_BOUNDS_PASS zero=2 truncated=1 overflow=1"
       " oversized=1 depth=3 valid=1 allocation_order=1 oom=1 short_span=1 O0=1 O2=1")
+
+# F07 P0.4: a missing image-format-list extension must not disable the
+# unrelated native BCn-3D storage-buffer compute pass. Extract the exact
+# constructor branch, not a hand-authored approximation.
+runtime_src = (root / "vendor/encore-active/eden-vulkan/vk_texture_cache_cost.cpp").read_text()
+constructor = runtime_src[runtime_src.index("TextureCacheRuntime::TextureCacheRuntime("):
+                          runtime_src.index("void TextureCacheRuntime::Finish()")]
+fallback_start = constructor.index("    if (!device.IsKhrImageFormatListSupported()) {")
+fallback_end = constructor.index("    for (size_t index_a", fallback_start)
+fallback = constructor[fallback_start:fallback_end]
+assert "#ifdef PS5_NATIVE" in fallback
+assert fallback.index("bl3d_unswizzle_pass.emplace") < fallback.index("        return;")
+assert "VK_KHR_image_format_list" in fallback
+late_start = constructor.rindex("    if (Settings::values.gpu_unswizzle_enabled.GetValue()) {")
+late = constructor[late_start:constructor.index("\n}", late_start)]
+assert late.count("bl3d_unswizzle_pass.emplace") == 1
+assert constructor.count("bl3d_unswizzle_pass.emplace") == 2
+oracle = (root / "tools/check-vendored-vulkan-fork.py").read_text()
+assert "BCn 3D compute-buffer pass" in oracle
+fixture = r"""
+#include <cassert>
+#include <optional>
+namespace Settings {
+struct Bool { bool enabled{}; bool GetValue() const {return enabled;} };
+struct Values { Bool gpu_unswizzle_enabled; };
+inline Values values{};
+}
+struct Device { bool extension{}; bool IsKhrImageFormatListSupported() const {return extension;} };
+struct Pass {
+    Pass(Device&,int&,int&,int&,int&) {++instances;}
+    inline static unsigned instances{};
+};
+struct Probe {
+    Device device{};
+    int scheduler{}, descriptor_pool{}, staging_buffer_pool{}, compute_pass_descriptor_queue{};
+    std::optional<Pass> bl3d_unswizzle_pass;
+    void Init() {
+""" + fallback + late + r"""
+    }
+};
+int main() {
+    for (bool extension: {false,true}) {
+        for (bool enabled: {false,true}) {
+            Settings::values.gpu_unswizzle_enabled.enabled=enabled;
+            Pass::instances=0;
+            Probe p; p.device.extension=extension; p.Init();
+            unsigned expected=enabled && (
+#ifdef PS5_NATIVE
+                true
+#else
+                extension
+#endif
+            ) ? 1u:0u;
+            assert(Pass::instances==expected);
+            assert(p.bl3d_unswizzle_pass.has_value()==(expected!=0));
+        }
+    }
+}
+"""
+# C++ initializer-list range for(bool) needs initializer_list explicitly.
+fixture = fixture.replace("#include <optional>", "#include <optional>\n#include <initializer_list>")
+with tempfile.TemporaryDirectory(prefix="eden-f07-bcn3d-constructor-") as folder:
+    source = Path(folder)/"ctor.cpp"
+    source.write_text(fixture)
+    for native in (False,True):
+        for opt in ("-O0","-O2"):
+            exe = Path(folder)/("bcn3d"+opt[1:]+("-ps5" if native else "-desktop"))
+            built = subprocess.run([compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                                    *(['-DPS5_NATIVE=1'] if native else []),
+                                    str(source),"-o",str(exe)],
+                                   capture_output=True,text=True,timeout=40)
+            assert built.returncode==0,(native,opt,built.stderr[-5000:])
+            ran = subprocess.run([str(exe)],capture_output=True,text=True,timeout=15)
+            assert ran.returncode==0,(native,opt,ran.stderr[-5000:])
+print("F07_BCN3D_PASS_UNSUPPORTED_IMAGE_FORMAT_LIST_PASS native=1 desktop=1 extension_on_off=1 setting_on_off=1 O0=1 O2=1")
