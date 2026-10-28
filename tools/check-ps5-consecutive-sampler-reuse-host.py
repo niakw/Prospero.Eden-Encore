@@ -40,11 +40,16 @@ assert pinned_loop.count("samplers.push_back(sampler);")==1
 assert pinned_loop.count("views.push_back({handle.first});")==1
 
 
-fill_guard = "    if (!views.empty()) {"
-assert native.count(fill_guard) == 1
-fill_at = native.index(fill_guard)
+# F07 P0.4: an empty FillImageViews call also resets the deletion/retry latch.
+# Keep the sampler memo's parity check tied to that selected graphics block,
+# without reinstating the unsafe empty-view skip.
+fill_marker = "    // FillImageViews resets the image-deletion/retry latch"
+assert native.count(fill_marker) == 1
+fill_at = native.index(fill_marker)
 fill_end = native.index("\n    }", fill_at) + len("\n    }")
-assert "texture_cache.FillImageViews" in native[fill_at:fill_end]
+fill_block = native[fill_at:fill_end]
+assert fill_block.count("texture_cache.FillImageViews(") == 1
+assert "if (!views.empty())" not in fill_block
 assert native.index("texture_cache.UpdateRenderTargets(false)") > fill_end
 assert native.index("texture_cache.CheckFeedbackLoop(") > fill_end
 
