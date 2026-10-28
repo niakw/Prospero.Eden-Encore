@@ -45,7 +45,14 @@ assert RASTER.index("pipeline->PreflightDescriptorScratch();") < RASTER.index(
 assert NATIVE.index("last_descriptor_payload.assign(entries, entries + num_descriptor_entries)") > (
     NATIVE.index("bool GraphicsPipeline::ConfigureDraw(")
 )
-assert NATIVE.count("last_descriptor_payload.assign(entries, entries + num_descriptor_entries)") == 2
+# All three real snapshots must be preflighted before paired cache locks:
+# descriptor-buffer, desktop legacy, and PS5's post-Record legacy commit.
+assert NATIVE.count("last_descriptor_payload.assign(entries, entries + num_descriptor_entries)") == 3
+configure = NATIVE[NATIVE.index("bool GraphicsPipeline::ConfigureDraw("):]
+record_at = configure.index("    scheduler.Record([this, descriptor_data")
+assert configure.count("last_descriptor_payload.assign(entries, entries + num_descriptor_entries)") == 3
+assert configure.index("#ifndef PS5_NATIVE") < record_at
+assert configure.index("#ifdef PS5_NATIVE\\n    // Descriptor-set updates are encoded") > record_at
 
 # Recreate the exact previous selected preflight from the reviewed delta.
 snapshot_guard = """
