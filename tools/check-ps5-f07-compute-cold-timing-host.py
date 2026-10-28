@@ -48,6 +48,8 @@ struct Shader {};
 unsigned created=0;
 int CreateComputePipeline(const Key&,const Shader*) { return ++created; }
 void Probe(bool is_new, bool is_retry) {
+    // Desktop intentionally has no PS5 retry instrumentation.
+    (void)is_retry;
     const Key key{};
     const Shader* shader=nullptr;
     int pipeline=0;
