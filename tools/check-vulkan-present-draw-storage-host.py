@@ -95,6 +95,10 @@ RECORD
     std::array<CommandChunk,2> chunks;
     CommandChunk* chunk=&chunks[0];
     unsigned switches{};
+    unsigned invalidations{};
+    // The production RecordWithUploadBuffer reset hook is part of the
+    // extracted scheduler, even though this fixture tests accepted draws.
+    void InvalidateState() { ++invalidations; }
     void DispatchWork() { assert(++switches==1);chunk=&chunks[1]; }
     void ForceRollover() { chunks[0].command_offset=0x8000-1; }
     void Drain(std::vector<Event>& events) { for(auto& c:chunks)c.ExecuteAll({&events},{&events}); assert(chunks[0].Empty()&&chunks[1].Empty()); }
@@ -160,6 +164,8 @@ int main() {
         std::vector<Event> old_events,new_events;
         old_scheduler.Drain(old_events);new_scheduler.Drain(new_events);
         assert(old_scheduler.switches==1 && new_scheduler.switches==1);
+        // Every scheduled draw was accepted: no false state invalidation.
+        assert(old_scheduler.invalidations==0 && new_scheduler.invalidations==0);
         if(hud!=2) {
             // Real game layers, blend modes and the user-controlled FPS HUD
             // must remain byte-for-byte equal to the pinned renderer.
