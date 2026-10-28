@@ -851,15 +851,28 @@ void BlockLinearUnswizzle3DPass::UnswizzleChunk(
             .size = barrier_size,
         };
 
-        // Image layout transition
+        // Image layout transition. Each previous BCn 3D batch ended in
+        // GENERAL, not TRANSFER_DST_OPTIMAL. On PS5 a later Z batch must
+        // transition from its actual layout and synchronize any intervening
+        // shader reads/writes before the next transfer.
         const VkImageMemoryBarrier pre_barrier{
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
             .pNext = nullptr,
+#ifdef PS5_NATIVE
+            .srcAccessMask = is_first_chunk ? VkAccessFlags{} :
+                            static_cast<VkAccessFlags>(VK_ACCESS_MEMORY_READ_BIT |
+                                                       VK_ACCESS_MEMORY_WRITE_BIT),
+#else
             .srcAccessMask = is_first_chunk ? VkAccessFlags{} :
                             static_cast<VkAccessFlags>(VK_ACCESS_TRANSFER_WRITE_BIT),
+#endif
             .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+#ifdef PS5_NATIVE
+            .oldLayout = is_first_chunk ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_GENERAL,
+#else
             .oldLayout = is_first_chunk ? VK_IMAGE_LAYOUT_UNDEFINED :
                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+#endif
             .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -867,9 +880,15 @@ void BlockLinearUnswizzle3DPass::UnswizzleChunk(
             .subresourceRange = {aspect, 0, 1, 0, 1},
         };
 
-        // Single barrier handles both buffer and image
+        // Single barrier handles both buffer and image.
+        // The previous batch can have been sampled by any graphics stage;
+        // match the GENERAL image read/write access in the native barrier.
         cmdbuf.PipelineBarrier(
+#ifdef PS5_NATIVE
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+#else
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+#endif
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             0,
             nullptr, buffer_barrier, pre_barrier
