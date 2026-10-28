@@ -4089,3 +4089,15 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "                copy_amount = (std::min)(swizzle_chunk_size, remaining);\n#else",
     "                // A zero budget can occur if GPU unswizzle is toggled\n                // after cache construction. Retain forward progress instead\n                // of pinning IsDecoding forever on a zero-byte read.\n                copy_amount = swizzle_chunk_size != 0\n                    ? (std::min)(swizzle_chunk_size, remaining)\n                    : (std::min)(task.bytes_per_slice, remaining);\n#else",
     "F07 preserve BCn 3D read progress when budget is zero")
+
+# F07 P0.3: TickAsyncDecode is invoked under texture_cache.mutex.
+# Keep a fixed per-frame bound on completed decodes but preserve the full
+# source-extracted GPU submission, stale-revision checks and upload barrier.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "void TextureCache<P>::TickAsyncDecode() {\n    bool has_uploads{};\n    auto i = async_decodes.begin();",
+    "void TextureCache<P>::TickAsyncDecode() {\n    bool has_uploads{};\n#ifdef PS5_NATIVE\n    // TickFrame holds texture_cache.mutex: cap completed async uploads so\n    // a burst of HUD textures cannot occupy the entire cache lock in one\n    // frame. Work not processed this tick retains its decode context.\n    constexpr size_t kMaxCompletedDecodesPerTick = 4;\n    size_t completed_decodes = 0;\n#endif\n    auto i = async_decodes.begin();",
+    "F07 native async texture completion quota")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        if (!async_decode->complete.load(std::memory_order_acquire)) {\n            ++i;\n            continue;\n        }\n#endif\n        std::unique_lock lock{async_decode->mutex};",
+    "        if (!async_decode->complete.load(std::memory_order_acquire)) {\n            ++i;\n            continue;\n        }\n        if (completed_decodes == kMaxCompletedDecodesPerTick) {\n            break;\n        }\n        ++completed_decodes;\n#endif\n        std::unique_lock lock{async_decode->mutex};",
+    "F07 bounded ready decode completion under texture lock")

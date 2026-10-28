@@ -23,6 +23,9 @@ method = active[active.index(start):active.index(end, active.index(start))]
 old_method = pinned[pinned.index(start):pinned.index(end, pinned.index(start))]
 assert "lock.unlock();" not in old_method  # original reproducible lifetime hazard
 assert method.count("lock.unlock();") == 4
+assert "kMaxCompletedDecodesPerTick = 4" in method
+assert "completed_decodes == kMaxCompletedDecodesPerTick" in method
+assert "F07 bounded ready decode completion under texture lock" in generator
 assert method.count("i = async_decodes.erase(i);") == 4
 assert "F07 async decoded staging allocation failure and short span recovery" in generator
 assert "F07 async decoded Vulkan submission failure recovery" in generator
@@ -177,7 +180,12 @@ int main(){
     cache.runtime.short_on_call=3;
     const unsigned locks_before_first_tick = CheckedMutex::lock_calls;
     cache.TickAsyncDecode();
-    // Seven completed tasks consume the mutex; the pending one does not.
+    // Only four completed contexts are handled under the first frame lock.
+    assert(CheckedMutex::lock_calls == locks_before_first_tick + 4);
+    assert(cache.async_decodes.size()==4);
+    assert(cache.runtime.staging_calls==1 && cache.runtime.barriers==1);
+    cache.TickAsyncDecode();
+    // Seven completed tasks are now drained over TWO frames; pending untouched.
     assert(CheckedMutex::lock_calls == locks_before_first_tick + 7);
     assert(cache.async_decodes.size()==1 && !cache.async_decodes[0]->complete);
     assert(True(cache.slot_images[1].flags&ImageFlagBits::CpuModified));
@@ -230,6 +238,38 @@ int main(){
     assert(cache.async_decodes.empty() && cache.runtime.barriers==4);
     assert(cache.slot_images[7].uploads==1);
     assert((cache.slot_images[7].result==std::vector<std::uint8_t>{11,12,13,14}));
+    // A real burst of successful texture decodes must spread the upload
+    // submissions and barriers over consecutive TickFrame calls. No stale
+    // images and no abandoned contexts after the third tick.
+    TextureCache<int> burst;
+    burst.slot_images.resize(11);
+    for (std::size_t id=0;id<11;++id) {
+        auto& image=burst.slot_images[id];
+        image.size=4;
+        image.flags|=ImageFlagBits::IsDecoding;
+        image.flags|=ImageFlagBits::Tracked;
+        auto ctx=std::make_unique<AsyncDecodeContext>();
+        ctx->image_id=id;
+        ctx->complete=true;
+        ctx->decoded_data={static_cast<std::uint8_t>(id),1,2,3};
+        burst.async_decodes.emplace_back(std::move(ctx));
+    }
+    burst.TickAsyncDecode();
+    assert(burst.async_decodes.size()==7 && burst.runtime.barriers==1);
+    assert(burst.runtime.staging_calls==4 && burst.slot_images[3].uploads==1);
+    assert(burst.slot_images[4].uploads==0);
+    burst.TickAsyncDecode();
+    assert(burst.async_decodes.size()==3 && burst.runtime.barriers==2);
+    assert(burst.runtime.staging_calls==8 && burst.slot_images[7].uploads==1);
+    assert(burst.slot_images[8].uploads==0);
+    burst.TickAsyncDecode();
+    assert(burst.async_decodes.empty() && burst.runtime.barriers==3);
+    assert(burst.runtime.staging_calls==11);
+    for (std::size_t id=0;id<11;++id) {
+        assert(burst.slot_images[id].uploads==1);
+        assert(burst.slot_images[id].result[0]==id);
+        assert(!True(burst.slot_images[id].flags&ImageFlagBits::IsDecoding));
+    }
 }
 """
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
@@ -246,7 +286,7 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-async-lifetime-") as directory
         assert built.returncode==0,(optimization,built.stderr[-5000:])
         ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=20)
         assert ran.returncode==0,(optimization,ran.stdout,ran.stderr[-5000:])
-print("F07_ASYNC_TICK_LIFETIME_HOST_PASS unlock_before_erase=1 revision_size_guard=1 stale_same_size=1 stale_remapped_same_size=1 pending=1 staging_oom=1 short_span=1 failed_gpu_submission=1 retry=1 O0=1 O2=1")
+print("F07_ASYNC_TICK_LIFETIME_HOST_PASS unlock_before_erase=1 revision_size_guard=1 stale_same_size=1 stale_remapped_same_size=1 pending=1 staging_oom=1 short_span=1 failed_gpu_submission=1 retry=1 burst_quota_4=1 burst_11_in_3_ticks=1 O0=1 O2=1")
 
 
 # Extract the real queued native conversion lambda and execute both branches.

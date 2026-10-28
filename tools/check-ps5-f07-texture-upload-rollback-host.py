@@ -22,8 +22,10 @@ assert body.count("upload_completed = true;") == 4
 assert "F07 contain native sync texture allocation failure at upload entry" in gen
 assert "F07 dirty native sync texture retry after bad allocation" in gen
 assert body.count("catch (const std::bad_alloc&)") == 1
-assert body.index("try {", body.index("runtime.UploadStagingBuffer(MapSizeBytes(image))")-75) < body.index(
-    "runtime.UploadStagingBuffer(MapSizeBytes(image))")
+assert body.index("try {", body.index("::Eden::Performance::CachePhaseTimer staging_phase")) < body.index(
+    "const size_t upload_size = MapSizeBytes(image);")
+assert body.index("staging.mapped_span.size_bytes() < upload_size") < body.index(
+    "UploadImageContents(image, staging);")
 assert body.index("upload_completed = true;",body.index("runtime.InsertUploadMemoryBarrier();")) < body.index(
     "catch (const std::bad_alloc&)")
 for branch in ("runtime.TransitionImageLayout(image);",

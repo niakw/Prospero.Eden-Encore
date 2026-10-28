@@ -2008,6 +2008,13 @@ void TextureCache<P>::QueueAsyncUnswizzle(Image& image, ImageId image_id) {
 template <class P>
 void TextureCache<P>::TickAsyncDecode() {
     bool has_uploads{};
+#ifdef PS5_NATIVE
+    // TickFrame holds texture_cache.mutex: cap completed async uploads so
+    // a burst of HUD textures cannot occupy the entire cache lock in one
+    // frame. Work not processed this tick retains its decode context.
+    constexpr size_t kMaxCompletedDecodesPerTick = 4;
+    size_t completed_decodes = 0;
+#endif
     auto i = async_decodes.begin();
     while (i != async_decodes.end()) {
         auto* async_decode = i->get();
@@ -2018,6 +2025,10 @@ void TextureCache<P>::TickAsyncDecode() {
             ++i;
             continue;
         }
+        if (completed_decodes == kMaxCompletedDecodesPerTick) {
+            break;
+        }
+        ++completed_decodes;
 #endif
         std::unique_lock lock{async_decode->mutex};
 #ifndef PS5_NATIVE

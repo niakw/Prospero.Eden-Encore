@@ -93,3 +93,9 @@ Le rejet du passage BCn 3D absent est déjà appliqué par le générateur ; l'o
 Auparavant, si une tranche BCn 3D dépassait `swizzle_chunk_size`, `TickAsyncUnswizzle` forçait la lecture d'une tranche entière sous le verrou texture, par exemple 64 Mio malgré un budget de 16 Mio. Sur PS5 native, la lecture d'une tranche est désormais découpée en morceaux au plus égaux au budget. La soumission compute reste conditionnée à une tranche complète via `bytes_ready` ; la révision stale/remappée conserve son mécanisme d'annulation. Le témoin C++ extrait l'arithmétique exacte avec tranches 4/32/64 Mio et PS5/desktop O0/O2. Aucun gain en frametime console n'est revendiqué avant mesure.
 
 **Cas limite P0.3 :** si le budget de lecture devient nul après une modification des réglages, le chemin natif conserve une progression bornée par la tranche encore disponible, évitant une tâche `IsDecoding` indéfiniment en attente. Le témoin compare également ce cas au comportement desktop d'origine.
+
+## P0.3 — rafale de décodages asynchrones terminés
+
+`TickAsyncDecode` finalise désormais au maximum quatre contextes terminés par passage sur PS5. Les autres restent en file avec leur `IsDecoding` intact jusqu'au tick suivant, sans perdre leurs octets décodés. Chaque tick conserve sa barrière GPU unique s'il a transféré une ou plusieurs textures. Le test source-extrait exerce aussi une rafale de onze textures en trois ticks, ainsi que les refus de staging, les révisions CPU périmées et une soumission rejetée. Cette borne s'applique au nombre de contextes, pas au temps absolu d'un upload individuel. Aucun gain FPS console n'est encore mesuré.
+
+Le test `check-ps5-f07-texture-upload-rollback-host.py` est également réaligné sur l'allocation `upload_size` du correctif de staging court, afin de supprimer son ancienne recherche d'ancre devenue invalide.
