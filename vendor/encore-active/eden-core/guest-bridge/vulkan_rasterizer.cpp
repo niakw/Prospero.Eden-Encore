@@ -1513,17 +1513,30 @@ template <bool IS_IMAGE_UPLOAD>
 bool AccelerateDMA::DmaBufferImageCopy(const Tegra::DMA::ImageCopy& copy_info,
                                        const Tegra::DMA::BufferOperand& buffer_operand,
                                        const Tegra::DMA::ImageOperand& image_operand) {
+#ifdef PS5_NATIVE
+    // Invalid DMA images have no buffer-cache allocation or GPU work.
+    // Reject them before the paired guest cache mutexes, so HUD bursts
+    // cannot queue behind an unrelated texture update for a no-op copy.
+    const u64 checked_bytes = static_cast<u64>(buffer_operand.pitch) * buffer_operand.height;
+    if (checked_bytes == 0 || checked_bytes > static_cast<u64>(~u32{0})) {
+        return false;
+    }
+#endif
     std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};
     const auto image_id = texture_cache.DmaImageId(image_operand, IS_IMAGE_UPLOAD);
     if (image_id == VideoCommon::NULL_IMAGE_ID) {
         return false;
     }
+#ifdef PS5_NATIVE
+    const u32 buffer_size = static_cast<u32>(checked_bytes);
+#else
     // Widen before multiplying, then respect the u32 buffer-cache span.
     const u64 buffer_size_wide = static_cast<u64>(buffer_operand.pitch) * buffer_operand.height;
     if (buffer_size_wide > static_cast<u64>(~u32{0})) {
         return false;
     }
     const u32 buffer_size = static_cast<u32>(buffer_size_wide);
+#endif
     static constexpr auto sync_info = VideoCommon::ObtainBufferSynchronize::FullSynchronize;
     const auto post_op = IS_IMAGE_UPLOAD ? VideoCommon::ObtainBufferOperation::DoNothing
                                          : VideoCommon::ObtainBufferOperation::MarkAsWritten;

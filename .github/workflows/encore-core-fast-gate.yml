@@ -323,6 +323,7 @@ jobs:
           python3 -B tools/check-ps5-f07-texel-descriptor-stability-host.py
           python3 -B tools/check-ps5-dma-buffer-copy-span-host.py
           python3 -B tools/check-ps5-f07-inline-dma-buffer-elision-host.py
+          python3 -B tools/check-ps5-f07-dma-image-prelock-span-host.py
           python3 -B tools/check-ps5-empty-image-stage-host.py
           python3 -B tools/check-ps5-consecutive-sampler-reuse-host.py
           python3 -B tools/check-ps5-f07-nonadjacent-tic-memo-host.py
