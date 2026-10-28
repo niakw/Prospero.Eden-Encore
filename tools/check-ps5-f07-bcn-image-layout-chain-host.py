@@ -35,9 +35,9 @@ assert "is_first_chunk ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT :" in stage_fragme
 stage_fragment=stage_fragment.replace(
     "VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,", "VK_PIPELINE_STAGE_ALL_COMMANDS_BIT"
 ).replace(
-    "VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,\\n#endif",
-    "VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT\\n#endif",
-).rstrip()+"\\n;"
+    "VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,\n#endif",
+    "VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT\n#endif",
+).rstrip()+"\n;"
 
 for wf in (".github/workflows/encore-core-fast-gate.yml",
            ".github/workflows/encore-core-preflight.yml"):
