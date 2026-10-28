@@ -129,3 +129,7 @@ Un lot natif de quatre décodages terminés maximum est suivi par ses identifian
 ## P0.4 — ne pas invalider un resolve MSAA pour une copie rejetée
 
 Sur PS5, `ReinterpretImage` invalide désormais le shadow MSAA de destination uniquement après validation des copies et allocation réussie du scratch buffer. Les dimensions vides, formats invalides et dépassements de taille ne détruisent plus l'état du resolve déjà disponible ; toute copie valide garde une invalidation avant l'enregistrement Vulkan. Le témoin source-extrait vérifie le nombre d'invalidations en plus des allocations refusées, et conserve le comportement desktop original. Pas de mesure GPU console.
+
+## P0.3 — staging incomplet pendant les téléchargements de textures évincées
+
+`PrefetchDownloads` pouvait enregistrer `Image::DownloadMemory` avec une région de staging GPU plus courte que la texture, ou laisser propager un refus d'allocation sous `texture_cache.mutex`. Sur PS5, l'admission vérifie maintenant `mapped_span.size_bytes()` et traite une exception d'allocation comme un refus de préchargement. Un buffer différé partiellement obtenu est restitué ; la passe spéculative s'arrête sans annoncer d'upload valide, et le nettoyage autoritaire conserve sa politique et son attente GPU. Le témoin C++ source-extrait de balayage mixte est exécuté avec et sans `PS5_NATIVE` sous ASan/UBSan, incluant mapping court et allocation refusée. La copie effective du pilote et l'amélioration de frametime FC27 ne sont pas établies.
