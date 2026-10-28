@@ -4216,3 +4216,14 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "#ifdef PS5_NATIVE\n#include <new>",
     "#ifdef PS5_NATIVE\n#include <exception>\n#include <new>",
     "F07 include uncaught exception counter for readback rollback")
+
+# F07 P0.4: validate readback staging at the runtime boundary; keep the
+# historical 40-image batch oracle byte-for-byte unchanged.
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "StagingBufferRef TextureCacheRuntime::DownloadStagingBuffer(size_t size, bool deferred) {\n    return staging_buffer_pool.Request(size, MemoryUsage::Download, deferred);\n}",
+    "StagingBufferRef TextureCacheRuntime::DownloadStagingBuffer(size_t size, bool deferred) {\n#ifdef PS5_NATIVE\n    // Reject broken readback staging before the pinned batch can record copies.\n    // Never trust a mapped CPU span without a real Vulkan buffer handle.\n    auto map = staging_buffer_pool.Request(size, MemoryUsage::Download, deferred);\n    if (!map.buffer || map.mapped_span.size_bytes() < size) {\n        if (deferred && map.buffer) staging_buffer_pool.FreeDeferred(map);\n        throw std::bad_alloc{};\n    }\n    return map;\n#else\n    return staging_buffer_pool.Request(size, MemoryUsage::Download, deferred);\n#endif\n}",
+    "F07 reject invalid Vulkan guest readback staging in runtime")
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "#include <memory>\n#include <utility>",
+    "#include <memory>\n#ifdef PS5_NATIVE\n#include <new>\n#endif\n#include <utility>",
+    "F07 add explicit PS5 native bad_alloc header for staging readback")
