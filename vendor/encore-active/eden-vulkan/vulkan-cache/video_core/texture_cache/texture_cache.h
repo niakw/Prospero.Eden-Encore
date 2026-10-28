@@ -1672,7 +1672,17 @@ void TextureCache<P>::RefreshContents(Image& image, ImageId image_id) {
 #ifdef PS5_NATIVE
     try {
 #endif
+#ifdef PS5_NATIVE
+    const size_t upload_size = MapSizeBytes(image);
+    auto staging = runtime.UploadStagingBuffer(upload_size);
+    if (staging.mapped_span.size_bytes() < upload_size) {
+        // No valid image bytes can be uploaded from an incomplete mapping.
+        // The existing rollback scope guard retains CpuModified for retry.
+        return;
+    }
+#else
     auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));
+#endif
 #ifdef PS5_NATIVE
     staging_phase.Stop();
     ::Eden::Performance::CachePhaseTimer contents_phase{
