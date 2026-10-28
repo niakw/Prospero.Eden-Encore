@@ -1675,9 +1675,18 @@ bool TextureCacheRuntime::IsFormatScalable(PixelFormat format) {
 
 void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
                                     std::span<const VideoCommon::ImageCopy> copies) {
+#ifdef PS5_NATIVE
+    // ReinterpretImage owns invalidation after validating its copy and scratch
+    // buffer. Do not stale the old MSAA resolve when it rejects the operation.
+    if (ENABLE_MSAA_RESOLVE_CONSUME &&
+        BytesPerBlock(src.info.format) == BytesPerBlock(dst.info.format)) {
+        InvalidateResolveShadow(dst.Handle());
+    }
+#else
     if (ENABLE_MSAA_RESOLVE_CONSUME) {
         InvalidateResolveShadow(dst.Handle());
     }
+#endif
     // As per the size-compatible formats section of vulkan, copy manually via ReinterpretImage
     // these images that aren't size-compatible
     if (BytesPerBlock(src.info.format) != BytesPerBlock(dst.info.format)) {
