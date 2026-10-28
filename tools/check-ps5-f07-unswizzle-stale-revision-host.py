@@ -43,7 +43,8 @@ assert "F07 throttle only queued unswizzle batches" in generator
 assert "current_unswizzle_frame = 0u;" in fragment.split("return;", 1)[0]
 finish_start = "    if (is_final_batch && all_slices_submitted) {"
 finish_end = "\n}\n\ntemplate <class P>\nbool TextureCache<P>::ScaleUp"
-assert src_finish := active.find(finish_start, active.find(method_start))
+src_finish = active.find(finish_start, active.find(method_start))
+assert src_finish >= 0
 assert finish_end in active[src_finish:]
 finish_fragment = active[src_finish:active.index(finish_end,src_finish)]
 assert "unswizzle_queue.empty() ? 0u : 4u" in finish_fragment
