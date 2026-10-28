@@ -18,6 +18,8 @@ preflight = ("guest_descriptor_queue.PreflightGuestDraw([this] { scheduler.WaitW
 select = "pipeline_cache.CurrentComputePipeline()"
 locks = "std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};"
 assert compute.count(preflight) == 1
+assert "bool initial_compute_descriptor_drain = false;" in compute
+assert "if (preflight == 0 && !initial_compute_descriptor_drain) break;" in compute
 # The selected pipeline advertises an immutable descriptor count: select
 # BEFORE preflight so an empty compute shader cannot wait for 1024 entries.
 # Every real wait remains outside the paired guest buffer/texture mutexes.

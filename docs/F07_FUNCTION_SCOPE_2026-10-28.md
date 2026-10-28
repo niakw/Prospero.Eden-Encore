@@ -201,3 +201,7 @@ Les deux écritures `AddSampledImage` et `AddImage` initialisent désormais l'en
 ## P0.3 — élimination d'un double contrôle des descripteurs graphiques sans attente
 
 `RasterizerVulkan::PrepareDraw` vérifiait deux fois de suite la même disponibilité de descripteurs, dans la majorité des draws où le premier `PreflightGuestDraw` n'avait pas attendu le worker. Sur PS5, le second contrôle `PreflightExactGuestDraw` est maintenant sauté **uniquement en l'absence d'attente initiale**. Dès qu'un drain survient, les deux vérifications bornées restent disponibles pour revalider la demande de la nouvelle pipeline après remaps. Le témoin de prévalidation graphique vérifie zéro contrôle exact en absence de drain, une vérification après drain, et l'absence de régression sur pipeline sans descripteurs. Les contrôles tardifs après les barrières GPU restent inchangés. Gain FPS à confirmer sur PS5.
+
+## P0.3 — parité compute des contrôles de capacité sans drain
+
+`RasterizerVulkan::DispatchCompute` pouvait effectuer immédiatement un deuxième `PreflightExactGuestDraw` après un `PreflightGuestDraw` négatif, alors que ni la réservation ni les tables invitées n'avaient changé. La seconde vérification est maintenant sautée uniquement quand aucun wait n'est intervenu. Toute attente réelle conserve les deux revalidations et la sélection d'un pipeline possiblement différent. L'ancien chemin desktop reste inchangé ; les témoins source-extraits garantissent toujours la parité du seuil exact et du chemin de resélection. Mesure de performance PS5 encore requise.
