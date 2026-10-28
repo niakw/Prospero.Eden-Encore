@@ -59,3 +59,7 @@ En PS5 native, `TickAsyncDecode` intercepte désormais une exception du transfer
 ## P0.4 — rejet de soumission des lots BCn 3D
 
 Si `FullUploadSwizzles` ou `AccelerateImageUpload` échoue au cours d’un lot, la branche native abandonne la révision incomplète, restitue le staging en différé, conserve `CpuModified`, efface `IsDecoding`, détracke la texture et retire la tâche de la file. Le prochain upload peut reprendre sur les octets invités courants. Un harnais C++ source-extrait exécute les chemins échec et succès sous O0/O2. L’état de la console reste non mesuré.
+
+## P0.4 — lecture mémoire invitée échouée durant un lot BCn 3D
+
+Le chemin PS5 natif de `TickAsyncUnswizzle` capture les exceptions de `GpuMemory::ReadBlock` même lorsqu'une portion du staging a déjà été remplie. Il libère en différé la source des lots GPU antérieurs, conserve `CpuModified`, libère `IsDecoding` et retire le travail incomplet. Un témoin C++ source-extrait force l'échec initial, l'échec après une lecture partielle, le succès et la reprise sous O0/O2. La branche desktop reste inchangée ; aucun FPS réel n'est déduit.

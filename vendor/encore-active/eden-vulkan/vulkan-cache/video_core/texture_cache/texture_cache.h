@@ -2224,9 +2224,27 @@ void TextureCache<P>::TickAsyncUnswizzle() {
             if (copy_amount == 0) copy_amount = task.bytes_per_slice;
         }
 
+#ifdef PS5_NATIVE
+        try {
+#endif
         gpu_memory->ReadBlock(image.gpu_addr + task.current_offset,
                               task.staging_buffer.mapped_span.data() + task.current_offset,
                               copy_amount);
+#ifdef PS5_NATIVE
+        } catch (...) {
+            // A failed guest read invalidates the partial GPU staging data.
+            // Deferred release also protects batches submitted earlier.
+            runtime.FreeDeferredStagingBuffer(task.staging_buffer);
+            image.flags |= ImageFlagBits::CpuModified;
+            if (True(image.flags & ImageFlagBits::Tracked)) {
+                UntrackImage(image, task.image_id);
+            }
+            image.flags &= ~ImageFlagBits::IsDecoding;
+            unswizzle_queue.pop_front();
+            current_unswizzle_frame = 0u;
+            return;
+        }
+#endif
         task.current_offset += copy_amount;
     }
 

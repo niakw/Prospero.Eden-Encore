@@ -307,3 +307,119 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-3d-dispatch-failure-") as d:
         ran=subprocess.run([str(exe)],capture_output=True,text=True,timeout=15)
         assert ran.returncode==0,(opt,ran.stderr[-5000:])
 print("F07_3D_UPLOAD_FAILURE_RECOVERY_PASS freed=1 dirty=1 pending_cleared=1 retry=1 O0=1 O2=1")
+
+# P0.4: execute the native guest read branch extracted verbatim, at O0/O2.
+# It is the same production upload staging, not a rewritten error handler.
+read_start = "    // Read data\n"
+read_end = "\n    const bool is_final_batch ="
+read_method = active[active.index(method_start):active.index(
+    "\n}\n\ntemplate <class P>\nbool TextureCache<P>::ScaleUp", active.index(method_start))]
+assert read_method.count(read_start) == 1 and read_method.count(read_end) == 1
+read_fragment = read_method[read_method.index(read_start):
+                            read_method.index(read_end,read_method.index(read_start))]
+assert "F07 failed BCn 3D guest read recovery" in generator
+assert "runtime.FreeDeferredStagingBuffer(task.staging_buffer);" in read_fragment
+assert read_fragment.index("gpu_memory->ReadBlock") < read_fragment.index("catch (...)")
+assert read_fragment.index("task.current_offset += copy_amount;") > read_fragment.index("catch (...)")
+read_cpp = r"""
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <deque>
+#include <span>
+#include <stdexcept>
+#include <vector>
+enum class ImageFlagBits:unsigned {CpuModified=1,Tracked=2,IsDecoding=4};
+unsigned operator~(ImageFlagBits f){return ~static_cast<unsigned>(f);}
+struct Flags{
+    unsigned bits{};
+    Flags& operator|=(ImageFlagBits f){bits|=static_cast<unsigned>(f);return *this;}
+    Flags& operator&=(unsigned f){bits&=f;return *this;}
+};
+unsigned operator&(Flags f,ImageFlagBits b){return f.bits&static_cast<unsigned>(b);}
+bool True(unsigned value){return value!=0;}
+struct Image {Flags flags;std::size_t gpu_addr{0x100};};
+struct Staging {std::vector<std::uint8_t> values;std::span<std::uint8_t> mapped_span{};bool allocated{true};};
+struct Task {
+    std::size_t image_id{}, current_offset{}, total_size{64},bytes_per_slice{16};
+    Staging staging_buffer;
+};
+struct GpuMemory {
+    unsigned reads{};bool fail{};
+    void ReadBlock(std::size_t addr,std::uint8_t* dst,std::size_t count) {
+        ++reads;
+        if(fail)throw std::runtime_error("mock guest read failure");
+        for(std::size_t i=0;i<count;++i)dst[i]=static_cast<std::uint8_t>(addr+i);
+    }
+};
+struct Runtime {
+    unsigned deferred{};
+    void FreeDeferredStagingBuffer(Staging& stage){
+        assert(stage.allocated);stage.allocated=false;++deferred;
+    }
+};
+struct Cache {
+    std::deque<Task> unswizzle_queue;
+    std::vector<Image> slot_images{1};
+    GpuMemory memory;
+    GpuMemory* gpu_memory{&memory};
+    Runtime runtime;
+    std::size_t swizzle_chunk_size{16};
+    unsigned current_unswizzle_frame{3},untracked{};
+    void Enqueue(std::size_t offset=0){
+        unswizzle_queue.emplace_back();
+        auto& task=unswizzle_queue.back();task.current_offset=offset;
+        task.staging_buffer.values.resize(task.total_size);
+        task.staging_buffer.mapped_span=task.staging_buffer.values;
+        auto& img=slot_images[0];
+        img.flags|=ImageFlagBits::IsDecoding;
+        img.flags|=ImageFlagBits::Tracked;
+    }
+    void UntrackImage(Image& img,std::size_t) {
+        assert(True(img.flags&ImageFlagBits::Tracked));
+        img.flags &= ~ImageFlagBits::Tracked;++untracked;
+    }
+    void TickRead(){
+        auto& task=unswizzle_queue.front();
+        auto& image=slot_images[task.image_id];
+""" + read_fragment + r"""
+    }
+};
+int main(){
+    for(std::size_t offset:{std::size_t{0},std::size_t{16}}) {
+        Cache c;c.Enqueue(offset);c.memory.fail=true;c.TickRead();
+        assert(c.unswizzle_queue.empty()&&c.runtime.deferred==1);
+        assert(c.memory.reads==1&&c.current_unswizzle_frame==0);
+        assert(c.untracked==1);
+        assert(True(c.slot_images[0].flags&ImageFlagBits::CpuModified));
+        assert(!True(c.slot_images[0].flags&ImageFlagBits::Tracked));
+        assert(!True(c.slot_images[0].flags&ImageFlagBits::IsDecoding));
+    }
+    Cache ok;ok.Enqueue();ok.TickRead();
+    assert(ok.unswizzle_queue.front().current_offset==16);
+    assert(ok.runtime.deferred==0&&ok.memory.reads==1);
+    assert(ok.unswizzle_queue.front().staging_buffer.values[0]==0);
+    assert(ok.unswizzle_queue.front().staging_buffer.values[15]==15);
+    for(int n=0;n<3;++n)ok.TickRead();
+    assert(ok.unswizzle_queue.front().current_offset==64);
+    assert(ok.runtime.deferred==0&&ok.memory.reads==4);
+    Cache retry;retry.Enqueue();retry.memory.fail=true;retry.TickRead();
+    retry.memory.fail=false;retry.Enqueue();retry.TickRead();
+    assert(retry.unswizzle_queue.size()==1&&retry.unswizzle_queue.front().current_offset==16);
+    assert(retry.runtime.deferred==1&&retry.memory.reads==2);
+}
+"""
+with tempfile.TemporaryDirectory(prefix="eden-f07-3d-guest-read-failure-") as d:
+    p=Path(d)/"guest.cpp"
+    p.write_text(read_cpp)
+    for opt in ("-O0","-O2"):
+        exe=Path(d)/("guest"+opt[1:])
+        built=subprocess.run([compiler,"-std=c++20",opt,"-DPS5_NATIVE=1",
+                              "-Wall","-Wextra","-Werror","-fsanitize=undefined",
+                              "-fno-sanitize-recover=all",str(p),"-o",str(exe)],
+                             capture_output=True,text=True,timeout=40)
+        assert built.returncode==0,(opt,built.stderr[-5000:])
+        ran=subprocess.run([str(exe)],capture_output=True,text=True,timeout=15)
+        assert ran.returncode==0,(opt,ran.stderr[-5000:])
+print("F07_BCN3D_GUEST_READ_RECOVERY_PASS first=1 partial=1 deferred=1 retry=1 O0=1 O2=1")
