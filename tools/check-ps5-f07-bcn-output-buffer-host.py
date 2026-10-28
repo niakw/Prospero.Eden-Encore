@@ -20,6 +20,8 @@ assert "F07 PS5 transactional BCn 3D compute output buffer" in gen
 assert method.count("compute_unswizzle_buffer_size = required_size;") == 2
 assert method.index("runtime->memory_allocator.CreateBuffer(ci, MemoryUsage::DeviceLocal)") < method.rindex("compute_unswizzle_buffer_size = required_size;")
 assert "blocks_xy > max_buffer / blocks_z" in method
+assert "if (!replacement)" in method
+assert "compute_unswizzle_buffer = std::move(replacement);" in method
 for path in (".github/workflows/encore-core-fast-gate.yml",
              ".github/workflows/encore-core-preflight.yml"):
     assert "python3 -B tools/check-ps5-f07-bcn-output-buffer-host.py" in (root/path).read_text()
@@ -53,9 +55,11 @@ struct Buffer { VkDeviceSize size; };
 struct Allocator {
     unsigned requests{};
     bool fail{};
+    bool return_null{};
     std::unique_ptr<Buffer> CreateBuffer(const VkBufferCreateInfo& ci,MemoryUsage) {
         ++requests;
         if (fail) throw std::bad_alloc{};
+        if (return_null) return {};
         return std::make_unique<Buffer>(Buffer{ci.size});
     }
 };
@@ -98,9 +102,19 @@ int main() {
     assert(image.compute_unswizzle_buffer_size==1024);
 #endif
     runtime.memory_allocator.fail=false;
+#ifdef PS5_NATIVE
+    runtime.memory_allocator.return_null=true;
+    bool null_rejected=false;
+    try { image.AllocateComputeUnswizzleBuffer(4); }
+    catch(const std::bad_alloc&) { null_rejected=true; }
+    assert(null_rejected && runtime.memory_allocator.requests==3);
+    assert(image.compute_unswizzle_buffer_size==512);
+    assert(image.compute_unswizzle_buffer && image.compute_unswizzle_buffer->size==512);
+    runtime.memory_allocator.return_null=false;
+#endif
     image.AllocateComputeUnswizzleBuffer(4);
 #ifdef PS5_NATIVE
-    assert(runtime.memory_allocator.requests==3);
+    assert(runtime.memory_allocator.requests==4);
     assert(image.compute_unswizzle_buffer->size==1024);
 #else
     // Desktop's historical eager size advertisement skips the retry.
@@ -148,4 +162,4 @@ with tempfile.TemporaryDirectory(prefix="f07-bcn-output-") as directory:
             assert result.returncode==0,(native,opt,result.stderr[-5000:])
             ran=subprocess.run([str(out)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-4000:])
-print("F07_BCN_OUTPUT_BUFFER_PASS transactional_retry=1 no_empty=1 zero_slices=1 no_u64_wrap=1 native=1 desktop_original=1 O0=1 O2=1 UBSan=1")
+print("F07_BCN_OUTPUT_BUFFER_PASS transactional_retry=1 null_vulkan_handle=1 no_empty=1 zero_slices=1 no_u64_wrap=1 native=1 desktop_original=1 O0=1 O2=1 UBSan=1")
