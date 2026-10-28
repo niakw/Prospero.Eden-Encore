@@ -4082,3 +4082,10 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        if (remaining > swizzle_chunk_size) {\n            copy_amount = (copy_amount / task.bytes_per_slice) * task.bytes_per_slice;\n            if (copy_amount == 0) copy_amount = task.bytes_per_slice;\n        }",
     "        if (remaining > swizzle_chunk_size) {\n            copy_amount = (copy_amount / task.bytes_per_slice) * task.bytes_per_slice;\n            if (copy_amount == 0) {\n#ifdef PS5_NATIVE\n                // One BCn-3D slice can exceed the per-frame read budget.\n                // Stage a partial slice; dispatch still waits until a full\n                // slice is ready. Do not copy >budget under texture mutex.\n                copy_amount = (std::min)(swizzle_chunk_size, remaining);\n#else\n                copy_amount = task.bytes_per_slice;\n#endif\n            }\n        }",
     "F07 bound oversized BCn 3D slice reads per native frame")
+
+# F07: changing the live unswizzle setting can leave a queued task with a
+# zero native read budget; avoid a zero-byte read that pins IsDecoding.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "                copy_amount = (std::min)(swizzle_chunk_size, remaining);\n#else",
+    "                // A zero budget can occur if GPU unswizzle is toggled\n                // after cache construction. Retain forward progress instead\n                // of pinning IsDecoding forever on a zero-byte read.\n                copy_amount = swizzle_chunk_size != 0\n                    ? (std::min)(swizzle_chunk_size, remaining)\n                    : (std::min)(task.bytes_per_slice, remaining);\n#else",
+    "F07 preserve BCn 3D read progress when budget is zero")
