@@ -220,6 +220,10 @@ RECORD
     std::array<CommandChunk, 2> chunks;
     CommandChunk* chunk = &chunks[0];
     unsigned switches = 0;
+    unsigned invalidations = 0;
+    // The extracted RecordWithUploadBuffer calls the real scheduler's
+    // InvalidateState on rejected enqueue; expose the observable reset here.
+    void InvalidateState() { ++invalidations; }
     void DispatchWork() { assert(++switches == 1); chunk = &chunks[1]; }
     void ForceRollover() { chunks[0].command_offset = 0x8000 - 1; }
     void Drain(u64& observed) {
@@ -233,8 +237,36 @@ template<class T> void Fill(T& value, unsigned seed) {
     auto* bytes = reinterpret_cast<u8*>(&value);
     for (std::size_t i = 0; i < sizeof(T); ++i) bytes[i] = static_cast<u8>(seed + i);
 }
+// Exercise the native two-chunk rejection path as well as the normal
+// successful rollover. A rejected upload must invalidate cached bindings
+// and a subsequent accepted draw must remain executable.
+void RejectedSecondRecord() {
+    Vulkan::Scheduler scheduler;
+    scheduler.ForceRollover();
+    scheduler.chunks[1].command_offset = 0x8000 - 1;
+    bool rejected = false;
+    try {
+        scheduler.Record([](vk::CommandBuffer) {});
+    } catch (const std::bad_alloc&) {
+        rejected = true;
+    }
+    assert(rejected && scheduler.invalidations == 1 && scheduler.switches == 1);
+    // Neither rejected command was constructed: reset the synthetic test
+    // offsets, then prove the next real record is successfully executed.
+    scheduler.chunks[0].command_offset = 0;
+    scheduler.chunks[1].command_offset = 0;
+    u64 observed = 0;
+    scheduler.Record([](vk::CommandBuffer cmdbuf) {
+        const std::array<u64, 1> payload{73};
+        cmdbuf.Check(payload);
+    });
+    scheduler.Drain(observed);
+    assert(observed == Digest(std::array<u64, 1>{73}));
+    assert(scheduler.invalidations == 1);
+}
 CASES
 int main() {
+    RejectedSecondRecord();
 CALLS
     std::puts("DEFERRED_COPY_OWNERSHIP_PASS sites=7 delayed=1 chunk_rollover=1 chunk_reuse=1 sanitizers=ASan,UBSan");
 }
