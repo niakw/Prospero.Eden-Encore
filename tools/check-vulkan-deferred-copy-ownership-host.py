@@ -50,6 +50,8 @@ f07_texture_labels = (
     'F07 invalidate native reinterpret resolve after scratch allocation',
     'F07 reject invalid Vulkan guest readback staging in runtime',
     'F07 add explicit PS5 native bad_alloc header for staging readback',
+    'F07 PS5 transactional BCn 3D compute output buffer',
+    'F07 reject null native BCn 3D output buffer handle',
 )
 f07_texture_deltas = []
 for statement in tree.body:
