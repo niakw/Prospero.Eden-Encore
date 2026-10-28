@@ -83,3 +83,7 @@ La PS5 rejette maintenant un staging GPU vide ou trop court avant toute copie de
 ## P0.4 — passage BCn 3D absent ou désactivé
 
 Une soumission BCn 3D sans passage compute disponible ne doit plus être silencieusement considérée comme terminée sur PS5 : `AccelerateImageUpload` signale une erreur explicite, que `TickAsyncUnswizzle` traite en restituant le staging différé, en conservant CpuModified et en libérant IsDecoding. Cela couvre aussi le changement de réglage après la création du runtime. Le comportement desktop reste identique. Un témoin C++ source-extrait teste les modes PS5/desktop O0/O2, le passage BCn valide et le chemin ASTC ; pixels réels/FPS non mesurés.
+
+## F07 — reprise après erreur de l'oracle
+
+Le rejet du passage BCn 3D absent est déjà appliqué par le générateur ; l'oracle le rejouait à tort une seconde fois. Deux doublons sont supprimés sans relâcher la comparaison octet par octet, tandis que les cinq deltas historiques restent strictement vérifiés.

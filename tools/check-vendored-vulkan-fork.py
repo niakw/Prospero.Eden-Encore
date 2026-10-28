@@ -154,9 +154,8 @@ with tempfile.TemporaryDirectory(prefix='eden-vulkan-fork-compare-') as d:
     upload_path = actual["vk_texture_cache_cost.cpp"]
     upload_source = upload_path.read_text()
     upload_deltas = (
-        # F07 PS5: no GPU pass must not silently acknowledge a BCn-3D upload.
-        ("#include <optional>\n#include <span>", "#include <optional>\n#include <stdexcept>\n#include <span>"),
-        ("        if (IsPixelFormatBCn(image.info.format) && image.info.type == ImageType::e3D) {\n            ASSERT(false && \"GPU unswizzle is disabled for BCn 3D texture\");\n        }\n        ASSERT(false);\n        return;", "        if (IsPixelFormatBCn(image.info.format) && image.info.type == ImageType::e3D) {\n#ifdef PS5_NATIVE\n            // Never silently acknowledge a BCn-3D upload with no compute\n            // pass. TickAsyncUnswizzle catches this and retries fresh pixels.\n            throw std::runtime_error(\"BCn 3D Vulkan unswizzle pass unavailable\");\n#else\n            ASSERT(false && \"GPU unswizzle is disabled for BCn 3D texture\");\n#endif\n        }\n        ASSERT(false);\n        return;"),
+        # The native missing-pass guard is replayed by prepare-vulkan-port.py.
+        # Only five independent post-generator source transformations are here.
     # F07 P0.4: a device without image-format-list still needs its optional
     # BCn 3D compute-buffer pass to complete native asynchronous uploads.
     ("    if (!device.IsKhrImageFormatListSupported()) {\n        return;\n    }",
