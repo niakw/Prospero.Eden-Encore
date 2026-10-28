@@ -129,7 +129,7 @@ int main() {
     Image still_valid{{{65536,65536,16},16}, &huge};
     still_valid.AllocateComputeUnswizzleBuffer(16);
     assert(huge.memory_allocator.requests==1);
-    assert(still_valid.compute_unswizzle_buffer_size==(u64{1}<<32));
+    assert(still_valid.compute_unswizzle_buffer_size==(u64{1}<<36));
 #endif
 }
 """
