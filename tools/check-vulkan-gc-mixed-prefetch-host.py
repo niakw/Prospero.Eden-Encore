@@ -114,10 +114,16 @@ struct TextureCacheRuntime {
     std::size_t issued{}, completed{}, finishes{}, freed{};
     std::vector<std::unique_ptr<std::uint8_t[]>> storage;
     std::vector<bool> deferred;
-    bool short_first{}, throw_first{};
+    bool short_first{}, throw_first{}, null_first{};
     StagingBufferRef DownloadStagingBuffer(std::size_t size, bool is_deferred = false) {
         assert(is_deferred);
         if (throw_first) {throw_first=false;throw std::bad_alloc{};}
+        if (null_first) {
+            null_first=false;
+            // A null Vulkan buffer can still report a full CPU mapping.
+            storage.push_back(std::make_unique<std::uint8_t[]>(size));
+            return {0,0,{storage.back().get(),size}};
+        }
         storage.push_back(std::make_unique<std::uint8_t[]>(size));
         deferred.push_back(true);
         ++issued;
@@ -169,10 +175,11 @@ struct Scenario {
               std::size_t eviction_budget = 40,
               u64 initial_usage = 1000_MiB,
               std::size_t expected_scanned = 0,
-              bool short_first=false, bool throw_first=false) {
+              bool short_first=false, bool throw_first=false, bool null_first=false) {
         Vulkan::TextureCacheRuntime runtime;
         runtime.short_first=short_first;
         runtime.throw_first=throw_first;
+        runtime.null_first=null_first;
 __PRODUCTION_DECLARATION__
         std::size_t bytes = 0;
         u64 usage = initial_usage;
@@ -348,6 +355,9 @@ int main() {
         0,{},40,1000_MiB,1,true,false);
     Scenario({ImageFor(0,true),ImageFor(1,true)}).Test(
         0,{},40,1000_MiB,1,false,true);
+    // Null VkBuffer + full mapped bytes must never schedule a GPU transfer.
+    Scenario({ImageFor(0,true),ImageFor(1,true)}).Test(
+        0,{},40,1000_MiB,1,false,false,true);
 #endif
     {
         std::vector<Image> images;

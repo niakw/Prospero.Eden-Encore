@@ -137,3 +137,8 @@ Sur PS5, `ReinterpretImage` invalide désormais le shadow MSAA de destination un
 ## P0.4 — ne jamais évincer une texture GPU sale après refus du staging individuel
 
 Lorsque `PrefetchDownloads` ne fournit pas de copie, `Cleanup` déclenche un téléchargement GPU individuel avant de supprimer l'image. Si son allocation échoue avec `std::bad_alloc`, renvoie un handle nul ou une zone plus courte que la texture, le chemin natif PS5 conserve désormais la texture et passe à l'entrée LRU suivante. `IsDownloadable` et le suivi GPU restent intacts ; aucune fausse copie invitée n'est validée. Une allocation saine conserve `DownloadMemory`, `Finish` et `SwizzleImage` dans le même ordre. Le nouveau témoin source-extrait vérifie les refus ainsi que le succès normal en O0/O2, PS5 et desktop. Ce correctif est une protection de données, pas une preuve de fluidité FC27.
+
+
+## P0.3/P0.4 — handles Vulkan nuls malgré un mapping complet
+
+Les téléchargements anticipés du GC et les uploads synchrones refusent désormais sur PS5 native un buffer Vulkan nul même si le mapping expose assez d'octets. Le GC ne planifie aucune copie spéculative invalide ; l'upload conserve CpuModified pour réessayer. Le générateur du port garde ces deux gardes. Les tests source-extraits reproduisent explicitement le cas handle nul / mapping complet, en plus du staging court, du refus et du succès, sous compilation hôte. Aucune amélioration du frametime FC27 n'est déduite de ces tests.
