@@ -34,12 +34,17 @@ upload_deltas = ast.literal_eval(upload_nodes[0].value)
 assert len(upload_deltas) == 5
 assert sum("VK_KHR_image_format_list" in current for _, current in upload_deltas) == 1
 
-# The new BCn-3D no-pass error path is applied by the generator itself,
-# not by the older upload-barrier oracle. Reverse these two independently
-# reviewed edits before checking the original pre-deferred-copy blob SHA.
+# These native BCn-3D and reinterpret-image guards are applied by the
+# generator itself, not by the older upload-barrier oracle. Reverse EVERY
+# independently reviewed change to the same texture translation unit in
+# generator order before checking the original pre-deferred-copy blob SHA.
+# Keep the fixed historical fingerprint strict, not a newly calculated SHA.
 f07_texture_labels = (
     'F07 native BCn 3D unavailable pass exception include',
     'F07 native BCn 3D unavailable pass retry signal',
+    'F07 reject empty native Vulkan reinterpret image copies',
+    'F07 validate native Vulkan reinterpret scratch byte budget',
+    'F07 reject scratch sizes outside Vulkan transient buffer slots',
 )
 f07_texture_deltas = []
 for statement in tree.body:
