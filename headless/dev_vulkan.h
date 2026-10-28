@@ -17,7 +17,10 @@ inline bool trace_pipelines = false; // report first pipeline uses to klog
 // Experimental PS5 all-on: build a usable non-optimized Vulkan pipeline first
 // for new runtime shaders, then optimize with one background worker. Never
 // rebuild disk-preloaded pipelines (those already have optimized binaries).
-#if defined(EDEN_DEV_PROFILE)
+// All-on native release: compile a usable first-use pipeline before its
+// bounded idle-worker optimization. Other platforms keep their old default.
+// Per-title fast_pipelines=off remains available for A/B troubleshooting.
+#if defined(PS5_NATIVE) || defined(EDEN_DEV_PROFILE)
 inline bool fast_first_pipelines = true;
 #else
 inline bool fast_first_pipelines = false;
@@ -64,7 +67,7 @@ inline void ResetForTitle() noexcept {
     disable_descriptor_buffer = false;
     robustness2 = false;
     trace_pipelines = false;
-#if defined(EDEN_DEV_PROFILE)
+#if defined(PS5_NATIVE) || defined(EDEN_DEV_PROFILE)
     fast_first_pipelines = true;
 #else
     fast_first_pipelines = false;

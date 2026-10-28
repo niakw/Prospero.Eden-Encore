@@ -241,3 +241,52 @@ with tempfile.TemporaryDirectory(prefix="eden-r313-pipelines-") as d:
     subprocess.run([str(app)], check=True, timeout=20)
 print("PASS F07 initial builder teardown, optimizer queued lifetime, cancel, null handle, rejection, release/acquire")
 print("PASS R313 runtime-only fast-first, disk cache exclusion, one worker, no OOB index 24")
+
+
+# Compile the actual default/reset contract on native release and non-native
+# profiles. The fast-first feature has a runtime opt-out; it must reset to
+# the profile default only when the next title begins.
+header = (root / "headless/dev_vulkan.h").read_text()
+assert header.count("#if defined(PS5_NATIVE) || defined(EDEN_DEV_PROFILE)") == 2
+default_probe = r"""
+#include <cassert>
+#include <cstdio>
+#include "headless/dev_vulkan.h"
+int main() {
+#if defined(PS5_NATIVE) || defined(EDEN_DEV_PROFILE)
+    constexpr bool expected = true;
+#else
+    constexpr bool expected = false;
+#endif
+    using namespace Eden::DevVulkan;
+    assert(fast_first_pipelines == expected);
+    fast_first_pipelines = !expected;
+    assert(fast_first_pipelines != expected);
+    ResetForTitle();
+    assert(fast_first_pipelines == expected);
+    fast_first_pipelines = false;
+    assert(!fast_first_pipelines);
+    ResetForTitle();
+    assert(fast_first_pipelines == expected);
+    std::puts("FAST_FIRST_DEFAULT_PROFILE_PASS");
+}
+"""
+with tempfile.TemporaryDirectory(prefix="encore-f07-fast-first-default-") as d:
+    probe_source = Path(d) / "defaults.cpp"
+    probe_source.write_text(default_probe)
+    for label, macros in (
+        ("native-release", ["-DPS5_NATIVE=1"]),
+        ("native-dev", ["-DPS5_NATIVE=1", "-DEDEN_DEV_PROFILE=1"]),
+        ("desktop-release", []),
+        ("desktop-dev", ["-DEDEN_DEV_PROFILE=1"]),
+    ):
+        for optimization in ("-O0", "-O2"):
+            binary = Path(d) / (label + optimization[1:])
+            subprocess.run(["c++", "-std=c++20", optimization,
+                            "-Wall", "-Wextra", "-Werror", "-I", str(root),
+                            *macros, str(probe_source), "-o", str(binary)],
+                           check=True, capture_output=True, text=True, timeout=40)
+            result = subprocess.run([str(binary)], check=True,
+                                    capture_output=True, text=True, timeout=15)
+            assert "FAST_FIRST_DEFAULT_PROFILE_PASS" in result.stdout
+            print("FAST_FIRST_DEFAULT_PROFILE_PASS", label, optimization)
