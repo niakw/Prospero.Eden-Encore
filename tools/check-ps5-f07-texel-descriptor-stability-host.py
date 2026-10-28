@@ -80,7 +80,7 @@ with tempfile.TemporaryDirectory(prefix="encore-f07-texel-descriptors-") as fold
         for native in (False,True):
             exe=Path(folder)/(("native" if native else "desktop")+opt[1:])
             cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
-                 "-Wno-class-memaccess","-fsanitize=undefined",
+                 "-fsanitize=undefined",
                  "-fno-sanitize-recover=all",*(['-DPS5_NATIVE=1'] if native else []),
                  str(p),"-o",str(exe)]
             compiled=subprocess.run(cmd,capture_output=True,text=True,timeout=40)
