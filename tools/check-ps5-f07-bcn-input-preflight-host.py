@@ -43,6 +43,9 @@ struct Pass {
     unsigned allocated{};
     void Validate(Image& image,const Staging& swizzled,std::span<const Swizzle> swizzles,
                   u32 z_start,u32 z_count) {
+        // The desktop fixture deliberately extracts a native-only guard.
+        (void)image; (void)swizzled; (void)swizzles;
+        (void)z_start; (void)z_count;
 """ + block + r"""
         ++allocated;
     }
