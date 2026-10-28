@@ -21,7 +21,7 @@ assert "F07 avoid all commands source barrier for first native BCn3D batch" in g
 assert "VK_IMAGE_LAYOUT_GENERAL" in pre
 assert "VK_IMAGE_LAYOUT_GENERAL" in post
 assert method.index("VK_PIPELINE_STAGE_ALL_COMMANDS_BIT") < method.index(
-    "VK_PIPELINE_STAGE_TRANSFER_BIT,\\n            0,\\n            nullptr, buffer_barrier, pre_barrier")
+    "VK_PIPELINE_STAGE_TRANSFER_BIT,\n            0,\n            nullptr, buffer_barrier, pre_barrier")
 # Extract the source-selected stage expression, not an independently
 # invented equivalent, to exercise first vs reused chunks in a C++ fixture.
 barrier_start=method.index("cmdbuf.PipelineBarrier(", method.index("Single barrier handles both buffer and image."))
@@ -30,7 +30,14 @@ stage_fragment=stage_src[stage_src.index("#ifdef PS5_NATIVE"):stage_src.index(" 
 assert stage_fragment.count("VK_PIPELINE_STAGE_ALL_COMMANDS_BIT")==1
 assert stage_fragment.count("VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT")==2
 assert "is_first_chunk ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT :" in stage_fragment
-stage_fragment=stage_fragment.rstrip().removesuffix(",")+";"
+# Keep the preprocessor selection from production but make the extracted
+# two comma-terminated call arguments into a standalone expression.
+stage_fragment=stage_fragment.replace(
+    "VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,", "VK_PIPELINE_STAGE_ALL_COMMANDS_BIT"
+).replace(
+    "VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,\\n#endif",
+    "VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT\\n#endif",
+).rstrip()+"\\n;"
 
 for wf in (".github/workflows/encore-core-fast-gate.yml",
            ".github/workflows/encore-core-preflight.yml"):
@@ -62,6 +69,7 @@ constexpr int VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL=1;
 constexpr int VK_IMAGE_LAYOUT_GENERAL=2;
 constexpr std::uint32_t VK_QUEUE_FAMILY_IGNORED=~std::uint32_t{};
 VkPipelineStageFlags SrcStage(bool is_first_chunk) {
+    (void)is_first_chunk; // Original desktop stage is unconditional.
     const VkPipelineStageFlags stage =
 """ + stage_fragment + r"""
     return stage;
