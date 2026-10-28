@@ -162,7 +162,7 @@ Les vérifications de staging citées plus haut imposent **handle Vulkan réel E
 | B2 — pipelines/descripteurs | **10/10 décisions source; CI/console ouvertes** | Scratch preflight, FIFO wait, rollback Record, ring/tick et quota optimiseur inspectés | CI groupée puis qualifier les attentes fallback réellement coûteuses sur console |
 | B3 — rasterizer/guest | **9/9 décisions source; mesures console ouvertes** | Preflight, pair-lock, writes guest, frame, FIFO audités ; miroir distinct | Traces >50/>100 ms, progression guest et captures HUD |
 | B4 — textures/HUD | **12/12 décisions source; CI/console ouvertes** | Async rollback, staging nul/court, aliases, GC, BCn et recycler inspectés | Gate commun, puis HUD/mi-temps/bandeau noir sur console |
-| B5 — gates groupés + console | **Bloqué par B1–B4** | Build natif sur SHA unique, puis test physique FC27/BOTW | Fermer ou rouvrir par preuve |
+| B5 — gates groupés + console | **38/38 revues closes ; CI et console ouvertes** | Fast gate, prévalidation et CodeQL sur `63261b8` ; build natif lancé sur `9c16d89` (mêmes sources moteur, oracle hôte ultérieurement réparé) | Attendre verdicts ; résoudre uniquement un échec prouvé, puis retenir un SHA de build/gates qualifié avant essai console |
 
 **Reprise programmée :** tâche horaire « Eden Encore — reprise F07 » ; ses actions doivent être revérifiées via le HEAD, les commits et le journal de lots. Elle doit cesser lorsque les critères de clôture sont satisfaits et aucune modification ne doit être inventée si aucun outil n'est accessible.
 
@@ -188,3 +188,11 @@ Les vérifications de staging citées plus haut imposent **handle Vulkan réel E
 - Ce checkpoint [full-build] déclenche une **compilation native authentique** du même arbre moteur après ce correctif de test, sans nouvelle divergence des sources ou du générateur Vulkan. Le paquet reste non qualifié tant que la CI et un essai FC 27/BOTW sur console ne l'ont pas confirmé.
 
 - Suivi du fast gate : après le premier témoin réparé (sortie `DEFERRED_COPY_OWNERSHIP_PASS`), un **second** harnais historique `check-vulkan-present-draw-storage-host.py` échouait pour la même méthode `InvalidateState` absente de son Scheduler minimal. Correctif `26b09c8c93266624ffb7877991ff3ad2737550f3` : fonction simulée + assertion qu'aucune invalidation n'a lieu sur les 15 cas de présentations enregistrées. La compilation PS5 est relancée sur ce contenu de tests [full-build] plutôt que de poursuivre un candidat dont un témoin est déjà connu cassé.
+
+## Reprise B5 sans relance inutile — 29 octobre 2026
+
+**Source moteur inchangée depuis `407ad36` :** les commits de réparation de harnais `3384977`, `26b09c8`, `63261b8` ne modifient ni le moteur PS5, ni le générateur du fork Vulkan. Les échecs de tests qui les ont motivés ne prouvent pas des régressions du binaire GPU.
+
+**Runs à lire avant tout nouveau patch :** fast gate [40785959436](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40785959436), source preflight [40785959512](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40785959512), CodeQL [40785959464](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40785959464) sur `63261b8`; build PS5 [40785052216](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40785052216) lancé sur `9c16d89` (avant dernière réparation de témoin, moteur identique). Aucun de ces runs n'était clos globalement au moment de cette note. Ne pas pousser de nouveaux correctifs GPU juste pour provoquer une nouvelle CI, ni relancer inutilement un build natif en cours.
+
+**Décision immédiate :** si un gate échoue, lire la première vraie erreur et réparer la cause dans le plus petit lot cohérent (source + générateur + témoin lorsqu'il s'agit de Vulkan). Sinon conserver le candidat et le qualifier sur console, avec comparaison mesurée de FC27 froid/chaud, 1440p 1×, HUD, pause/mi-temps, et contrôle BOTW. La date/sha du paquet réellement testé doit être attachée aux résultats. La réussite CI ne démontre pas les 30 FPS stables.
