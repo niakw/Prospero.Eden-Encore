@@ -69,7 +69,9 @@ def cut(s,start,end):
 dst=cut(native,"    const u64 dst_size_wide","\n    Tegra::Memory::GpuGuestMemory<u8")
 src=cut(native,"    const u64 src_size_wide","\n    GPUVAddr src_addr")
 mid=cut(native,"    const u64 pitch_wide","\n    intermediate_buffer.resize_destructive")
-acc=cut(vulkan,"    const u64 buffer_size_wide","\n    static constexpr auto sync_info")
+acc=cut(vulkan,"    const u64 buffer_size_wide","\n#endif\n    static constexpr auto sync_info")
+# The extracted desktop arithmetic is inside #else; keep its closing #endif out.
+assert "#else\n    // Widen before multiplying" in vulkan
 cpp=r"""
 #include <cassert>
 #include <cstdint>
