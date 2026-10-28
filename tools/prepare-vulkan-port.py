@@ -4309,3 +4309,14 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "                for (size_t i = 0; i < 8; ++i)\n                    is_continue |= (rt_active_mask & (1u << i)) && view_image_id == rt_image_id[i];",
     "#ifdef PS5_NATIVE\n                u32 color_slots = rt_active_mask & ((1u << NUM_RT) - 1);\n                while (color_slots) {\n                    const u32 slot = std::countr_zero(color_slots);\n                    is_continue |= view_image_id == rt_image_id[slot];\n                    color_slots &= color_slots - 1;\n                }\n#else\n                for (size_t i = 0; i < 8; ++i)\n                    is_continue |= (rt_active_mask & (1u << i)) && view_image_id == rt_image_id[i];\n#endif",
     "F07 enumerate active color slots for feedback image IDs")
+
+# F07 P0.3: sparse feedback alias checks have no observable comparisons
+# after finding an active color attachment. Exit immediately on a match.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "                    is_continue |= view.id == render_targets.color_buffer_ids[slot];\n                    color_slots &= color_slots - 1;",
+    "                    if (view.id == render_targets.color_buffer_ids[slot]) {\n                        is_continue = true;\n                        break;\n                    }\n                    color_slots &= color_slots - 1;",
+    "F07 short circuit active color view feedback match")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "                    is_continue |= view_image_id == rt_image_id[slot];\n                    color_slots &= color_slots - 1;",
+    "                    if (view_image_id == rt_image_id[slot]) {\n                        is_continue = true;\n                        break;\n                    }\n                    color_slots &= color_slots - 1;",
+    "F07 short circuit active color image feedback match")

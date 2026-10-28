@@ -12,10 +12,21 @@ assert method.count("std::countr_zero(color_slots)")==2
 assert "F07 enumerate active color slots for feedback view IDs" in gen
 assert "F07 enumerate active color slots for feedback image IDs" in gen
 assert method.count("color_slots &= color_slots - 1;")==2
+assert method.count("is_continue = true;\n                        break;")==2
+assert "F07 short circuit active color view feedback match" in gen
+assert "F07 short circuit active color image feedback match" in gen
 assert method.count("#else\n                for (size_t i = 0; i < 8; ++i)")==2
 for wf in (".github/workflows/encore-core-fast-gate.yml", ".github/workflows/encore-core-preflight.yml"):
     assert "python3 -B tools/check-ps5-f07-feedback-active-color-slots-host.py" in (root/wf).read_text()
 
+# Count only the two native active-attachment comparisons. The rest of
+# the source-extracted function is byte-identical to the live engine.
+instrumented = method.replace(
+    "view.id == render_targets.color_buffer_ids[slot]",
+    "CountColorView(view.id, render_targets.color_buffer_ids[slot])").replace(
+    "view_image_id == rt_image_id[slot]",
+    "CountColorImage(view_image_id, rt_image_id[slot])")
+assert instrumented != method
 cpp=r"""
 #include <array>
 #include <bit>
@@ -34,6 +45,10 @@ struct RenderTargets{
   ImageViewId depth_buffer_id{};
 };
 struct Runtime{unsigned barriers{};void BarrierFeedbackLoop(){++barriers;}};
+inline unsigned color_view_checks{};
+inline unsigned color_image_checks{};
+inline bool CountColorView(ImageViewId a, ImageViewId b) {++color_view_checks;return a==b;}
+inline bool CountColorImage(ImageId a, ImageId b) {++color_image_checks;return a==b;}
 namespace Settings{
 struct Toggle{bool enabled{true};bool GetValue()const{return enabled;}};
 struct Values{Toggle barrier_feedback_loops;};
@@ -56,7 +71,7 @@ template<class P>struct TextureCache{
 };
 struct Policy{};
 template<class P>
-""" + method + r"""
+""" + instrumented + r"""
 int main(){
  const ImageViewInOut depth_alias[]={{1}};
  const ImageViewInOut no_alias[]={{4}};
@@ -98,6 +113,27 @@ int main(){
    image_collision.CheckFeedbackLoop(depth_alias);
    assert(image_collision.runtime.barriers==((mask & (1u<<3)) ? 0u:1u));
  }
+#ifdef PS5_NATIVE
+ // A first attached-color hit never inspects the seven remaining slots.
+ color_view_checks=0;color_image_checks=0;
+ TextureCache<Policy> fast_view{};
+ fast_view.rt_active_mask=(1u<<NUM_RT)|0xff;
+ fast_view.slot_image_views[1].image_id=77;
+ fast_view.render_targets.color_buffer_ids[0]=1;
+ fast_view.CheckFeedbackLoop(depth_alias);
+ assert(fast_view.runtime.barriers==0);
+ assert(color_view_checks==1 && color_image_checks==0);
+ // Image-level alias after the view IDs miss: eight view comparisons,
+ // but only one image comparison on the first matching color slot.
+ color_view_checks=0;color_image_checks=0;
+ TextureCache<Policy> fast_image{};
+ fast_image.rt_active_mask=(1u<<NUM_RT)|0xff;
+ fast_image.slot_image_views[1].image_id=77;
+ fast_image.rt_image_id[0]=77;
+ fast_image.CheckFeedbackLoop(depth_alias);
+ assert(fast_image.runtime.barriers==0);
+ assert(color_view_checks==8 && color_image_checks==1);
+#endif
  TextureCache<Policy> empty{};
  empty.CheckFeedbackLoop(null_view);
  assert(empty.runtime.barriers==0);
@@ -127,4 +163,4 @@ with tempfile.TemporaryDirectory(prefix="f07-active-color-feedback-") as td:
             assert build.returncode==0,(native,opt,build.stderr[-4000:])
             run=subprocess.run([str(exe)],capture_output=True,text=True,timeout=15)
             assert run.returncode==0,(native,opt,run.stderr[-4000:])
-print("F07_ACTIVE_COLOR_FEEDBACK_PASS native_desktop_O0_O2 masks=256 depth=1 color_view_alias=1 color_image_alias=1 disabled=1")
+print("F07_ACTIVE_COLOR_FEEDBACK_PASS native_desktop_O0_O2 masks=256 depth=1 color_view_alias=1 color_image_alias=1 short_circuit=1 disabled=1")
