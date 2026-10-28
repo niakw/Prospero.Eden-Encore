@@ -84,18 +84,22 @@ subprocess.run(['bash', str(root / 'tools/ci/package-image.sh'), str(app), str(i
 image_digest = hashlib.sha256(image.read_bytes()).hexdigest()
 # Prove the package-image path is deterministic before publishing its checksum. This catches a
 # third-party timestamp/randomness regression instead of silently changing release bytes.
+# Pack twice to the SAME canonical destination. A change of output
+# basename can affect tool metadata independently of source determinism.
+# Preserve the original bytes and restore them even after a failed check.
 repro = dist / f'.{image.name}.repro'
+image.replace(repro)
 try:
-    subprocess.run(['bash', str(root / 'tools/ci/package-image.sh'), str(app), str(repro)], check=True)
-    repro_digest = hashlib.sha256(repro.read_bytes()).hexdigest()
+    subprocess.run(['bash', str(root / 'tools/ci/package-image.sh'), str(app), str(image)], check=True)
+    repro_digest = hashlib.sha256(image.read_bytes()).hexdigest()
     if repro_digest != image_digest:
-        # Report byte offsets, not just hashes. This check still fails closed;
-        # do not publish potentially nondeterministic release image bytes.
+        # Keep this fail-closed: diagnose the bytes, never waive the mismatch.
         subprocess.run([sys.executable, str(root / 'tools/ci/diagnose-image-repro.py'),
-                        str(image), str(repro)], check=False)
+                        str(repro), str(image)], check=False)
         raise SystemExit(f'FFPFSC reproducibility check failed: {image_digest} != {repro_digest}')
 finally:
-    repro.unlink(missing_ok=True)
+    image.unlink(missing_ok=True)
+    repro.replace(image)
 (dist / 'SHA256SUMS').write_text(
     f'{digest}  {archive.name}\n'
     f'{ftp_digest}  {ftp_archive.name}\n'
