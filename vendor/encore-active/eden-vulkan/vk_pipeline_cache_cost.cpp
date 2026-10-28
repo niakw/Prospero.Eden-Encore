@@ -805,9 +805,20 @@ ComputePipeline* PipelineCache::CurrentComputePipeline() {
     if (is_new) {
         pipeline = CreateComputePipeline(key, shader);
 #ifdef PS5_NATIVE
-        if (!pipeline && failed_compute_retries.size() < 32) {
-            // A transient guest shader translation failure must not permanently
-            // suppress a compute dispatch. Track failures only.
+        if (!pipeline) {
+            // Bound recovery metadata without starving the latest failed
+            // compute shaders after 32 earlier failed keys. This scan runs
+            // ONLY on a new null pipeline, not per compute dispatch.
+            if (failed_compute_retries.size() >= 32) {
+                const auto oldest = std::min_element(
+                    failed_compute_retries.begin(), failed_compute_retries.end(),
+                    [](const auto& left, const auto& right) {
+                        return left.second.eligible_at < right.second.eligible_at;
+                    });
+                if (oldest != failed_compute_retries.end()) {
+                    failed_compute_retries.erase(oldest);
+                }
+            }
             failed_compute_retries.try_emplace(
                 key, ComputeRetryState{
                     std::chrono::steady_clock::now() + std::chrono::seconds(2), false});
@@ -1134,9 +1145,21 @@ GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {
 #endif
         pipeline = CreateGraphicsPipeline();
 #ifdef PS5_NATIVE
-        if (!pipeline && failed_graphics_retries.size() < 64) {
-            // Cold misses are allowed to fail, but do not cache a transient
-            // translation error forever. Only failed keys allocate metadata.
+        if (!pipeline) {
+            // Failed-key retry metadata is capped, but a burst of >=64
+            // failures must not permanently deny NEW shaders their one
+            // delayed recovery attempt. Rotate only on failure, never on a
+            // successful draw or during the hot null-cache lookup.
+            if (failed_graphics_retries.size() >= 64) {
+                const auto oldest = std::min_element(
+                    failed_graphics_retries.begin(), failed_graphics_retries.end(),
+                    [](const auto& left, const auto& right) {
+                        return left.second.eligible_at < right.second.eligible_at;
+                    });
+                if (oldest != failed_graphics_retries.end()) {
+                    failed_graphics_retries.erase(oldest);
+                }
+            }
             failed_graphics_retries.try_emplace(
                 graphics_key, GraphicsRetryState{
                     std::chrono::steady_clock::now() + std::chrono::seconds(2), false});

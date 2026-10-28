@@ -14,7 +14,9 @@ stop = "    if (::Eden::DevVulkan::trace_pipelines && pipeline) {"
 assert src.count(begin) == 1 and src.count(stop) == 1
 body = src[src.index(begin):src.index(stop, src.index(begin))]
 assert body.count("CreateComputePipeline(key, shader)") == 2
-assert "failed_compute_retries.size() < 32" in body
+assert "failed_compute_retries.size() >= 32" in body
+assert "std::min_element(" in body
+assert "F07 bounded compute retry fairness under failing shader burst" in gen
 assert "failed_compute_retries.erase(failed);" in body
 assert 'if (pipeline) {\n                failed_compute_retries.erase(failed);' not in body
 assert "std::chrono::seconds(2)" in body
@@ -24,6 +26,7 @@ assert "F07 one delayed compute shader retry" in gen
 assert "failed_compute_retries" not in pinned
 
 cpp = r"""
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <map>
@@ -104,8 +107,19 @@ int main() {
     full.key = 33;
     full.Probe();
     assert(full.create_calls == 1 && full.failed_compute_retries.size() == 32);
+    assert(full.failed_compute_retries.contains(33));
+    int displaced = 0;
+    for (int i = 0; i < 32; ++i)
+        if (!full.failed_compute_retries.contains(i)) ++displaced;
+    assert(displaced == 1);
     for (int i = 0; i < 1024; ++i) full.Probe();
     assert(full.create_calls == 1);
+    full.failed_compute_retries.at(33).eligible_at =
+        std::chrono::steady_clock::now() - std::chrono::seconds(1);
+    full.Probe();
+    assert(full.create_calls == 2 && full.failed_compute_retries.size() == 31);
+    for (int i = 0; i < 1024; ++i) full.Probe();
+    assert(full.create_calls == 2);
 }
 """
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
@@ -120,4 +134,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-compute-retry-") as folder:
                         "-fno-sanitize-recover=all", str(path), "-o", str(exe)],
                        check=True, timeout=40)
         subprocess.run([str(exe)], check=True, timeout=20)
-print("F07_FAILED_COMPUTE_RETRY_PASS bounded=32 cooldown=2s retry=1 O0=1 O2=1")
+print("F07_FAILED_COMPUTE_RETRY_PASS bounded=32 cooldown=2s retry=1 newest_retries_when_full=1 O0=1 O2=1")

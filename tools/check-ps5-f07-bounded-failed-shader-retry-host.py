@@ -20,7 +20,9 @@ end = "    if (!pipeline) {\n        return nullptr;"
 assert src.count(start) == 1
 block = src[src.index(start) + len(start):src.index(end, src.index(start))]
 assert block.count("CreateGraphicsPipeline()") == 2
-assert "failed_graphics_retries.size() < 64" in block
+assert "failed_graphics_retries.size() >= 64" in block
+assert "std::min_element(" in block
+assert "F07 bounded graphics retry fairness under failing shader burst" in gen
 assert "failed->second.attempted = true;" in block
 assert 'failed_graphics_retries.erase(failed);' in block
 assert 'if (pipeline) {\n                failed_graphics_retries.erase(failed);' not in block
@@ -39,6 +41,7 @@ assert '${PORT_BUILD_DIR}/include/video_core/renderer_vulkan/vk_pipeline_cache.h
 assert "::Common::unordered_map<GraphicsPipelineCacheKey, std::unique_ptr<GraphicsPipeline>> graphics_cache;" in hdr
 
 cpp = r"""
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -130,8 +133,22 @@ int main() {
     full.Probe();
     assert(full.create_calls == 1);
     assert(full.failed_graphics_retries.size() == 64);
+    assert(full.failed_graphics_retries.contains(65));
+    // Exactly one previous entry was displaced, so the count stays bounded.
+    int displaced = 0;
+    for (int i = 0; i < 64; ++i) {
+        if (!full.failed_graphics_retries.contains(i)) ++displaced;
+    }
+    assert(displaced == 1);
     for (int i = 0; i < 1024; ++i) full.Probe();
     assert(full.create_calls == 1);
+    full.failed_graphics_retries.at(65).eligible_at =
+        std::chrono::steady_clock::now() - std::chrono::seconds(1);
+    full.Probe();
+    assert(full.create_calls == 2);
+    assert(full.failed_graphics_retries.size() == 63);
+    for (int i = 0; i < 1024; ++i) full.Probe();
+    assert(full.create_calls == 2);
 }
 """
 compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++")
@@ -146,4 +163,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-failed-shader-") as folder:
                         "-fsanitize=undefined", "-fno-sanitize-recover=all",
                         str(path), "-o", str(exe)], check=True, timeout=40)
         subprocess.run([str(exe)], check=True, timeout=20)
-print("F07_FAILED_SHADER_RETRY_PASS bounded=64 cooldown=2s once_per_key=1 recovered=1 persistent_failure=1 O0=1 O2=1")
+print("F07_FAILED_SHADER_RETRY_PASS bounded=64 cooldown=2s once_per_key=1 recovered=1 persistent_failure=1 newest_retries_when_full=1 O0=1 O2=1")
