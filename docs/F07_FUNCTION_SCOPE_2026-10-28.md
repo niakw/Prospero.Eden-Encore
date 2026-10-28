@@ -125,3 +125,7 @@ Un lot natif de quatre décodages terminés maximum est suivi par ses identifian
 ## P0.4 — conversion des coordonnées avant les copies Vulkan
 
 `TextureCacheRuntime::ReinterpretImage` convertissait les abscisses et largeurs source avec une multiplication 32 bits **avant** les vérifications de dimension et d'allocation. Une valeur admissible après division pouvait donc être tronquée durant la multiplication. Sur PS5, les formats à ratio nul et les abscisses source négatives sont refusés, le calcul est fait en 64 bits, puis son résultat vérifié contre les bornes du type offset/extent avant de construire les `VkBufferImageCopy`. Le comportement desktop est conservé. Le test source-extrait vérifie le cas de multiplication 32 bits débordante mais de quotient valide, les formats invalides, les offsets négatifs et les largeurs converties invalides en O0/O2. Les performances et les pixels réels ne sont pas encore mesurés sur PS5.
+
+## P0.4 — ne pas invalider un resolve MSAA pour une copie rejetée
+
+Sur PS5, `ReinterpretImage` invalide désormais le shadow MSAA de destination uniquement après validation des copies et allocation réussie du scratch buffer. Les dimensions vides, formats invalides et dépassements de taille ne détruisent plus l'état du resolve déjà disponible ; toute copie valide garde une invalidation avant l'enregistrement Vulkan. Le témoin source-extrait vérifie le nombre d'invalidations en plus des allocations refusées, et conserve le comportement desktop original. Pas de mesure GPU console.

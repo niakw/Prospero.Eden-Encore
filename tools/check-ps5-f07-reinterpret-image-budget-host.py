@@ -40,6 +40,11 @@ assert "area > max_size / depth" in size
 assert "volume > max_size / img_bpp" in size
 assert "scratch_max = size_t{1} << (std::numeric_limits<size_t>::digits - 1)" in size
 assert "if (total_size > scratch_max)" in size
+assert "F07 defer native reinterpret resolve invalidation until valid allocation" in generator
+assert "F07 invalidate native reinterpret resolve after scratch allocation" in generator
+assert method.index("const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);") < method.index(
+    "#ifdef PS5_NATIVE\n    // A rejected reinterpretation does not alter")
+assert method.index("InvalidateResolveShadow(dst.Handle());", method.index("const VkBuffer copy_buffer")) < method.index("scheduler.RequestOutsideRenderPassOperationContext();")
 assert "F07 reject scratch sizes outside Vulkan transient buffer slots" in generator
 assert size.index("#else\n    for (const auto& copy") > size.index("#ifdef PS5_NATIVE")
 assert size.index("const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);") > size.index("#endif")
@@ -51,13 +56,17 @@ cpp=r"""
 #include <vector>
 using u32=std::uint32_t;
 using VkBuffer=std::size_t;
+using VkImage=std::size_t;
+inline constexpr bool ENABLE_MSAA_RESOLVE_CONSUME=true;
 struct Extent {u32 width{},height{},depth{};};
 struct ImageCopy {Extent extent{};};
 struct ImageInfo {u32 format{};};
-struct Image {ImageInfo info{};};
+struct Image {ImageInfo info{}; VkImage Handle() const {return 73;} };
 u32 BytesPerBlock(u32 format) {return format;}
 struct Runtime {
     std::size_t calls{},last_size{};
+    std::size_t invalidates{};
+    void InvalidateResolveShadow(VkImage image) {assert(image==73);++invalidates;}
     VkBuffer GetTemporaryBuffer(std::size_t bytes) {
 #ifdef PS5_NATIVE
         assert(bytes!=0);
@@ -67,6 +76,9 @@ struct Runtime {
         return bytes;
     }
     void ReinterpretImage(Image& dst,const std::vector<ImageCopy>& copies) {
+#ifndef PS5_NATIVE
+        if (ENABLE_MSAA_RESOLVE_CONSUME) InvalidateResolveShadow(dst.Handle());
+#endif
 __SOURCE_EMPTY_GUARD__
 __SOURCE_SIZE_GUARD__
         static_cast<void>(copy_buffer);
@@ -77,32 +89,33 @@ int main() {
     Runtime empty;
     empty.ReinterpretImage(normal,{});
 #ifdef PS5_NATIVE
-    assert(empty.calls==0);
+    assert(empty.calls==0 && empty.invalidates==0);
 #else
     assert(empty.calls==1 && empty.last_size==0);
 #endif
     Runtime valid;
     valid.ReinterpretImage(normal,{{{4,5,1}},{{4,1,2}}});
     assert(valid.calls==1 && valid.last_size==112);
+    assert(valid.invalidates==1);
     Image invalid_format{{0}};
     Runtime invalid;
     invalid.ReinterpretImage(invalid_format,{{{4,5,1}}});
 #ifdef PS5_NATIVE
-    assert(invalid.calls==0);
+    assert(invalid.calls==0 && invalid.invalidates==0);
 #endif
     for (ImageCopy copy : {ImageCopy{{0,5,1}},ImageCopy{{4,0,1}},
                            ImageCopy{{4,5,0}}}) {
         Runtime zero;
         zero.ReinterpretImage(normal,{copy});
 #ifdef PS5_NATIVE
-        assert(zero.calls==0);
+        assert(zero.calls==0 && zero.invalidates==0);
 #endif
     }
     const u32 max=(std::numeric_limits<u32>::max)();
     Runtime product;
     product.ReinterpretImage(normal,{{{max,max,max}}});
 #ifdef PS5_NATIVE
-    assert(product.calls==0);
+    assert(product.calls==0 && product.invalidates==0);
 #endif
     // A positive, non-overflowing size above the last scratch-array slot
     // must also be rejected before GetTemporaryBuffer can index past it.
@@ -110,14 +123,14 @@ int main() {
     Runtime above_slot;
     above_slot.ReinterpretImage(one_byte,{{{max,max,1}}});
 #ifdef PS5_NATIVE
-    assert(above_slot.calls==0);
+    assert(above_slot.calls==0 && above_slot.invalidates==0);
 #endif
     // Keep an independent accumulative overflow witness in the source;
     // the scratch slot ceiling normally rejects this sequence even earlier.
     Runtime aggregate;
     aggregate.ReinterpretImage(one_byte,{{{max,max,1}},{{max,max,1}}});
 #ifdef PS5_NATIVE
-    assert(aggregate.calls==0);
+    assert(aggregate.calls==0 && aggregate.invalidates==0);
 #endif
 }
 """.replace("__SOURCE_EMPTY_GUARD__",early).replace("__SOURCE_SIZE_GUARD__",size)
@@ -136,4 +149,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-vulkan-reinterpret-") as folde
             assert built.returncode==0,(native,opt,built.stderr[-6000:])
             ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
-print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 valid=1 desktop_original=1 O0=1 O2=1")
+print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 valid=1 desktop_original=1 O0=1 O2=1")

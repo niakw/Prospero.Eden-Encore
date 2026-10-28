@@ -1164,9 +1164,11 @@ void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
         return;
     }
 #endif
+#ifndef PS5_NATIVE
     if (ENABLE_MSAA_RESOLVE_CONSUME) {
         InvalidateResolveShadow(dst.Handle());
     }
+#endif
     boost::container::small_vector<VkBufferImageCopy, 16> vk_in_copies(copies.size());
     boost::container::small_vector<VkBufferImageCopy, 16> vk_out_copies(copies.size());
     const VkImageAspectFlags src_aspect_mask = src.AspectMask();
@@ -1263,6 +1265,14 @@ void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
     }
 #endif
     const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);
+#ifdef PS5_NATIVE
+    // A rejected reinterpretation does not alter the destination image.
+    // Invalidate its resolved shadow only after native validation and
+    // scratch allocation succeeded, before submitting Vulkan commands.
+    if (ENABLE_MSAA_RESOLVE_CONSUME) {
+        InvalidateResolveShadow(dst.Handle());
+    }
+#endif
     const VkImage dst_image = dst.Handle();
     const VkImage src_image = src.Handle();
     scheduler.RequestOutsideRenderPassOperationContext();
