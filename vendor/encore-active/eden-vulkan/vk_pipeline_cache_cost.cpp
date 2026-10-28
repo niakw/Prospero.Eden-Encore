@@ -1085,6 +1085,13 @@ void PipelineCache::QueueVulkanPipelineCacheFlush() {
     if (!use_vulkan_pipeline_cache || vulkan_pipeline_cache_filename.empty()) {
         return;
     }
+#ifdef PS5_NATIVE
+    // Recover a failed background serialization without racing the owner's
+    // non-atomic quota. The existing time gate still bounds retry frequency.
+    if (flush_worker_failed.exchange(false, std::memory_order_acq_rel)) {
+        pipelines_since_flush = VULKAN_CACHE_FLUSH_PIPELINES;
+    }
+#endif
     if (++pipelines_since_flush < VULKAN_CACHE_FLUSH_PIPELINES) {
         return;
     }
@@ -1116,8 +1123,16 @@ void PipelineCache::QueueVulkanPipelineCacheFlush() {
                 vulkan_pipeline_cache.Read(&size, nullptr);
                 last_cache_size.store(size, std::memory_order_relaxed);
             } catch (const std::exception& error) {
+#ifdef PS5_NATIVE
+                // Signal a new checkpoint, but only the GPU owner may update
+                // the ordinary pipeline build quota on its next call.
+                flush_worker_failed.store(true, std::memory_order_release);
+#endif
                 LOG_WARNING(Render_Vulkan, "Deferred driver cache flush failed: {}", error.what());
             } catch (...) {
+#ifdef PS5_NATIVE
+                flush_worker_failed.store(true, std::memory_order_release);
+#endif
                 LOG_WARNING(Render_Vulkan, "Deferred driver cache flush failed: unknown exception");
             }
         });

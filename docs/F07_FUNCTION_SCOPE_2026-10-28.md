@@ -67,3 +67,7 @@ Le chemin PS5 natif de `TickAsyncUnswizzle` capture les exceptions de `GpuMemory
 ## P0.2 — échec d’une compilation optimisée facultative
 
 Une exception d’admission/OOM dans `QueueOptimizedPipeline` ne doit pas déclencher le gestionnaire critique de construction initiale après que `MakePipeline` a déjà publié le pipeline rapide. L’appelant PS5 absorbe les refus connus ou inconnus de la file facultative et laisse se poursuivre la collecte statistique. Le test C++ source-extrait vérifie le pipeline initial, les deux exceptions et le chemin direct en PS5 et desktop sous O0/O2. Le worker optimisé garde sa logique antérieure de libération des quotas ; aucun gain FPS console n’est affirmé.
+
+## P0.1 — échec dans le worker de sauvegarde Vulkan
+
+Après une erreur de sérialisation ou une exception pendant la lecture du cache driver, le worker PS5 transmet maintenant un indicateur `atomic_bool` au thread propriétaire GPU. Ce dernier restaure le quota des 128 pipelines à la prochaine opportunité, sous le délai existant de 30 s minimum (ou plus selon la taille du cache). Le compteur non atomique n'est jamais écrit depuis le worker. Le test C++ source-extrait vérifie exception connue, inconnue, délai de retry et préservation du chemin desktop. Ni performance graphique ni persistance réelle sur PS5 ne sont démontrées.

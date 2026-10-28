@@ -195,6 +195,11 @@ private:
     std::chrono::steady_clock::time_point last_flush{};
     std::atomic<size_t> last_cache_size{};
     std::atomic_bool flush_in_flight{};
+#ifdef PS5_NATIVE
+    // Written by the serializer; consumed only by the GPU-owner thread.
+    // Do not mutate pipelines_since_flush concurrently with Vulkan draws.
+    std::atomic_bool flush_worker_failed{};
+#endif
 
     Common::ThreadWorker workers;
     Common::ThreadWorker serialization_thread;
