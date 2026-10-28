@@ -2030,7 +2030,25 @@ void TextureCache<P>::TickAsyncDecode() {
             i = async_decodes.erase(i);
             continue;
         }
-        auto staging = runtime.UploadStagingBuffer(expected_size);
+        // Upload staging may fail after the decode worker completed.
+        // Never leave IsDecoding stuck or copy into an undersized buffer.
+        auto staging = [&]() -> decltype(runtime.UploadStagingBuffer(expected_size)) {
+            try {
+                return runtime.UploadStagingBuffer(expected_size);
+            } catch (...) {
+                return {};
+            }
+        }();
+        if (staging.mapped_span.size() < expected_size) {
+            image.flags &= ~ImageFlagBits::IsDecoding;
+            image.flags |= ImageFlagBits::CpuModified;
+            if (True(image.flags & ImageFlagBits::Tracked)) {
+                UntrackImage(image, async_decode->image_id);
+            }
+            lock.unlock();
+            i = async_decodes.erase(i);
+            continue;
+        }
 #else
         auto staging = runtime.UploadStagingBuffer(MapSizeBytes(image));
 #endif
