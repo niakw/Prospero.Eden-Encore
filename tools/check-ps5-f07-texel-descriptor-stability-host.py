@@ -18,6 +18,13 @@ end="\n\n    void AddTexelBuffer(VkBufferView texel_buffer, VkDeviceAddress"
 assert header.count(begin)==header.count(end)==1
 method=header[header.index(begin):header.index(end,header.index(begin))]
 assert "F07 zero unused native texel descriptor payload bytes" in generator
+assert "F07 zero native image descriptor payload bytes for legacy and buffer reuse" in generator
+image_begin="    void AddSampledImage(VkImageView image_view, VkSampler sampler) {"
+image_end="\n\n    void AddBuffer(VkBuffer buffer,"
+assert header.count(image_begin)==header.count(image_end)==1
+image_methods=header[header.index(image_begin):header.index(image_end,header.index(image_begin))]
+assert image_methods.count("std::memset(entry, 0, sizeof(*entry));")==2
+assert "if (use_descriptor_buffer)" not in image_methods
 assert "std::memset(entry, 0, sizeof(*entry));" in method
 assert "entry->texel_buffer = texel_buffer;" in method
 assert "#else\n        *(payload_cursor++) = texel_buffer;\n#endif" in method
@@ -32,18 +39,34 @@ cpp=r"""
 #include <cstdint>
 #include <cstring>
 using VkBufferView=std::uint64_t;
+using VkImageView=std::uint64_t;
+using VkSampler=std::uint64_t;
+using VkImageLayout=std::uint32_t;
+inline constexpr VkSampler VK_NULL_HANDLE=0;
+inline constexpr VkImageLayout VK_IMAGE_LAYOUT_GENERAL=1;
+struct VkDescriptorImageInfo {
+    VkSampler sampler{};
+    VkImageView imageView{};
+    VkImageLayout imageLayout{};
+};
 struct DescriptorUpdateEntry {
     VkBufferView texel_buffer{};
+    VkDescriptorImageInfo image{};
     std::uint64_t unused[2]{};
     DescriptorUpdateEntry()=default;
     DescriptorUpdateEntry(VkBufferView view) : texel_buffer{view} {}
+    DescriptorUpdateEntry& operator=(VkDescriptorImageInfo info) {
+        image=info;return *this;
+    }
     DescriptorUpdateEntry& operator=(VkBufferView view) {texel_buffer=view;return *this;}
 };
 static_assert(sizeof(DescriptorUpdateEntry)>sizeof(VkBufferView));
 struct Queue {
-    std::array<DescriptorUpdateEntry,3> payload{};
+    std::array<DescriptorUpdateEntry,8> payload{};
+    bool use_descriptor_buffer{};
     DescriptorUpdateEntry* payload_cursor=payload.data();
 __METHOD__
+__IMAGE_METHODS__
 };
 int main() {
     Queue q;
@@ -60,6 +83,27 @@ int main() {
     const bool same=std::memcmp(&q.payload[0],&q.payload[1],sizeof(q.payload[0]))==0;
     const bool changed=std::memcmp(&q.payload[0],&q.payload[2],sizeof(q.payload[0]))!=0;
     assert(changed);
+    // Image descriptors must have stable padding even when the PS5 uses the
+    // legacy descriptor-set path rather than a descriptor buffer.
+    for (bool descriptor_buffer : {false,true}) {
+        Queue images;
+        images.use_descriptor_buffer=descriptor_buffer;
+        for(std::size_t i=0;i<images.payload.size();++i) {
+            std::memset(&images.payload[i],(i%2) ? 0x5a : 0xa5,sizeof(images.payload[i]));
+        }
+        images.AddImage(0x123);
+        images.AddImage(0x123);
+        images.AddSampledImage(0x456,0x789);
+        images.AddSampledImage(0x456,0x789);
+        assert(images.payload[0].image.imageView==0x123);
+        assert(images.payload[1].image.imageView==0x123);
+        assert(images.payload[2].image.sampler==0x789);
+        assert(images.payload[3].image.sampler==0x789);
+#ifdef PS5_NATIVE
+        assert(std::memcmp(&images.payload[0],&images.payload[1],sizeof(images.payload[0]))==0);
+        assert(std::memcmp(&images.payload[2],&images.payload[3],sizeof(images.payload[2]))==0);
+#endif
+    }
 #ifdef PS5_NATIVE
     assert(same);
     for(std::size_t i=sizeof(VkBufferView);i<sizeof(q.payload[0]);++i) {
@@ -70,7 +114,7 @@ int main() {
     assert(!same);
 #endif
 }
-""".replace("__METHOD__",method)
+""".replace("__METHOD__",method).replace("__IMAGE_METHODS__",image_methods)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler,"C++20 compiler unavailable"
 with tempfile.TemporaryDirectory(prefix="encore-f07-texel-descriptors-") as folder:
@@ -87,4 +131,4 @@ with tempfile.TemporaryDirectory(prefix="encore-f07-texel-descriptors-") as fold
             assert compiled.returncode==0,(native,opt,compiled.stderr[-3000:])
             ran=subprocess.run([str(exe)],capture_output=True,text=True,timeout=10)
             assert ran.returncode==0,(native,opt,ran.stderr[-3000:])
-print("F07_TEXEL_DESCRIPTOR_STABILITY_PASS native=1 desktop_original=1 O0=1 O2=1 stale_bytes=0 handle_change=1")
+print("F07_TEXEL_DESCRIPTOR_STABILITY_PASS native=1 desktop_original=1 O0=1 O2=1 texel=1 image=1 sampled_image=1 legacy_sets=1 stale_bytes=0 handle_change=1")
