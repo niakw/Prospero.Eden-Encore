@@ -24,14 +24,27 @@ Légende : `[ ]` = décision finale encore à consigner ; un contrôle peut déb
 ### B1 — P0.1 : traductions shader et cache Vulkan (7)
 Fichier : `vendor/encore-active/eden-vulkan/vk_pipeline_cache_cost.cpp`
 
-- [ ] 01 `CurrentGraphicsPipeline` — conserver les hits rapides, vérifier absence de rescans ou de traduction cachée pour HUD identique ; comparer hit/miss.
-- [ ] 02 `CurrentGraphicsPipelineSlowPath` — auditer saturation/reprise bornée de 64 clés échouées et fraîcheur des caches invalidés.
-- [ ] 03 `CreateGraphicsPipeline` — attribuer CFG/IR/SPIR-V et coût synchrone initial, vérifier priorité des tâches vs optimiseur ; n'exporter hors owner que les parties thread-safe prouvées.
-- [ ] 04 `CurrentComputePipeline` — vérifier cache de pipeline, reprise bornée 32 clés et absence de nouvel essai à chaque dispatch.
-- [ ] 05 `CreateComputePipeline` — vérifier coût de traduction initiale, admission worker, timeout/exception et disponibilité.
-- [ ] 06 `LoadDiskResources` — vérifier préchauffage persistant limité à 8, contenu réel valide et absence d'arrêt du worker shader.
-- [ ] 07 `QueueVulkanPipelineCacheFlush` — vérifier coalescence, durée de vie du cache et rattrapage d'une tâche de sauvegarde rejetée.
+- [x] 01 `CurrentGraphicsPipeline` — conserver les hits rapides, vérifier absence de rescans ou de traduction cachée pour HUD identique ; comparer hit/miss.
+- [x] 02 `CurrentGraphicsPipelineSlowPath` — auditer saturation/reprise bornée de 64 clés échouées et fraîcheur des caches invalidés.
+- [x] 03 `CreateGraphicsPipeline` — attribuer CFG/IR/SPIR-V et coût synchrone initial, vérifier priorité des tâches vs optimiseur ; n'exporter hors owner que les parties thread-safe prouvées.
+- [x] 04 `CurrentComputePipeline` — vérifier cache de pipeline, reprise bornée 32 clés et absence de nouvel essai à chaque dispatch.
+- [x] 05 `CreateComputePipeline` — vérifier coût de traduction initiale, admission worker, timeout/exception et disponibilité.
+- [x] 06 `LoadDiskResources` — vérifier préchauffage persistant limité à 8, contenu réel valide et absence d'arrêt du worker shader.
+- [x] 07 `QueueVulkanPipelineCacheFlush` — vérifier coalescence, durée de vie du cache et rattrapage d'une tâche de sauvegarde rejetée.
 
+**B1 — source audit completed, CI and console pending (407ad36).**
+
+| No. | Function | Source decision | Evidence/remaining risk |
+|---:|---|---|---|
+| 01 | `CurrentGraphicsPipeline` | No speculative change | Transition hits avoid cache slow path; guest register refresh must be preserved. Console HUD frequency unmeasured. |
+| 02 | `CurrentGraphicsPipelineSlowPath` | Existing guard retained | Failed shader recovery 64-key cap and one delayed retry, with cold-failure-only rotation. Host CI pending. |
+| 03 | `CreateGraphicsPipeline` | No additional safe change proved | CFG/IR/SPIR-V translation still GPU-owner synchronous; first-use priority and detailed phase counters exist. Cold stalls not solved. |
+| 04 | `CurrentComputePipeline` | Existing guard retained | Bounded 32-key retry, cold-failure-only rotation, no repeat translation on normal cache hits. |
+| 05 | `CreateComputePipeline` | No additional safe change proved | Foreground priority and shader-phase instrumentation exist. Moving guest shader environments to other threads is not justified yet. |
+| 06 | `LoadDiskResources` | Patch integrated | `407ad36`: both reader writes to `state.total` now share the worker mutex. Prewarm 8, reader-only cancellation and join preserved. |
+| 07 | `QueueVulkanPipelineCacheFlush` | Existing guard retained | Single in-flight flush, bounded time gate, queue rejection rollback and atomic worker error handoff. |
+
+These checkmarks record a SOURCE-LEVEL DECISION, NOT green CI, measured FPS or PS5 console validation. Do not silently promote these states.
 **Porte B1 :** hot path cache hit sans coût superflu ; coûts froids et politiques de réessai bornés ; aucun shader invalide ni suppression de rendu pour « gagner » des FPS.
 
 ### B2 — P0.2 : pipeline graphique/compute et anneaux descripteurs (10)
@@ -95,7 +108,7 @@ Fichiers : `vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cac
 | Lot | État | Résultat/preuve | Prochaine action |
 |---|---|---|---|
 | B0 — registre + correction générateur du scheduler | **Intégré dans le commit qui ajoute ce fichier** | Réconciliation du `#include <new>` à vérifier par CI, échec précédent #40782741133 identifié | B1 P0.1 01→07 |
-| B1 — shader/cache | **À traiter** | F07_SCOPE répertorie déjà retries 64/32, préwarm 8 et timers ; aucun FPS console prouvé | Clore les 7 décisions ; patcher seulement anomalies confirmées |
+| B1 — shader/cache | **7/7 décisions source; CI/console ouvertes** | Réessais 64/32, priorité premier usage, prewarm 8 ; correction mutex `407ad36` | Gate hôte puis mesures console ; ne pas rouvrir sans échec observé |
 | B2 — pipelines/descripteurs | **À traiter** | Wait unique, rollback scheduler, ring guards déjà présents ; évaluer leur complétude | Clore les 10 décisions |
 | B3 — rasterizer/guest | **À traiter** | Pair-lock/preflight et tests dispersés existants | Clore les 9 décisions |
 | B4 — textures/HUD | **À traiter** | Nombreuses gardes async/readback/BCn déjà intégrées | Clore les 12 décisions |
@@ -104,3 +117,10 @@ Fichiers : `vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cac
 **Reprise programmée :** tâche horaire « Eden Encore — reprise F07 » ; ses actions doivent être revérifiées via le HEAD, les commits et le journal de lots. Elle doit cesser lorsque les critères de clôture sont satisfaits et aucune modification ne doit être inventée si aucun outil n'est accessible.
 
 **Commande de reprise utilisateur :** « continue Eden Encore d'après `docs/F07_BATCH_EXECUTION_REGISTER.md` ». En début de reprise, contrôler le HEAD réel, pas uniquement le SHA imprimé ici. Ne pas multiplier les branches/PR ni inventer de résultat CI.
+
+## F07 checkpoint — 2026-10-28
+
+- Source decision count: B1 7/7; B2 0/10 final; B3 0/9 final; B4 0/12 final. These remaining 31 are audit decisions, not 31 proven defects.
+- Business code commit: `407ad36ef5207d4fef964074241cb197fb153248`. Fork generator and selected Vulkan source were changed together, with host witness updated.
+- CI checks not yet proven green on `407ad36`; no console FPS or HUD freshness proof. No PR or secondary branch created.
+- Next: B2 08–17 source review, targeted regressions, then B3/B4, followed by one coherent four-gate/console campaign.
