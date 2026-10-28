@@ -50,17 +50,33 @@ These checkmarks record a SOURCE-LEVEL DECISION, NOT green CI, measured FPS or P
 ### B2 — P0.2 : pipeline graphique/compute et anneaux descripteurs (10)
 Fichiers : `vk_graphics_pipeline_cost.cpp` (5), `vk_compute_pipeline_cost.cpp` (2), `vk_descriptor_buffer_cost.cpp` (3) sous `vendor/encore-active/eden-vulkan/`.
 
-- [ ] 08 `GraphicsPipeline::ConfigureImpl` — scratch préalloué avant verrous, TIC/TSC et buffers valides après invalidation.
-- [ ] 09 `GraphicsPipeline::ConfigureDraw` — commande wait unique ordonnée, publication acquire, réutilisation de descriptors uniquement si mêmes données/génération, rebind après refus de Record.
-- [ ] 10 `GraphicsPipeline::AddTransition` — cohérence des deux vecteurs si allocation refusée, aucune exception facultative cassant un draw valide.
-- [ ] 11 `GraphicsPipeline::MakePipeline` — builder/pipeline publication atomique, compteur priorité premier usage, exceptions et fermeture de completion.
-- [ ] 12 `GraphicsPipeline::QueueOptimizedPipeline` — quota de travaux spéculatifs, priorité au shader initial, absence de fuite des slots de queue.
-- [ ] 13 `ComputePipeline::Configure` — wait unique, scratch et payload, refus de pipeline nul, reliaison de descripteurs lors d'un reset.
-- [ ] 14 `ComputePipeline::PreflightDescriptorScratch` — allocations hors pair-lock et slots corrects en cas d'appels imbriqués.
-- [ ] 15 `DescriptorBufferRing::PreflightFrameReuse` — vérifier synchronisation tick/fence et absence de réutilisation avant libération.
-- [ ] 16 `DescriptorBufferRing::PreflightCapacity` — capacité réelle et garde avant acquisition des verrous guest.
-- [ ] 17 `DescriptorBufferRing::Allocate` — échec de réservation non silencieux, génération, durée de vie et retour correct au pool.
+- [x] 08 `GraphicsPipeline::ConfigureImpl` — scratch préalloué avant verrous, TIC/TSC et buffers valides après invalidation.
+- [x] 09 `GraphicsPipeline::ConfigureDraw` — commande wait unique ordonnée, publication acquire, réutilisation de descriptors uniquement si mêmes données/génération, rebind après refus de Record.
+- [x] 10 `GraphicsPipeline::AddTransition` — cohérence des deux vecteurs si allocation refusée, aucune exception facultative cassant un draw valide.
+- [x] 11 `GraphicsPipeline::MakePipeline` — builder/pipeline publication atomique, compteur priorité premier usage, exceptions et fermeture de completion.
+- [x] 12 `GraphicsPipeline::QueueOptimizedPipeline` — quota de travaux spéculatifs, priorité au shader initial, absence de fuite des slots de queue.
+- [x] 13 `ComputePipeline::Configure` — wait unique, scratch et payload, refus de pipeline nul, reliaison de descripteurs lors d'un reset.
+- [x] 14 `ComputePipeline::PreflightDescriptorScratch` — allocations hors pair-lock et slots corrects en cas d'appels imbriqués.
+- [x] 15 `DescriptorBufferRing::PreflightFrameReuse` — vérifier synchronisation tick/fence et absence de réutilisation avant libération.
+- [x] 16 `DescriptorBufferRing::PreflightCapacity` — capacité réelle et garde avant acquisition des verrous guest.
+- [x] 17 `DescriptorBufferRing::Allocate` — échec de réservation non silencieux, génération, durée de vie et retour correct au pool.
 
+**B2 — 10/10 SOURCE reviews recorded (not console validated).**
+
+| No. | Decision | Source observation / remaining risk |
+|---:|---|---|
+| 08 | Existing safeguard retained; no further safe patch proved | Scratch is leased/reused; image table sync bypassed for descriptor-free draws. Nested depth >=3 still uses safe fallback reserve under lock. |
+| 09 | Existing safeguard retained; no further safe patch proved | FIFO wait once, acquire load, descriptor-set memo committed after Record; descriptor-buffer identity includes generation and payload. Reject/restore cases need gate. |
+| 10 | Existing safeguard retained; no further safe patch proved | Both vectors rolled back together if optional append fails; gameplay draw kept. |
+| 11 | Existing safeguard retained; no further safe patch proved | Completion guard releases waiter and shader notifier after Vulkan builder error; null pipeline remains rejected. |
+| 12 | Existing safeguard retained; no further safe patch proved | 16-slot optional quota, quiet 16-ms window and cancel/exception slot release preserve first-use priority. |
+| 13 | Existing safeguard retained; no further safe patch proved | FIFO wait recorded after acceptance, same-generation payload reuse and new descriptor allocation fallback. GPU completion cost not benchmarked. |
+| 14 | Existing safeguard retained; no further safe patch proved | Reserves compute views/samplers and payload before guest pair-lock; nested fallback remains. |
+| 15 | Existing safeguard retained; no further safe patch proved | Earlier wait uses matching previous frame tick, then disables frame_reused; no premature recycling intended. |
+| 16 | Existing safeguard retained; no further safe patch proved | Full-ring scheduler.Finish moved before cache locks when allocation is known; uncertain cases retain fallback. |
+| 17 | Existing safeguard retained; no further safe patch proved | Checks CanAllocate, ticks/generation and returns empty allocation on overflow; rare scheduler.Finish under pair-lock remains for correct fallback. |
+
+These source-level decisions are not a claim of complete optimization or green CI. The fallback GPU waits under cache mutexes are still potentially expensive, but must not be removed without evidence that correctness is preserved. Host witnesses and console timings remain mandatory.
 **Porte B2 :** aucune commande non acceptée considérée soumise, aucune attente pipeline sous pair-lock sans nécessité démontrée, correction des buffers/descripteurs préservée.
 
 ### B3 — P0.3 : coût sous verrous, progression GPU/CPU, présentation (9)
@@ -109,7 +125,7 @@ Fichiers : `vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cac
 |---|---|---|---|
 | B0 — registre + correction générateur du scheduler | **Intégré dans le commit qui ajoute ce fichier** | Réconciliation du `#include <new>` à vérifier par CI, échec précédent #40782741133 identifié | B1 P0.1 01→07 |
 | B1 — shader/cache | **7/7 décisions source; CI/console ouvertes** | Réessais 64/32, priorité premier usage, prewarm 8 ; correction mutex `407ad36` | Gate hôte puis mesures console ; ne pas rouvrir sans échec observé |
-| B2 — pipelines/descripteurs | **À traiter** | Wait unique, rollback scheduler, ring guards déjà présents ; évaluer leur complétude | Clore les 10 décisions |
+| B2 — pipelines/descripteurs | **10/10 décisions source; CI/console ouvertes** | Scratch preflight, FIFO wait, rollback Record, ring/tick et quota optimiseur inspectés | CI groupée puis qualifier les attentes fallback réellement coûteuses sur console |
 | B3 — rasterizer/guest | **À traiter** | Pair-lock/preflight et tests dispersés existants | Clore les 9 décisions |
 | B4 — textures/HUD | **À traiter** | Nombreuses gardes async/readback/BCn déjà intégrées | Clore les 12 décisions |
 | B5 — gates groupés + console | **Bloqué par B1–B4** | Build natif sur SHA unique, puis test physique FC27/BOTW | Fermer ou rouvrir par preuve |
@@ -120,7 +136,9 @@ Fichiers : `vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cac
 
 ## F07 checkpoint — 2026-10-28
 
-- Source decision count: B1 7/7; B2 0/10 final; B3 0/9 final; B4 0/12 final. These remaining 31 are audit decisions, not 31 proven defects.
+- Source decision count: B1 7/7; B2 10/10; B3 0/9; B4 0/12. The resulting 21 remaining checks are audit decisions, not 21 proven defects. These remaining 31 are audit decisions, not 31 proven defects.
 - Business code commit: `407ad36ef5207d4fef964074241cb197fb153248`. Fork generator and selected Vulkan source were changed together, with host witness updated.
 - CI checks not yet proven green on `407ad36`; no console FPS or HUD freshness proof. No PR or secondary branch created.
 - Next: B2 08–17 source review, targeted regressions, then B3/B4, followed by one coherent four-gate/console campaign.
+
+- B2 n°08–17: 10 source decisions recorded from the three selected Vulkan modules. No performance gain or successful PS5 build has been inferred.
