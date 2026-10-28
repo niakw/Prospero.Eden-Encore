@@ -4298,3 +4298,14 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    if (runtime.CanReportMemoryUsage()) {\n        total_used_memory = runtime.GetDeviceMemoryUsage();\n    }",
     "    if (runtime.CanReportMemoryUsage()) {\n#ifdef PS5_NATIVE\n        // A driver memory-budget probe can run under texture_cache.mutex.\n        // While comfortably below the GC watermark, sample every other\n        // frame; at 2/3 of the watermark or higher, sample EVERY frame to\n        // preserve prompt reclaim and avoid an allocation-pressure blind spot.\n        const bool near_gc_watermark =\n            total_used_memory >= minimum_memory - minimum_memory / 3;\n        if (near_gc_watermark || (frame_tick & 1u) == 0) {\n            total_used_memory = runtime.GetDeviceMemoryUsage();\n        }\n#else\n        total_used_memory = runtime.GetDeviceMemoryUsage();\n#endif\n    }",
     "F07 native memory pressure sampling outside near GC watermark")
+
+# F07 P0.3: sparse depth+color renderpasses should inspect ONLY attached
+# color slots while resolving sampled-depth feedback (desktop unchanged).
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "                for (size_t i = 0; i < 8; ++i)\n                    is_continue |= (rt_active_mask & (1u << i)) && view.id == render_targets.color_buffer_ids[i];",
+    "#ifdef PS5_NATIVE\n                // Only visit color targets actually attached to this depth pass.\n                u32 color_slots = rt_active_mask & ((1u << NUM_RT) - 1);\n                while (color_slots) {\n                    const u32 slot = std::countr_zero(color_slots);\n                    is_continue |= view.id == render_targets.color_buffer_ids[slot];\n                    color_slots &= color_slots - 1;\n                }\n#else\n                for (size_t i = 0; i < 8; ++i)\n                    is_continue |= (rt_active_mask & (1u << i)) && view.id == render_targets.color_buffer_ids[i];\n#endif",
+    "F07 enumerate active color slots for feedback view IDs")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "                for (size_t i = 0; i < 8; ++i)\n                    is_continue |= (rt_active_mask & (1u << i)) && view_image_id == rt_image_id[i];",
+    "#ifdef PS5_NATIVE\n                u32 color_slots = rt_active_mask & ((1u << NUM_RT) - 1);\n                while (color_slots) {\n                    const u32 slot = std::countr_zero(color_slots);\n                    is_continue |= view_image_id == rt_image_id[slot];\n                    color_slots &= color_slots - 1;\n                }\n#else\n                for (size_t i = 0; i < 8; ++i)\n                    is_continue |= (rt_active_mask & (1u << i)) && view_image_id == rt_image_id[i];\n#endif",
+    "F07 enumerate active color slots for feedback image IDs")
