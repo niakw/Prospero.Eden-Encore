@@ -1157,6 +1157,13 @@ void TextureCacheRuntime::BarrierFeedbackLoop() {
 
 void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
                                            std::span<const VideoCommon::ImageCopy> copies) {
+#ifdef PS5_NATIVE
+    // An empty reinterpret has no image pixels or valid VkBufferImageCopy.
+    // Never ask GetTemporaryBuffer to classify a zero-sized allocation.
+    if (copies.empty()) {
+        return;
+    }
+#endif
     if (ENABLE_MSAA_RESOLVE_CONSUME) {
         InvalidateResolveShadow(dst.Handle());
     }
@@ -1179,9 +1186,37 @@ void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
     });
     const u32 img_bpp = BytesPerBlock(dst.info.format);
     size_t total_size = 0;
+#ifdef PS5_NATIVE
+    // Prevent u32 intermediate overflow and size_t wrap before asking for
+    // a scratch VkBuffer. Invalid extents cannot be recorded as Vulkan copies.
+    constexpr size_t max_size = (std::numeric_limits<size_t>::max)();
+    for (const auto& copy : copies) {
+        const size_t width = copy.extent.width;
+        const size_t height = copy.extent.height;
+        const size_t depth = copy.extent.depth;
+        if (width == 0 || height == 0 || depth == 0 || img_bpp == 0 ||
+            width > max_size / height) {
+            return;
+        }
+        const size_t area = width * height;
+        if (area > max_size / depth) {
+            return;
+        }
+        const size_t volume = area * depth;
+        if (volume > max_size / img_bpp) {
+            return;
+        }
+        const size_t bytes = volume * img_bpp;
+        if (total_size > max_size - bytes) {
+            return;
+        }
+        total_size += bytes;
+    }
+#else
     for (const auto& copy : copies) {
         total_size += copy.extent.width * copy.extent.height * copy.extent.depth * img_bpp;
     }
+#endif
     const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);
     const VkImage dst_image = dst.Handle();
     const VkImage src_image = src.Handle();
