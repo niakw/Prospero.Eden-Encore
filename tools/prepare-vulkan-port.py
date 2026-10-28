@@ -3031,6 +3031,16 @@ apply_reviewed_delta(
     "        // An in-flight asynchronous decode has not published its new pixels.\n        // Clean GPU-authored images keep the zero-copy presentation path.\n        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified |\n                                ImageFlagBits::IsDecoding))) {",
     'F07 P0.4 exclude asynchronously decoding accelerated framebuffer')
 
+# F07 P0.4: multiple image views can share a framebuffer guest address.
+# Skipping only the decoding candidate can select a different, older "clean"
+# candidate. Disallow accelerated present for the address while any matching
+# image is in flight; normal raw guest upload remains the fallback.
+apply_reviewed_delta(
+    'vulkan-cache/video_core/texture_cache/texture_cache.h',
+    "        // An in-flight asynchronous decode has not published its new pixels.\n        // Clean GPU-authored images keep the zero-copy presentation path.\n        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified |\n                                ImageFlagBits::IsDecoding))) {\n            continue;\n        }",
+    "        // Another image for this same guest address can still be clean but\n        // older. While ANY matching image decodes new pixels, no accelerated\n        // candidate can prove freshness. Upload guest bytes for this frame.\n        if (True(image.flags & ImageFlagBits::IsDecoding)) {\n            return {};\n        }\n        // Clean GPU-authored images keep the zero-copy presentation path.\n        if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuModified))) {\n            continue;\n        }",
+    'F07 P0.4 prevent stale alternate framebuffer view during async decode')
+
 # F07 P0.4: composite can be the first GPU consumer after a guest
 # memory remap. Flush queued mapping invalidations ahead of the texture
 # mutex, matching DrawTexture's lock ordering. This keeps the newly selected
