@@ -177,3 +177,7 @@ Sur PS5, `CommitAsyncFlushes` peut réserver plusieurs buffers et publier d'abor
 ## P0.4 — protection du calcul de taille des lots asynchrones
 
 `CommitAsyncFlushes` additionnait les tailles alignées à 64 octets sans vérifier le débordement de `size_t`. Sur PS5, les deux opérations (alignement et somme) sont désormais vérifiées **avant** la demande de staging. En cas de dépassement, `std::bad_alloc` laisse le lot en attente pour le traitement d'erreur habituel au lieu de créer un buffer Vulkan sous-dimensionné. Le témoin C++ source-extrait couvre les deux débordements, O0/O2, sans modifier le chemin desktop.
+
+## P0.2 — raccourci de deux transitions graphiques récurrentes
+
+Sur PS5, `GraphicsPipeline::Next` conserve deux indices récents de transitions plutôt qu'un seul. Sur les bascules répétées HUD/scène parmi 48 destinations, les 2 000 alternances du témoin source-extrait doivent ne demander qu'au plus trois comparaisons de clés par appel, sans allocation supplémentaire ni changement pour desktop. Les références de rendu restent des indices sûrs même après croissance du vecteur. Les mesures de FPS sur console restent nécessaires.

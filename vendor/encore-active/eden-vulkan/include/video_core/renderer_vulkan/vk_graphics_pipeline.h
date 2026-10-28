@@ -142,12 +142,19 @@ public:
             return this;
         }
 #ifdef PS5_NATIVE
-        // The GPU owner often revisits the same overlay/scene transition.
-        // Keep the last successful index, not a pointer into a reallocating
-        // vector. Below eight transitions the original linear scan is cheaper.
-        if (transition_keys.size() >= 8 && hot_transition_index < transition_keys.size() &&
-            transition_keys[hot_transition_index] == current_key) {
-            return transitions[hot_transition_index];
+        // Two frequent overlay/HUD edges avoid rescanning a large transition
+        // graph on each alternating draw. Store indices, never vector pointers.
+        if (transition_keys.size() >= 8) {
+            const size_t hot = hot_transition_indices[0];
+            if (hot < transition_keys.size() && transition_keys[hot] == current_key) {
+                return transitions[hot];
+            }
+            const size_t other = hot_transition_indices[1];
+            if (other != hot && other < transition_keys.size() &&
+                transition_keys[other] == current_key) {
+                std::swap(hot_transition_indices[0], hot_transition_indices[1]);
+                return transitions[other];
+            }
         }
 #endif
         const auto it{std::find(transition_keys.begin(), transition_keys.end(), current_key)};
@@ -156,7 +163,8 @@ public:
         }
         const size_t index{static_cast<size_t>(std::distance(transition_keys.begin(), it))};
 #ifdef PS5_NATIVE
-        hot_transition_index = index;
+        hot_transition_indices[1] = hot_transition_indices[0];
+        hot_transition_indices[0] = index;
 #endif
         return transitions[index];
     }
@@ -211,9 +219,8 @@ private:
     std::vector<GraphicsPipelineCacheKey> transition_keys;
     std::vector<GraphicsPipeline*> transitions;
 #ifdef PS5_NATIVE
-    // Only the rasterizer GPU owner reads/writes this index. Appends never
-    // invalidate it; transitions remain cache-owned until pipeline teardown.
-    size_t hot_transition_index{};
+    // GPU owner only. Two valid indices remain stable across vector growth.
+    std::array<size_t, 2> hot_transition_indices{};
 #endif
 
     std::array<vk::ShaderModule, NUM_STAGES> spv_modules;
