@@ -3878,3 +3878,12 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        auto* async_decode = i->get();\n        std::unique_lock lock{async_decode->mutex};\n        if (!async_decode->complete) {\n            ++i;\n            continue;\n        }",
     "        auto* async_decode = i->get();\n#ifdef PS5_NATIVE\n        // The worker publishes decoded bytes with the atomic completion flag.\n        // Poll unfinished decodes without contending on its mutex each frame.\n        if (!async_decode->complete.load(std::memory_order_acquire)) {\n            ++i;\n            continue;\n        }\n#endif\n        std::unique_lock lock{async_decode->mutex};\n#ifndef PS5_NATIVE\n        if (!async_decode->complete) {\n            ++i;\n            continue;\n        }\n#endif",
     "F07 atomic unfinished texture decode polling")
+
+# F07: preserve parallel transition arrays under partial allocation failure.
+# In native builds a failed pointer append must roll back the successful key
+# append, or Next() may address a missing transition and crash. Normal lookup
+# and the non-PS5 path are unchanged.
+apply_reviewed_delta("vk_graphics_pipeline_cost.cpp",
+    "void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {\n    transition_keys.push_back(transition->key);\n    transitions.push_back(transition);\n}",
+    "void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {\n    transition_keys.push_back(transition->key);\n#ifdef PS5_NATIVE\n    // Both arrays must describe the same transition index. An allocation\n    // failure while appending the pointer must not leave an orphaned key:\n    // Next() would later index past transitions and corrupt a guest draw.\n    try {\n        transitions.push_back(transition);\n    } catch (...) {\n        transition_keys.pop_back();\n        throw;\n    }\n#else\n    transitions.push_back(transition);\n#endif\n}",
+    "F07 graphics transition append rollback")
