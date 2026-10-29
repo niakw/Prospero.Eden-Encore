@@ -263,3 +263,127 @@ with tempfile.TemporaryDirectory(prefix="encore-exact-preflight-") as d:
         assert run.returncode == 0, (opt, run.stdout, run.stderr[-5000:])
         assert "SIX_NATIVE_DESCRIPTOR_PREFLIGHT_EXACT_PARITY_PASS" in run.stdout
         print("DESCRIPTOR_PREFLIGHT_EXACT_SOURCE_PASS", opt)
+
+
+# F07 V03: compile the EXACT shipping Allocate fallback body, not a
+# handwritten restatement. PreflightFrameReuse may not have been called:
+# a completed frame tick must not trigger scheduler.Wait under cache locks.
+ring = (root / "vendor/encore-active/eden-vulkan/vk_descriptor_buffer_cost.cpp").read_text()
+gen = (root / "tools/prepare-vulkan-port.py").read_text()
+ring_at = ring.index("DescriptorBufferRing::Allocation DescriptorBufferRing::Allocate(")
+fallback_at = ring.index("    if (frame_reused) {", ring_at)
+fallback_end = ring.index("\n    if (cursor + needed > chunk_capacity)", fallback_at)
+fallback = ring[fallback_at:fallback_end]
+assert fallback.startswith("    if (frame_reused) {")
+assert fallback.strip().endswith("}")
+# Strict generator parity: the production source is the same C++ fragment
+# emitted after the pinned VulkanTimer wrapper (no staging/source divergence).
+gen_anchor = "        native_fallback = '''"
+assert gen.count(gen_anchor) == 1
+from_gen = gen.split(gen_anchor, 1)[1].split("'''", 1)[0]
+assert from_gen == fallback
+assert "old_tick != 0 && !scheduler.IsFree(old_tick)" in fallback
+assert "scheduler.Wait(old_tick);" in fallback
+assert "#else\n        { auto timer = Eden::Performance::VulkanTimer(10); scheduler.Wait(frame_ticks[frame_index]); }" in fallback
+assert ring.index("PreflightFrameReuse(Scheduler& scheduler)") < ring_at
+assert "old_tick == 0 || scheduler.IsFree(old_tick)" in ring[:ring_at]
+
+fallback_cpp = r"""
+#include <array>
+#include <cassert>
+#include <cstdint>
+#include <cstdio>
+using u64 = std::uint64_t;
+namespace Eden::Performance {
+struct VulkanTimer { explicit VulkanTimer(int) {} };
+}
+struct Scheduler {
+    bool free_tick{};
+    int queries{};
+    int waits{};
+    u64 last_wait{};
+    bool IsFree(u64 tick) {
+        assert(tick != 0);
+        ++queries;
+        return free_tick;
+    }
+    void Wait(u64 tick) {
+        ++waits;
+        last_wait = tick;
+    }
+};
+struct Rig {
+    bool frame_reused = true;
+    unsigned frame_index = 0;
+    std::array<u64, 1> frame_ticks{};
+    void Allocate(Scheduler& scheduler) {
+__ACTUAL_FALLBACK__
+    }
+};
+int main() {
+    {
+        Scheduler s;
+        Rig r;
+        r.Allocate(s);
+#ifdef PS5_NATIVE
+        assert(s.waits == 0 && s.queries == 0);
+#else
+        assert(s.waits == 1 && s.last_wait == 0);
+#endif
+        assert(!r.frame_reused);
+    }
+    {
+        Scheduler s;
+        s.free_tick = true;
+        Rig r;
+        r.frame_ticks[0] = 17;
+        r.Allocate(s);
+#ifdef PS5_NATIVE
+        assert(s.waits == 0 && s.queries == 1);
+#else
+        assert(s.waits == 1 && s.last_wait == 17);
+#endif
+        // Subsequent Allocate within the same frame is never waited twice.
+        r.Allocate(s);
+#ifdef PS5_NATIVE
+        assert(s.waits == 0 && s.queries == 1);
+#else
+        assert(s.waits == 1);
+#endif
+    }
+    {
+        Scheduler s;
+        s.free_tick = false;
+        Rig r;
+        r.frame_ticks[0] = 23;
+        r.Allocate(s);
+        assert(s.waits == 1 && s.last_wait == 23);
+#ifdef PS5_NATIVE
+        assert(s.queries == 1);
+#else
+        assert(s.queries == 0);
+#endif
+        assert(!r.frame_reused);
+        r.Allocate(s);
+        assert(s.waits == 1);
+    }
+    std::puts("DESCRIPTOR_RETIRED_TICK_FALLBACK_SOURCE_PASS");
+}
+""".replace("__ACTUAL_FALLBACK__", fallback)
+with tempfile.TemporaryDirectory(prefix="encore-native-ring-fallback-") as folder:
+    cpp_path = Path(folder) / "ring_fallback.cpp"
+    cpp_path.write_text(fallback_cpp)
+    for mode in ("native", "desktop"):
+        for opt in ("-O0", "-O2"):
+            exe = Path(folder) / ("ring_fallback_" + mode + "_" + opt[1:])
+            cmd = [compiler, "-std=c++20", opt, "-Wall", "-Wextra",
+                   "-Werror", "-fsanitize=undefined", "-fno-sanitize-recover=all"]
+            if mode == "native":
+                cmd += ["-DPS5_NATIVE"]
+            cmd += [str(cpp_path), "-o", str(exe)]
+            built = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            assert built.returncode == 0, (mode, opt, built.stderr[-5000:])
+            run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=20)
+            assert run.returncode == 0, (mode, opt, run.stdout, run.stderr[-5000:])
+            assert "DESCRIPTOR_RETIRED_TICK_FALLBACK_SOURCE_PASS" in run.stdout
+            print("DESCRIPTOR_RETIRED_TICK_FALLBACK_SOURCE_PASS", mode, opt)
