@@ -14,7 +14,7 @@ inline bool avatar_owner_marker_matches(const char* marker,
                                         const char* format) {
     if (!marker || !format) return false;
     char expected[32]{};
-    const int n = std::snprintf(expected, sizeof(expected), "0x%08X %s\\n",
+    const int n = std::snprintf(expected, sizeof(expected), "0x%08X %s\n",
                                 foreground_user, format);
     if (n <= 0 || n >= static_cast<int>(sizeof(expected))) return false;
     const int fd = ::open(marker, O_RDONLY | O_NOFOLLOW | O_NONBLOCK);
