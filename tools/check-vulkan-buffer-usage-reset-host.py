@@ -45,7 +45,9 @@ runtime_start="void BufferCacheRuntime::TickFrame("
 runtime_end="\nu64 BufferCacheRuntime::CurrentTick()"
 assert active.count(runtime_start)==active.count(runtime_end)==1
 method=active[active.index(runtime_start):active.index(runtime_end,active.index(runtime_start))]
-assert "if (last_tick != 0 && last_tick <= completed_tick)" in method
+assert "if (last_tick <= completed_tick)" in method
+assert "if (last_tick == 0)" in method
+assert "sampled_completed_tick" in method
 assert "scheduler.GetMasterSemaphore().KnownGpuTick()" in method
 for workflow in ("encore-core-fast-gate.yml","encore-core-preflight.yml"):
     assert "check-vulkan-buffer-usage-reset-host.py" in (ROOT/".github/workflows"/workflow).read_text()
@@ -119,6 +121,10 @@ int main(){
     assert(!buffers[1].tracker.active && buffers[1].tracker.resets==2);
     assert(buffers[1].last_usage_tick==0);
     assert(buffers[2].tracker.resets==1);
+    // All buffers are now retired; no outstanding GPU work merits polling.
+    const auto sampled=semaphore.samples;
+    runtime.TickFrame(buffers);
+    assert(semaphore.samples==sampled);
 #else
     assert(!buffers[1].tracker.active && buffers[1].tracker.resets==4);
 #endif
@@ -139,4 +145,4 @@ with tempfile.TemporaryDirectory(prefix="eden-vulkan-buffer-reset-") as d:
             assert built.returncode==0,(native,opt,built.stderr[-3000:])
             run=subprocess.run([str(out)],capture_output=True,text=True,timeout=15)
             assert run.returncode==0,(native,opt,run.stderr[-3000:])
-print("F07_BUFFER_USAGE_RESET_PASS O0=1 O2=1 native_retires_once=1 reactivation=1 desktop_original=1")
+print("F07_BUFFER_USAGE_RESET_PASS O0=1 O2=1 native_retires_once=1 idle_skip_gpu_probe=1 reactivation=1 desktop_original=1")
