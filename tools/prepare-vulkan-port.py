@@ -4553,6 +4553,12 @@ apply_reviewed_delta("vk_buffer_cache_cost.cpp",
 apply_reviewed_delta("vk_buffer_cache_cost.cpp",
     "    boost::container::static_vector<VkBuffer, VideoCommon::NUM_VERTEX_BUFFERS> buffer_handles(bindings.buffers.size());", "#ifdef PS5_NATIVE\n    // The guest may unbind transform feedback entirely or supply an invalid\n    // binding table. Do not record a zero-count Vulkan command, construct an\n    // over-capacity static_vector or read a missing offset/size under cache locks.\n    const size_t binding_count = bindings.buffers.size();\n    if (binding_count == 0 || binding_count > VideoCommon::NUM_VERTEX_BUFFERS ||\n        bindings.offsets.size() < binding_count ||\n        bindings.sizes.size() < binding_count) {\n        return;\n    }\n#endif\n    boost::container::static_vector<VkBuffer, VideoCommon::NUM_VERTEX_BUFFERS> buffer_handles(bindings.buffers.size());",
     "F07 reject malformed native transform-feedback binding arrays")
+# F07: a lost/null guest index buffer uses the four-byte substitute. Keep its
+# offset inside that substitute, like the existing null vertex/TFB bindings.
+apply_reviewed_delta("vk_buffer_cache_cost.cpp",
+    "    if (vk_buffer == VK_NULL_HANDLE) {\n        // Vulkan doesn't support null index buffers. Replace it with our own null buffer.\n        ReserveNullBuffer();\n        vk_buffer = *null_buffer;\n    }", "    if (vk_buffer == VK_NULL_HANDLE) {\n        // Vulkan doesn't support null index buffers. Replace it with our own null buffer.\n        ReserveNullBuffer();\n        vk_buffer = *null_buffer;\n#ifdef PS5_NATIVE\n        // The fallback buffer is only four bytes. A stale guest index\n        // offset must not survive the handle substitution or Vulkan may\n        // bind beyond that allocation (same rule as null vertex/TFB).\n        vk_offset = 0;\n#endif\n    }",
+    "F07 reset native null index fallback byte offset")
+
 
 
 # F07 P0.3: empty sampled/storage image descriptor batches only reset
