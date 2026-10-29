@@ -78,4 +78,77 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-gpu-budget-") as dir:
             assert built.returncode==0,(native,opt,built.stderr[-3200:])
             ran=subprocess.run([str(out)],capture_output=True,text=True,timeout=10)
             assert ran.returncode==0,(native,opt,ran.stderr[-3200:])
-print("F07_MEMORY_BUDGET_SAMPLING_PASS native=1 desktop=1 O0=1 O2=1 low_pressure_half=1 high_pressure_every_frame=1 gc=1")
+# Native BufferCache is a separately selected header in the PS5 CMake overlay.
+# Check the real source body rather than duplicating the cost guard in Python.
+buffer_src=(root/"vendor/encore-active/eden-core/src/video_core/buffer_cache/buffer_cache.h").read_text()
+buffer_method=buffer_src.index("void BufferCache<P>::TickFrame() {")
+buffer_budget_begin=buffer_src.index("    // If we can obtain the memory info, use it instead of the estimate.",buffer_method)
+buffer_budget_end=buffer_src.index("    ++frame_tick;",buffer_budget_begin)
+buffer_selected=buffer_src[buffer_budget_begin:buffer_budget_end]
+assert buffer_selected.count("runtime.GetDeviceMemoryUsage();")==2
+assert "total_used_memory >= minimum_memory - minimum_memory / 3" in buffer_selected
+assert "(frame_tick & 1u) == 0" in buffer_selected
+assert 'configure_file("${EDEN_MAINTAINED_BUFFER_PAGES}"' in (root/"headless/CMakeLists.txt").read_text()
+assert "assert maintained == expected" in (root/"tools/check-ps5-buffer-pages-r437.py").read_text()
+buffer_cpp=r"""
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+struct MockRuntime {
+    bool report{true};
+    std::size_t reported{100};
+    int probes{};
+    bool CanReportMemoryUsage() const {return report;}
+    std::size_t GetDeviceMemoryUsage(){++probes;return reported;}
+};
+template<class P>struct BufferCache {
+    MockRuntime runtime;
+    std::size_t total_used_memory{};
+    std::size_t minimum_memory{900};
+    std::size_t frame_tick{};
+    int collections{};
+    void RunGarbageCollector(){++collections;}
+    void CheckBudget(){
+"""+buffer_selected+r"""
+    }
+};
+struct Mock{};
+int main(){
+    BufferCache<Mock> b;
+    for(int f=0;f<8;++f){b.frame_tick=f;b.CheckBudget();}
+#ifdef PS5_NATIVE
+    assert(b.runtime.probes==4);
+#else
+    assert(b.runtime.probes==8);
+#endif
+    assert(b.collections==0);
+    b.total_used_memory=650;
+    b.runtime.reported=650;
+    b.frame_tick=8;b.CheckBudget();
+    const int count=b.runtime.probes;
+    b.runtime.reported=950;
+    b.frame_tick=9;b.CheckBudget();
+    assert(b.runtime.probes==count+1);
+    assert(b.total_used_memory==950 && b.collections==1);
+    b.runtime.reported=120;
+    b.frame_tick=10;b.CheckBudget();
+    assert(b.total_used_memory==120);
+    const int sampled=b.runtime.probes;
+    b.runtime.report=false;
+    b.frame_tick=11;b.CheckBudget();
+    assert(b.runtime.probes==sampled);
+    assert(b.total_used_memory==120);
+}
+"""
+with tempfile.TemporaryDirectory(prefix="eden-f07-buffer-budget-") as d:
+    source=Path(d)/"budget.cpp";source.write_text(buffer_cpp)
+    for native in (False,True):
+        for opt in ("-O0","-O2"):
+            out=Path(d)/(("native" if native else "desktop")+opt[1:])
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror","-fsanitize=undefined",
+                 "-fno-sanitize-recover=all",*(['-DPS5_NATIVE=1'] if native else []),str(source),"-o",str(out)]
+            built=subprocess.run(cmd,capture_output=True,text=True,timeout=40)
+            assert built.returncode==0,(native,opt,built.stderr[-3200:])
+            ran=subprocess.run([str(out)],capture_output=True,text=True,timeout=10)
+            assert ran.returncode==0,(native,opt,ran.stderr[-3200:])
+print("F07_MEMORY_BUDGET_SAMPLING_PASS native=1 desktop=1 O0=1 O2=1 low_pressure_half=1 high_pressure_every_frame=1 gc=1 buffer_budget=1")
