@@ -66,6 +66,7 @@ jobs:
       - name: Early audit and native source boundary witnesses
         run: |
           set -euo pipefail
+          python3 -B tools/check-eden-backport-patch-integrity-host.py
           python3 -B tools/check-python-source-syntax.py
           python3 -B tools/check-encore-ncz-sources.py
           python3 -B tools/check-exefs-directory-host.py
