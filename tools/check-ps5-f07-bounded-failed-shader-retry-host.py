@@ -15,6 +15,10 @@ hdr = (root / "vendor/sources/eden/src/video_core/renderer_vulkan/vk_pipeline_ca
 active = (root / "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_pipeline_cache.h").read_text()
 cmake = (root / "headless/vulkan.cmake").read_text()
 gen = (root / "tools/prepare-vulkan-port.py").read_text()
+trace_begin = src.index("struct ColdShaderMissTrace {")
+trace_end = src.index("\n};\n#endif", trace_begin) + len("\n};")
+cold_trace = src[trace_begin:trace_end]
+assert cold_trace in gen
 start = "GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {"
 end = "    if (!pipeline) {\n        return nullptr;"
 assert src.count(start) == 1
@@ -45,13 +49,26 @@ cpp = r"""
 #include <atomic>
 #include <cassert>
 #include <chrono>
+#include <cstdint>
+#include <cstdio>
 #include <map>
 #include <memory>
 namespace Eden { namespace Performance {
 enum class CachePhase { GraphicsPipelineCreate };
 inline std::atomic_bool detailed_gpu_profile{false};
-struct CachePhaseTimer { CachePhaseTimer(CachePhase, bool) {} };
+struct CachePhaseTimer {
+    CachePhaseTimer(CachePhase, bool) {}
+    void Stop() noexcept {}
+};
 }}
+using u64 = std::uint64_t;
+""" + cold_trace + r"""
+struct MockGraphicsKey {
+    int value{};
+    MockGraphicsKey& operator=(int next) { value = next; return *this; }
+    operator int() const noexcept { return value; }
+    u64 Hash() const noexcept { return static_cast<u64>(value); }
+};
 class PipelineCache {
 public:
     struct GraphicsRetryState {
@@ -60,7 +77,7 @@ public:
     };
     std::map<int, std::unique_ptr<int>> graphics_cache;
     std::map<int, GraphicsRetryState> failed_graphics_retries;
-    int graphics_key{};
+    MockGraphicsKey graphics_key{};
     int create_calls{};
     bool recover_on_second{};
     std::unique_ptr<int> CreateGraphicsPipeline() {
