@@ -149,15 +149,25 @@ int main(){
     unsigned empty_repeats{};
     std::atomic<bool> running{true};
     std::atomic<unsigned> competitor_gets{};
+    // Start the measured invalidation burst only AFTER the real competing
+    // thread has acquired/released the mutex once. Without a handshake, a
+    // fast -O2 source replay can finish all 96 drains before that thread is
+    // ever scheduled; that is not evidence of a lock-budget regression.
+    std::atomic<bool> competitor_started{false};
     std::thread competitor([&] {
         while(running.load(std::memory_order_relaxed)){
             {
                 std::lock_guard<TimedMutex> lk{p.invalidation_mutex};
                 ++competitor_gets;
             }
+            if (!competitor_started.exchange(true,std::memory_order_release)) {
+                competitor_started.notify_one();
+            }
             std::this_thread::yield();
         }
     });
+    competitor_started.wait(false,std::memory_order_acquire);
+    assert(competitor_gets.load(std::memory_order_acquire)>0);
     for(unsigned i=0;i<iterations;++i){
         p.InvalidateCacheRange(static_cast<Address>(0x1000+i*8),4);
         p.PerformRequestedCacheInvalidation(HaltReason::CacheInvalidation);
@@ -170,7 +180,9 @@ int main(){
     assert(p.jit_state.resets==iterations);
     assert(p.emitter.cleared==0);
     assert(p.emitter.workload.load(std::memory_order_relaxed)!=0);
-    assert(empty_repeats==iterations && competitor_gets>0);
+    assert(empty_repeats==iterations);
+    assert(competitor_started.load(std::memory_order_acquire));
+    assert(competitor_gets.load(std::memory_order_acquire)>0);
     // The maintained code dispatches outside mutex; old code does not.
     assert(p.emitter.executed_under_guard==PINNED_EXPECTED);
     const auto held=p.invalidation_mutex.held_ns.load(std::memory_order_relaxed);
