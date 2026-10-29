@@ -2199,7 +2199,15 @@ u64 TextureCache<P>::GetScaledImageSizeBytes(const ImageBase& image) {
 template <class P>
 void TextureCache<P>::QueueAsyncDecode(Image& image, ImageId image_id) {
     UNIMPLEMENTED_IF(False(image.flags & ImageFlagBits::Converted));
+#ifdef PS5_NATIVE
+    // Dynamic HUD revisions can enqueue many decodes per second. Quiet
+    // releases need no per-texture INFO formatting or log queue traffic.
+    if (::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)) {
+        LOG_INFO(HW_GPU, "Queuing async texture decode");
+    }
+#else
     LOG_INFO(HW_GPU, "Queuing async texture decode");
+#endif
 
 #ifdef PS5_NATIVE
     // Never strand IsDecoding or a pending decode entry if preparation or
