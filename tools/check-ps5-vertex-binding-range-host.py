@@ -213,3 +213,70 @@ with tempfile.TemporaryDirectory(prefix="encore-vertex-early-") as tmp:
             assert run.returncode==0,(mode,ps5,run.stderr[-5000:])
 print("VERTEX_EARLY_REJECTION_HOST_PASS invalid_no_handles=1 clamped_no_null=1"
       " clamped_tail_ignored=1 malformed_rejected=1 desktop_unchanged=1 valid_handles_and_fallback=1 O0_O2=1")
+
+# Source-extracted native transform-feedback input validation. The upstream
+# version constructs the fixed-capacity vector even with invalid guest arrays.
+tfb_begin="void BufferCacheRuntime::BindTransformFeedbackBuffers("
+tfb_end="\nvoid BufferCacheRuntime::ReserveNullBuffer("
+assert native.count(tfb_begin)==1 and native.count(tfb_end)==1
+tfb_method=native[native.index(tfb_begin):native.index(tfb_end,native.index(tfb_begin))]
+assert "F07 reject malformed native transform-feedback binding arrays" in generator
+assert "binding_count > VideoCommon::NUM_VERTEX_BUFFERS" in tfb_method
+assert "bindings.offsets.size() < binding_count" in tfb_method
+assert "bindings.sizes.size() < binding_count" in tfb_method
+guard_begin=tfb_method.index("#ifdef PS5_NATIVE")
+guard_end=tfb_method.index("#endif",guard_begin)+len("#endif")
+tfb_guard=tfb_method[guard_begin:guard_end]
+assert tfb_method.index("binding_count == 0") < tfb_method.index("buffer_handles(bindings.buffers.size())")
+tfb_cpp=r"""
+#include <cassert>
+#include <cstddef>
+#include <vector>
+namespace VideoCommon {constexpr std::size_t NUM_VERTEX_BUFFERS=32;}
+struct HostBindings {
+    std::vector<int> buffers,offsets,sizes;
+};
+struct Guard {
+    HostBindings bindings;
+    unsigned attempts{};
+    void Bind() {
+__TFB_GUARD__
+        ++attempts;
+    }
+};
+int main(){
+    const auto check=[](std::size_t n,std::size_t off,std::size_t sz,bool accepted) {
+        Guard g;
+        g.bindings.buffers.resize(n);
+        g.bindings.offsets.resize(off);
+        g.bindings.sizes.resize(sz);
+        g.Bind();
+#ifdef PS5_NATIVE
+        assert((g.attempts==1)==accepted);
+#else
+        assert(g.attempts==1);
+#endif
+    };
+    check(0,0,0,false);
+    check(1,1,1,true);
+    check(8,8,8,true);
+    check(32,32,32,true);
+    check(33,33,33,false);
+    check(3,2,3,false);
+    check(3,3,2,false);
+    check(3,4,5,true);
+}
+""".replace("__TFB_GUARD__",tfb_guard)
+for mode in (False,True):
+    for opt in ("-O0","-O2"):
+        with tempfile.TemporaryDirectory(prefix="eden-f07-tfb-guard-") as folder:
+            path=Path(folder)/"tfb.cpp"; exe=Path(folder)/"tfb"
+            path.write_text(tfb_cpp)
+            command=[clang,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                     "-fsanitize=address,undefined","-fno-sanitize-recover=all",
+                     *(['-DPS5_NATIVE=1'] if mode else []),str(path),"-o",str(exe)]
+            built=subprocess.run(command,capture_output=True,text=True,timeout=45)
+            assert built.returncode==0,(mode,opt,built.stderr[-3200:])
+            run=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
+            assert run.returncode==0,(mode,opt,run.stderr[-3200:])
+print("F07_NATIVE_TFB_BINDINGS_GUARD_PASS native_empty=1 overcapacity=1 short_arrays=1 desktop_original=1 O0=1 O2=1")

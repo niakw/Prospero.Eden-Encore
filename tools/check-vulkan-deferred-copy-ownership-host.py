@@ -97,6 +97,7 @@ f07_copy_labels = (
     'F07 preserve explicit barriers when deciding native staging upload reordering',
     'F07 include buffer cache staging allocation exception',
     'F07 validate native upload and download buffer cache staging handles',
+    'F07 reject malformed native transform-feedback binding arrays',
 )
 f07_buffer_deltas = []
 for statement in tree.body:

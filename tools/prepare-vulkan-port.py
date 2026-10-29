@@ -4547,6 +4547,13 @@ apply_reviewed_delta("vk_buffer_cache_cost.cpp",
     "#endif\n"
     "}",
     "F07 validate native upload and download buffer cache staging handles")
+# F07: transform-feedback descriptors come from guest state and can be empty
+# or partially reset after an unbind. Never record a zero-count Vulkan bind,
+# overrun the inline static_vector, or index a missing offset/size on PS5.
+apply_reviewed_delta("vk_buffer_cache_cost.cpp",
+    "    boost::container::static_vector<VkBuffer, VideoCommon::NUM_VERTEX_BUFFERS> buffer_handles(bindings.buffers.size());", "#ifdef PS5_NATIVE\n    // The guest may unbind transform feedback entirely or supply an invalid\n    // binding table. Do not record a zero-count Vulkan command, construct an\n    // over-capacity static_vector or read a missing offset/size under cache locks.\n    const size_t binding_count = bindings.buffers.size();\n    if (binding_count == 0 || binding_count > VideoCommon::NUM_VERTEX_BUFFERS ||\n        bindings.offsets.size() < binding_count ||\n        bindings.sizes.size() < binding_count) {\n        return;\n    }\n#endif\n    boost::container::static_vector<VkBuffer, VideoCommon::NUM_VERTEX_BUFFERS> buffer_handles(bindings.buffers.size());",
+    "F07 reject malformed native transform-feedback binding arrays")
+
 
 # F07 P0.3: empty sampled/storage image descriptor batches only reset
 # the deletion retry latch. Avoid constructing the TIC memo under paired GPU
