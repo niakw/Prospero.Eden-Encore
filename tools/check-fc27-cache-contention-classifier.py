@@ -167,6 +167,17 @@ shader = (
 worker = ("graphics_pipeline_wait", "compute_pipeline_wait")
 assert set(shader) == module.SHADER_PHASES
 assert set(worker) == module.WORKER_PHASES
+# The native PS5 reporter is the source of truth for these phase names.
+# Fail if its phase table or frame identifiers drift from this parser.
+native_report = (root / "headless/performance.cpp").read_text()
+native_frames = (root / "headless/graphics.cpp").read_text()
+phase_table = native_report.split("constexpr const char* cache_phase_names[] = {", 1)[1].split("};", 1)[0]
+for phase in module.PROFILE_PHASES:
+    assert f'"{phase}"' in phase_table, phase
+assert "EDEN_GPU_CACHE_PHASE frame=%u phase=%s" in native_report
+assert "window_samples=%llu window_ns=%llu max_ns=%llu" in native_report
+assert "EDEN_FRAME_JIT_CORE frame=%u core=%u compile_ns=%llu" in native_frames
+assert "EDEN_FRAME_PRESSURE frame=%u detail=not_measured" in native_frames
 full_phase_lines = [gpu_phase(970, phase, 2_000_000)
                     for phase in (*shader, *worker)]
 complete = module.windows(record(970, 27, 95, 100, 3) + full_phase_lines)
