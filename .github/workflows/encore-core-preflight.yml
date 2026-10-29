@@ -340,6 +340,7 @@ jobs:
           python3 -B tools/check-ps5-buffer-presentation-state-space.py
           python3 -B tools/check-ps5-vulkan-worker-wake.py
           python3 -B tools/check-vulkan-worker-fatal-drain-host.py
+          python3 -B tools/check-ps5-gpu-time-batch-host.py
           python3 -B tools/check-vulkan-renderpass-clear-bounds-host.py
           python3 -B tools/check-vulkan-fence-completed-wait-host.py
           python3 -B tools/check-vulkan-buffer-frame-tick-snapshot-host.py
