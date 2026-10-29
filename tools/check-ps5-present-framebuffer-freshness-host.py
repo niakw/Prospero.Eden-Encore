@@ -201,3 +201,126 @@ with tempfile.TemporaryDirectory(prefix="encore-f07-present-fresh-") as d:
             else:
                 assert run.returncode != 0,(optimization,label,"old policy unexpectedly passed")
                 print("F07_PRESENT_STALE_SIBLING_OLD_EXPECTED_FAIL_PASS",optimization)
+
+
+# C04: source-extracted accelerated renderer method, not only the candidate
+# selector. Missing Vulkan image OR color view must fall back without
+# claiming a valid GPU read segment. Desktop behavior remains untouched.
+method_signature = "std::optional<FramebufferTextureInfo> RasterizerVulkan::AccelerateDisplay("
+assert raster.count(method_signature) == 1
+start = raster.index(method_signature)
+opening = raster.index("{", start)
+level = 0
+stop = None
+for pos in range(opening, len(raster)):
+    if raster[pos] == "{":
+        level += 1
+    elif raster[pos] == "}":
+        level -= 1
+        if level == 0:
+            stop = pos+1
+            break
+assert stop is not None
+display_method = raster[start:stop]
+guard = "if (info.image == VK_NULL_HANDLE || info.image_view == VK_NULL_HANDLE)"
+assert guard in display_method
+assert display_method.index(guard) < display_method.index("query_cache.NotifySegment(false);")
+assert "F07 C04 accelerated framebuffer rejects missing Vulkan handles" in generator
+mock = r"""
+#include <cassert>
+#include <cstdint>
+#include <cstdio>
+#include <mutex>
+#include <optional>
+#include <utility>
+using DAddr = std::uint64_t;
+using u32 = std::uint32_t;
+using VkImage = std::uint64_t;
+using VkImageView = std::uint64_t;
+#define VK_NULL_HANDLE 0
+namespace Shader { enum class TextureType { Color2D }; }
+namespace Tegra { struct FramebufferConfig {}; }
+struct FramebufferTextureInfo {
+    VkImage image{};
+    VkImageView image_view{};
+    u32 width{}, height{}, scaled_width{}, scaled_height{};
+};
+struct ImageView {
+    VkImage image{};
+    VkImageView view{};
+    struct {u32 width{50},height{25};} size;
+    VkImage ImageHandle() const {return image;}
+    VkImageView Handle(Shader::TextureType) const {return view;}
+};
+struct Cache {
+    std::mutex mutex;
+    ImageView* candidate{};
+    bool scaled{};
+    std::pair<ImageView*,bool> TryFindFramebufferImageView(
+        const Tegra::FramebufferConfig&,DAddr) {return {candidate,scaled};}
+};
+struct GpuMemory {unsigned flush{};void FlushCaching(){++flush;}};
+struct Query {unsigned notices{};void NotifySegment(bool x) {assert(!x);++notices;}};
+struct Resolution{u32 ScaleUp(u32 x) const{return x*2;}};
+namespace Settings {struct Values{Resolution resolution_info;};inline Values values{};}
+struct RasterizerVulkan {
+    GpuMemory* gpu_memory{};
+    Cache texture_cache;
+    Query query_cache;
+    std::optional<FramebufferTextureInfo> AccelerateDisplay(
+        const Tegra::FramebufferConfig&,DAddr,u32);
+};
+__METHOD__
+int main(){
+    GpuMemory memory;
+    RasterizerVulkan raster;
+    raster.gpu_memory=&memory;
+    ImageView source;
+    Tegra::FramebufferConfig config{};
+    assert(!raster.AccelerateDisplay(config,0,0));
+    assert(memory.flush==0&&raster.query_cache.notices==0);
+    assert(!raster.AccelerateDisplay(config,1234,0));
+    assert(raster.query_cache.notices==0);
+    raster.texture_cache.candidate=&source;
+    source.image=0;source.view=43;
+    auto invalid_image=raster.AccelerateDisplay(config,1234,0);
+#ifdef PS5_NATIVE
+    assert(!invalid_image && raster.query_cache.notices==0);
+#else
+    assert(invalid_image && raster.query_cache.notices==1);
+#endif
+    source.image=42;source.view=0;
+    auto invalid_view=raster.AccelerateDisplay(config,1234,0);
+#ifdef PS5_NATIVE
+    assert(!invalid_view && raster.query_cache.notices==0);
+#else
+    assert(invalid_view && raster.query_cache.notices==2);
+#endif
+    source.image=42;source.view=43;
+    raster.texture_cache.scaled=true;
+    auto ok=raster.AccelerateDisplay(config,1234,0);
+    assert(ok && ok->image==42 && ok->image_view==43);
+    assert(ok->width==50 && ok->height==25 &&
+           ok->scaled_width==100 && ok->scaled_height==50);
+#ifdef PS5_NATIVE
+    assert(raster.query_cache.notices==1 && memory.flush==4);
+#else
+    assert(raster.query_cache.notices==3 && memory.flush==0);
+#endif
+    std::puts("F07_C04_DISPLAY_NULL_HANDLE_FALLBACK_PASS");
+}
+""".replace("__METHOD__",display_method)
+with tempfile.TemporaryDirectory(prefix="encore-c04-display-handle-") as d:
+    src=Path(d)/"display.cpp"
+    src.write_text(mock)
+    for opt in ("-O0","-O2"):
+        for native in (True,False):
+            exe=Path(d)/("display-"+opt[1:]+("-native" if native else "-desktop"))
+            subprocess.run(["c++","-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                            "-fsanitize=undefined","-fno-sanitize-recover=all",
+                            *(["-DPS5_NATIVE=1"] if native else []),
+                            str(src),"-o",str(exe)],check=True,timeout=60)
+            result=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
+            assert result.returncode==0,(opt,native,result.stderr)
+            assert "F07_C04_DISPLAY_NULL_HANDLE_FALLBACK_PASS" in result.stdout
+            print("F07_C04_DISPLAY_NULL_HANDLE_FALLBACK_PASS",opt,"native",int(native))
