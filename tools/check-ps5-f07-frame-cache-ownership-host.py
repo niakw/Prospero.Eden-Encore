@@ -6,6 +6,7 @@ and no quiet-path clocks. Test with the real CachePhaseTimer and TickFrame.
 Host-only: not a PS5 timing or FC27 frame proof.
 """
 from pathlib import Path
+import json
 import shutil
 import subprocess
 import tempfile
@@ -20,7 +21,9 @@ workflow = (root / ".github/workflows/encore-core-preflight.yml").read_text()
 start = raster.index("void RasterizerVulkan::TickFrame() {")
 end = raster.index("\n}\n", start) + 2
 body = raster[start:end]
-assert body in generator, "Pinned generator must reproduce the exact active body"
+assert json.dumps(body, ensure_ascii=False) in generator, (
+    "Pinned generator must reproduce the exact active body"
+)
 assert generator.count("F07 frame GC texture and buffer lock ownership instrumentation") == 1
 assert "python3 -B tools/check-ps5-f07-frame-cache-ownership-host.py" in workflow
 assert report.count('"frame_texture_wait"') == 1
@@ -28,7 +31,7 @@ assert report.count('"frame_texture_held"') == 1
 assert report.count('"frame_buffer_wait"') == 1
 assert report.count('"frame_buffer_held"') == 1
 for name in ("FrameTextureWait", "FrameTextureHeld", "FrameBufferWait", "FrameBufferHeld"):
-    assert perf.count(name) >= 2
+    assert perf.count(name) == 1
     assert "CachePhase::" + name in body
 assert "ShouldSampleCacheFrame()" in body
 assert "std::scoped_lock lock{texture_cache.mutex};" in body
