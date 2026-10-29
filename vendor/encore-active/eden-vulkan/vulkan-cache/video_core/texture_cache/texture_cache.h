@@ -2291,7 +2291,11 @@ void TextureCache<P>::TickAsyncDecode() {
     // a burst of HUD textures cannot occupy the entire cache lock in one
     // frame. Work not processed this tick retains its decode context.
     constexpr size_t kMaxCompletedDecodesPerTick = 4;
+    // Invalid/stale decodes must not consume the four REAL upload slots.
+    // Still cap retirements to keep the texture mutex responsive on a burst.
+    constexpr size_t kMaxRetiredDecodesPerTick = 16;
     size_t completed_decodes = 0;
+    size_t retired_decodes = 0;
     // Keep every successfully submitted native texture ID in fixed storage:
     // a rejected visibility barrier must invalidate the whole upload batch.
     std::array<ImageId, kMaxCompletedDecodesPerTick> submitted_images{};
@@ -2307,10 +2311,11 @@ void TextureCache<P>::TickAsyncDecode() {
             ++i;
             continue;
         }
-        if (completed_decodes == kMaxCompletedDecodesPerTick) {
+        if (completed_decodes == kMaxCompletedDecodesPerTick ||
+            retired_decodes == kMaxRetiredDecodesPerTick) {
             break;
         }
-        ++completed_decodes;
+        ++retired_decodes;
 #endif
         std::unique_lock lock{async_decode->mutex};
 #ifndef PS5_NATIVE
@@ -2388,6 +2393,7 @@ void TextureCache<P>::TickAsyncDecode() {
         has_uploads = true;
 #ifdef PS5_NATIVE
         submitted_images[submitted_count++] = async_decode->image_id;
+        ++completed_decodes;
 #endif
         // The context owns async_decode->mutex. Unlock before destroying it.
         lock.unlock();

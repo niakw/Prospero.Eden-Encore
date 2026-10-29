@@ -25,6 +25,13 @@ assert "lock.unlock();" not in old_method  # original reproducible lifetime haza
 assert method.count("lock.unlock();") == 4
 assert "kMaxCompletedDecodesPerTick = 4" in method
 assert "completed_decodes == kMaxCompletedDecodesPerTick" in method
+assert "kMaxRetiredDecodesPerTick = 16" in method
+assert "retired_decodes == kMaxRetiredDecodesPerTick" in method
+assert "F07 count only accepted async HUD uploads under independent retired decode budget" in generator
+assert "F07 bound completion retirements while skipping invalid async decode slots" in generator
+assert "F07 increment successful async decode quota only after GPU submission" in generator
+assert method.index("++completed_decodes;") > method.index("submitted_images[submitted_count++]")
+assert method.index("++retired_decodes;") < method.index("std::unique_lock lock{async_decode->mutex}")
 assert "F07 bounded ready decode completion under texture lock" in generator
 assert method.count("i = async_decodes.erase(i);") == 4
 assert "F07 async decoded staging allocation failure and short span recovery" in generator
@@ -211,14 +218,14 @@ int main(){
     cache.runtime.short_on_call=3;
     const unsigned locks_before_first_tick = CheckedMutex::lock_calls;
     cache.TickAsyncDecode();
-    // Only four completed contexts are handled under the first frame lock.
-    assert(CheckedMutex::lock_calls == locks_before_first_tick + 4);
-    assert(cache.async_decodes.size()==4);
-    assert(cache.runtime.staging_calls==1 && cache.runtime.barriers==1);
-    cache.TickAsyncDecode();
-    // Seven completed tasks are now drained over TWO frames; pending untouched.
+    // Invalid revisions and failed allocations do not take the four
+    // successful-upload slots: retire all seven completed tasks at once.
     assert(CheckedMutex::lock_calls == locks_before_first_tick + 7);
     assert(cache.async_decodes.size()==1 && !cache.async_decodes[0]->complete);
+    assert(cache.runtime.staging_calls==4 && cache.runtime.barriers==1);
+    cache.TickAsyncDecode();
+    assert(CheckedMutex::lock_calls == locks_before_first_tick + 7);
+    assert(cache.async_decodes.size()==1);
     assert(True(cache.slot_images[1].flags&ImageFlagBits::CpuModified));
     assert(!True(cache.slot_images[1].flags&ImageFlagBits::Tracked));
     assert(!True(cache.slot_images[1].flags&ImageFlagBits::IsDecoding));
@@ -301,6 +308,39 @@ int main(){
         assert(burst.slot_images[id].result[0]==id);
         assert(!True(burst.slot_images[id].flags&ImageFlagBits::IsDecoding));
     }
+    // A stale HUD burst must not starve valid work for four frames, and
+    // retirement itself stays capped at 16 completed contexts per frame.
+    TextureCache<int> mixed;
+    mixed.slot_images.resize(23);
+    for (std::size_t id=0;id<23;++id) {
+        auto& image=mixed.slot_images[id];
+        image.size=4;
+        image.flags|=ImageFlagBits::IsDecoding;
+        image.flags|=ImageFlagBits::Tracked;
+        auto ctx=std::make_unique<AsyncDecodeContext>();
+        ctx->image_id=id;
+        ctx->complete=true;
+        ctx->decoded_data={static_cast<std::uint8_t>(id),1,2,3};
+        if (id < 19) image.flags|=ImageFlagBits::CpuModified;
+        mixed.async_decodes.emplace_back(std::move(ctx));
+    }
+    const unsigned before_mixed = CheckedMutex::lock_calls;
+    mixed.TickAsyncDecode();
+    assert(mixed.async_decodes.size()==7);
+    assert(CheckedMutex::lock_calls==before_mixed+16);
+    assert(mixed.runtime.staging_calls==0 && mixed.runtime.barriers==0);
+    mixed.TickAsyncDecode();
+    assert(mixed.async_decodes.empty());
+    assert(CheckedMutex::lock_calls==before_mixed+23);
+    assert(mixed.runtime.staging_calls==4 && mixed.runtime.barriers==1);
+    for (std::size_t id=0;id<19;++id) {
+        assert(mixed.slot_images[id].uploads==0);
+        assert(True(mixed.slot_images[id].flags&ImageFlagBits::CpuModified));
+    }
+    for (std::size_t id=19;id<23;++id) {
+        assert(mixed.slot_images[id].uploads==1);
+        assert(!True(mixed.slot_images[id].flags&ImageFlagBits::IsDecoding));
+    }
     // Two valid uploads have been recorded but their final visibility barrier
     // fails. BOTH images must be dirty/retryable; no decoding lock may leak.
     TextureCache<int> failed_barrier;
@@ -350,7 +390,7 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-async-lifetime-") as directory
         assert built.returncode==0,(optimization,built.stderr[-5000:])
         ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=20)
         assert ran.returncode==0,(optimization,ran.stdout,ran.stderr[-5000:])
-print("F07_ASYNC_TICK_LIFETIME_HOST_PASS unlock_before_erase=1 revision_size_guard=1 stale_same_size=1 stale_remapped_same_size=1 pending=1 staging_oom=1 short_span=1 failed_gpu_submission=1 retry=1 burst_quota_4=1 burst_11_in_3_ticks=1 failed_barrier_dirty_batch=1 barrier_retry=1 O0=1 O2=1")
+print("F07_ASYNC_TICK_LIFETIME_HOST_PASS unlock_before_erase=1 revision_size_guard=1 stale_same_size=1 stale_remapped_same_size=1 pending=1 staging_oom=1 short_span=1 failed_gpu_submission=1 retry=1 burst_quota_4=1 retired_quota_16=1 stale_budget_elision=1 burst_11_in_3_ticks=1 failed_barrier_dirty_batch=1 barrier_retry=1 O0=1 O2=1")
 
 
 # Extract the real queued native conversion lambda and execute both branches.
