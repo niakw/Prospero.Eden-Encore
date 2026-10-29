@@ -43,7 +43,7 @@ assert '"    scheduler.InvalidateState();\\n"' in gen
 assert "F07 bypass cold guest graphics shader lookup in native raw DrawTexture" in gen
 for method_name,support in (("UpdateAlphaToCoverageEnable","SupportsAlphaToCoverage"),
                             ("UpdateAlphaToOneEnable","SupportsAlphaToOne")):
-    assert f"F07 avoid raw blit guest shader lookup for native {method_name[6:]}" in gen
+    assert f"F07 avoid raw blit guest shader lookup for native {method_name[6:-6]}" in gen
     start_method="void RasterizerVulkan::"+method_name+"("
     method=raster.split(start_method,1)[1].split("\nvoid RasterizerVulkan::",1)[0]
     assert method.count("pipeline_cache.CurrentGraphicsPipeline()")==1
