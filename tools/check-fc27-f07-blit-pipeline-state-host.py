@@ -241,4 +241,3 @@ with tempfile.TemporaryDirectory(prefix="fc27-f07-raw-vertex-") as td:
             subprocess.run(args, check=True, capture_output=True, text=True)
             subprocess.run([str(executable)], check=True, capture_output=True, text=True)
 print("FC27_F07_RAW_BLIT_PIPELINE_INVALIDATION_PASS source_extracted=3 raw_blit_avoids_guest_shader=1 alpha_state_avoids_cold_shader=2 desktop_original=1 O0=1 O2=1")
-
