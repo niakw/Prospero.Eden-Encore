@@ -289,7 +289,14 @@ assert acquire_body.index("if (!scratch.image)") < acquire_body.index(
 )
 assert "F07 MSAA null scratch image rejected before caching" in generator
 assert "#ifdef PS5_NATIVE\n    // Some allocation backends report failure" in acquire_body
-assert acquire_body in generator
+# The generator stores strict reviewed deltas, not the entire method.
+null_block_begin = "    MsaaScratchImage scratch{"
+null_block_end = "    const VkImage handle = *scratch.image;"
+null_block = acquire_body[
+    acquire_body.index(null_block_begin):
+    acquire_body.index(null_block_end) + len(null_block_end)
+]
+assert null_block in generator
 
 pool_cpp = r"""
 #include <cassert>
