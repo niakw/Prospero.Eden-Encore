@@ -64,6 +64,7 @@ f07_texture_labels = (
     'F07 skip GPU completion probe on empty native MSAA scratch list',
     'F07 skip GPU completion probe on empty native MSAA GC frame',
     'F07 avoid native MSAA GPU completion probe without matching image key',
+    'F07 skip MSAA GPU probe when every scratch image is checked out',
 )
 f07_texture_deltas = []
 for statement in tree.body:

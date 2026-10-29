@@ -358,9 +358,12 @@ assert "F07 snapshot native MSAA scratch and resolve cleanup GPU completion" in 
 assert "F07 skip GPU completion probe on empty native MSAA scratch list" in generator
 assert "F07 skip GPU completion probe on empty native MSAA GC frame" in generator
 assert "F07 avoid native MSAA GPU completion probe without matching image key" in generator
+assert "F07 skip MSAA GPU probe when every scratch image is checked out" in generator
 assert "sampled_completed_tick" in gc_acquire
 assert gc_acquire.index("if (scratch.key != key)") < gc_acquire.index("KnownGpuTick()")
 assert "if (msaa_scratch_images.empty() && pending_resolve_shadows.empty())" in gc_tick
+assert "std::all_of(msaa_scratch_images.begin()" in gc_tick
+assert "return scratch.tick == (std::numeric_limits<u64>::max)();" in gc_tick
 assert gc_tick.index("if (msaa_scratch_images.empty() && pending_resolve_shadows.empty())") < gc_tick.index("KnownGpuTick()")
 assert gc_acquire.count("KnownGpuTick()")==1
 assert gc_tick.count("KnownGpuTick()")==1
@@ -430,6 +433,29 @@ int main() {
     r.TickFrame();
 #ifdef PS5_NATIVE
     assert(r.scheduler.semaphore.polls==0);
+#endif
+    // Checked-out scratch has no retired tick. Multiple GC frames must not
+    // probe the GPU; releasing it must resume the original aging behavior.
+    TextureCacheRuntime checked_out;
+    checked_out.msaa_scratch_images.push_back(
+        {{},std::make_shared<VkImage>(4242),std::numeric_limits<u64>::max(),0});
+    checked_out.TickFrame();
+    checked_out.TickFrame();
+#ifdef PS5_NATIVE
+    assert(checked_out.scheduler.semaphore.polls==0);
+    assert(checked_out.scheduler.is_free_calls==0);
+#else
+    assert(checked_out.scheduler.is_free_calls==2);
+#endif
+    assert(checked_out.msaa_scratch_images[0].unused_frames==0);
+    checked_out.msaa_scratch_images[0].tick=5;
+    checked_out.scheduler.semaphore.completed=5;
+    checked_out.TickFrame();
+    assert(checked_out.msaa_scratch_images[0].unused_frames==1);
+#ifdef PS5_NATIVE
+    assert(checked_out.scheduler.semaphore.polls==1);
+#else
+    assert(checked_out.scheduler.is_free_calls==3);
 #endif
     VkImageCreateInfo ci{};
     ci.format=2;ci.imageType=3;ci.extent={64,32,1};
@@ -531,4 +557,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-msaa-snapshot-") as folder:
             assert built.returncode==0,(native,opt,built.stderr[-6000:])
             ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
-print("F07_MSAA_GC_SOURCE_EXTRACTED_PASS native_one_tick_per_scan=1 empty_scan_no_poll=1 wrong_key_no_poll=1 resolve_only=1 desktop_original=1 delayed_reuse_safe=1 O0=1 O2=1")
+print("F07_MSAA_GC_SOURCE_EXTRACTED_PASS native_one_tick_per_scan=1 empty_scan_no_poll=1 checked_out_no_poll=1 wrong_key_no_poll=1 resolve_only=1 desktop_original=1 delayed_reuse_safe=1 O0=1 O2=1")
