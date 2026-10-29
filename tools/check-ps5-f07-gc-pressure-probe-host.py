@@ -24,6 +24,7 @@ assert gc.count("dirty_probe_remaining = 0;") == 3  # initial, after eviction, c
 assert "must_download && !DirtyEvictionsForCleanup()" in gc
 assert "must_download && !DirtyEvictions()" in gc  # desktop remains untouched
 assert "Pinned native GC pressure-probe anchor changed" in generator
+assert "F07 bound native dirty GC pressure checks after clean-image rewrite" in generator
 assert "gc = gc.replace(old, new)" in generator
 
 compiler = next((x for x in ("clang++-18", "clang++", "g++") if shutil.which(x)), None)
