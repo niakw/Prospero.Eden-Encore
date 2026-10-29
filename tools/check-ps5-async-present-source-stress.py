@@ -88,6 +88,7 @@ public:
   Scheduler scheduler;
   std::deque<Frame*> present_queue,free_queue;
   std::condition_variable_any frame_cv;
+  std::condition_variable_any present_ready_cv;
   std::condition_variable free_cv;
   std::mutex swapchain_mutex,queue_mutex,free_mutex;
   bool present_in_flight{};
@@ -105,7 +106,7 @@ public:
   }
   ~PresentManager(){
     present_thread.request_stop();
-    frame_cv.notify_all();
+    present_ready_cv.notify_all();
     if(present_thread.joinable())present_thread.join();
   }
   Frame* GetRenderFrame();

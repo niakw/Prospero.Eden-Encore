@@ -222,10 +222,10 @@ void PresentManager::Present(Frame* frame) {
             std::unique_lock lock{queue_mutex};
             if (present_failure) return;
             present_queue.push_back(frame);
-            // The present worker and WaitPresent share this CV. notify_one
-            // could wake only the drain waiter and strand a queued frame.
+            // Only the presentation worker waits on present_ready_cv.
+            // Avoid waking WaitPresent on every enqueue; it needs completion.
             lock.unlock();
-            frame_cv.notify_all();
+            present_ready_cv.notify_one();
         });
     } else {
         scheduler.WaitWorker();
@@ -370,7 +370,7 @@ void PresentManager::PresentThread(std::stop_token token) {
     while (!token.stop_requested()) {
         std::unique_lock lock{queue_mutex};
         // Wait for presentation frames
-        frame_cv.wait(lock, token, [this] { return !present_queue.empty(); });
+        present_ready_cv.wait(lock, token, [this] { return !present_queue.empty(); });
         if (!token.stop_requested()) {
             // Take the frame; completion is signaled after the swapchain copy.
             Frame* frame = present_queue.front();

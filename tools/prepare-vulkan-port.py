@@ -797,6 +797,9 @@ adapt('src/video_core/renderer_vulkan/vk_present_manager.h',
      '    std::atomic<std::size_t> swapchain_image_count{};\n'
      '    std::atomic<VkFormat> swapchain_image_format{};\n'
      '    std::atomic<VkFormat> swapchain_image_view_format{};'),
+    ('    std::condition_variable_any frame_cv;',
+     '    std::condition_variable_any frame_cv;\n'
+     '    std::condition_variable_any present_ready_cv;'),
     ('    std::jthread present_thread;',
      '    bool present_in_flight{}; // guarded by queue_mutex\n'
      '    std::exception_ptr present_failure;\n    std::jthread present_thread;'),
@@ -895,14 +898,16 @@ void PresentManager::CopyToSwapchain(Frame* frame) {'''),
      '    lock.unlock();'),
     ('            present_queue.push_back(frame);',
      '            if (present_failure) return;\n            present_queue.push_back(frame);'),
-    # PresentThread and WaitPresent share frame_cv. Waking just one waiter
-    # on enqueue can wake WaitPresent instead of the presentation worker.
+    # The drain waiter and present worker have different predicates.
+    # A dedicated CV avoids waking the drain on every frame enqueue.
     ('            present_queue.push_back(frame);\n            frame_cv.notify_one();',
      '            present_queue.push_back(frame);\n'
-     '            // The present worker and WaitPresent share this CV. notify_one\n'
-     '            // could wake only the drain waiter and strand a queued frame.\n'
+     '            // Only the presentation worker waits on present_ready_cv.\n'
+     '            // Avoid waking WaitPresent on every enqueue; it needs completion.\n'
      '            lock.unlock();\n'
-     '            frame_cv.notify_all();'),
+     '            present_ready_cv.notify_one();'),
+    ('frame_cv.wait(lock, token, [this] { return !present_queue.empty(); });',
+     'present_ready_cv.wait(lock, token, [this] { return !present_queue.empty(); });'),
     ('            // Take the frame and notify anyone waiting',
      '            // Take the frame; completion is signaled after the swapchain copy.'),
     ('            present_queue.pop_front();',

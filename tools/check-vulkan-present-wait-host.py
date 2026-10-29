@@ -18,6 +18,8 @@ checks = (
     "if (present_failure) std::rethrow_exception(present_failure);",
     "lock.unlock();\\n",
     "frame_cv.notify_all();",
+    "present_ready_cv.notify_one();",
+    "std::condition_variable_any present_ready_cv;",
 )
 for token in checks:
     assert token in generator, token
@@ -58,10 +60,12 @@ assert "present_in_flight = false;" in present_thread
 enqueue = section("void PresentManager::Present(Frame* frame) {",
                   "size_t PresentManager::MaxExtraFrames() const {")
 assert "present_queue.push_back(frame);" in enqueue
-assert "frame_cv.notify_all();" in enqueue
+assert "present_ready_cv.notify_one();" in enqueue
 assert "frame_cv.notify_one();" not in enqueue
-assert enqueue.index("lock.unlock();") < enqueue.index("frame_cv.notify_all();")
+assert "frame_cv.notify_all();" not in enqueue
+assert enqueue.index("lock.unlock();") < enqueue.index("present_ready_cv.notify_one();")
 assert "frame_cv.notify_one();" not in present_thread
+assert "present_ready_cv.wait(lock, token," in present_thread
 assert present_thread.index("free_cv.notify_one();") > present_thread.index(
     "// Notify only after releasing free_mutex")
 assert present_thread.index("lock.unlock();") < present_thread.index(
@@ -82,6 +86,7 @@ code = r"""
 struct Gate {
     std::mutex queue_mutex, free_mutex, swapchain_mutex;
     std::condition_variable frame_cv, free_cv;
+    std::condition_variable_any present_ready_cv;
     std::deque<int> present_queue, free_queue;
     std::exception_ptr present_failure;
     bool present_in_flight{};
@@ -92,7 +97,7 @@ struct Gate {
             if (present_failure) return;
             present_queue.push_back(id);
         }
-        frame_cv.notify_all();
+        present_ready_cv.notify_one();
     }
     void CopyOne(bool fault) {
         std::unique_lock lock{queue_mutex};
@@ -179,8 +184,8 @@ struct FrameReuse {
     }
 };
 int main() {
-    // A drain waiter and the presenter can sleep on the same CV.
-    // Enqueue must wake the presenter; only completion satisfies the drain.
+    // The drain and presenter wait on separate CVs.
+    // Enqueue wakes only the presenter; completion wakes the drain.
     for (int run=0; run<30; ++run) {
         Gate g;
         {
@@ -190,7 +195,7 @@ int main() {
         std::thread drain{[&] { g.WaitPresent(); }};
         std::thread worker{[&] {
             std::unique_lock lock{g.queue_mutex};
-            g.frame_cv.wait(lock, [&] { return !g.present_queue.empty(); });
+            g.present_ready_cv.wait(lock, [&] { return !g.present_queue.empty(); });
             lock.unlock();
             g.CopyOne(false);
         }};
