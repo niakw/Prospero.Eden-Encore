@@ -230,3 +230,66 @@ with tempfile.TemporaryDirectory(prefix="encore-f02-invalidate-") as folder:
                 assert f"arch={arch} impl={impl}" in run.stdout
                 print(run.stdout.strip(),opt,flush=True)
 print("F02_PS5_JIT_COMPILATION_TIMING_NOT_PROVEN source_extracted_invalidation_only")
+
+
+# J01: execute the native A32 source-extracted RAII cold timer in the
+# F02 host gate. No PS5 SDK, game JIT work, or release-mode profiling.
+a32=(ROOT/ARCHES["A32"][1]).read_text()
+assert 'EDEN_JIT_A32_DEV_PROFILE=1' in HEADLESS
+assert 'if(EDEN_DEV_PROFILE)\n        set_property(SOURCE' in HEADLESS
+assert a32.index('if (auto block = emitter.GetBasicBlock(descriptor))') < a32.index('struct EdenCompileTimer {')
+assert 'if (eden_jit_evacuation) eden_jit_evacuation(unsigned(conf.processor_id));' in a32
+assert 'eden_jit_cache_event(unsigned(conf.processor_id),' in a32
+assert 'eden_jit_phases(unsigned(conf.processor_id),' in a32
+assert 'eden_compile_timer.active && eden_jit_phases' in a32
+opener='        struct EdenCompileTimer {'
+closer='        } eden_compile_timer{unsigned(conf.processor_id)};'
+assert a32.count(opener)==a32.count(closer)==1
+src=a32[a32.index(opener):a32.index(closer)+len(closer)]
+model=r"""
+#include <atomic>
+#include <cassert>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+inline bool detailed=false;
+inline unsigned calls=0;
+inline unsigned long long cpu_ns=0;
+extern "C" bool eden_native_detailed_logging() noexcept {return detailed;}
+extern "C" void eden_jit_compile(unsigned core,unsigned long long ns){
+    assert(core==2);++calls;cpu_ns+=ns;
+}
+struct Config{unsigned processor_id{2};};
+int main(){
+    Config conf;
+    auto compile=[&](bool hit){
+        if(hit)return;
+        __ACTUAL__
+        std::atomic<unsigned> n{0};
+        for(unsigned i=0;i<1500;++i)n.fetch_add(1,std::memory_order_relaxed);
+        assert(n.load()==1500);
+    };
+    compile(true);assert(calls==0);
+    compile(false);assert(calls==0);
+    detailed=true;
+    compile(true);assert(calls==0);
+    compile(false);assert(calls==1&&cpu_ns>0);
+    detailed=false;
+    compile(false);assert(calls==1);
+    std::puts("F07_A32_JIT_ACCOUNTING_PASS");
+}
+""".replace("__ACTUAL__",src)
+with tempfile.TemporaryDirectory(prefix="f07-j01-a32-") as folder:
+    source=Path(folder)/"a32.cpp"
+    source.write_text(model)
+    for opt in ("-O0","-O2"):
+        output=Path(folder)/f"model-{opt[1:]}"
+        build=subprocess.run([compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                              "-fsanitize=undefined","-fno-sanitize-recover=all",
+                              str(source),"-o",str(output)],capture_output=True,text=True,timeout=50)
+        assert build.returncode==0,(opt,build.stderr[-3000:])
+        run=subprocess.run([str(output)],capture_output=True,text=True,timeout=10)
+        assert run.returncode==0,(opt,run.stderr[-3000:])
+        assert "F07_A32_JIT_ACCOUNTING_PASS" in run.stdout
+        print(f"F07_A32_JIT_ACCOUNTING_PASS {opt} source_extracted=1 quiet=1")
+
