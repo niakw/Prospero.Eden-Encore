@@ -14,6 +14,8 @@ import re
 import statistics
 
 FIELDS = re.compile(r"\b([A-Za-z][A-Za-z_0-9]*)=(-?[0-9]+(?:\.[0-9]+)?)")
+PHASE_NAME = re.compile(r"\bphase=([a-z_]+)\b")
+GPU_OWNER_PHASES = frozenset(("pair_wait", "pair_held", "compute_pair_wait", "compute_pair_held"))
 
 def values(line: str) -> dict[str, float]:
     return {key: float(value) for key, value in FIELDS.findall(line)}
@@ -23,11 +25,15 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
     pending = None
     last_row = None  # measured pressure row owning the next four JIT-core records
     jit_cores: dict[int, dict[str, float]] = {}
+    phase_row = None  # GPU-owner sampled phases emitted after the pressure line
+    seen_phases: set[str] = set()
     for line in lines:
         if "EDEN_VULKAN_FRAME " in line:
             # A new interval cannot inherit core data from an older window.
             last_row = None
             jit_cores = {}
+            phase_row = None
+            seen_phases = set()
             pending = values(line.partition("EDEN_VULKAN_FRAME ")[2])
         elif "EDEN_FRAME_PRESSURE " in line and pending is not None:
             pressure = values(line.partition("EDEN_FRAME_PRESSURE ")[2])
@@ -39,10 +45,13 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
                     and pending["total"] == pressure.get("frame")
                     and "cache_wait_ms" in pressure and "jit_ms" in pressure):
                 last_row = {**pending, **pressure}
+                phase_row = last_row
                 result.append(last_row)
                 jit_cores = {}
+                seen_phases = set()
             else:
                 last_row = None
+                phase_row = None
             pending = None
         elif "EDEN_FRAME_JIT_CORE " in line and last_row is not None:
             core_values = values(line.partition("EDEN_FRAME_JIT_CORE ")[2])
@@ -71,6 +80,24 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
                     last_row["jit_core_evacuations"] = sum(
                         x["evacuations"] for x in jit_cores.values())
                 last_row = None
+        elif "EDEN_GPU_CACHE_PHASE " in line and phase_row is not None:
+            snapshot = values(line.partition("EDEN_GPU_CACHE_PHASE ")[2])
+            name = PHASE_NAME.search(line)
+            phase = name.group(1) if name else None
+            # These are 1-in-16 GPU-owner samples, not cumulative wall time.
+            # ReportGpuThread emits them after the pressure/JIT quartet.
+            if phase not in GPU_OWNER_PHASES:
+                continue
+            if (snapshot.get("frame") != phase_row["total"]
+                    or phase in seen_phases
+                    or any(k not in snapshot or snapshot[k] < 0
+                           for k in ("window_samples", "window_ns", "max_ns"))):
+                phase_row = None
+                continue
+            seen_phases.add(phase)
+            phase_row[f"gpu_{phase}_samples"] = snapshot["window_samples"]
+            phase_row[f"gpu_{phase}_sample_ms"] = snapshot["window_ns"] / 1_000_000
+            phase_row[f"gpu_{phase}_max_ms"] = snapshot["max_ns"] / 1_000_000
     return result
 
 def med(rows: list[dict[str, float]], key: str) -> float | None:
@@ -128,6 +155,25 @@ def report(rows: list[dict[str, float]]) -> str:
         )
     else:
         out.append(f"jit_core_breakdown: complete=0/{len(rows)} (not measured or incomplete)")
+    owner_rows = [
+        r for r in rows
+        if all(f"gpu_{phase}_samples" in r for phase in GPU_OWNER_PHASES)
+    ]
+    if owner_rows:
+        def phase_ms(phase: str) -> float:
+            return sum(r[f"gpu_{phase}_sample_ms"] for r in owner_rows)
+        out.append(
+            f"gpu_cache_owner_samples: complete={len(owner_rows)}/{len(rows)} "
+            f"graphics_held_sample_ms={phase_ms('pair_held'):.3f} "
+            f"compute_held_sample_ms={phase_ms('compute_pair_held'):.3f} "
+            f"graphics_wait_sample_ms={phase_ms('pair_wait'):.3f} "
+            f"compute_wait_sample_ms={phase_ms('compute_pair_wait'):.3f}"
+        )
+    else:
+        out.append(f"gpu_cache_owner_samples: complete=0/{len(rows)} (not measured or incomplete)")
+    out.append("NOTE: GPU cache-owner phases sample 1-in-16 draws and nest within "
+               "their parent operation; they are NOT all cache lock holders "
+               "or total frame elapsed time.")
     out.append("NOTE: per-core JIT CPU time may overlap between cores; its maximum "
                "is NOT renderer wall time or the cause of a presentation gap.")
     out.append("NOTE: JIT and cache times aggregate many guest threads across "
