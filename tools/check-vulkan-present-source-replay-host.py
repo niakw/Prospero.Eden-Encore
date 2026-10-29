@@ -61,6 +61,7 @@ for path, expected_sha in expected_blobs.items():
 header = rendered["src/video_core/renderer_vulkan/vk_present_manager.h"]
 source = rendered["src/video_core/renderer_vulkan/vk_present_manager.cpp"]
 assert "bool present_in_flight{}; // guarded by queue_mutex" in header
+assert "std::condition_variable_any present_ready_cv;" in header
 assert "#include <exception>" in header
 assert "std::exception_ptr present_failure;" in header
 assert "if (present_failure) std::rethrow_exception(present_failure);" in source
@@ -93,11 +94,12 @@ assert wait_present.index("if (present_failure) std::rethrow_exception(present_f
 present_method = source.split("void PresentManager::Present(Frame* frame) {", 1)[1].split(
     "size_t PresentManager::MaxExtraFrames(", 1)[0]
 assert "scheduler.WaitWorker();" in present_method
-# The producer must wake both the presenter and WaitPresent, not just one.
-assert "frame_cv.notify_all();" in present_method
+# The producer wakes only the presenter; the drain waits for completion.
+assert "present_ready_cv.notify_one();" in present_method
+assert "frame_cv.notify_all();" not in present_method
 assert "frame_cv.notify_one();" not in present_method
 assert present_method.index("present_queue.push_back(frame);") < present_method.index(
-    "lock.unlock();") < present_method.index("frame_cv.notify_all();")
+    "lock.unlock();") < present_method.index("present_ready_cv.notify_one();")
 assert present_method.index("CopyToSwapchain(frame);") < present_method.index(
     "std::scoped_lock lock{free_mutex};")
 assert present_method.index("std::scoped_lock lock{free_mutex};") < present_method.index(
@@ -110,6 +112,7 @@ worker = source.split("void PresentManager::PresentThread(", 1)[1].split(
 assert worker.index("present_queue.pop_front();") < worker.index("present_in_flight = true;")
 assert worker.index("present_in_flight = true;") < worker.index("CopyToSwapchain(frame);")
 assert "frame_cv.notify_one();" not in worker
+assert "present_ready_cv.wait(lock, token," in worker
 assert worker.index("free_queue.push_back(frame);") < worker.index(
     "free_cv.notify_one();")
 assert worker.index("free_cv.notify_one();") > worker.index(
