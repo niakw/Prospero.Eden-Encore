@@ -53,6 +53,17 @@ assert wait_present.index("frame_cv.wait(") < wait_present.index(
     "std::scoped_lock swapchain_lock{swapchain_mutex};")
 assert "present_in_flight = true;" in present_thread
 assert "present_in_flight = false;" in present_thread
+# Both WaitPresent and the present worker wait on frame_cv. A single notify_one
+# on enqueue could choose the drain waiter and leave the worker asleep.
+enqueue = section("void PresentManager::Present(Frame* frame) {",
+                  "size_t PresentManager::MaxExtraFrames() const {")
+assert "present_queue.push_back(frame);" in enqueue
+assert "frame_cv.notify_all();" in enqueue
+assert "frame_cv.notify_one();" not in enqueue
+assert enqueue.index("lock.unlock();") < enqueue.index("frame_cv.notify_all();")
+assert "frame_cv.notify_one();" not in present_thread
+assert present_thread.index("free_cv.notify_one();") > present_thread.index(
+    "// Notify only after releasing free_mutex")
 assert present_thread.index("lock.unlock();") < present_thread.index(
     "present_in_flight = false;")
 assert present_thread.index("free_queue.push_back(frame);") < present_thread.index(
@@ -76,8 +87,12 @@ struct Gate {
     bool present_in_flight{};
     std::atomic<int> completed{0};
     void Queue(int id) {
-        std::lock_guard lock{queue_mutex};
-        if (!present_failure) { present_queue.push_back(id); frame_cv.notify_one(); }
+        {
+            std::lock_guard lock{queue_mutex};
+            if (present_failure) return;
+            present_queue.push_back(id);
+        }
+        frame_cv.notify_all();
     }
     void CopyOne(bool fault) {
         std::unique_lock lock{queue_mutex};
@@ -85,15 +100,14 @@ struct Gate {
         const int id = present_queue.front();
         present_queue.pop_front();
         present_in_flight = true;
-        frame_cv.notify_one();
         std::unique_lock swapchain_lock{swapchain_mutex};
         lock.unlock();
         if (fault) throw std::runtime_error("present worker failure");
         {
             std::scoped_lock fl{free_mutex};
             free_queue.push_back(id);
-            free_cv.notify_one();
         }
+        free_cv.notify_one();
         swapchain_lock.unlock();
         {
             std::lock_guard queue_lock{queue_mutex};
@@ -165,6 +179,26 @@ struct FrameReuse {
     }
 };
 int main() {
+    // A drain waiter and the presenter can sleep on the same CV.
+    // Enqueue must wake the presenter; only completion satisfies the drain.
+    for (int run=0; run<30; ++run) {
+        Gate g;
+        {
+            std::lock_guard lock{g.queue_mutex};
+            g.present_in_flight = true;
+        }
+        std::thread drain{[&] { g.WaitPresent(); }};
+        std::thread worker{[&] {
+            std::unique_lock lock{g.queue_mutex};
+            g.frame_cv.wait(lock, [&] { return !g.present_queue.empty(); });
+            lock.unlock();
+            g.CopyOne(false);
+        }};
+        g.Queue(99);
+        drain.join();
+        worker.join();
+        assert(g.completed == 1);
+    }
     // If GPU fence wait keeps the free queue locked, the producer cannot
     // recycle an independent frame. Probe with try_lock while consumer is
     // definitely blocked in the fence.

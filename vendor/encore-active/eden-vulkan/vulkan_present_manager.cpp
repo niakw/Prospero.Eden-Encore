@@ -222,7 +222,10 @@ void PresentManager::Present(Frame* frame) {
             std::unique_lock lock{queue_mutex};
             if (present_failure) return;
             present_queue.push_back(frame);
-            frame_cv.notify_one();
+            // The present worker and WaitPresent share this CV. notify_one
+            // could wake only the drain waiter and strand a queued frame.
+            lock.unlock();
+            frame_cv.notify_all();
         });
     } else {
         scheduler.WaitWorker();
@@ -369,11 +372,10 @@ void PresentManager::PresentThread(std::stop_token token) {
         // Wait for presentation frames
         frame_cv.wait(lock, token, [this] { return !present_queue.empty(); });
         if (!token.stop_requested()) {
-            // Take the frame and notify anyone waiting
+            // Take the frame; completion is signaled after the swapchain copy.
             Frame* frame = present_queue.front();
             present_queue.pop_front();
             present_in_flight = true;
-            frame_cv.notify_one();
 
             // By exchanging the lock ownership we take the swapchain lock
             // before the queue lock goes out of scope. This way the swapchain
@@ -385,8 +387,10 @@ void PresentManager::PresentThread(std::stop_token token) {
             {
                 std::scoped_lock fl{free_mutex};
                 free_queue.push_back(frame);
-                free_cv.notify_one();
             }
+            // Notify only after releasing free_mutex to avoid waking into
+            // an immediately contended queue lock.
+            free_cv.notify_one();
             // Publish completion only AFTER presentation and frame handoff.
             // Release swapchain mutex before reacquiring queue_mutex.
             lock.unlock();
