@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include <algorithm>
+#include "common/scope_exit.h"
 #include <cstdio>
 #include "dev_vulkan.h"
 #include "diagnostics.h"
@@ -2256,6 +2257,16 @@ void Image::UploadMemory(VkBuffer buffer, VkDeviceSize offset,
         const VkImageCreateInfo image_ci = MakeMsaaScratchImageCreateInfo(
             runtime->device, info, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
         const VkImage temp_vk_image = runtime->AcquireMsaaScratchImage(image_ci);
+#ifdef PS5_NATIVE
+        // An allocation, Vulkan Record or blit failure before the ordinary
+        // Release leaves this scratch at UINT64_MAX ("checked out") forever.
+        // Return it against CurrentTick even when partially enqueued GPU
+        // commands must still retire; never make it reusable immediately.
+        bool scratch_released = false;
+        SCOPE_EXIT {
+            if (!scratch_released) runtime->ReleaseMsaaScratchImage(temp_vk_image);
+        };
+#endif
 
         scheduler->RequestOutsideRenderPassOperationContext();
         auto vk_copies = TransformBufferImageCopies(copies, offset, upload_aspect_mask);
@@ -2295,6 +2306,9 @@ void Image::UploadMemory(VkBuffer buffer, VkDeviceSize offset,
         }
         initialized = true;
         runtime->ReleaseMsaaScratchImage(temp_vk_image);
+#ifdef PS5_NATIVE
+        scratch_released = true;
+#endif
 
         if (is_rescaled) {
             ScaleUp();
