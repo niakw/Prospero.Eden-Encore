@@ -171,8 +171,12 @@ struct TextureCacheRuntime {
 struct Info {
     ImageId id{};
     unsigned num_samples{1};
+    bool no_regions{};
 };
-std::vector<ImageId> FullDownloadCopies(Info info) { return {info.id}; }
+std::vector<ImageId> FullDownloadCopies(Info info) {
+    if (info.no_regions) return {};
+    return {info.id};
+}
 std::vector<ImageId> FixSmallVectorADL(std::vector<ImageId> copies) {
     return copies;
 }
@@ -400,6 +404,13 @@ int main() {
         Scenario(std::move(images)).Test(40, std::move(ids));
     }
 #ifdef PS5_NATIVE
+    // A dirty image without any GPU download regions cannot be staged or
+    // projected as evicted. Continue to the NEXT valid dirty LRU image.
+    {
+        auto unsupported = ImageFor(0, true);
+        unsupported.info.no_regions = true;
+        Scenario({unsupported, ImageFor(1, true)}).Test(1, {1}, 40, 1000_MiB, 2);
+    }
     // Short mappings and thrown staging requests must stop speculative
     // downloads before recording GPU copies; real Cleanup can retry.
     Scenario({ImageFor(0,true),ImageFor(1,true)}).Test(
