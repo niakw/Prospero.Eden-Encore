@@ -36,8 +36,15 @@ assert "critical_memory : expected_memory" in projected
 assert "return usage < projected_stop;" in projected
 assert projected.count("::Eden::Performance::KeepDirtyTextures()") == 1
 assert "return NoteProjectedEviction(image);" in record
-# One true ends a full batch; the PS5-only second true rejects invalid staging.
-assert record.count("return true;") == 2
+# The two ordinary capacity/invalid-stage exits plus both native recoverable
+# exception exits stop the prefetch pass, never marking dirty bytes evicted.
+assert record.count("return true;") == 4
+assert "RetireFailedBatch();" in record
+assert "if (!gc_downloads.empty()) runtime.Finish();" in record
+assert "ReleaseDownloads();" in record
+assert "catch (const std::bad_alloc&)" in record
+assert "catch (const std::invalid_argument&)" in record
+assert "F07 rollback partial Vulkan dirty GC prefetch before staging release" in generator
 assert record.index("return NoteProjectedEviction(image);") < record.index("return true;")
 assert record.index("if (!map.buffer || map.mapped_span.size_bytes() < image.unswizzled_size_bytes)") < record.rindex("return true;")
 assert gc.count("return NoteProjectedEviction(image);") == 2
@@ -93,9 +100,19 @@ cpp = r"""
 #include <memory>
 #include <new>
 #include <span>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <vector>
+struct ScopeExitMaker {};
+template<class F> struct ScopeExit {
+    F callback;
+    ~ScopeExit() { callback(); }
+};
+template<class F> ScopeExit<std::decay_t<F>> operator+(ScopeExitMaker, F&& callback) {
+    return {std::forward<F>(callback)};
+}
+#define SCOPE_EXIT auto scope_guard = ScopeExitMaker{} + [&]
 #include "vulkan_gc_budget.h"
 
 using ImageId = std::size_t;
@@ -184,6 +201,13 @@ struct Scenario {
         runtime.throw_first=throw_first;
         runtime.null_first=null_first;
 __PRODUCTION_DECLARATION__
+        const auto ReleaseDownloads = [&] {
+            for (auto& [id, map] : gc_downloads) {
+                (void)id;
+                runtime.FreeDeferredStagingBuffer(map);
+            }
+            gc_downloads.clear();
+        };
         std::size_t bytes = 0;
         u64 usage = initial_usage;
         constexpr u64 critical_memory = 100_MiB;
