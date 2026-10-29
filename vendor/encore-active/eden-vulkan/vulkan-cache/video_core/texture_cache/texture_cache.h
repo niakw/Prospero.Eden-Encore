@@ -279,6 +279,13 @@ void TextureCache<P>::RunGarbageCollector() {
                     image.info.num_samples != 1 ||
                     image.unswizzled_size_bytes > 32_MiB)
                     return NoteProjectedEviction(image);
+#ifdef PS5_NATIVE
+                // A no-region download is not a successful readback of dirty
+                // GPU bytes. Do not prefetch, or project this image evicted:
+                // Cleanup must leave it resident until guest copy regions
+                // can be represented.
+                if (FullDownloadCopies(image.info).empty()) return false;
+#endif
                 // Full descriptor/byte capacity is a true batch boundary.
                 if (gc_downloads.size() == gc_prefetch_limit ||
                     image.unswizzled_size_bytes > 32_MiB - bytes) return true;
@@ -364,6 +371,13 @@ void TextureCache<P>::RunGarbageCollector() {
         }
         if (must_download && !UsePrefetched(image_id, image)) {
 #ifdef PS5_NATIVE
+            // A zero-region readback leaves the staging bytes undefined.
+            // Never SwizzleImage those bytes or delete the only dirty GPU
+            // copy; keep it resident and retry on a later eligible frame.
+            if (FullDownloadCopies(image.info).empty()) {
+                ++skipped;
+                return false;
+            }
             // Never evict dirty GPU bytes if the fallback guest readback could
             // not obtain a COMPLETE staging mapping under memory pressure.
             auto map = [&]() -> decltype(runtime.DownloadStagingBuffer(image.unswizzled_size_bytes)) {
