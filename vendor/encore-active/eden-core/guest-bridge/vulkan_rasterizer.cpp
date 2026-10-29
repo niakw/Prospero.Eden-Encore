@@ -1658,10 +1658,20 @@ void RasterizerVulkan::UpdateDynamicStates() {
     }
 
     if (device.IsExtVertexInputDynamicStateSupported()) {
+#ifdef PS5_NATIVE
+        // DrawTexture uses its own blit pipeline, not a guest graphics
+        // pipeline. Do not translate a cold guest shader while holding the
+        // texture-cache lock just to set unused vertex input state. The next
+        // guest PrepareDraw has prepared_pipeline and will bind it normally.
+        if (prepared_pipeline && prepared_pipeline->HasDynamicVertexInput()) {
+            UpdateVertexInput(regs);
+        }
+#else
         if (auto* gp = prepared_pipeline ? prepared_pipeline : pipeline_cache.CurrentGraphicsPipeline();
             gp && gp->HasDynamicVertexInput()) {
             UpdateVertexInput(regs);
         }
+#endif
     }
 }
 
