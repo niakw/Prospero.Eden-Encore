@@ -26,6 +26,8 @@ assert "scheduler.IsFree(it->LastUsageTick())" not in modified
 assert "#ifdef PS5_NATIVE\n    // No tracked buffers" in modified
 assert modified.index("if (slot_buffers.begin() == slot_buffers.end())") < modified.index("KnownGpuTick()")
 assert "No tracked buffers: avoid even the GPU-completion semaphore snapshot" in GEN
+assert "sampled_completed_tick" in modified
+assert modified.index("if (last_tick == 0)") < modified.index("KnownGpuTick();", modified.index("for (auto it = slot_buffers.begin()"))
 cpp=r"""
 #include <array>
 #include <cassert>
@@ -82,6 +84,14 @@ int main(){
   cache.TickFrame(buffers);
   for(const auto& buffer:buffers)assert(!buffer.tracking);
   assert(sem.reads==2*FRAME_READS);
+  // Every resident buffer has now retired, but the container is nonempty.
+  // The PS5 path must not poll the GPU semaphore on subsequent idle frames.
+  cache.TickFrame(buffers);
+#ifdef PS5_NATIVE
+  assert(sem.reads==2*FRAME_READS);
+#else
+  assert(sem.reads==3*FRAME_READS);
+#endif
   buffers.clear();
   cache.TickFrame(buffers);
   assert(sem.reads==
@@ -99,9 +109,9 @@ assert compiler
 with tempfile.TemporaryDirectory(prefix="eden-tick-snapshot-") as d:
     folder=Path(d)
     for name,body,reads,empty,native_empty,ps5 in (
-        ("pinned",original,6,12,12,False),
-        ("maintained-desktop",modified,1,3,3,False),
-        ("maintained-ps5",modified,1,3,2,True),
+        ("pinned",original,6,18,18,False),
+        ("maintained-desktop",modified,1,4,4,False),
+        ("maintained-ps5",modified,1,4,2,True),
     ):
         src=folder/(name+".cpp")
         binary=folder/name
@@ -115,4 +125,4 @@ with tempfile.TemporaryDirectory(prefix="eden-tick-snapshot-") as d:
                         *(["-DPS5_NATIVE=1"] if ps5 else []),
                         str(src),"-o",str(binary)],check=True,timeout=90)
         subprocess.run([str(binary)],check=True,timeout=30)
-print("VULKAN_BUFFER_TICK_SNAPSHOT_HOST_PASS no_empty_ps5_poll=1 desktop_unchanged=1; PS5 FPS unmeasured")
+print("VULKAN_BUFFER_TICK_SNAPSHOT_HOST_PASS no_empty_ps5_poll=1 idle_resident_no_poll=1 desktop_unchanged=1; PS5 FPS unmeasured")

@@ -444,14 +444,28 @@ void BufferCacheRuntime::TickFrame(Common::SlotVector<Buffer>& slot_buffers) noe
 #endif
     // One monotone GPU completion snapshot per pass instead of an atomic load
     // per resident buffer. A completion during this pass is reclaimed next frame.
+#ifdef PS5_NATIVE
+    // Idle resident buffers have zero usage ticks after retirement. Defer the
+    // GPU completion query until a nonzero tick actually needs inspection,
+    // rather than probing every rendered frame with no outstanding usage.
+    u64 completed_tick = 0;
+    bool sampled_completed_tick = false;
+#else
     const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();
+#endif
     for (auto it = slot_buffers.begin(); it != slot_buffers.end(); it++) {
 #ifdef PS5_NATIVE
-        // Completed usage is marked inactive by ResetUsageTracking(). A
-        // resident idle buffer must not clear its per-page usage bits again
-        // on every later frame while buffer_cache.mutex is held.
+        // ResetUsageTracking resets the tick to zero. Don't rescan usage pages
+        // or query driver completion for any already retired buffer.
         const u64 last_tick = it->LastUsageTick();
-        if (last_tick != 0 && last_tick <= completed_tick) {
+        if (last_tick == 0) {
+            continue;
+        }
+        if (!sampled_completed_tick) {
+            completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();
+            sampled_completed_tick = true;
+        }
+        if (last_tick <= completed_tick) {
 #else
         if (it->LastUsageTick() <= completed_tick) {
 #endif
