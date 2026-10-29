@@ -282,6 +282,10 @@ print("ENCORE_M06_MAINTAINED_MEMORY_SOURCE_PARITY_PASS")
 # M07 is the historic two-replacement Vulkan source, now owned as a
 # full experimental translation unit. Normalize only the old absolute
 # configure-time include path to the existing explicit video_core include root.
+# The inactive guest-bridge intentionally uses CanExecuteDraw() in four
+# callbacks; the native renderer uses CanExecuteRecordedDraw() to enforce
+# the newer FIFO worker-bind latch. This is a deliberate integration variant,
+# not a reason to silently change the guest draw path.
 original_m07 = (root/"vendor/encore-active/eden-vulkan/vulkan_rasterizer.cpp").read_text()
 m07_entry = "bool RasterizerVulkan::OnCPUWrite(DAddr addr, u64 size) {"
 m07_buffer_lock = "        ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);"
@@ -301,11 +305,21 @@ m07_lock_with_fallback = """
             if (gpu_memory->EnqueueDeferredCPUWrite(addr, size)) return false;
             ::Eden::Performance::GuestCacheLock(buffer_cache.mutex, false);
         }"""
+# Require exactly the four known Draw/DrawIndirect callback differences.
+# Keep byte-for-byte parity for everything else, including F07 HUD flushing.
+m07_native_draw_guard = "CanExecuteRecordedDraw()"
+m07_guest_draw_guard = "CanExecuteDraw()"
+maintained_m07_text = maintained_m07.read_text()
+assert original_m07.count(m07_native_draw_guard) == 4
+assert original_m07.count(m07_guest_draw_guard) == 0
+assert maintained_m07_text.count(m07_guest_draw_guard) == 4
+assert maintained_m07_text.count(m07_native_draw_guard) == 0
 expected_m07 = ('#include "gpu_deferred_replay.h"\n'
                 '#include "video_core/memory_manager.h"\n' +
                 original_m07.replace(m07_entry, m07_entry_with_guard).replace(
-                    m07_buffer_lock, m07_lock_with_fallback))
-assert maintained_m07.read_text() == expected_m07, "M07 maintained Vulkan variant parity drift"
+                    m07_buffer_lock, m07_lock_with_fallback).replace(
+                    m07_native_draw_guard, m07_guest_draw_guard))
+assert maintained_m07_text == expected_m07, "M07 maintained Vulkan variant parity drift"
 # The inactive deferred-write bridge shares the *entire* maintained rasterizer
 # except its two historic DEV write-interception substitutions. Keep the F07
 # present remap drain as well, ahead of the texture-cache mutex: losing this
