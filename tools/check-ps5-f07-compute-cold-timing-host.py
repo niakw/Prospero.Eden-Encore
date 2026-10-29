@@ -43,7 +43,14 @@ struct CachePhaseTimer {
     CachePhaseTimer(CachePhase,bool enabled) { if (enabled) ++measurements; }
 };
 }
-struct Key {};
+// The extraction below intentionally tests CPU timing, not the separate
+// detailed-only per-shader diagnostics. Supply their minimal C++ interface
+// so adding a diagnostic probe cannot invalidate the timing witness.
+struct Key { unsigned long long Hash() const { return 0x1234ULL; } };
+struct ColdShaderMissTrace {
+    ColdShaderMissTrace(const char*, unsigned long long, bool) {}
+    void Complete(bool) const {}
+};
 struct Shader {};
 unsigned created=0;
 int CreateComputePipeline(const Key&,const Shader*) { return ++created; }
