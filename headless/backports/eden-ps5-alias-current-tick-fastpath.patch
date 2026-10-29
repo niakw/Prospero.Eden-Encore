@@ -1,9 +1,9 @@
 --- a/src/video_core/texture_cache/texture_cache.h
 +++ b/src/video_core/texture_cache/texture_cache.h
-@@ -2450,8 +2450,17 @@
+@@ -2450,8 +2450,16 @@
  template <class P>
  void TextureCache<P>::SynchronizeAliases(ImageId image_id) {
--    boost::container::small_vector<const AliasedImage*, 8> aliased_images;
+     boost::container::small_vector<const AliasedImage*, 8> aliased_images;
      Image& image = slot_images[image_id];
 +#ifdef PS5_NATIVE
 +    // MarkModification advances the cache-wide tick monotonically. If this
@@ -13,8 +13,6 @@
 +        return;
 +    }
 +#endif
-+    // Avoid constructing the inline alias vector on a common no-op HUD lookup.
-+    boost::container::small_vector<const AliasedImage*, 8> aliased_images;
      bool any_rescaled = True(image.flags & ImageFlagBits::Rescaled);
      bool any_modified = True(image.flags & ImageFlagBits::GpuModified);
      u64 most_recent_tick = image.modification_tick;
