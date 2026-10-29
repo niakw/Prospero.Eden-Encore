@@ -31,7 +31,7 @@ assert "can_reorder_upload && !barrier" in route
 assert "can_reorder_upload) {" in route
 
 batch_begin="    boost::container::small_vector<VkBufferCopy, 8> vk_copies"
-batch_end="    if (src_buffer == staging_pool.StreamBuf() && can_reorder_upload) {"
+batch_end=route_begin  # stop before the next #ifdef, keeping this fixture balanced
 # The maintained native path constructs without an initial size, whereas
 # desktop constructs a sized vector. Both retain the common type declaration.
 assert source.count(batch_end)==1 and source.count(batch_begin)==2
@@ -41,6 +41,7 @@ assert source.count(batch_start_anchor)==1
 batch_method=source[source.index(batch_start_anchor):]
 batch_start=0
 batch=batch_method[batch_start:batch_method.index(batch_end)]
+assert batch.count("#ifdef PS5_NATIVE") == 1 and batch.count("#else") == 1 and batch.count("#endif") == 1
 assert "copy.size != 0" in batch and "std::ranges::transform" in batch
 assert "vk_copies.empty()" in batch
 assert batch.index("copy.size != 0") < batch.index("vk_copies.empty()")
