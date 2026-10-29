@@ -31,6 +31,12 @@ old, new=header_replacements[0]
 assert old in pinned and pinned.count(old)==1
 assert "last_usage_tick = 0;" in new and "#ifdef PS5_NATIVE" in new
 header=pinned.replace(old,new)
+# The selected shipping Vulkan fork must contain the same native header
+# replayed from the installed Eden backport (not merely a test-only mock).
+backport=(ROOT/"vendor/encore-active/eden-backports/src/video_core/renderer_vulkan/vk_buffer_cache.h").read_text()
+maintained=(ROOT/"vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_buffer_cache.h").read_text()
+assert backport.count(old)==1
+assert maintained==backport.replace(old,new)
 start=header.index("    void ResetUsageTracking() noexcept {")
 stop=header.index("    [[nodiscard]] u64 LastUsageTick()",start)
 reset=header[start:stop].strip()
