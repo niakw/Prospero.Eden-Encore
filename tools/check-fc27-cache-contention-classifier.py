@@ -167,6 +167,7 @@ shader = (
 worker = ("graphics_pipeline_wait", "compute_pipeline_wait")
 assert set(shader) == module.SHADER_PHASES
 assert set(worker) == module.WORKER_PHASES
+assert module.RING_PHASES == frozenset(("descriptor_ring_finish", "descriptor_ring_preflight"))
 # The native PS5 reporter is the source of truth for these phase names.
 # Fail if its phase table or frame identifiers drift from this parser.
 native_report = (root / "headless/performance.cpp").read_text()
@@ -220,5 +221,37 @@ jit_late_duplicate = module.windows(
     [core_line(900, 0, 50_000_000, 1, 0)]
 )
 assert "jit_core_breakdown: complete=0/1" in module.report(jit_late_duplicate)
+# Exact GPU drain phases: unlike the shader draw samples these two timers
+# count every real Finish call, separately under paired locks and pre-lock.
+drain_lines = [
+    gpu_phase(990, "descriptor_ring_finish", 26_000_000),
+    gpu_phase(990, "descriptor_ring_preflight", 2_000_000),
+]
+drain_rows = module.windows(record(990, 24, 170, 100, 4) + drain_lines)
+drain_report = module.report(drain_rows)
+assert "descriptor_ring_drain: complete=1/1" in drain_report
+assert "under_lock_finish_calls=3 under_lock_finish_ms=26.000" in drain_report
+assert "prelock_finish_calls=3 prelock_finish_ms=2.000" in drain_report
+assert "not 1-in-16 draw samples" in drain_report
+# Explicit zero is valid: no fullness waits in this measured window.
+zero_drain = [
+    "EDEN_GPU_CACHE_PHASE frame=991 phase=descriptor_ring_finish "
+    "samples=100 total_ns=0 window_samples=0 window_ns=0 max_ns=0",
+    "EDEN_GPU_CACHE_PHASE frame=991 phase=descriptor_ring_preflight "
+    "samples=100 total_ns=0 window_samples=0 window_ns=0 max_ns=0",
+]
+zero_rows = module.windows(record(991, 30, 33, 0, 0) + zero_drain)
+zero_report = module.report(zero_rows)
+assert "descriptor_ring_drain: complete=1/1" in zero_report
+assert "under_lock_finish_calls=0 under_lock_finish_ms=0.000" in zero_report
+assert "prelock_finish_calls=0 prelock_finish_ms=0.000" in zero_report
+# One missing, duplicate, or foreign-frame line invalidates attribution.
+for corrupt in (
+    drain_lines[:1],
+    drain_lines + [drain_lines[0]],
+    drain_lines[:1] + [gpu_phase(992, "descriptor_ring_preflight", 2_000_000)],
+):
+    candidate = module.windows(record(990, 24, 170, 100, 4) + corrupt)
+    assert "descriptor_ring_drain: complete=0/1" in module.report(candidate)
 assert module.report([]) == "NO_VALID_WINDOWS (requires matching frame totals)"
 print("PINNED_FC27_LONG_FRAME_CLASSIFIER_PASS")
