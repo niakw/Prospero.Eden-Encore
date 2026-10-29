@@ -387,3 +387,132 @@ with tempfile.TemporaryDirectory(prefix="encore-native-ring-fallback-") as folde
             assert run.returncode == 0, (mode, opt, run.stdout, run.stderr[-5000:])
             assert "DESCRIPTOR_RETIRED_TICK_FALLBACK_SOURCE_PASS" in run.stdout
             print("DESCRIPTOR_RETIRED_TICK_FALLBACK_SOURCE_PASS", mode, opt)
+
+
+# F07 V03: an exhausted descriptor ring must still drain current GPU users
+# before reusing memory. Compile the actual PreflightCapacity method with
+# mock counters and prove a single drain, generation advance, and no drain
+# for exact-fit, spare chunk, invalid or reused-frame cases.
+signature_capacity = ("bool DescriptorBufferRing::PreflightCapacity(Scheduler& scheduler,\n"
+                      "                                             VkDeviceSize size) {")
+assert ring.count(signature_capacity) == 1
+begin_capacity = ring.index(signature_capacity)
+braces = 0
+end_capacity = None
+for index in range(ring.index("{", begin_capacity), len(ring)):
+    braces += (ring[index] == "{") - (ring[index] == "}")
+    if braces == 0:
+        end_capacity = index + 1
+        break
+assert end_capacity is not None
+capacity_method = ring[begin_capacity:end_capacity]
+assert "scheduler.Finish();" in capacity_method
+assert "++generation;" in capacity_method
+assert "chunk_cursor = 0;" in capacity_method
+assert "cursor = 0;" in capacity_method
+assert "DescriptorRingPreflight" in capacity_method
+assert "bool DescriptorBufferRing::PreflightCapacity" in gen
+assert "if (chunks.empty() || frame_reused || size == 0 || !CanAllocate(size))" in gen
+assert "if (needed <= chunk_capacity - cursor || chunk_cursor + 1 < chunks_per_frame)" in gen
+
+capacity_cpp = r"""
+#include <atomic>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <vector>
+using u64 = std::uint64_t;
+using VkDeviceSize = std::uint64_t;
+namespace Common {
+VkDeviceSize AlignUp(VkDeviceSize value, VkDeviceSize alignment) {
+    return (value + alignment - 1) / alignment * alignment;
+}
+}
+namespace Eden::Performance {
+enum class CachePhase { DescriptorRingPreflight };
+inline std::atomic<bool> detailed_gpu_profile{};
+struct VulkanTimer { explicit VulkanTimer(int) {} ~VulkanTimer() {} };
+struct CachePhaseTimer {
+    CachePhaseTimer(CachePhase, bool) {}
+    ~CachePhaseTimer() {}
+};
+}
+struct Scheduler {
+    unsigned finishes{};
+    void Finish() { ++finishes; }
+};
+struct DescriptorBufferRing {
+    std::vector<int> chunks{1};
+    bool frame_reused{};
+    VkDeviceSize chunk_capacity{256};
+    VkDeviceSize alignment{16};
+    VkDeviceSize cursor{};
+    std::size_t chunk_cursor{};
+    std::size_t chunks_per_frame{1};
+    u64 generation{7};
+    bool CanAllocate(VkDeviceSize size) const noexcept {
+        return size <= chunk_capacity &&
+               Common::AlignUp(size, alignment) <= chunk_capacity;
+    }
+    bool PreflightCapacity(Scheduler&, VkDeviceSize);
+};
+__CAPACITY_METHOD__
+int main() {
+    // The sole legal unconditional reuse happens when the last ring chunk
+    // cannot hold another aligned payload. Its GPU fence must not be skipped.
+    {
+        Scheduler s;
+        DescriptorBufferRing d;
+        d.cursor = 240;
+        assert(d.PreflightCapacity(s, 32));
+        assert(s.finishes == 1);
+        assert(d.cursor == 0 && d.chunk_cursor == 0 && d.generation == 8);
+        assert(!d.PreflightCapacity(s, 32));
+        assert(s.finishes == 1 && d.generation == 8);
+    }
+    // Exact fits, spare chunks, and wrong/zero payload requests do not drain.
+    {
+        Scheduler s;
+        DescriptorBufferRing d;
+        d.cursor = 240;
+        assert(!d.PreflightCapacity(s, 16));
+        assert(s.finishes == 0 && d.cursor == 240 && d.generation == 7);
+        d.chunks_per_frame = 2;
+        assert(!d.PreflightCapacity(s, 32));
+        assert(s.finishes == 0 && d.generation == 7);
+    }
+    {
+        Scheduler s;
+        DescriptorBufferRing d;
+        d.cursor = 240;
+        for (const VkDeviceSize size : {VkDeviceSize{0}, VkDeviceSize{257}}) {
+            assert(!d.PreflightCapacity(s, size));
+        }
+        assert(s.finishes == 0 && d.generation == 7);
+        d.frame_reused = true;
+        assert(!d.PreflightCapacity(s, 32));
+        assert(s.finishes == 0 && d.generation == 7);
+        d.frame_reused = false;
+        d.chunks.clear();
+        assert(!d.PreflightCapacity(s, 32));
+        assert(s.finishes == 0 && d.generation == 7);
+    }
+    std::puts("DESCRIPTOR_CAPACITY_OWNER_PREFLIGHT_SOURCE_PASS");
+}
+""".replace("__CAPACITY_METHOD__", capacity_method)
+with tempfile.TemporaryDirectory(prefix="encore-ring-capacity-") as folder:
+    cpp_path = Path(folder) / "capacity.cpp"
+    cpp_path.write_text(capacity_cpp)
+    for opt in ("-O0", "-O2"):
+        exe = Path(folder) / ("capacity_" + opt[1:])
+        built = subprocess.run(
+            [compiler, "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+             "-fsanitize=undefined", "-fno-sanitize-recover=all",
+             str(cpp_path), "-o", str(exe)],
+            capture_output=True, text=True, timeout=60)
+        assert built.returncode == 0, (opt, built.stderr[-5000:])
+        run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=20)
+        assert run.returncode == 0, (opt, run.stdout, run.stderr[-5000:])
+        assert "DESCRIPTOR_CAPACITY_OWNER_PREFLIGHT_SOURCE_PASS" in run.stdout
+        print("DESCRIPTOR_CAPACITY_OWNER_PREFLIGHT_SOURCE_PASS", opt)
