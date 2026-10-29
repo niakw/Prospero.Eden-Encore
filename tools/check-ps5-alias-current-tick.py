@@ -39,6 +39,10 @@ with tempfile.TemporaryDirectory(prefix="eden-r321-alias-tick-") as tmp:
     assert native_body.count(sort_guard)==1
     assert native_body.index("if (aliased_images.size() > 1)") < native_body.index("std::ranges::sort(aliased_images,")
     assert native_body.index("std::ranges::sort(aliased_images,") < native_body.index("for (const AliasedImage* const aliased")
+    assert "F07 bypass recursive alias rescale checks when every source is unscaled" in generator
+    assert "const bool can_rescale = any_rescaled && ImageCanRescale(image);" in native_body
+    assert native_body.index("const bool can_rescale = any_rescaled && ImageCanRescale(image);") < native_body.index("if (any_rescaled) {")
+
     cpp=d/"alias.cpp"
     cpp.write_text(r"""
 #include <algorithm>
@@ -125,7 +129,11 @@ int main() {
     # only after the sort has restored increasing modification ticks.
     native_fixture=native_fixture.replace(
         "int copies=0,upscales=0,downscales=0;",
-        "int copies=0,upscales=0,downscales=0; std::vector<int> copy_order{};"
+        "int copies=0,upscales=0,downscales=0; "
+        "int rescale_checks=0; std::vector<int> copy_order{};"
+    ).replace(
+        "bool ImageCanRescale(Image&) {return true;}",
+        "bool ImageCanRescale(Image&) {++rescale_checks;return true;}"
     ).replace(
         "void CopyImage(ImageId,ImageId,std::vector<int>){++copies;}",
         "void CopyImage(ImageId,ImageId id,std::vector<int>){++copies;copy_order.push_back(id);}"
@@ -140,7 +148,16 @@ int main() {
         " two.slot_images[1].modification_tick=9;\n"
         " two.slot_images[2].modification_tick=10;\n"
         " two.SynchronizeAliases(0);\n"
-        " assert(two.copy_order.size()==2 && two.copy_order[0]==1 && two.copy_order[1]==2);\n}"
+        " assert(two.copy_order.size()==2 && two.copy_order[0]==1 && two.copy_order[1]==2);\n"
+        "#ifdef PS5_NATIVE\n assert(two.rescale_checks==0);\n"
+        "#else\n assert(two.rescale_checks==1);\n#endif\n"
+        " two.modification_tick=12;\n"
+        " two.slot_images[1].modification_tick=12;\n"
+        " two.slot_images[1].flags |= ImageFlagBits::Rescaled;\n"
+        " two.SynchronizeAliases(0);\n"
+        "#ifdef PS5_NATIVE\n assert(two.rescale_checks==1);\n"
+        "#else\n assert(two.rescale_checks==2);\n#endif\n"
+        " assert(two.upscales>=1);\n}"
     )
     assert "assert(two.copy_order.size()==2" in native_fixture
     native_cpp=d/"active-alias.cpp"

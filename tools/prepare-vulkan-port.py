@@ -4360,6 +4360,23 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "#endif",
     "F07 skip singleton native alias sort while preserving multi-alias order")
 
+# F07 P0.4: ImageCanRescale can recursively traverse alias graphs and
+# mutate lazy rescaling metadata. It is unnecessary when all involved images
+# are unscaled: all branches simply copy the original pixel regions.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    const bool can_rescale = ImageCanRescale(image);\n"
+    "    if (any_rescaled) {",
+    "#ifdef PS5_NATIVE\n"
+    "    // If neither this image nor its newer aliases are rescaled, the copy\n"
+    "    // path does not use can_rescale. Avoid recursive alias-graph scans and\n"
+    "    // lazy rescalability bookkeeping while the texture mutex is held.\n"
+    "    const bool can_rescale = any_rescaled && ImageCanRescale(image);\n"
+    "#else\n"
+    "    const bool can_rescale = ImageCanRescale(image);\n"
+    "#endif\n"
+    "    if (any_rescaled) {",
+    "F07 bypass recursive alias rescale checks when every source is unscaled")
+
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
 # extent fit checks, and reject unknown zero-sized block ratios early.

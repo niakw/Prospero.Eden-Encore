@@ -3685,7 +3685,14 @@ void TextureCache<P>::SynchronizeAliases(ImageId image_id) {
     ::Eden::Performance::CachePhaseTimer alias_copy_phase{
         ::Eden::Performance::CachePhase::TextureAliasCopy};
 #endif
+#ifdef PS5_NATIVE
+    // If neither this image nor its newer aliases are rescaled, the copy
+    // path does not use can_rescale. Avoid recursive alias-graph scans and
+    // lazy rescalability bookkeeping while the texture mutex is held.
+    const bool can_rescale = any_rescaled && ImageCanRescale(image);
+#else
     const bool can_rescale = ImageCanRescale(image);
+#endif
     if (any_rescaled) {
         if (can_rescale) {
             ScaleUp(image);
