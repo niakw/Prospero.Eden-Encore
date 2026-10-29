@@ -189,7 +189,7 @@ struct Image {
     std::vector<ImageId> overlapping_images;
     u64 reclaimed_bytes{};
     bool decoding{false}, costly{false};
-    unsigned fail_mode{}; // 1: bad_alloc, 2: malformed batch
+    unsigned fail_mode{}; // 1: bad_alloc, 2: invalid_argument, 3: unexpected runtime failure
     Vulkan::TextureCacheRuntime* recording_runtime{};
     bool HasScaled() const { return scaled; }
     void DownloadMemory(Vulkan::StagingBufferRef& map,
@@ -199,6 +199,7 @@ struct Image {
         if (recording_runtime) recording_runtime->queued_max = map.index;
         if (fail_mode == 1) throw std::bad_alloc{};
         if (fail_mode == 2) throw std::invalid_argument("mock invalid copy");
+        if (fail_mode == 3) throw std::runtime_error("mock unexpected driver failure");
         if (!map.mapped_span.empty()) {
             map.mapped_span.front() = 0x19;
             map.mapped_span.back() = 0x37;
@@ -242,6 +243,7 @@ __PRODUCTION_DECLARATION__
 __PRODUCTION_PROJECTION__
         std::size_t scanned = 0;
         std::size_t remaining = eviction_budget;
+        bool rethrew_unexpected = false;
         for (ImageId id = 0; id < images.size(); ++id) {
             if (remaining == 0 || scanned >= 8192) break;
             ++scanned;
@@ -256,13 +258,22 @@ __PRODUCTION_PROJECTION__
 __PRODUCTION_RECORD__
                 return NoteProjectedEviction(image);
             };
-            if (scan_one()) break;
+            try {
+                if (scan_one()) break;
+            } catch (const std::runtime_error&) {
+                // Non-recoverable errors must still drain and retire EVERY
+                // previously accepted map, then propagate to the caller.
+                if (fail_second != 3) throw;
+                rethrew_unexpected = true;
+                break;
+            }
             assert(bytes <= 32_MiB);
             assert(gc_downloads.size() <= gc_prefetch_limit);
             if (!fail_second)
                 assert(runtime.freed == (short_first ? 1u : 0u));
         }
         assert(scanned <= 8192);
+        assert(rethrew_unexpected == (fail_second == 3));
         if (expected_scanned != 0) assert(scanned == expected_scanned);
         assert(gc_downloads.size() == expected);
         std::vector<ImageId> actual;
@@ -427,6 +438,10 @@ int main() {
         0,{},40,1000_MiB,2,false,false,false,1);
     Scenario({ImageFor(0,true),ImageFor(1,true)}).Test(
         0,{},40,1000_MiB,2,false,false,false,2);
+    // Unclassified failure after a GPU record is never swallowed.
+    // The same pending map retirement happens BEFORE the rethrow.
+    Scenario({ImageFor(0,true),ImageFor(1,true)}).Test(
+        0,{},40,1000_MiB,2,false,false,false,3);
 #endif
     {
         std::vector<Image> images;
