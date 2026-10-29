@@ -301,13 +301,27 @@ struct PipelineWaitTrace {
     const bool enabled{detailed_gpu_profile.load(std::memory_order_relaxed)};
     const std::chrono::steady_clock::time_point started{
         enabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{}};
+    std::chrono::steady_clock::time_point lock_acquired{};
+    void MarkLockAcquired() noexcept {
+        if (enabled) lock_acquired = std::chrono::steady_clock::now();
+    }
     void Complete(const char* kind, std::uint64_t cache_key, bool usable) const {
         if (!enabled) return;
+        const auto finished = std::chrono::steady_clock::now();
         const auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now() - started).count();
-        std::printf("EDEN_VULKAN_PIPELINE_WAIT kind=%s key=%016llx wait_ns=%llu usable=%u\n",
+            finished - started).count();
+        // Both components use the SAME finished snapshot, so the split
+        // sums back to wait_ns without double counting or overlapping CPU
+        // compilation. Post-mutex includes condition wake and callback work.
+        const auto mutex_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            lock_acquired - started).count();
+        const auto post_mutex_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            finished - lock_acquired).count();
+        std::printf("EDEN_VULKAN_PIPELINE_WAIT kind=%s key=%016llx wait_ns=%llu usable=%u mutex_ns=%llu post_mutex_ns=%llu\n",
                     kind, static_cast<unsigned long long>(cache_key),
-                    static_cast<unsigned long long>(elapsed), unsigned(usable));
+                    static_cast<unsigned long long>(elapsed), unsigned(usable),
+                    static_cast<unsigned long long>(mutex_ns),
+                    static_cast<unsigned long long>(post_mutex_ns));
     }
 };
 // R361: Count draws rejected before recording, including hidden HUD/pitch

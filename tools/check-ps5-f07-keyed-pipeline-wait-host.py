@@ -21,7 +21,10 @@ end = perf.index("\n};", begin) + len("\n};")
 trace = perf[begin:end]
 assert "if (!enabled) return;" in trace
 assert "wait_ns=%llu usable=%u" in trace
-assert "std::chrono::steady_clock::now() - started" in trace
+assert "finished - started" in trace
+assert "lock_acquired - started" in trace
+assert "finished - lock_acquired" in trace
+assert "mutex_ns=%llu post_mutex_ns=%llu" in trace
 assert "struct ShaderMissStageCosts" in perf
 assert "result->SetDiagnosticCacheKeyHash(key.Hash());" in cache
 assert "void SetDiagnosticCacheKeyHash(u64 hash) noexcept" in header
@@ -32,6 +35,8 @@ for phrase in (
     "F07 keyed graphics worker-wait after mutex release",
     "F07 keyed compute worker-wait after mutex release",
     "F07 publish diagnostic compute cache key before first Configure",
+    "F07 V01 keyed vk_graphics_pipeline_cost.cpp mutex-versus-postlock phase split",
+    "F07 V01 keyed vk_compute_pipeline_cost.cpp mutex-versus-postlock phase split",
 ):
     assert phrase in gen, phrase
 
@@ -44,7 +49,7 @@ def callback_body(text, kind):
     assert block.count("std::unique_lock lock{build_mutex};") == 2
     assert block.count("if (is_built.load(std::memory_order_acquire)) return;") == 2
     assert block.index("if (is_built.load(std::memory_order_acquire)) return;") < block.index("PipelineWaitTrace keyed_wait;")
-    assert block.index("PipelineWaitTrace keyed_wait;") < block.index("std::unique_lock lock{build_mutex};") < block.rindex("if (is_built.load(std::memory_order_acquire)) return;")
+    assert block.index("PipelineWaitTrace keyed_wait;") < block.index("std::unique_lock lock{build_mutex};") < block.index("keyed_wait.MarkLockAcquired();") < block.rindex("if (is_built.load(std::memory_order_acquire)) return;")
     # The first ready check is still before the timer, so completed builders
     # skip diagnostics entirely. A publication after the first check but
     # before locking remains a no-log fast exit under the mutex.
@@ -249,6 +254,13 @@ with tempfile.TemporaryDirectory(prefix="f07-v01-worker-keyed-") as tmp:
                     # ownership plus 9ms condition wait; the old trace only
                     # saw the latter. Use a conservative >=12ms floor.
                     assert int(lines[2].split("wait_ns=")[1].split()[0]) >= 12_000_000
+                    for item in lines:
+                        total = int(item.split("wait_ns=")[1].split()[0])
+                        mutex = int(item.split("mutex_ns=")[1].split()[0])
+                        post = int(item.split("post_mutex_ns=")[1].split()[0])
+                        assert total == mutex + post, (kind, opt, item)
+                    assert int(lines[2].split("mutex_ns=")[1].split()[0]) >= 12_000_000
+                    assert int(lines[2].split("post_mutex_ns=")[1].split()[0]) >= 1_000_000
                 else:
                     assert not lines, (kind, opt, lines)
                 print(f"F07_KEYED_PIPELINE_WAIT_PASS kind={kind} native={int(native)} {opt}")

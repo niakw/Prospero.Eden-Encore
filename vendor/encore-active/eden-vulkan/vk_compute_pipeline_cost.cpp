@@ -449,6 +449,7 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
             // the GPU worker's preceding mutex delay.
             ::Eden::Performance::PipelineWaitTrace keyed_wait;
             std::unique_lock lock{build_mutex};
+            keyed_wait.MarkLockAcquired();
             if (is_built.load(std::memory_order_acquire)) return;
 #endif
             auto timer = Eden::Performance::VulkanTimer(16);

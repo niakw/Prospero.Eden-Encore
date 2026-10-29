@@ -5380,6 +5380,15 @@ for pipeline_file in ("vk_graphics_pipeline_cost.cpp", "vk_compute_pipeline_cost
         "            // Include contention acquiring build_mutex in the keyed\n            // diagnostic; a genuinely blocked condvar wait must not omit\n            // the GPU worker's preceding mutex delay.\n            ::Eden::Performance::PipelineWaitTrace keyed_wait;\n            std::unique_lock lock{build_mutex};\n            if (is_built.load(std::memory_order_acquire)) return;",
         f"F07 V01 include build mutex acquisition in keyed {pipeline_file} wait")
 
+# V01: split genuinely blocked GPU-worker wait into the build mutex
+# contention and post-acquire/condvar portions. The sums use one end stamp.
+for pipeline_file in ("vk_graphics_pipeline_cost.cpp", "vk_compute_pipeline_cost.cpp"):
+    apply_reviewed_delta(
+        pipeline_file,
+        "            std::unique_lock lock{build_mutex};\n            if (is_built.load(std::memory_order_acquire)) return;\n#endif\n            auto timer = Eden::Performance::VulkanTimer(16);",
+        "            std::unique_lock lock{build_mutex};\n            keyed_wait.MarkLockAcquired();\n            if (is_built.load(std::memory_order_acquire)) return;\n#endif\n            auto timer = Eden::Performance::VulkanTimer(16);",
+        f"F07 V01 keyed {pipeline_file} mutex-versus-postlock phase split")
+
 apply_reviewed_delta(
     "include/video_core/renderer_vulkan/vk_compute_pipeline.h",
     "    void PreflightDescriptorScratch();\n    [[nodiscard]] bool HasDescriptorEntries() const noexcept {",
