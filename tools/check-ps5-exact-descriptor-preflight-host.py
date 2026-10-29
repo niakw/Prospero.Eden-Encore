@@ -295,7 +295,7 @@ fallback_cpp = r"""
 #include <cstdio>
 using u64 = std::uint64_t;
 namespace Eden::Performance {
-struct VulkanTimer { explicit VulkanTimer(int) {} };
+struct VulkanTimer { explicit VulkanTimer(int) {} ~VulkanTimer() {} };
 }
 struct Scheduler {
     bool free_tick{};
