@@ -72,6 +72,11 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
                     or core not in (0.0, 1.0, 2.0, 3.0)
                     or any(k not in core_values or core_values[k] < 0 for k in fields)
                     or int(core) in jit_cores):
+                # An extra/invalid core record must revoke any previously
+                # accepted quartet for this frame, not leave false certainty.
+                for field in ("jit_core_cpu_sum_ms", "jit_core_peak_ms",
+                              "jit_core_calls", "jit_core_evacuations"):
+                    last_row.pop(field, None)
                 last_row = None
                 continue
             jit_cores[int(core)] = core_values
@@ -88,7 +93,8 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
                         x["compile_calls"] for x in jit_cores.values())
                     last_row["jit_core_evacuations"] = sum(
                         x["evacuations"] for x in jit_cores.values())
-                last_row = None
+                if "jit_core_cpu_sum_ms" not in last_row:
+                    last_row = None
         elif "EDEN_GPU_CACHE_PHASE " in line and phase_row is not None:
             snapshot = values(line.partition("EDEN_GPU_CACHE_PHASE ")[2])
             name = PHASE_NAME.search(line)
@@ -101,6 +107,11 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
                     or phase in seen_phases
                     or any(k not in snapshot or snapshot[k] < 0
                            for k in ("window_samples", "window_ns", "max_ns"))):
+                # Reject duplicate/out-of-frame snapshots even if every
+                # expected phase had already been collected.
+                for seen in seen_phases:
+                    for suffix in ("samples", "sample_ms", "max_ms"):
+                        phase_row.pop(f"gpu_{seen}_{suffix}", None)
                 phase_row = None
                 continue
             seen_phases.add(phase)
