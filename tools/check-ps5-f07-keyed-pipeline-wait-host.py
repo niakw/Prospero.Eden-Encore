@@ -101,6 +101,7 @@ struct Pipeline {
     u64 diagnostic_cache_key_hash{0xabcd};
     bool bound{true};
     std::function<void()> on_before_lock = [] {};
+    std::function<void()> on_before_wait = [] {};
     bool CanExecuteDraw() const {
         return is_built.load(std::memory_order_acquire) && bound;
     }
@@ -184,8 +185,17 @@ int main() {
             caller_at_lock.store(true,std::memory_order_release);
             caller_at_lock.notify_one();
         };
+        std::atomic<bool> callback_at_wait{false};
+        contended.on_before_wait = [&] {
+            callback_at_wait.store(true,std::memory_order_release);
+            callback_at_wait.notify_one();
+        };
         std::thread publisher([&] {
             holder.join();
+            // Do not publish before the callback has passed its second
+            // acquire check: otherwise the fast path can return without
+            // a condition wait and this fixture would be schedule-dependent.
+            callback_at_wait.wait(false,std::memory_order_acquire);
             std::this_thread::sleep_for(std::chrono::milliseconds(9));
             contended.Publish();
         });
@@ -210,7 +220,9 @@ with tempfile.TemporaryDirectory(prefix="f07-v01-worker-keyed-") as tmp:
         source = Path(tmp) / f"{kind}.cpp"
         source.write_text(cpp.replace("__ACTUAL_CALLBACK__", callback.replace(
             "            std::unique_lock lock{build_mutex};",
-            "            on_before_lock();\n            std::unique_lock lock{build_mutex};", 1)))
+            "            on_before_lock();\n            std::unique_lock lock{build_mutex};", 1).replace(
+            "            build_condvar.wait(lock,",
+            "            on_before_wait();\n            build_condvar.wait(lock,", 1)))
         for native in (False, True):
             for opt in ("-O0", "-O2"):
                 exe = Path(tmp) / f"{kind}-{'ps5' if native else 'desktop'}-{opt[1:]}"
