@@ -402,7 +402,7 @@ int main() {
     assert(c.FindDMAImage(tiled,42)==20); // >8 matching images
     std::puts("F07_T01_DMA_SINGLE_SCAN_PASS");
 }
-""".replace("__METHOD__",candidate_fn.replace(
+""".replace("__METHOD__","template<class P>\n"+candidate_fn.replace(
     "boost::container::small_vector<ImageId, 8> image_ids;",
     "std::vector<ImageId> image_ids;"))
 with tempfile.TemporaryDirectory(prefix="encore-f07-dma-find-image-") as directory:
