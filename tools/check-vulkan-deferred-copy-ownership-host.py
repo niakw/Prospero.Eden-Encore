@@ -45,6 +45,7 @@ f07_texture_labels = (
     'F07 reject empty native Vulkan reinterpret image copies',
     'F07 validate native Vulkan reinterpret scratch byte budget',
     'F07 reject scratch sizes outside Vulkan transient buffer slots',
+    'F07 avoid empty native image upload and unnecessary MSAA resolve invalidation',
     'F07 validate native reinterpret pixel ratios before coordinate conversion',
     'F07 skip zero-area native Vulkan image blits',
     'F07 preserve resolve validity on rejected size-incompatible CopyImage',
@@ -60,6 +61,8 @@ f07_texture_labels = (
     'F07 reject null native image reinterpret scratch handle',
     'F07 snapshot native MSAA scratch reuse GPU completion',
     'F07 snapshot native MSAA scratch and resolve cleanup GPU completion',
+    'F07 skip GPU completion probe on empty native MSAA scratch list',
+    'F07 skip GPU completion probe on empty native MSAA GC frame',
 )
 f07_texture_deltas = []
 for statement in tree.body:
