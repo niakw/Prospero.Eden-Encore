@@ -7,8 +7,8 @@ source OpenCL (`.c`, `.cpp`, `.h`, `.hpp`, `.inc`, `.cl` et variantes voisines)
 présent sous `vendor/encore-active`. Il est généré depuis l'arbre réel
 et contrôlé par `tools/check-active-source-inventory.py`.
 
-- **330 fichiers** de code et d'en-têtes enregistrés.
-- **330 fichiers** possèdent une correspondance de chemin *exacte*
+- **331 fichiers** de code et d'en-têtes enregistrés.
+- **331 fichiers** possèdent une correspondance de chemin *exacte*
   avec une ou plusieurs lignes du registre de fonctions.
 - **0 fichier** reste sans correspondance de chemin exacte dans le registre.
   Cette couverture ne prouve pas la sélection native ni le comportement console.
@@ -314,7 +314,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/include/video_core/renderer_vulkan/renderer_vulkan.h` | `maintained-override` | V35 |
 | `eden-vulkan/include/video_core/renderer_vulkan/striped_wait.h` | `maintained-override` | V40 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_blit_screen.h` | `maintained-override` | V34 |
-| `eden-vulkan/include/video_core/renderer_vulkan/vk_buffer_cache.h` | `maintained-override` | — |
+| `eden-vulkan/include/video_core/renderer_vulkan/vk_buffer_cache.h` | `maintained-override` | V111 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h` | `maintained-override` | V41 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h` | `maintained-override` | V33 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h` | `maintained-override` | V10 |
@@ -381,7 +381,7 @@ Les fichiers source/en-tête/fragment de `headless/` sont suivis
 dans [`EDEN_HEADLESS_SOURCE_CATALOG.md`](EDEN_HEADLESS_SOURCE_CATALOG.md).
 Les chemins du graphe moteur y ont un propriétaire exact ; les autres sont
 triés séparément entre moteur, JIT, tests, ressources et launcher.
-La couverture de 326/326 ci-dessus ne s'applique **pas** à ce dossier.
+La couverture de 331/331 ci-dessus ne s'applique **pas** à ce dossier.
 
 ## Critères de tenue à jour
 
