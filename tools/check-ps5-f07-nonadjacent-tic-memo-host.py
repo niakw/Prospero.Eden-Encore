@@ -26,6 +26,12 @@ assert "previous_view_id" not in source
 assert method(backports) != source
 assert source.count("view_memo[view.index & 15U]")==2
 assert source.count("std::array<ViewMemo, 16> view_memo{}")==1
+assert "F07 bypass draw-local texture memo on empty image descriptor batches" in gen
+assert source.count("if (views.empty()) {")==1
+assert source.index("if (views.empty()) {") < source.index("std::array<ViewMemo, 16> view_memo{}")
+empty_guard=source[source.index("#ifdef PS5_NATIVE"):source.index("    bool has_blacklisted = false;")]
+assert "has_deleted_images = false;" in empty_guard
+assert "return;" in empty_guard
 assert "previous_view_id" not in source
 assert source.count("PrepareImageView(cached.id, false, false);") == 1
 assert "ImageFlagBits::Remapped" in source
