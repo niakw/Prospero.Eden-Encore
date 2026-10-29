@@ -50,6 +50,16 @@ for node in ast.walk(tree):
                 pairs.append(pair)
 assert pairs.count((old,new)) == 1
 assert "python3 -B tools/check-ps5-clear-scissor-overflow-host.py" in workflow
+assert "F07 skip guest memory remap drain for all-masked native clear" in generator
+clear_start = "void RasterizerVulkan::Clear(u32 layer_count) {"
+clear_end = "    std::scoped_lock lock{texture_cache.mutex};"
+assert native.count(clear_start)==1
+clear_src=native.split(clear_start,1)[1].split(clear_end,1)[0]
+assert clear_src.count("gpu_memory->FlushCaching();")==2
+assert clear_src.index("if (!use_color && !use_depth && !use_stencil)") < clear_src.rindex("gpu_memory->FlushCaching();")
+assert "#ifndef PS5_NATIVE" in clear_src and "#ifdef PS5_NATIVE" in clear_src
+assert "    FlushWork();" in clear_src
+
 
 cpp = r"""
 #include <algorithm>
@@ -113,4 +123,57 @@ with tempfile.TemporaryDirectory(prefix="encore-clear-scissor-") as temp:
                     "-fsanitize=address,undefined","-fno-sanitize-recover=all",
                     str(src),"-o",str(binary)],check=True,timeout=45)
     subprocess.run([str(binary)],check=True,timeout=30)
-print("CLEAR_SCISSOR_OVERFLOW_HOST_PASS INT32_MIN=1 sanitizer=1 cases=230400 generator_parity=1")
+# Execute the actual Clear pre-lock branch on PS5 and desktop. The
+# scheduler's FlushWork still executes even for the all-masked no-op.
+clear_probe=clear_src[clear_src.index("    FlushWork();"):]
+probe_cpp=r"""
+#include <cassert>
+struct Regs {
+    struct Channels { bool R{},G{},B{},A{},Z{},S{}; } clear_surface;
+};
+struct Maxwell3D { Regs regs; };
+struct Memory { unsigned drains{}; void FlushCaching(){++drains;} };
+struct RasterizerVulkan {
+    Maxwell3D* maxwell3d;
+    Memory* gpu_memory;
+    unsigned dispatches{};
+    void FlushWork(){++dispatches;}
+    void TestClear() {
+__SOURCE__
+    }
+};
+int main() {
+    Maxwell3D gpu;
+    Memory memory;
+    RasterizerVulkan raster{&gpu,&memory};
+    raster.TestClear();
+    assert(raster.dispatches==1);
+#ifdef PS5_NATIVE
+    assert(memory.drains==0);
+#else
+    assert(memory.drains==1);
+#endif
+    gpu.regs.clear_surface.Z=true;
+    raster.TestClear();
+    assert(raster.dispatches==2 && memory.drains==
+#ifdef PS5_NATIVE
+           1
+#else
+           2
+#endif
+    );
+}
+""".replace("__SOURCE__",clear_probe)
+with tempfile.TemporaryDirectory(prefix="encore-clear-noop-") as temp:
+    source = Path(temp)/"clear.cpp"
+    source.write_text(probe_cpp)
+    for native_mode in (False,True):
+        for opt in ("-O0","-O2"):
+            binary=Path(temp)/("test"+opt[2:]+("n" if native_mode else "d"))
+            cmd=[clang,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                 "-fsanitize=undefined","-fno-sanitize-recover=all",
+                 *(["-DPS5_NATIVE=1"] if native_mode else []),
+                 str(source),"-o",str(binary)]
+            subprocess.run(cmd,check=True,timeout=45)
+            subprocess.run([str(binary)],check=True,timeout=30)
+print("CLEAR_SCISSOR_OVERFLOW_HOST_PASS INT32_MIN=1 sanitizer=1 cases=230400 generator_parity=1 empty_clear_remap_elision=1 desktop_original=1 O0=1 O2=1")
