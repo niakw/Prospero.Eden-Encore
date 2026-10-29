@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "eden_services.h"
+#ifdef PS5_NATIVE
+#include "ps5_profile_avatar_staging.hpp"
+#endif
 
 #include "assets_dir.h"
 #include "crash_report.h"
@@ -1509,6 +1512,25 @@ std::string EdenServices::profile_avatar() {
         user_id == -1 || user_id == 0)
         return {};
 
+// Only consume NiakPS5's optional, local, explicitly owner-bound stage.
+// A title is not entitled to read another account's portrait. This remains
+// optional: Encore still reads its own foreground PS5 user cache directly.
+    constexpr const char* staged_root="/data/NiakPS5/assets/";
+    constexpr const char* staged_marker="/data/NiakPS5/assets/niak-profile-source.txt";
+    if (pe::ps5::avatar_owner_marker_matches(staged_marker,
+            static_cast<std::uint32_t>(user_id), "png") &&
+        IsFile(std::string(staged_root)+"niak-profile.png")) {
+        std::fprintf(stderr,"EDEN_PROFILE_AVATAR format=staged_png status=found\\n");
+        return std::string(staged_root)+"niak-profile.png";
+    }
+    if (pe::ps5::avatar_owner_marker_matches(staged_marker,
+            static_cast<std::uint32_t>(user_id), "dds") &&
+        IsFile(std::string(staged_root)+"niak-profile.dds")) {
+        std::fprintf(stderr,"EDEN_PROFILE_AVATAR format=staged_dds status=found\\n");
+        return std::string(staged_root)+"niak-profile.dds";
+    }
+
+    // Account-scoped native cache remains the independent fallback.
     // Keep the lookup bound to the active user, never enumerate all users.
     // Some console caches contain only pre-scaled DDS avatars (no PNG).
     // Prefer the full-colour PNG, then a 128px DDS suitable for the 54px UI.
