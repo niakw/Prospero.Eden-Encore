@@ -333,4 +333,70 @@ zero_texture = [
 assert "texture_exact_gc_events: complete=1/1" in module.report(
     module.windows(record(1000, 30, 33, 0, 0) + zero_texture))
 assert module.report([]) == "NO_VALID_WINDOWS (requires matching frame totals)"
+# J01: compile the production DEV-only printf for the largest presentation
+# gap. The four JIT cores were already sampled; do not silently omit core 3.
+import re
+import shutil
+import subprocess
+import tempfile
+
+presenter = (root / "headless/graphics.cpp").read_text()
+anchor = 'std::printf("EDEN_PRESENT_INTERVAL_WITNESS'
+assert presenter.count(anchor) == 1
+begin = presenter.index(anchor)
+end = presenter.index(");", begin) + 2
+actual_printf = presenter[begin:end]
+assert "jit0_ns=%llu jit1_ns=%llu jit2_ns=%llu jit3_ns=%llu" in actual_printf
+assert "d[12], d[13], d[14], d[15]," in actual_printf
+assert "d[16] + d[17] + d[18] + d[19]" in actual_printf
+assert "d[20] + d[21] + d[22] + d[23]" in actual_printf
+model = r"""
+#include <array>
+#include <cstdio>
+struct IntervalWitness {
+    unsigned peak_frame{1002};
+    double peak_ms{180.5};
+    std::array<unsigned long long, 24> peak_delta{};
+};
+int main() {
+    IntervalWitness vulkan_interval_witness{};
+    auto& counts = vulkan_interval_witness.peak_delta;
+    counts[11] = 1000;
+    counts[12] = 100; counts[13] = 200; counts[14] = 300; counts[15] = 400;
+    counts[16] = 1; counts[17] = 2; counts[18] = 3; counts[19] = 4;
+    counts[20] = 1; counts[21] = 2; counts[22] = 0; counts[23] = 3;
+    counts[10] = 42; counts[2] = 3; counts[1] = 4; counts[6] = 5;
+    const auto& d = vulkan_interval_witness.peak_delta;
+    __ACTUAL_PRINTF__
+}
+""".replace("__ACTUAL_PRINTF__", actual_printf)
+compiler = shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
+assert compiler, "C++20 compiler required"
+with tempfile.TemporaryDirectory(prefix="f07-jit4-peak-") as folder:
+    source = Path(folder) / "peak.cpp"
+    source.write_text(model)
+    for opt in ("-O0", "-O2"):
+        binary = Path(folder) / f"peak-{opt[1:]}"
+        build = subprocess.run(
+            [compiler, "-std=c++20", "-Wall", "-Wextra", "-Werror", opt,
+             "-fsanitize=undefined", "-fno-sanitize-recover=all",
+             str(source), "-o", str(binary)],
+            capture_output=True, text=True, timeout=40,
+        )
+        assert build.returncode == 0, (opt, build.stderr[-4000:])
+        run = subprocess.run([str(binary)], capture_output=True, text=True, timeout=10)
+        assert run.returncode == 0, (opt, run.stderr[-4000:])
+        parsed = dict(re.findall(r"\b([a-z_0-9]+)=([0-9.]+)", run.stdout))
+        assert {key: int(parsed[key]) for key in
+                ("jit0_ns", "jit1_ns", "jit2_ns", "jit3_ns")} == {
+                    "jit0_ns": 100, "jit1_ns": 200,
+                    "jit2_ns": 300, "jit3_ns": 400,
+                }, (opt, run.stdout)
+        assert int(parsed["jit_ns"]) == sum(int(parsed[f"jit{i}_ns"]) for i in range(4))
+        assert int(parsed["jit_calls"]) == 10
+        assert int(parsed["evacuations"]) == 6
+        assert int(parsed["frame"]) == 1002
+        assert float(parsed["interval_ms"]) == 180.5
+        print(f"F07_JIT4_PEAK_INTERVAL_PASS {opt} source_extracted=1 sum_cpu=1")
+
 print("PINNED_FC27_LONG_FRAME_CLASSIFIER_PASS")
