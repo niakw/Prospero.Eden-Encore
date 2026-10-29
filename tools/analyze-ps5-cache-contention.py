@@ -117,6 +117,8 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
         elif "EDEN_PRESENT_INTERVAL_WITNESS " in line and phase_row is not None:
             # This DEV-only snapshot covers one *between-presentations*
             # interval inside the reporting window, NOT a guest frame.
+            # Require its identifier in this exact window's reported frame
+            # span, not merely <= its ending frame (which accepts old peaks).
             # Preserve the source's complete four-core CPU attribution;
             # no timing is inferred from missing/quiet/duplicate records.
             snapshot = values(line.partition("EDEN_PRESENT_INTERVAL_WITNESS ")[2])
@@ -128,7 +130,9 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
                 not peak_seen and not peak_invalid
                 and "scope=between_presents" in line
                 and all(key in snapshot and snapshot[key] >= 0 for key in required)
-                and snapshot.get("frame", 0) > 0
+                and phase_row.get("frames", 0) > 0
+                and snapshot.get("frame", 0) >= (
+                    phase_row["total"] - phase_row["frames"] + 1)
                 and snapshot.get("frame", 0) <= phase_row["total"]
                 and snapshot.get("interval_ms", 0) >= 100
                 and snapshot.get("jit_ns") == sum(
@@ -137,7 +141,7 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
             if not valid:
                 # A second, malformed or cross-window peak invalidates only
                 # peak attribution, never a valid window/JIT/phase sample.
-                for field in ("peak_present_interval_ms",
+                for field in ("peak_present_frame", "peak_present_interval_ms",
                               "peak_present_jit_cpu_ms",
                               "peak_present_jit_core_max_ms",
                               "peak_present_cache_wait_ms",
@@ -147,6 +151,7 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
                 peak_invalid = True
             else:
                 peak_seen = True
+                phase_row["peak_present_frame"] = snapshot["frame"]
                 phase_row["peak_present_interval_ms"] = snapshot["interval_ms"]
                 phase_row["peak_present_jit_cpu_ms"] = snapshot["jit_ns"] / 1_000_000
                 phase_row["peak_present_jit_core_max_ms"] = max(
@@ -242,14 +247,21 @@ def report(rows: list[dict[str, float]]) -> str:
     # elapsed renderer time, and its snapshot cannot identify the culprit.
     peak_rows = [r for r in rows if "peak_present_interval_ms" in r]
     if peak_rows:
+        # C05: choose exactly one worst interval, never cherry-pick independent
+        # maxima from unrelated five-second windows and display them as if
+        # they shared a timestamp. A tie uses the later window deterministically.
+        peak = max(peak_rows,
+                   key=lambda row: (row["peak_present_interval_ms"], row["total"]))
         out.append(
             f"peak_present_interval: complete={len(peak_rows)}/{len(rows)} "
-            f"max_interval_ms={max(r['peak_present_interval_ms'] for r in peak_rows):.3f} "
-            f"max_jit_cpu_ms={max(r['peak_present_jit_cpu_ms'] for r in peak_rows):.3f} "
-            f"max_single_jit_core_ms={max(r['peak_present_jit_core_max_ms'] for r in peak_rows):.3f} "
-            f"max_cache_wait_ms={max(r['peak_present_cache_wait_ms'] for r in peak_rows):.3f} "
-            f"max_gpu_fence_ms={max(r['peak_present_gpu_fence_ms'] for r in peak_rows):.3f} "
-            f"max_guest_sync_ms={max(r['peak_present_guest_sync_ms'] for r in peak_rows):.3f}"
+            f"window_end_frame={int(peak['total'])} "
+            f"peak_frame={int(peak['peak_present_frame'])} "
+            f"selected_interval_ms={peak['peak_present_interval_ms']:.3f} "
+            f"selected_jit_cpu_ms={peak['peak_present_jit_cpu_ms']:.3f} "
+            f"selected_jit_core_max_ms={peak['peak_present_jit_core_max_ms']:.3f} "
+            f"selected_cache_wait_ms={peak['peak_present_cache_wait_ms']:.3f} "
+            f"selected_gpu_fence_ms={peak['peak_present_gpu_fence_ms']:.3f} "
+            f"selected_guest_sync_ms={peak['peak_present_guest_sync_ms']:.3f}"
         )
     else:
         out.append(

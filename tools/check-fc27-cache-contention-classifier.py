@@ -337,13 +337,14 @@ assert module.report([]) == "NO_VALID_WINDOWS (requires matching frame totals)"
 # attributable to one reporting window. Do not mistake summed CPU nanoseconds
 # from concurrent JIT cores for 200 ms of blocked presentation.
 def peak_witness(frame=1005, jit3=400_000, scope="between_presents",
-                 total_jit=1_000_000, include_fourth=True):
+                 total_jit=1_000_000, include_fourth=True,
+                 interval_ms=201.5, cache_wait_ns=5_000_000):
     cores = (100_000, 200_000, 300_000, jit3)
-    values = [f"EDEN_PRESENT_INTERVAL_WITNESS frame={frame} interval_ms=201.500",
+    values = [f"EDEN_PRESENT_INTERVAL_WITNESS frame={frame} interval_ms={interval_ms:.3f}",
               f"jit_ns={total_jit}", "jit_calls=7",
               *(f"jit{i}_ns={core}" for i, core in enumerate(cores)
                 if i < 3 or include_fourth),
-              "evacuations=1", "cache_wait_ns=5000000",
+              "evacuations=1", f"cache_wait_ns={cache_wait_ns}",
               "gpu_fence_ns=2500000", "gpu_dispatch_ns=800000",
               f"guest_sync_ns=400000 scope={scope}"]
     return " ".join(values)
@@ -357,14 +358,16 @@ assert peak_rows[0]["peak_present_jit_core_max_ms"] == 0.4
 assert peak_rows[0]["peak_present_gpu_fence_ms"] == 2.5
 peak_report = module.report(peak_rows)
 assert "peak_present_interval: complete=1/1" in peak_report
-assert "max_interval_ms=201.500" in peak_report
-assert "max_jit_cpu_ms=1.000" in peak_report
-assert "max_single_jit_core_ms=0.400" in peak_report
-assert "max_cache_wait_ms=5.000" in peak_report
+assert "window_end_frame=1010 peak_frame=1005" in peak_report
+assert "selected_interval_ms=201.500" in peak_report
+assert "selected_jit_cpu_ms=1.000" in peak_report
+assert "selected_jit_core_max_ms=0.400" in peak_report
+assert "selected_cache_wait_ms=5.000" in peak_report
 assert "not a guest frame or causal GPU proof" in peak_report
 for invalid in (
     [peak_witness(), peak_witness()],
     [peak_witness(frame=1011)],
+    [peak_witness(frame=860)], # outside [861,1010], even though <= 1010
     [peak_witness(total_jit=999_999)],
     [peak_witness(scope="window")],
     [peak_witness(include_fourth=False)],
@@ -375,6 +378,24 @@ for invalid in (
     assert len(bad) == 1
     assert "peak_present_interval_ms" not in bad[0]
     assert "peak_present_interval: complete=0/1" in module.report(bad)
+# Independent per-field maxima belong to different windows. Select the
+# single worst presentation gap and retain ONLY its actual co-measured costs.
+# The shorter gap has an artificially huge cache wait to catch false pairing.
+discordant = module.windows(
+    record(1010, 23, 420, 1, 2)
+    + [peak_witness(frame=1005, interval_ms=401.5,
+                    cache_wait_ns=5_000_000)]
+    + record(1160, 18, 350, 2, 1000)
+    + [peak_witness(frame=1158, interval_ms=211.5,
+                    cache_wait_ns=500_000_000)]
+)
+assert len(discordant) == 2
+discordant_report = module.report(discordant)
+assert "peak_present_interval: complete=2/2" in discordant_report
+assert "window_end_frame=1010 peak_frame=1005" in discordant_report
+assert "selected_interval_ms=401.500" in discordant_report
+assert "selected_cache_wait_ms=5.000" in discordant_report
+assert "selected_cache_wait_ms=500.000" not in discordant_report
 # A bad peak must not erase a valid frame window or the four JIT core series.
 with_core = module.windows(record(1010, 23, 220, 100, 2) +
                            [core_line(1010, 0, 25_000_000, 1, 0),
