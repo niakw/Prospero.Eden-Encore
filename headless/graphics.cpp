@@ -700,8 +700,6 @@ void GraphicsWindow::OnFrameDisplayed() {
                 Experimental::vulkan_frame_probe.load(std::memory_order_relaxed);
             if (capture_interval)
                 vulkan_interval_witness.Observe(CaptureFramePressure(), 0.0, frame_total);
-            else
-                vulkan_interval_witness.Reset();
 #endif
         } else {
             ++frame_sample_count;
@@ -717,7 +715,7 @@ void GraphicsWindow::OnFrameDisplayed() {
             if (capture_interval)
                 vulkan_interval_witness.Observe(CaptureFramePressure(),
                                                 present_interval * 1000.0, frame_total);
-            else
+            else if (vulkan_interval_witness.seeded)
                 vulkan_interval_witness.Reset();
 #endif
             // User-observed FC27 dribble drops: capture how often a nominal 30 FPS
@@ -728,7 +726,8 @@ void GraphicsWindow::OnFrameDisplayed() {
             frame_late_100 += present_interval >= 0.100;
             frame_late_200 += present_interval >= 0.200;
             frame_late_500 += present_interval >= 0.500;
-            if (Experimental::vulkan_frame_probe.load(std::memory_order_relaxed)) {
+            if (Eden::NativeLogs::Detailed() &&
+                Experimental::vulkan_frame_probe.load(std::memory_order_relaxed)) {
                 // Opt-in passive pacing histogram: never sleep or synthesize
                 // frames on the guest/compositor hot path.
                 const double ms = present_interval * 1000.0;
@@ -745,9 +744,11 @@ void GraphicsWindow::OnFrameDisplayed() {
             // shows up in the 2-vsync bucket, a slow one across all of them. "half" counts the
             // frames that came within one refresh of a 120 Hz output.
             static std::array<unsigned, 5> interval_hist{};
-            const double interval_ms = (now - frame_sample_last) * 1000.0;
-            ++interval_hist[interval_ms < 12.5 ? 4 : interval_ms < 20.0 ? 0 : interval_ms < 36.0 ? 1 :
-                            interval_ms < 52.0 ? 2 : 3];
+            if (Eden::NativeLogs::Detailed()) {
+                const double interval_ms = present_interval * 1000.0;
+                ++interval_hist[interval_ms < 12.5 ? 4 : interval_ms < 20.0 ? 0 : interval_ms < 36.0 ? 1 :
+                                interval_ms < 52.0 ? 2 : 3];
+            }
 #endif
             frame_sample_last = now;
             if (now - frame_sample_start >= 5.0) {
@@ -857,7 +858,8 @@ void GraphicsWindow::OnFrameDisplayed() {
 #endif
                 }
 #ifdef EDEN_DEV_PROFILE
-                vulkan_interval_witness.NextWindow();
+                if (vulkan_interval_witness.seeded)
+                    vulkan_interval_witness.NextWindow();
 #endif
                 frame_sample_start = now;
                 frame_sample_count = 0;
@@ -874,7 +876,8 @@ void GraphicsWindow::OnFrameDisplayed() {
             std::chrono::steady_clock::now().time_since_epoch()).count();
         std::printf("EDEN_STAGE backend=%s phase=first_frame_callback mono_ns=%lld\n",
                     vulkan ? "Vulkan" : "OpenGL", static_cast<long long>(mono_ns));
-        std::fflush(stdout);
+        // LogPipe drains stdout asynchronously; forcing a 64-KiB stdio flush
+        // from the first presentation callback can block on its pipe writer.
     }
     // Development autoboot bypasses the launcher, which normally hides splash.
     // OpenGL already does this inside EGL; Vulkan uses the shared frame callback.

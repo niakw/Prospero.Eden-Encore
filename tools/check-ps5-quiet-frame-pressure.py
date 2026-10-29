@@ -145,9 +145,13 @@ assert "mutex" not in witness and "new " not in witness
 assert '#ifdef EDEN_DEV_PROFILE\n#include "present_interval_witness.h"\n#endif' in graphics
 assert "FrameDiagnostics::PresentIntervalWitness<24> vulkan_interval_witness;" in graphics
 assert present.count("vulkan_interval_witness.Observe(CaptureFramePressure()") == 2
-assert present.count("vulkan_interval_witness.Reset();") == 3  # new title + two quiet gates
-assert "if (Eden::NativeLogs::Detailed() &&" not in present  # runtime capture has compound bool
-assert present.count("Eden::NativeLogs::Detailed() &&") == 2
+assert present.count("vulkan_interval_witness.Reset();") == 2  # title reset + transition to quiet
+assert "else if (vulkan_interval_witness.seeded)\n                vulkan_interval_witness.Reset();" in present
+assert present.count("Eden::NativeLogs::Detailed() &&") == 3  # two witnesses + pacing histogram
+assert "if (Eden::NativeLogs::Detailed() &&\n                Experimental::vulkan_frame_probe.load(std::memory_order_relaxed))" in present
+assert "if (Eden::NativeLogs::Detailed()) {\n                const double interval_ms = present_interval * 1000.0;" in present
+assert "if (vulkan_interval_witness.seeded)\n                    vulkan_interval_witness.NextWindow();" in present
+assert "std::fflush(stdout);" not in present
 assert present.count("Experimental::vulkan_frame_probe.load(std::memory_order_relaxed)") >= 2
 assert "if (vulkan_interval_witness.captured) {" in present
 assert "EDEN_PRESENT_INTERVAL_WITNESS frame=%u interval_ms=%.3f" in present
@@ -198,6 +202,27 @@ int main() {
     assert(!witness.seeded && !witness.captured);
     witness.Observe(c, 400.0, 107); // no stale quiet-session baseline
     assert(!witness.captured);
+    // Model the exact source gate: one reset on the transition to quiet,
+    // none for subsequent quiet frames, and a fresh baseline on re-enable.
+    unsigned quiet_resets = 0;
+    const auto update = [&](bool enabled, const Counts& snapshot, double ms, unsigned frame) {
+        if (enabled) witness.Observe(snapshot, ms, frame);
+        else if (witness.seeded) {
+            witness.Reset();
+            ++quiet_resets;
+        }
+    };
+    update(false, c, 0.0, 108);
+    for (unsigned frame = 109; frame < 1009; ++frame)
+        update(false, c, 0.0, frame);
+    assert(quiet_resets == 1 && !witness.seeded);
+    update(true, c, 200.0, 1009);
+    assert(witness.seeded && !witness.captured);
+    update(true, d, 120.0, 1010); // decreasing counter must not create a peak
+    assert(!witness.captured);
+    update(false, d, 0.0, 1011);
+    update(false, d, 0.0, 1012);
+    assert(quiet_resets == 2 && !witness.seeded);
     std::puts("PASS: passive native present-interval witness");
 }
 """
