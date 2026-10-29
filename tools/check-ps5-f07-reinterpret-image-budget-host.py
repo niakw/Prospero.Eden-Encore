@@ -289,7 +289,7 @@ print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid
 gc_begin="VkImage TextureCacheRuntime::AcquireMsaaScratchImage("
 gc_end="\nvoid TextureCacheRuntime::ReleaseMsaaScratchImage("
 tick_begin="void TextureCacheRuntime::TickFrame() {"
-tick_end="\nImage::Image("
+tick_end="\nImage::Image(TextureCacheRuntime& runtime_"
 assert source.count(gc_begin)==source.count(gc_end)==1
 assert source.count(tick_begin)==source.count(tick_end)==1
 gc_acquire=source[source.index(gc_begin):source.index(gc_end,source.index(gc_begin))]
@@ -384,7 +384,7 @@ int main() {
     r.msaa_scratch_images[3].unused_frames=1;
     r.pending_resolve_shadows={{7,1},{9,2},{10,3}};
     r.scheduler.semaphore.completed=9;
-    const auto before_polls=r.scheduler.semaphore.polls;
+    [[maybe_unused]] const auto before_polls=r.scheduler.semaphore.polls;
     const auto before_isfree=r.scheduler.is_free_calls;
     r.TickFrame();
     assert(r.msaa_scratch_images.size()==8);
