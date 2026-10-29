@@ -2387,6 +2387,15 @@ void Image::DownloadMemory(std::span<VkBuffer> buffers_span, std::span<size_t> o
             const VkImageCreateInfo image_ci =
                 MakeMsaaScratchImageCreateInfo(runtime->device, info, scratch_usage);
             const VkImage temp_vk_image = runtime->AcquireMsaaScratchImage(image_ci);
+#ifdef PS5_NATIVE
+            // A rejected Record, failed blit or staging allocation must not
+            // strand this scratch at UINT64_MAX. The returned CurrentTick
+            // still protects commands already submitted to the GPU worker.
+            bool scratch_released = false;
+            SCOPE_EXIT {
+                if (!scratch_released) runtime->ReleaseMsaaScratchImage(temp_vk_image);
+            };
+#endif
 
             const VkImageAspectFlags temp_aspect_mask = aspect_mask;
             const VkAccessFlags attachment_access =
@@ -2517,6 +2526,9 @@ void Image::DownloadMemory(std::span<VkBuffer> buffers_span, std::span<size_t> o
                                        0, memory_write_barrier, nullptr, image_write_barrier);
             });
             runtime->ReleaseMsaaScratchImage(temp_vk_image);
+#ifdef PS5_NATIVE
+            scratch_released = true;
+#endif
         }
         if (is_rescaled) {
             ScaleUp(true);
