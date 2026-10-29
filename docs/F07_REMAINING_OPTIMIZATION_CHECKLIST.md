@@ -22,7 +22,7 @@
 | --- | ---: | ---: | --- |
 | Revue source prioritaire B1–B4 | **38/38** | **0** | Fonctions inspectées ; ne signifie pas 38 accélérations prouvées |
 | Acquis historiques A01–A09 | **9/9** | **0** | Code et témoins historiques déjà disponibles |
-| Décisions PRÉ-BUILD S/V/C/T/J/H/I/G/M/Q | **21/28** | **7** | 20 décisions hôte qualifiées (dont C03 profils de frame et T07 DMA/BCn/MSAA) et M03 **SANS PATCH JUSTIFIÉ** ; preuve FC27 sur console toujours absente |
+| Décisions PRÉ-BUILD S/V/C/T/J/H/I/G/M/Q | **21/29** | **8** | 20 décisions hôte qualifiées (dont C03 profils de frame et T07 DMA/BCn/MSAA) et M03 **SANS PATCH JUSTIFIÉ** ; preuve FC27 sur console toujours absente |
 | Vérifications POST-BUILD | **0/12** | **12** | Mesures console impossibles avant le premier paquet |
 | Portes finales B01–B11 | **0/11** | **11** | Six gates avant compilation, puis build et tests réels |
 
@@ -150,6 +150,9 @@ Les lignes **[x]** ci-dessous certifient **uniquement que le changement figure s
 - [ ] **G02 [POST-BUILD]** — Qualifier F01–F06 sur console : entrée, reprise, composition et sortie, sans confondre la preuve hôte et le jeu réel.
 
 ## 6. P2 — mémoire partagée, GC, modes extrêmes, bruit de production
+
+- [ ] **M05 [PRÉ-BUILD] — décommit des tables sparse sans lecture concurrente ni double scan.** `src/memory_pages.cpp::DecommitSparsePage` : [`5796cda1`](https://github.com/niakw/Prospero.Eden-Encore/commit/5796cda1db9f57644601885f851b995047e90e5b) retire le premier `SparseRangeOf` hors `sparse_mutex` (lecture de `range.end` non atomique) et conserve une recherche unique sous mutex. Nouveau témoin source-extrait C++20 `-O0/-O2` UBSan, réutilisation de slot, pages réellement décommitées et fallback dense, raccordé aux deux gates. **CI du SHA source à qualifier ; pas de gain console affirmé.** L'ancienne photographie `21/28` des autres jalons reste historique ; cette nouvelle décision porte le périmètre actif à `21/29`.
+
 
 - [ ] **M01 [POST-BUILD]** — Mesurer VRAM/VMA/direct-mem/JIT et fragmentation, séparément à 1× et 4×.** **Sortie :** mémoire restante/plus gros bloc, échec de réservation identifié, *pas* « 4× OOM explique 1× stutter ».
 - [x] **M02 [PRÉ-BUILD] — GC, BATCH READBACK ET ROLLBACK VALIDÉS SUR HÔTE (29/10/2026).** `TextureCache::RunGarbageCollector/TickFrame`, runtime staging et `vulkan_rasterizer.cpp` : prefetch borné à **40** textures et **32 MiB**, évictions propres/dirty séparées, copie de textures scalées admise si régions valides, exclusion des aliases/MSAA, projection de pression et sorties précoces, **un seul `Finish` pour le lot** puis libération deferred après completion, rollback sur span court/handle nul/OOM/erreur de copie et préservation des données dirty pour retry. **Preuves source-extrait et ASan/UBSan :** [source preflight #40867894640 — 6/6 SUCCESS](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40867894640), `check-vulkan-gc-budget-host.py` (200 000 saturations), `check-vulkan-gc-prefetch-host.py`, `check-vulkan-gc-mixed-prefetch-host.py` (desktop/PS5 ; échecs injectés), `check-ps5-f07-gc-dirty-eviction-rollback-host.py` (O0/O2), `check-ps5-f07-gc-pressure-probe-host.py` et readback rollback. **Sécurité** [CodeQL #40867894859 — 3/3 SUCCESS](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40867894859), même SHA `339d6652`. Comparaison à l'actuel HEAD avant ce suivi : **documentation seule**, moteur et générateur inchangés. **Limites :** fréquence/réduction réelle des waits GPU, VRAM et FPS en jeu sur PS5 non mesurées ; C03/C06/M01/B08–B10 toujours ouverts. Ne pas présumer du résultat sur console.
