@@ -34,6 +34,8 @@
 
 ### Correctifs déjà intégrés — ce qui avance sans fermer tout un chantier
 
+- [x] **J01 / C05 — attribution des quatre cœurs JIT dans les fenêtres mesurées :** `b6e1d5d` complète le classificateur `tools/analyze-ps5-cache-contention.py` avec les quatre `EDEN_FRAME_JIT_CORE` produits par `headless/graphics.cpp`. Même `frame`, quatre cœurs distincts, somme CPU compatible avec `jit_ms` arrondi ; toute série partielle, dupliquée ou incompatible est refusée sans invalider le FPS de la fenêtre. `530717f` ajoute les scénarios de régression (dont CPU/JIT cumulés ≠ temps mur du renderer). **Progrès de diagnostic seulement : exécution CI de ce SHA et qualification PS5 non attestées ; J01/C05 restent [ ]**, notamment pour l'invalidation JIT, le lien causal GPU et les pauses.
+
 - [x] **V01 / Q01 — sondage GPU DEV sans appels pilote par timestamp :** `237bf981` regroupe jusqu'à 32 paires de timestamps disponibles dans `Scheduler::GpuTimeCollect` sur PS5 lorsque `gpu_time` est activé, sans modifier le mode silencieux ni le desktop. Source Vulkan, générateur strict et témoin C++ extrait O0/O2/UBSan intégrés ; **CI en attente, aucun gain FPS ni validation console**, V01 reste ouvert.
 
 - [x] **C05 / S01 — attribution cache/JIT :** `dd68b7e` corrige `tools/analyze-ps5-cache-contention.py` pour ignorer les fenêtres `detail=not_measured` et `counters_reset=1` dépourvues de véritables durées, au lieu de les convertir en faux zéros. `ce4b0d5` étend le témoin existant aux deux cas, au zéro réellement mesuré et aux données partielles. **Correction de l'analyse seulement : aucun gain FPS revendiqué ; CI du SHA final non vérifiée, C05 et S01 restent ouverts.**
