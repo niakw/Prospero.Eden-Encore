@@ -397,13 +397,13 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {'''),
     # GPU, so the last report before a fatal GPU fault names the operation.
     ('#include "performance.h"', '#include "performance.h"\n#include "image_pages.h"\n#include "buffer_pages.h"\n#include "dev_vulkan.h"\n#include "diagnostics.h"\n#include <filesystem>'),
     ('scheduler.Record([draw_params](vk::CommandBuffer cmdbuf) {\n            ',
-     'scheduler.Record([draw_params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n            if (!pipeline || !pipeline->CanExecuteDraw()) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            '),
+     'scheduler.Record([draw_params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n            if (!pipeline || !pipeline->CanExecuteRecordedDraw()) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            '),
     ('scheduler.Record([buffer_obj = buffer->Handle(), offset,\n                              stride = params.stride](vk::CommandBuffer cmdbuf) {\n                ',
-     'scheduler.Record([buffer_obj = buffer->Handle(), offset,\n                              stride = params.stride,\n                              pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n                if (!pipeline || !pipeline->CanExecuteDraw()) {\n                    ::Eden::Performance::RecordGraphicsDrawDrop(\n                        ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                    return;\n                }\n                '),
+     'scheduler.Record([buffer_obj = buffer->Handle(), offset,\n                              stride = params.stride,\n                              pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n                if (!pipeline || !pipeline->CanExecuteRecordedDraw()) {\n                    ::Eden::Performance::RecordGraphicsDrawDrop(\n                        ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                    return;\n                }\n                '),
     ('scheduler.Record([draw_buffer_obj = draw_buffer->Handle(),\n                              buffer_obj = buffer->Handle(), offset_base, offset,\n                              params](vk::CommandBuffer cmdbuf) {\n                ',
-     'scheduler.Record([draw_buffer_obj = draw_buffer->Handle(),\n                              buffer_obj = buffer->Handle(), offset_base, offset,\n                              params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n                if (!pipeline || !pipeline->CanExecuteDraw()) {\n                    ::Eden::Performance::RecordGraphicsDrawDrop(\n                        ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                    return;\n                }\n                '),
+     'scheduler.Record([draw_buffer_obj = draw_buffer->Handle(),\n                              buffer_obj = buffer->Handle(), offset_base, offset,\n                              params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n                if (!pipeline || !pipeline->CanExecuteRecordedDraw()) {\n                    ::Eden::Performance::RecordGraphicsDrawDrop(\n                        ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                    return;\n                }\n                '),
     ('scheduler.Record([buffer_obj = buffer->Handle(), offset, params](vk::CommandBuffer cmdbuf) {\n            ',
-     'scheduler.Record([buffer_obj = buffer->Handle(), offset, params,\n                          pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n            if (!pipeline || !pipeline->CanExecuteDraw()) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            '),
+     'scheduler.Record([buffer_obj = buffer->Handle(), offset, params,\n                          pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {\n            if (!pipeline || !pipeline->CanExecuteRecordedDraw()) {\n                ::Eden::Performance::RecordGraphicsDrawDrop(\n                    ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);\n                return;\n            }\n            '),
     ('''    FlushWork();
     gpu_memory->FlushCaching();
 #ifdef PS5_NATIVE
@@ -1746,7 +1746,15 @@ adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
      '#else\n'
      '        return static_cast<bool>(pipeline);\n'
      '#endif\n'
-     '    }'),
+     '    }\n'
+     '#ifdef PS5_NATIVE\n'
+     '    // Vulkan command worker only. A recovered optimized handle may be\n'
+     '    // published BETWEEN ConfigureDraw and Draw: availability alone cannot\n'
+     '    // prove that a correct pipeline was already bound for that draw.\n'
+     '    [[nodiscard]] bool CanExecuteRecordedDraw() const noexcept {\n'
+     '        return worker_draw_bind_valid;\n'
+     '    }\n'
+     '#endif'),
     ('    GraphicsPipeline(const GraphicsPipeline&) = delete;',
      '    GraphicsPipeline(const GraphicsPipeline&) = delete;\n    ~GraphicsPipeline();'),
     ("    void AddTransition(GraphicsPipeline* transition);", "    void AddTransition(GraphicsPipeline* transition);\n#ifdef PS5_NATIVE\n    // Reserve graphics descriptor scratch before acquiring both guest caches.\n    // No descriptor content is read outside the locks.\n    void PreflightDescriptorScratch();\n#endif"),
@@ -1764,7 +1772,13 @@ adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
      '    };\n'
      '    std::shared_ptr<OptimizeState> optimize_state; // allocated ONLY for active R313 builds\n'
      '    vk::Pipeline optimized_pipeline;\n'
-     '    std::atomic_bool optimized_ready{false};'),
+     '    std::atomic_bool optimized_ready{false};\n'
+     '#ifdef PS5_NATIVE\n'
+     '    // Set/read only on the ordered Vulkan command worker, immediately before\n'
+     '    // each draw callback. Never use the later optimized_ready publication as\n'
+     '    // proof that an earlier ConfigureDraw actually bound the recovered handle.\n'
+     '    bool worker_draw_bind_valid{};\n'
+     '#endif'),
     # Guard pre-drain to pipelines that can actually allocate descriptors.
     ('    bool HasDynamicVertexInput() const noexcept { return key.state.dynamic_vertex_input; }',
      '    bool HasDynamicVertexInput() const noexcept { return key.state.dynamic_vertex_input; }\n'
@@ -5297,3 +5311,40 @@ apply_reviewed_delta(
             cold_retry.Complete(static_cast<bool>(pipeline));
             // The null graphics_cache entry itself guarantees at most one''',
     "F07 record exact graphics bounded retry CPU cost")
+
+
+# F07: Vulkan worker callbacks are FIFO. Do not confuse a pipeline variant
+# published AFTER ConfigureDraw with one that ConfigureDraw actually bound.
+# The four raster Draw/DrawIndirect callbacks observe this per-worker latch.
+apply_reviewed_delta(
+    "vk_graphics_pipeline_cost.cpp",
+    """        const bool use_optimized = optimized_ready.load(std::memory_order_acquire);
+        if (!pipeline && !use_optimized) {""",
+    """        const bool use_optimized = optimized_ready.load(std::memory_order_acquire);
+#ifdef PS5_NATIVE
+        // Reset BEFORE any early failure. Availability observed by a later
+        // Draw callback is insufficient: its ConfigureDraw may already have
+        // returned without binding anything when the rebuild was still cold.
+        worker_draw_bind_valid = false;
+#endif
+        if (!pipeline && !use_optimized) {""",
+    "F07 native worker bound-pipeline validity reset")
+apply_reviewed_delta(
+    "vk_graphics_pipeline_cost.cpp",
+    """        if (bind_pipeline || (use_optimized != optimized_at_record)) {
+            cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                use_optimized ? *optimized_pipeline : *pipeline);
+        }
+        cmdbuf.PushConstants""",
+    """        if (bind_pipeline || (use_optimized != optimized_at_record)) {
+            cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                use_optimized ? *optimized_pipeline : *pipeline);
+        }
+#ifdef PS5_NATIVE
+        // This callback precedes its Draw/DrawIndirect in scheduler FIFO.
+        // A late optimized-ready signal cannot retroactively validate an
+        // earlier skipped BindPipeline.
+        worker_draw_bind_valid = true;
+#endif
+        cmdbuf.PushConstants""",
+    "F07 native worker bound-pipeline validity publish")
