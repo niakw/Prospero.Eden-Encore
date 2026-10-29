@@ -22,7 +22,7 @@ ast.parse(generator)
 assert "F07 avoid barrier-free empty Vulkan buffer copies" in generator
 assert "F07 reject zero-sized Vulkan buffer copy regions" in generator
 assert "F07 preserve explicit barriers when deciding native staging upload reordering" in generator
-route_begin = "#ifdef PS5_NATIVE\\n    // An explicit transfer barrier"
+route_begin = "#ifdef PS5_NATIVE\n    // An explicit transfer barrier"
 route_end = "        scheduler.RecordWithUploadBuffer("
 assert source.count(route_begin)==1
 route_start=source.index(route_begin)
