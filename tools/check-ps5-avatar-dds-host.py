@@ -13,6 +13,16 @@ assert HEADER.exists()
 assert 'sceUserServiceGetForegroundUser(&user_id)' in SERVICE
 assert 'avatar128.dds' in SERVICE
 assert 'load_avatar_dds(resolved, image)' in SERVICE
+
+// The native profile is resolved periodically, with image-source revision
+// tracking for profile switches and the optional NiakPS5 ownership stage.
+const launcher_cpp = (ROOT / "headless/prosperoeden/pe/ui/launcher.cpp").read_text()
+const launcher_hpp = (ROOT / "headless/prosperoeden/pe/ui/launcher.hpp").read_text()
+assert "profile_avatar_refresh_elapsed_ >= 5.0f" in launcher_cpp
+assert "textures_.invalidate(profile_avatar_path_)" in launcher_cpp
+assert "probe.inode" in launcher_cpp and "probe.mtime" in launcher_cpp
+assert "avatar_owner_marker_matches" in SERVICE
+assert "ProfileAvatarProbe" in launcher_hpp
 def dds(w, h, payload, fmt, masks=(0, 0, 0, 0)):
     header = bytearray(128)
     struct.pack_into('<I', header, 0, 0x20534444)
