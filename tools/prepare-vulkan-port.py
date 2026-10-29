@@ -5248,17 +5248,39 @@ struct ColdShaderMissTrace {
     const char* kind;
     u64 key_hash;
     bool retry;
-    bool enabled{::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
-    std::chrono::steady_clock::time_point started{
-        enabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{}};
-    void Complete(bool success) const {
+    bool enabled;
+    ::Eden::Performance::ShaderMissStageCosts stages{};
+    ::Eden::Performance::ShaderMissStageCosts* previous{};
+    std::chrono::steady_clock::time_point started{};
+
+    ColdShaderMissTrace(const char* kind_, u64 key_hash_, bool retry_)
+        : kind(kind_), key_hash(key_hash_), retry(retry_),
+          enabled(::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)),
+          previous(enabled ? ::Eden::Performance::shader_miss_stage_active : nullptr),
+          started(enabled ? std::chrono::steady_clock::now()
+                          : std::chrono::steady_clock::time_point{}) {
+        if (enabled) ::Eden::Performance::shader_miss_stage_active = &stages;
+    }
+    ColdShaderMissTrace(const ColdShaderMissTrace&) = delete;
+    ColdShaderMissTrace& operator=(const ColdShaderMissTrace&) = delete;
+    ~ColdShaderMissTrace() {
+        if (enabled && ::Eden::Performance::shader_miss_stage_active == &stages)
+            ::Eden::Performance::shader_miss_stage_active = previous;
+    }
+    void Complete(bool success) {
         if (!enabled) return;
+        // Stop attributing before print I/O or subsequent cache work.
+        if (::Eden::Performance::shader_miss_stage_active == &stages)
+            ::Eden::Performance::shader_miss_stage_active = previous;
         const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::steady_clock::now() - started).count();
         std::printf("EDEN_VULKAN_SHADER_MISS kind=%s key=%016llx retry=%u "
-                    "success=%u cpu_ns=%llu\n", kind,
+                    "success=%u cpu_ns=%llu env_ns=%llu pool_ns=%llu "
+                    "cfg_ns=%llu ir_ns=%llu spirv_ns=%llu module_ns=%llu\n", kind,
                     static_cast<unsigned long long>(key_hash), unsigned(retry),
-                    unsigned(success), static_cast<unsigned long long>(ns));
+                    unsigned(success), static_cast<unsigned long long>(ns),
+                    stages.env_ns, stages.pool_ns, stages.cfg_ns, stages.ir_ns,
+                    stages.spirv_ns, stages.module_ns);
     }
 };
 #endif

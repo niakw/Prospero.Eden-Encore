@@ -217,6 +217,13 @@ struct CachePhaseTotal {
     std::atomic<unsigned long long> samples{}, total_ns{}, max_ns{};
 };
 inline std::array<CachePhaseTotal, static_cast<unsigned>(CachePhase::Count)> cache_phase_totals{};
+// Per-thread, first-use-only breakdown. Asynchronous Vulkan workers and
+// cache-hit draws never inherit another thread's shader-miss attribution.
+struct ShaderMissStageCosts {
+    unsigned long long env_ns{}, pool_ns{}, cfg_ns{}, ir_ns{}, spirv_ns{}, module_ns{};
+};
+inline thread_local ShaderMissStageCosts* shader_miss_stage_active{};
+
 inline thread_local bool cache_draw_sample_active = false;
 inline bool ShouldSampleCacheDraw() noexcept {
     if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return false;
@@ -234,7 +241,7 @@ inline bool ShouldSampleGuestWrite() noexcept {
 class CachePhaseTimer {
 public:
     explicit CachePhaseTimer(CachePhase phase, bool enabled = cache_draw_sample_active)
-        : stats(enabled ? &cache_phase_totals[static_cast<unsigned>(phase)] : nullptr) {
+        : phase(phase), stats(enabled ? &cache_phase_totals[static_cast<unsigned>(phase)] : nullptr) {
         if (stats) started = Common::g_wall_clock.GetTimeNS();
     }
     CachePhaseTimer(const CachePhaseTimer&) = delete;
@@ -244,6 +251,19 @@ public:
         const auto elapsed = (Common::g_wall_clock.GetTimeNS() - started).count();
         if (elapsed > 0) {
             const auto ns = static_cast<unsigned long long>(elapsed);
+            // No global-counter subtraction: concurrent worker phases cannot
+            // inflate the phase costs of this cold shader cache key.
+            if (auto* const keyed = shader_miss_stage_active) {
+                switch (phase) {
+                case CachePhase::GraphicsShaderEnvironment: keyed->env_ns += ns; break;
+                case CachePhase::ShaderPoolReset: keyed->pool_ns += ns; break;
+                case CachePhase::ShaderCfg: keyed->cfg_ns += ns; break;
+                case CachePhase::ShaderIr: keyed->ir_ns += ns; break;
+                case CachePhase::ShaderSpirv: keyed->spirv_ns += ns; break;
+                case CachePhase::ShaderModule: keyed->module_ns += ns; break;
+                default: break;
+                }
+            }
             stats->total_ns.fetch_add(ns, std::memory_order_relaxed);
             auto previous = stats->max_ns.load(std::memory_order_relaxed);
             while (previous < ns &&
@@ -255,6 +275,7 @@ public:
     }
     ~CachePhaseTimer() { Stop(); }
 private:
+    CachePhase phase;
     CachePhaseTotal* stats{};
     std::chrono::nanoseconds started{};
 };

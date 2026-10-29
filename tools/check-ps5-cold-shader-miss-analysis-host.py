@@ -45,7 +45,8 @@ source = (root / "vendor/encore-active/eden-vulkan/vk_pipeline_cache_cost.cpp").
     encoding="utf-8"
 )
 assert "EDEN_VULKAN_SHADER_MISS kind=%s key=%016llx retry=%u " in source
-assert r"success=%u cpu_ns=%llu\n" in source
+assert "success=%u cpu_ns=%llu env_ns=%llu pool_ns=%llu " in source
+assert r"cfg_ns=%llu ir_ns=%llu spirv_ns=%llu module_ns=%llu\n" in source
 assert source.count("ColdShaderMissTrace cold_") == 4
 print("PASS F07: keyed cold shader miss/retry accounting, malformed exclusion and no frame attribution")
 print("No PS5 runtime measurement or FPS gain claimed")
