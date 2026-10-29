@@ -5198,3 +5198,87 @@ apply_reviewed_delta("vulkan_scheduler.cpp",
     "    while (gpu_time.first_pending + 1 < gpu_time.next) {\n        const u32 slot = static_cast<u32>(gpu_time.first_pending % GpuTimeProbe::SLOTS);\n        std::array<u64, 2> stamps{};\n        if (device.GetLogical().GetQueryResults(*gpu_time.pool, slot * 2, 2, sizeof(stamps), stamps.data(),\n                                               sizeof(u64), VK_QUERY_RESULT_64_BIT) != VK_SUCCESS) break;\n        const u64 ns = stamps[1] > stamps[0]\n                           ? static_cast<u64>(double(stamps[1] - stamps[0]) * gpu_time.period_ns) : 0;\n        gpu_time.busy_ns += ns;\n        gpu_time.max_ns = (std::max)(gpu_time.max_ns, ns);\n        ++gpu_time.submissions;\n        ++gpu_time.first_pending;\n    }",
     "#ifdef PS5_NATIVE\n    // The optional GPU-time probe previously issued one driver query per\n    // completed command buffer. Fetch up to 32 consecutive timestamp pairs\n    // in one nonblocking call, stopping at the first unavailable pair.\n    // Never cross the 512-slot ring boundary or consume the newest submit.\n    constexpr u32 kQueryBatch = 32;\n    std::array<u64, kQueryBatch * 4> samples{};\n    while (gpu_time.first_pending + 1 < gpu_time.next) {\n        const u32 slot = static_cast<u32>(gpu_time.first_pending % GpuTimeProbe::SLOTS);\n        const u32 candidates = static_cast<u32>((std::min)(\n            u64{kQueryBatch}, gpu_time.next - gpu_time.first_pending - 1));\n        const u32 count = (std::min)(candidates, GpuTimeProbe::SLOTS - slot);\n        // Unavailable results are undefined; clear availability words before\n        // each poll so a reused batch cannot masquerade as completed.\n        samples.fill(0);\n        const VkResult result = device.GetLogical().GetQueryResults(\n            *gpu_time.pool, slot * 2, count * 2, count * 4 * sizeof(u64),\n            samples.data(), 2 * sizeof(u64),\n            VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);\n        if (result != VK_SUCCESS && result != VK_NOT_READY) break;\n        u32 completed = 0;\n        for (; completed < count; ++completed) {\n            const u64* const pair = samples.data() + completed * 4;\n            if (pair[1] == 0 || pair[3] == 0) break;\n            const u64 ns = pair[2] > pair[0]\n                               ? static_cast<u64>(double(pair[2] - pair[0]) * gpu_time.period_ns) : 0;\n            gpu_time.busy_ns += ns;\n            gpu_time.max_ns = (std::max)(gpu_time.max_ns, ns);\n            ++gpu_time.submissions;\n            ++gpu_time.first_pending;\n        }\n        if (completed != count) break;\n    }\n#else\n    while (gpu_time.first_pending + 1 < gpu_time.next) {\n        const u32 slot = static_cast<u32>(gpu_time.first_pending % GpuTimeProbe::SLOTS);\n        std::array<u64, 2> stamps{};\n        if (device.GetLogical().GetQueryResults(*gpu_time.pool, slot * 2, 2, sizeof(stamps), stamps.data(),\n                                               sizeof(u64), VK_QUERY_RESULT_64_BIT) != VK_SUCCESS) break;\n        const u64 ns = stamps[1] > stamps[0]\n                           ? static_cast<u64>(double(stamps[1] - stamps[0]) * gpu_time.period_ns) : 0;\n        gpu_time.busy_ns += ns;\n        gpu_time.max_ns = (std::max)(gpu_time.max_ns, ns);\n        ++gpu_time.submissions;\n        ++gpu_time.first_pending;\n    }\n#endif",
     "F07 batch native GPU timestamp queries without blocking the Vulkan worker")
+
+
+# F07 S01: first-use CPU attribution by actual cold graphics/compute cache key.
+# Profile only cache misses and the one bounded retry. The print happens after
+# the clock stop and cannot inflate measured translation/worker-admission time.
+# Keep the generated native C++ byte-for-byte equivalent to the maintained fork.
+apply_reviewed_delta(
+    "vk_pipeline_cache_cost.cpp",
+    "#include <algorithm>\n#include <cstdio>",
+    "#include <algorithm>\n#include <chrono>\n#include <cstdio>",
+    "F07 keyed cold shader trace chrono include")
+apply_reviewed_delta(
+    "vk_pipeline_cache_cost.cpp",
+    "namespace {\n#ifdef PS5_NATIVE\n// Keep the OPTIONAL graphics optimizer",
+    r'''namespace {
+#ifdef PS5_NATIVE
+// Detailed-only, per-cache-key CPU translation/admission cost. This NEVER
+// waits for the Vulkan driver worker and does not run on cache-hit draws.
+// The timer ends before emitting its diagnostic, avoiding log-I/O inflation.
+struct ColdShaderMissTrace {
+    const char* kind;
+    u64 key_hash;
+    bool retry;
+    bool enabled{::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
+    std::chrono::steady_clock::time_point started{
+        enabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{}};
+    void Complete(bool success) const {
+        if (!enabled) return;
+        const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now() - started).count();
+        std::printf("EDEN_VULKAN_SHADER_MISS kind=%s key=%016llx retry=%u "
+                    "success=%u cpu_ns=%llu\n", kind,
+                    static_cast<unsigned long long>(key_hash), unsigned(retry),
+                    unsigned(success), static_cast<unsigned long long>(ns));
+    }
+};
+#endif
+#ifdef PS5_NATIVE
+// Keep the OPTIONAL graphics optimizer''',
+    "F07 per-key detailed-only cold shader CPU timer")
+apply_reviewed_delta(
+    "vk_pipeline_cache_cost.cpp",
+    r'''        pipeline = CreateComputePipeline(key, shader);
+#ifdef PS5_NATIVE
+        if (!pipeline) {''',
+    r'''#ifdef PS5_NATIVE
+        ColdShaderMissTrace cold_miss{"compute", key.Hash(), false};
+#endif
+        pipeline = CreateComputePipeline(key, shader);
+#ifdef PS5_NATIVE
+        cold_miss.Complete(static_cast<bool>(pipeline));
+        if (!pipeline) {''',
+    "F07 record exact compute cold first-use CPU cost")
+apply_reviewed_delta(
+    "vk_pipeline_cache_cost.cpp",
+    r'''            pipeline = CreateComputePipeline(key, shader);
+            // A consumed retry cannot repeat:''',
+    r'''            ColdShaderMissTrace cold_retry{"compute", key.Hash(), true};
+            pipeline = CreateComputePipeline(key, shader);
+            cold_retry.Complete(static_cast<bool>(pipeline));
+            // A consumed retry cannot repeat:''',
+    "F07 record exact compute bounded retry CPU cost")
+apply_reviewed_delta(
+    "vk_pipeline_cache_cost.cpp",
+    r'''        pipeline = CreateGraphicsPipeline();
+#ifdef PS5_NATIVE
+        if (!pipeline) {''',
+    r'''#ifdef PS5_NATIVE
+        ColdShaderMissTrace cold_miss{"graphics", graphics_key.Hash(), false};
+#endif
+        pipeline = CreateGraphicsPipeline();
+#ifdef PS5_NATIVE
+        cold_miss.Complete(static_cast<bool>(pipeline));
+        if (!pipeline) {''',
+    "F07 record exact graphics cold first-use CPU cost")
+apply_reviewed_delta(
+    "vk_pipeline_cache_cost.cpp",
+    r'''            pipeline = CreateGraphicsPipeline();
+            // The null graphics_cache entry itself guarantees at most one''',
+    r'''            ColdShaderMissTrace cold_retry{"graphics", graphics_key.Hash(), true};
+            pipeline = CreateGraphicsPipeline();
+            cold_retry.Complete(static_cast<bool>(pipeline));
+            // The null graphics_cache entry itself guarantees at most one''',
+    "F07 record exact graphics bounded retry CPU cost")
