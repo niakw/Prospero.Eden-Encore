@@ -522,3 +522,84 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-msaa-frame-retire-") as d:
             assert result.returncode == 0, (mode, opt, result.stderr[-5000:])
             assert "F07_MSAA_TICKFRAME_RETIRE_PASS" in result.stdout
             print("F07_MSAA_TICKFRAME_RETIRE_PASS", mode, opt)
+
+
+# F07 T04/M02: the real readback method must reject empty/malformed
+# destination work BEFORE any ScaleDown, scratch, command recording or
+# dirty-image eviction bookkeeping. Compile the exact source guard on both
+# targets and prove the desktop behavior is unchanged.
+download_signature = (
+    "void Image::DownloadMemory(std::span<VkBuffer> buffers_span, std::span<size_t> offsets_span,\n"
+    "                            std::span<const VideoCommon::BufferImageCopy> copies) {"
+)
+assert source.count(download_signature) == 1
+read_start = source.index(download_signature) + len(download_signature)
+read_end = source.index("\n    const bool is_rescaled", read_start)
+read_preflight = source[read_start:read_end]
+assert read_preflight.count("#ifdef PS5_NATIVE") == 1
+assert "if (copies.empty())" in read_preflight
+assert "offsets_span.size() != buffers_span.size()" in read_preflight
+assert "throw std::invalid_argument" in read_preflight
+assert "F07 empty and malformed GPU readback preflight" in generator
+assert read_preflight in generator
+
+preflight_cpp = r"""
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <cstdio>
+#include <span>
+#include <stdexcept>
+struct Image {
+    unsigned expensive_gpu_calls{};
+    void DownloadMemory(std::span<int> buffers_span, std::span<size_t> offsets_span,
+                        std::span<const int> copies) {
+__ACTUAL_READ_PREFLIGHT__
+        ++expensive_gpu_calls;
+    }
+};
+int main() {
+    Image image;
+    std::array<int,1> buffer{71}, regions{3};
+    std::array<size_t,1> offsets{0};
+    image.DownloadMemory(buffer, offsets, regions);
+    assert(image.expensive_gpu_calls == 1);
+    image.DownloadMemory(buffer, offsets, {});
+#ifdef PS5_NATIVE
+    assert(image.expensive_gpu_calls == 1);
+#else
+    assert(image.expensive_gpu_calls == 2);
+#endif
+    bool refused_empty_destination = false;
+    try { image.DownloadMemory({}, offsets, regions); }
+    catch (const std::invalid_argument&) { refused_empty_destination = true; }
+    bool refused_short_offsets = false;
+    try { image.DownloadMemory(buffer, {}, regions); }
+    catch (const std::invalid_argument&) { refused_short_offsets = true; }
+#ifdef PS5_NATIVE
+    assert(refused_empty_destination && refused_short_offsets);
+    assert(image.expensive_gpu_calls == 1);
+#else
+    assert(!refused_empty_destination && !refused_short_offsets);
+    assert(image.expensive_gpu_calls == 4);
+#endif
+    std::puts("F07_READBACK_EMPTY_PREFLIGHT_PASS");
+}
+""".replace("__ACTUAL_READ_PREFLIGHT__", read_preflight)
+with tempfile.TemporaryDirectory(prefix="eden-f07-readback-preflight-") as d:
+    src = Path(d) / "read_preflight.cpp"
+    src.write_text(preflight_cpp)
+    for mode in ("native", "desktop"):
+        for opt in ("-O0", "-O2"):
+            exe = Path(d) / (mode + opt)
+            command = [compiler, "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+                       "-fsanitize=undefined", "-fno-sanitize-recover=all"]
+            if mode == "native":
+                command += ["-DPS5_NATIVE"]
+            command += [str(src), "-o", str(exe)]
+            result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+            assert result.returncode == 0, (mode, opt, result.stderr[-5000:])
+            result = subprocess.run([str(exe)], capture_output=True, text=True, timeout=15)
+            assert result.returncode == 0, (mode, opt, result.stderr[-5000:])
+            assert "F07_READBACK_EMPTY_PREFLIGHT_PASS" in result.stdout
+            print("F07_READBACK_EMPTY_PREFLIGHT_PASS", mode, opt)
