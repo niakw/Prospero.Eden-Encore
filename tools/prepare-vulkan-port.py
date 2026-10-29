@@ -5350,11 +5350,11 @@ apply_reviewed_delta(
     "F07 keyed compute worker-wait diagnostic admission")
 apply_reviewed_delta(
     "vk_graphics_pipeline_cost.cpp",
-    "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n        });", "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n#ifdef PS5_NATIVE\n            lock.unlock();\n            pipeline_ready_wait.Stop();\n            keyed_wait.Complete(\"graphics\", key.Hash(), CanExecuteDraw());\n#endif\n        });",
+    "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n        });", "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n#ifdef PS5_NATIVE\n            lock.unlock();\n            pipeline_ready_wait.Stop();\n            timer.reset(); // Exclude diagnostic print I/O from VulkanTimer(16).\n            keyed_wait.Complete(\"graphics\", key.Hash(), CanExecuteDraw());\n#endif\n        });",
     "F07 keyed graphics worker-wait after mutex release")
 apply_reviewed_delta(
     "vk_compute_pipeline_cost.cpp",
-    "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n        });", "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n#ifdef PS5_NATIVE\n            lock.unlock();\n            pipeline_ready_wait.Stop();\n            keyed_wait.Complete(\"compute\", diagnostic_cache_key_hash, IsBound());\n#endif\n        });",
+    "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n        });", "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n#ifdef PS5_NATIVE\n            lock.unlock();\n            pipeline_ready_wait.Stop();\n            timer.reset(); // Exclude diagnostic print I/O from VulkanTimer(16).\n            keyed_wait.Complete(\"compute\", diagnostic_cache_key_hash, IsBound());\n#endif\n        });",
     "F07 keyed compute worker-wait after mutex release")
 apply_reviewed_delta(
     "include/video_core/renderer_vulkan/vk_compute_pipeline.h",

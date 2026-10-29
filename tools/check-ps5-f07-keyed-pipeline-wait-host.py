@@ -44,7 +44,7 @@ def callback_body(text, kind):
     assert "std::unique_lock lock{build_mutex};" in block
     assert "build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });" in block
     assert "lock.unlock();" in block
-    assert block.index("lock.unlock();") < block.index("pipeline_ready_wait.Stop();") < block.index("keyed_wait.Complete")
+    assert block.index("lock.unlock();") < block.index("pipeline_ready_wait.Stop();") < block.index("timer.reset();") < block.index("keyed_wait.Complete")
     assert 'keyed_wait.Complete("' + kind + '"' in block
     assert "#ifdef PS5_NATIVE" in block and "#endif" in block
     return block

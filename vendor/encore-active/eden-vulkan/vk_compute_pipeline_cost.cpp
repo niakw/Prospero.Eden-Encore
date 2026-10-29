@@ -453,6 +453,7 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
 #ifdef PS5_NATIVE
             lock.unlock();
             pipeline_ready_wait.Stop();
+            timer.reset(); // Exclude diagnostic print I/O from VulkanTimer(16).
             keyed_wait.Complete("compute", diagnostic_cache_key_hash, IsBound());
 #endif
         });

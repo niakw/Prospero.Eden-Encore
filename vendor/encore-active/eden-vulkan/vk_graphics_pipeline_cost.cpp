@@ -911,6 +911,7 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
 #ifdef PS5_NATIVE
             lock.unlock();
             pipeline_ready_wait.Stop();
+            timer.reset(); // Exclude diagnostic print I/O from VulkanTimer(16).
             keyed_wait.Complete("graphics", key.Hash(), CanExecuteDraw());
 #endif
         });
