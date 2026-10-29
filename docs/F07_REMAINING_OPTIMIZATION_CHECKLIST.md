@@ -22,7 +22,7 @@
 | --- | ---: | ---: | --- |
 | Revue source prioritaire B1–B4 | **38/38** | **0** | Fonctions inspectées ; ne signifie pas 38 accélérations prouvées |
 | Acquis historiques A01–A09 | **9/9** | **0** | Code et témoins historiques déjà disponibles |
-| Décisions PRÉ-BUILD S/V/C/T/J/H/I/G/M/Q | **21/29** | **8** | 20 décisions hôte qualifiées (dont C03 profils de frame et T07 DMA/BCn/MSAA) et M03 **SANS PATCH JUSTIFIÉ** ; preuve FC27 sur console toujours absente |
+| Décisions PRÉ-BUILD S/V/C/T/J/H/I/G/M/Q | **22/29** | **7** | 21 décisions hôte qualifiées (dont M05 sparse) et M03 **SANS PATCH JUSTIFIÉ** ; preuve FC27 sur console toujours absente |
 | Vérifications POST-BUILD | **0/12** | **12** | Mesures console impossibles avant le premier paquet |
 | Portes finales B01–B11 | **0/11** | **11** | Six gates avant compilation, puis build et tests réels |
 
@@ -151,7 +151,7 @@ Les lignes **[x]** ci-dessous certifient **uniquement que le changement figure s
 
 ## 6. P2 — mémoire partagée, GC, modes extrêmes, bruit de production
 
-- [ ] **M05 [PRÉ-BUILD] — décommit des tables sparse sans lecture concurrente ni double scan.** `src/memory_pages.cpp::DecommitSparsePage` : [`5796cda1`](https://github.com/niakw/Prospero.Eden-Encore/commit/5796cda1db9f57644601885f851b995047e90e5b) retire le premier `SparseRangeOf` hors `sparse_mutex` (lecture de `range.end` non atomique) et conserve une recherche unique sous mutex. Nouveau témoin source-extrait C++20 `-O0/-O2` UBSan, réutilisation de slot, pages réellement décommitées et fallback dense, raccordé aux deux gates. **CI du SHA source à qualifier ; pas de gain console affirmé.** L'ancienne photographie `21/28` des autres jalons reste historique ; cette nouvelle décision porte le périmètre actif à `21/29`.
+- [x] **M05 [PRÉ-BUILD] — décommit des tables sparse sans lecture concurrente ni double scan.** `src/memory_pages.cpp::DecommitSparsePage` : [`5796cda1`](https://github.com/niakw/Prospero.Eden-Encore/commit/5796cda1db9f57644601885f851b995047e90e5b) supprime le premier `SparseRangeOf` hors `sparse_mutex` et conserve un lookup unique protégé. **Preuve hôte ACCEPTÉE :** [fast gate #40970392460](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40970392460) **SUCCESS** et [prévalidation #40970392561](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40970392561) **SUCCESS 7/7**, incluant le témoin source-extrait `-O0/-O2` UBSan, réutilisation de slot et dense fallback. CodeQL C++ de [#40970392426](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40970392426) **encore en cours à ce pointage** ; c'est une gate finale distincte. Pas de résultat de performance ni correction FC27 sur console affirmés.
 
 
 - [ ] **M01 [POST-BUILD]** — Mesurer VRAM/VMA/direct-mem/JIT et fragmentation, séparément à 1× et 4×.** **Sortie :** mémoire restante/plus gros bloc, échec de réservation identifié, *pas* « 4× OOM explique 1× stutter ».
