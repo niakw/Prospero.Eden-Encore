@@ -17,7 +17,9 @@ import re
 MARKER = "EDEN_VULKAN_SHADER_MISS "
 RECORD = re.compile(
     r"\bEDEN_VULKAN_SHADER_MISS kind=(graphics|compute) "
-    r"key=([0-9a-fA-F]{16}) retry=([01]) success=([01]) cpu_ns=([0-9]+)(?=\s|$)"
+    r"key=([0-9a-fA-F]{16}) retry=([01]) success=([01]) cpu_ns=([0-9]+)"
+    r"(?: env_ns=([0-9]+) pool_ns=([0-9]+) cfg_ns=([0-9]+) "
+    r"ir_ns=([0-9]+) spirv_ns=([0-9]+) module_ns=([0-9]+))?(?=\s|$)"
 )
 
 
@@ -28,6 +30,7 @@ class Miss:
     retry: bool
     success: bool
     cpu_ns: int
+    stages: tuple[int, int, int, int, int, int] | None = None
 
 
 def parse(lines: list[str]) -> tuple[list[Miss], int]:
@@ -40,8 +43,12 @@ def parse(lines: list[str]) -> tuple[list[Miss], int]:
         if match is None:
             malformed += 1
             continue
-        kind, key, retry, success, ns = match.groups()
-        records.append(Miss(kind, key.lower(), retry == "1", success == "1", int(ns)))
+        kind, key, retry, success, ns, *stage_fields = match.groups()
+        if "env_ns=" in line and stage_fields[0] is None:
+            malformed += 1
+            continue
+        stages = tuple(int(v) for v in stage_fields) if stage_fields[0] is not None else None
+        records.append(Miss(kind, key.lower(), retry == "1", success == "1", int(ns), stages))
     return records, malformed
 
 
@@ -77,11 +84,31 @@ def report(records: list[Miss], malformed: int = 0) -> str:
             f"p95_attempt_ms={nearest_rank_95([item.cpu_ns for item in items]) / 1_000_000:.3f} "
             f"max_attempt_ms={max(item.cpu_ns for item in items) / 1_000_000:.3f}"
         )
+        staged = [item for item in items if item.stages is not None]
+        if staged:
+            stage_totals = tuple(sum(item.stages[i] for item in staged) for i in range(6))
+            out.append(
+                f"  staged_attempts={len(staged)}/{len(items)} "
+                + " ".join(
+                    f"{name}_sum_ms={value / 1_000_000:.3f}"
+                    for name, value in zip(
+                        ("env", "pool", "cfg", "ir", "spirv", "module"), stage_totals
+                    )
+                )
+            )
         slowest = sorted(items, key=lambda item: item.cpu_ns, reverse=True)[:5]
         for item in slowest:
             out.append(
                 f"  slow_key={item.key} retry={int(item.retry)} "
                 f"success={int(item.success)} cpu_ms={item.cpu_ns / 1_000_000:.3f}"
+                + (
+                    " " + " ".join(
+                        f"{name}_ms={value / 1_000_000:.3f}"
+                        for name, value in zip(
+                            ("env", "pool", "cfg", "ir", "spirv", "module"), item.stages
+                        )
+                    ) if item.stages is not None else " stages=not_recorded"
+                )
             )
     out.append(
         "NOTE: CPU miss costs include synchronous translation/admission, not "

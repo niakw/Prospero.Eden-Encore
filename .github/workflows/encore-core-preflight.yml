@@ -159,6 +159,7 @@ jobs:
           python3 -B tools/check-ps5-vulkan-dispatch-ceiling.py
           python3 -B tools/check-ps5-vulkan-cache-phases.py
           python3 -B tools/check-ps5-cold-shader-miss-analysis-host.py
+          python3 -B tools/check-ps5-f07-keyed-shader-stages-host.py
           python3 -B tools/check-ps5-build-sha-provenance.py
           python3 -B tools/check-ps5-guest-cache-domains.py
           python3 -B tools/check-fc27-cache-contention-classifier.py

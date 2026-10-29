@@ -72,7 +72,8 @@ assert gen.count("F07 record exact compute cold first-use CPU cost") == 1
 assert "if (!enabled) return;" in cold_trace
 assert "steady_clock::now() - started" in cold_trace
 assert 'EDEN_VULKAN_SHADER_MISS kind=%s key=%016llx retry=%u ' in cold_trace
-assert "success=%u cpu_ns=%llu\\n" in cold_trace
+assert "success=%u cpu_ns=%llu env_ns=%llu pool_ns=%llu " in cold_trace
+assert "cfg_ns=%llu ir_ns=%llu spirv_ns=%llu module_ns=%llu\\n" in cold_trace
 start = pipeline.index("    if (is_new) {\n#ifdef PS5_NATIVE\n        // F07:")
 # The slow path now has a separate, bounded failed-key recovery branch.
 # This older harness tests ONLY the original cold-miss timer contract;
@@ -124,6 +125,10 @@ cpp = r"""
 using u64 = std::uint64_t;
 namespace Eden::Performance {
 enum class CachePhase { GraphicsPipelineCreate };
+struct ShaderMissStageCosts {
+    unsigned long long env_ns{}, pool_ns{}, cfg_ns{}, ir_ns{}, spirv_ns{}, module_ns{};
+};
+inline thread_local ShaderMissStageCosts* shader_miss_stage_active{};
 inline std::atomic<bool> detailed_gpu_profile{false};
 inline int profiled = 0;
 struct CachePhaseTimer {
