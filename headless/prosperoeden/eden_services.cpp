@@ -1520,13 +1520,13 @@ std::string EdenServices::profile_avatar() {
     if (pe::ps5::avatar_owner_marker_matches(staged_marker,
             static_cast<std::uint32_t>(user_id), "png") &&
         IsFile(std::string(staged_root)+"niak-profile.png")) {
-        std::fprintf(stderr,"EDEN_PROFILE_AVATAR format=staged_png status=found\\n");
+        std::fprintf(stderr,"EDEN_PROFILE_AVATAR format=staged_png status=found\n");
         return std::string(staged_root)+"niak-profile.png";
     }
     if (pe::ps5::avatar_owner_marker_matches(staged_marker,
             static_cast<std::uint32_t>(user_id), "dds") &&
         IsFile(std::string(staged_root)+"niak-profile.dds")) {
-        std::fprintf(stderr,"EDEN_PROFILE_AVATAR format=staged_dds status=found\\n");
+        std::fprintf(stderr,"EDEN_PROFILE_AVATAR format=staged_dds status=found\n");
         return std::string(staged_root)+"niak-profile.dds";
     }
 
