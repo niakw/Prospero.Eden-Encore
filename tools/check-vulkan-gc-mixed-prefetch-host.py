@@ -131,7 +131,7 @@ struct StagingBufferRef {
 };
 static_assert(std::is_trivially_copyable_v<StagingBufferRef>);
 struct TextureCacheRuntime {
-    std::size_t issued{}, completed{}, finishes{}, freed{};
+    std::size_t issued{}, completed{}, finishes{}, freed{}, queued_max{};
     std::vector<std::unique_ptr<std::uint8_t[]>> storage;
     std::vector<bool> deferred;
     bool short_first{}, throw_first{}, null_first{};
@@ -152,6 +152,7 @@ struct TextureCacheRuntime {
     }
     void Finish() { completed = issued; ++finishes; }
     void FreeDeferredStagingBuffer(StagingBufferRef& ref) {
+        assert(completed >= queued_max); // cannot release in-flight GPU readers
         assert(ref.index > 0 && ref.index <= issued);
         assert(deferred[ref.index - 1]);
         deferred[ref.index - 1] = false;
@@ -176,11 +177,16 @@ struct Image {
     std::vector<ImageId> overlapping_images;
     u64 reclaimed_bytes{};
     bool decoding{false}, costly{false};
+    unsigned fail_mode{}; // 1: bad_alloc, 2: malformed batch
+    Vulkan::TextureCacheRuntime* recording_runtime{};
     bool HasScaled() const { return scaled; }
     void DownloadMemory(Vulkan::StagingBufferRef& map,
                         const std::vector<ImageId>& copies) {
         assert(copies.size() == 1 && copies[0] == info.id);
         assert(map.mapped_span.size() == unswizzled_size_bytes);
+        if (recording_runtime) recording_runtime->queued_max = map.index;
+        if (fail_mode == 1) throw std::bad_alloc{};
+        if (fail_mode == 2) throw std::invalid_argument("mock invalid copy");
         if (!map.mapped_span.empty()) {
             map.mapped_span.front() = 0x19;
             map.mapped_span.back() = 0x37;
@@ -195,11 +201,16 @@ struct Scenario {
               std::size_t eviction_budget = 40,
               u64 initial_usage = 1000_MiB,
               std::size_t expected_scanned = 0,
-              bool short_first=false, bool throw_first=false, bool null_first=false) {
+              bool short_first=false, bool throw_first=false, bool null_first=false,
+              unsigned fail_second=0) {
         Vulkan::TextureCacheRuntime runtime;
         runtime.short_first=short_first;
         runtime.throw_first=throw_first;
         runtime.null_first=null_first;
+        if (fail_second) {
+            assert(images.size() >= 2);
+            images[1].fail_mode = fail_second;
+        }
 __PRODUCTION_DECLARATION__
         const auto ReleaseDownloads = [&] {
             for (auto& [id, map] : gc_downloads) {
@@ -223,6 +234,7 @@ __PRODUCTION_PROJECTION__
             if (remaining == 0 || scanned >= 8192) break;
             ++scanned;
             auto& image = images[id];
+            image.recording_runtime = &runtime;
             // R442: decoding and costly-load images are visited but are not
             // eviction candidates; their presence cannot exhaust the budget.
             if (image.decoding || image.costly) continue;
@@ -235,7 +247,8 @@ __PRODUCTION_RECORD__
             if (scan_one()) break;
             assert(bytes <= 32_MiB);
             assert(gc_downloads.size() <= gc_prefetch_limit);
-            assert(runtime.freed == (short_first ? 1u : 0u));
+            if (!fail_second)
+                assert(runtime.freed == (short_first ? 1u : 0u));
         }
         assert(scanned <= 8192);
         if (expected_scanned != 0) assert(scanned == expected_scanned);
@@ -253,9 +266,12 @@ __PRODUCTION_RECORD__
         }
         gc_downloads.clear();
         const auto rejected=short_first ? 1u : 0u;
-        assert(runtime.freed == expected + rejected);
-        assert(runtime.issued == expected + rejected);
-        assert(runtime.finishes == (expected ? 1u : 0u));
+        const auto rolled_back=fail_second ? 2u : 0u;
+        assert(runtime.freed == expected + rejected + rolled_back);
+        assert(runtime.issued == expected + rejected + rolled_back);
+        assert(runtime.finishes == (expected ? 1u : 0u) + (fail_second ? 1u : 0u));
+        if (fail_second)
+            assert(runtime.completed == 2 && runtime.queued_max == 2);
     }
 };
 Image ImageFor(ImageId id, bool dirty, std::size_t size = 1024) {
@@ -385,6 +401,13 @@ int main() {
     // Null VkBuffer + full mapped bytes must never schedule a GPU transfer.
     Scenario({ImageFor(0,true),ImageFor(1,true)}).Test(
         0,{},40,1000_MiB,1,false,false,true);
+    // One accepted GPU readback followed by a bad_alloc/invalid copy:
+    // both deferred maps MUST be fenced and freed, and no dirty image may
+    // be advertised to Cleanup as prefetched.
+    Scenario({ImageFor(0,true),ImageFor(1,true)}).Test(
+        0,{},40,1000_MiB,2,false,false,false,1);
+    Scenario({ImageFor(0,true),ImageFor(1,true)}).Test(
+        0,{},40,1000_MiB,2,false,false,false,2);
 #endif
     {
         std::vector<Image> images;
