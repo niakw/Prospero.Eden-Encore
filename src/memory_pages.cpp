@@ -936,11 +936,13 @@ std::size_t SparseCommitSpan() noexcept {
 // process-wide read-only zero block again, then release its backing. SparseLargeVector calls this
 // only after its committed-page bitmap says the whole 2 MiB slot is empty.
 void DecommitSparsePage(std::uintptr_t page) noexcept {
+    // SparseRangeOf reads the non-atomic range.end and owned metadata.
+    // Keep its only lookup under sparse_mutex: the old speculative lookup
+    // raced table teardown/reuse and repeated the 64-entry scan.
+    // This is a sparse-slot retirement path, not a guest page-table read.
+    const std::lock_guard lock{sparse_mutex};
     SparseRange* range = SparseRangeOf(page);
     if (range == nullptr) return; // Dense fallback: ZeroRegion already wrote the zeroes.
-    const std::lock_guard lock{sparse_mutex};
-    range = SparseRangeOf(page);
-    if (range == nullptr) return;
     const auto begin = range->begin.load(std::memory_order_relaxed);
     const std::size_t slot = (page - begin) / SparseSlot;
     if (!range->owned[slot].load(std::memory_order_relaxed)) return;
