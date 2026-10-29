@@ -119,7 +119,7 @@ int main() {
         "namespace Eden::Performance { "
         "enum class CachePhase { TextureAliasScan, TextureAliasCopy }; "
         "struct CachePhaseTimer { explicit CachePhaseTimer(CachePhase) {} "
-        "void Stop() {} }; }\\nusing u64=std::uint64_t;"
+        "void Stop() {} }; }\nusing u64=std::uint64_t;"
     )
     # A second source modified in the opposite order must be copied first
     # only after the sort has restored increasing modification ticks.
@@ -131,16 +131,16 @@ int main() {
         "void CopyImage(ImageId,ImageId id,std::vector<int>){++copies;copy_order.push_back(id);}"
     )
     native_fixture=native_fixture.replace(
-        " c.SynchronizeAliases(0);\\n assert(c.copies==1);\\n}",
-        " c.SynchronizeAliases(0);\\n assert(c.copies==1);\\n"
-        " TextureCache<Dummy> two;\\n two.modification_tick=11;\\n"
-        " two.slot_images[0].modification_tick=1;\\n"
-        " two.slot_images[0].aliased_images.push_back({2,{2}});\\n"
-        " two.slot_images[0].aliased_images.push_back({1,{1}});\\n"
-        " two.slot_images[1].modification_tick=9;\\n"
-        " two.slot_images[2].modification_tick=10;\\n"
-        " two.SynchronizeAliases(0);\\n"
-        " assert(two.copy_order.size()==2 && two.copy_order[0]==1 && two.copy_order[1]==2);\\n}"
+        " c.SynchronizeAliases(0);\n assert(c.copies==1);\n}",
+        " c.SynchronizeAliases(0);\n assert(c.copies==1);\n"
+        " TextureCache<Dummy> two;\n two.modification_tick=11;\n"
+        " two.slot_images[0].modification_tick=1;\n"
+        " two.slot_images[0].aliased_images.push_back({2,{2}});\n"
+        " two.slot_images[0].aliased_images.push_back({1,{1}});\n"
+        " two.slot_images[1].modification_tick=9;\n"
+        " two.slot_images[2].modification_tick=10;\n"
+        " two.SynchronizeAliases(0);\n"
+        " assert(two.copy_order.size()==2 && two.copy_order[0]==1 && two.copy_order[1]==2);\n}"
     )
     assert "assert(two.copy_order.size()==2" in native_fixture
     native_cpp=d/"active-alias.cpp"
