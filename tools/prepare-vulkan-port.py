@@ -4337,6 +4337,29 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    boost::container::small_vector<const AliasedImage*, 8> aliased_images;",
     "F07 avoid constructing alias vector on unchanged native image")
 
+# F07: one newer alias needs no sort. Multiple newer aliases retain the
+# existing monotonic modification-tick order (important for HUD freshness).
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    std::ranges::sort(aliased_images, [this](const AliasedImage* lhs, const AliasedImage* rhs) {\n"
+    "        const ImageBase& lhs_image = slot_images[lhs->id];\n"
+    "        const ImageBase& rhs_image = slot_images[rhs->id];\n"
+    "        return lhs_image.modification_tick < rhs_image.modification_tick;\n"
+    "    });",
+    "#ifdef PS5_NATIVE\n"
+    "    // Most alias refreshes have only one newer source. Sorting a single\n"
+    "    // entry cannot change upload ordering and adds work under texture lock.\n"
+    "    if (aliased_images.size() > 1) {\n"
+    "#endif\n"
+    "    std::ranges::sort(aliased_images, [this](const AliasedImage* lhs, const AliasedImage* rhs) {\n"
+    "        const ImageBase& lhs_image = slot_images[lhs->id];\n"
+    "        const ImageBase& rhs_image = slot_images[rhs->id];\n"
+    "        return lhs_image.modification_tick < rhs_image.modification_tick;\n"
+    "    });\n"
+    "#ifdef PS5_NATIVE\n"
+    "    }\n"
+    "#endif",
+    "F07 skip singleton native alias sort while preserving multi-alias order")
+
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
 # extent fit checks, and reject unknown zero-sized block ratios early.

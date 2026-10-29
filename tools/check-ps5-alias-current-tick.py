@@ -30,6 +30,15 @@ with tempfile.TemporaryDirectory(prefix="eden-r321-alias-tick-") as tmp:
     assert body.index("if (image.modification_tick == modification_tick)") < body.index("for (const AliasedImage& aliased")
     assert body.index("if (image.modification_tick == modification_tick)") < body.index("boost::container::small_vector<const AliasedImage*, 8> aliased_images;")
     assert body.index("boost::container::small_vector<const AliasedImage*, 8> aliased_images;") < body.index("for (const AliasedImage& aliased")
+    native=(root/"vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text()
+    generator=(root/"tools/prepare-vulkan-port.py").read_text()
+    assert "F07 skip singleton native alias sort while preserving multi-alias order" in generator
+    native_body=native[native.index("void TextureCache<P>::SynchronizeAliases("):]
+    native_body=native_body[:native_body.index("\ntemplate <class P>")]
+    sort_guard="#ifdef PS5_NATIVE\n    // Most alias refreshes have only one newer source."
+    assert native_body.count(sort_guard)==1
+    assert native_body.index("if (aliased_images.size() > 1)") < native_body.index("std::ranges::sort(aliased_images,")
+    assert native_body.index("std::ranges::sort(aliased_images,") < native_body.index("for (const AliasedImage* const aliased")
     cpp=d/"alias.cpp"
     cpp.write_text(r"""
 #include <algorithm>
@@ -101,4 +110,46 @@ int main() {
                         *flags,str(cpp),"-o",str(exe)],check=True,timeout=30)
         subprocess.run([str(exe)],check=True,timeout=10)
         print("PASS R321 pinned real SynchronizeAliases",name)
+    # Exercise the selected active F07 implementation, including native-only
+    # singleton fast-path and ordered multi-alias uploads at -O0 and -O2.
+    native_fixture=cpp.read_text().replace(body,native_body)
+    assert native_fixture != cpp.read_text()
+    native_fixture=native_fixture.replace(
+        "using u64=std::uint64_t;",
+        "namespace Eden::Performance { "
+        "enum class CachePhase { TextureAliasScan, TextureAliasCopy }; "
+        "struct CachePhaseTimer { explicit CachePhaseTimer(CachePhase) {} "
+        "void Stop() {} }; }\\nusing u64=std::uint64_t;"
+    )
+    # A second source modified in the opposite order must be copied first
+    # only after the sort has restored increasing modification ticks.
+    native_fixture=native_fixture.replace(
+        "int copies=0,upscales=0,downscales=0;",
+        "int copies=0,upscales=0,downscales=0; std::vector<int> copy_order{};"
+    ).replace(
+        "void CopyImage(ImageId,ImageId,std::vector<int>){++copies;}",
+        "void CopyImage(ImageId,ImageId id,std::vector<int>){++copies;copy_order.push_back(id);}"
+    )
+    native_fixture=native_fixture.replace(
+        " c.SynchronizeAliases(0);\\n assert(c.copies==1);\\n}",
+        " c.SynchronizeAliases(0);\\n assert(c.copies==1);\\n"
+        " TextureCache<Dummy> two;\\n two.modification_tick=11;\\n"
+        " two.slot_images[0].modification_tick=1;\\n"
+        " two.slot_images[0].aliased_images.push_back({2,{2}});\\n"
+        " two.slot_images[0].aliased_images.push_back({1,{1}});\\n"
+        " two.slot_images[1].modification_tick=9;\\n"
+        " two.slot_images[2].modification_tick=10;\\n"
+        " two.SynchronizeAliases(0);\\n"
+        " assert(two.copy_order.size()==2 && two.copy_order[0]==1 && two.copy_order[1]==2);\\n}"
+    )
+    assert "assert(two.copy_order.size()==2" in native_fixture
+    native_cpp=d/"active-alias.cpp"
+    native_cpp.write_text(native_fixture)
+    for name,flags in (("ps5",["-DPS5_NATIVE"]),("desktop",[])):
+        for opt in ("-O0","-O2"):
+            exe=d/("active-"+name+opt[2:])
+            subprocess.run(["c++","-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                            *flags,str(native_cpp),"-o",str(exe)],check=True,timeout=40)
+            subprocess.run([str(exe)],check=True,timeout=10)
+            print("PASS F07 source-extracted singleton + ordered aliases",name,opt)
 print("PASS R321 monotonic alias tick source patch and regression")
