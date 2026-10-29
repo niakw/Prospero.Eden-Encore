@@ -536,3 +536,67 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-async-worker-recovery-") as di
         ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=20)
         assert ran.returncode==0,(optimization,ran.stdout,ran.stderr[-4500:])
 print("F07_ASYNC_WORKER_FAILURE_HOST_PASS normal=1 failed=1 resumed=1 O0=1 O2=1")
+
+# Native async decode inputs are fully overwritten by UnswizzleImage.
+# The original vector(size,0) zeroed every byte on the GPU owner while holding
+# texture_cache.mutex, even though it was about to be overwritten.
+assert "F07 avoid zero-filling native asynchronous texture decode input" in generator
+scratch_needle = "#ifdef PS5_NATIVE\n    // UnswizzleImage writes each copy's destination bytes"
+assert queue.count(scratch_needle)==1
+allocation_begin=queue.index(scratch_needle)
+allocation_end=queue.index("    Tegra::Memory::GpuGuestMemory<u8",allocation_begin)
+allocation=queue[allocation_begin:allocation_end]
+assert "Common::ScratchBuffer<u8> local_unswizzle_data_buffer;" in allocation
+assert "local_unswizzle_data_buffer.resize_destructive(image.unswizzled_size_bytes);" in allocation
+assert 'std::vector<u8> local_unswizzle_data_buffer(image.unswizzled_size_bytes, 0);' in allocation
+assert allocation.index("resize_destructive") < allocation.index("#else")
+assert "input = std::move(local_unswizzle_data_buffer)" in queue
+assert "texture_decode_worker.QueueWork(std::move(func));" in queue
+scratch_cpp = r"""
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <span>
+#include <type_traits>
+#include <utility>
+#include <vector>
+#include "common/scratch_buffer.h"
+#include "common/unique_function.h"
+using u8=std::uint8_t;
+struct Image {std::size_t unswizzled_size_bytes;};
+void Test(std::size_t bytes) {
+    Image image{bytes};
+__ACTUAL_ALLOCATION__
+    assert(local_unswizzle_data_buffer.size()==bytes);
+    std::span<u8> output{local_unswizzle_data_buffer};
+    for(std::size_t i=0;i<output.size();++i) output[i]=static_cast<u8>(i+1);
+    auto task=[input=std::move(local_unswizzle_data_buffer),bytes]() mutable {
+        assert(input.size()==bytes);
+        const std::span<const u8> source{input.data(),input.size()};
+        for(std::size_t i=0;i<source.size();++i)
+            assert(source[i]==static_cast<u8>(i+1));
+    };
+    Common::UniqueFunction<void> worker_job(std::move(task));
+    worker_job();
+}
+int main() {
+    Test(1); Test(9); Test(65536);
+}
+""".replace("__ACTUAL_ALLOCATION__",allocation)
+with tempfile.TemporaryDirectory(prefix="eden-f07-async-input-buffer-") as folder:
+    cpp_path=Path(folder)/"input.cpp"
+    cpp_path.write_text(scratch_cpp)
+    for native in (False,True):
+        for opt in ("-O0","-O2"):
+            binary=Path(folder)/(("ps5" if native else "desktop")+opt[2:])
+            build=subprocess.run([compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                                  "-fsanitize=undefined","-fno-sanitize-recover=all",
+                                  "-I",str(root/"vendor/sources/eden/src"),
+                                  *(["-DPS5_NATIVE=1"] if native else []),
+                                  str(cpp_path),"-o",str(binary)],
+                                 capture_output=True,text=True,timeout=45)
+            assert build.returncode==0,(native,opt,build.stderr[-6500:])
+            run=subprocess.run([str(binary)],capture_output=True,text=True,timeout=20)
+            assert run.returncode==0,(native,opt,run.stderr[-5000:])
+print("F07_ASYNC_SCRATCH_OVERWRITE_PASS scratch_nonzero_input=1 move_only_worker=1 desktop_original=1 O0=1 O2=1 UBSan=1")

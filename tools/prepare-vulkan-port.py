@@ -4399,6 +4399,26 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        const auto uploads = FullUploadSwizzles(image.info);",
     "F07 bound native accelerated texture guest read to requested upload size")
 
+# F07 P0.4: the native async decode intermediate is wholly filled
+# by UnswizzleImage for its emitted copy regions. Use the already available
+# default-initialized move-only scratch buffer instead of a zero-filled vector
+# before an expensive HUD decode. The worker accepts move-only tasks.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    std::vector<u8> local_unswizzle_data_buffer(image.unswizzled_size_bytes, 0);\n"
+    "    Tegra::Memory::GpuGuestMemory<u8, Tegra::Memory::GuestMemoryFlags::UnsafeRead> swizzle_data",
+    "#ifdef PS5_NATIVE\n"
+    "    // UnswizzleImage writes each copy's destination bytes before ConvertImage\n"
+    "    // reads them. Avoid zero-filling the entire intermediate texture under\n"
+    "    // the texture-cache mutex; the move-only scratch buffer is accepted by\n"
+    "    // Common::UniqueFunction in the asynchronous decode worker queue.\n"
+    "    Common::ScratchBuffer<u8> local_unswizzle_data_buffer;\n"
+    "    local_unswizzle_data_buffer.resize_destructive(image.unswizzled_size_bytes);\n"
+    "#else\n"
+    "    std::vector<u8> local_unswizzle_data_buffer(image.unswizzled_size_bytes, 0);\n"
+    "#endif\n"
+    "    Tegra::Memory::GpuGuestMemory<u8, Tegra::Memory::GuestMemoryFlags::UnsafeRead> swizzle_data",
+    "F07 avoid zero-filling native asynchronous texture decode input")
+
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
 # extent fit checks, and reject unknown zero-sized block ratios early.
