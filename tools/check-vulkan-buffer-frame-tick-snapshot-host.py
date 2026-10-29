@@ -38,7 +38,13 @@ struct Buffer {
   u64 tick;
   bool tracking=true;
   u64 LastUsageTick() const noexcept {return tick;}
-  void ResetUsageTracking() noexcept {tracking=false;}
+  void ResetUsageTracking() noexcept {
+    tracking=false;
+#ifdef PS5_NATIVE
+    // The selected Buffer::ResetUsageTracking retires the usage tick too.
+    tick=0;
+#endif
+  }
 };
 struct MasterSemaphore {
   u64 completed=0;
@@ -61,11 +67,17 @@ int main(){
   BufferCacheRuntime cache{scheduler};
   Common::SlotVector<Buffer> buffers;
   for(u64 tick:std::array<u64,6>{0,3,6,7,8,12})
-    buffers.push_back(Buffer{tick,true});
+    buffers.push_back(Buffer{tick,tick!=0});
   cache.TickFrame(buffers);
   for(unsigned i=0;i<buffers.size();++i)
     assert(buffers[i].tracking==(i>=4));
   assert(sem.reads==FRAME_READS);
+#ifdef PS5_NATIVE
+  // The initial unused buffer has tick zero, not a pending GPU use.
+  assert(buffers[0].tick==0);
+  for(unsigned i=1;i<4;++i)assert(buffers[i].tick==0);
+  assert(buffers[4].tick==8 && buffers[5].tick==12);
+#endif
   sem.completed=12;
   cache.TickFrame(buffers);
   for(const auto& buffer:buffers)assert(!buffer.tracking);
