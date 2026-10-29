@@ -152,3 +152,60 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-buffer-budget-") as d:
             ran=subprocess.run([str(out)],capture_output=True,text=True,timeout=10)
             assert ran.returncode==0,(native,opt,ran.stderr[-3200:])
 print("F07_MEMORY_BUDGET_SAMPLING_PASS native=1 desktop=1 O0=1 O2=1 low_pressure_half=1 high_pressure_every_frame=1 gc=1 buffer_budget=1")
+
+# Source-extracted rolling uniform-cache heuristic (selected maintained header).
+history_start=buffer_src.index("    // Calculate hits and shots and move hit bits to the right",buffer_method)
+history_end=buffer_src.index("    // If we can obtain the memory info",history_start)
+history_selected=buffer_src[history_start:history_end]
+assert history_selected.count("std::copy_backward(")==2
+assert "std::copy_n(" not in history_selected
+history_cpp=r"""
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstdint>
+#include <numeric>
+using u32=std::uint32_t;
+static constexpr u32 DEFAULT_SKIP_CACHE_SIZE=16;
+struct ChannelState {
+    std::array<u32,4> uniform_cache_hits{};
+    std::array<u32,4> uniform_cache_shots{};
+    u32 uniform_buffer_skip_cache_size{};
+};
+template<class P>struct History {
+    ChannelState* channel_state{};
+    void Tick(){
+"""+history_selected+r"""
+    }
+};
+struct Mock{};
+int main(){
+    ChannelState state;
+    state.uniform_cache_hits={1,2,3,4};
+    state.uniform_cache_shots={5,6,7,8};
+    History<Mock> history{&state};
+    history.Tick();
+    assert((state.uniform_cache_hits==std::array<u32,4>{0,1,2,3}));
+    assert((state.uniform_cache_shots==std::array<u32,4>{0,5,6,7}));
+    assert(state.uniform_buffer_skip_cache_size==16);
+    history.Tick();
+    assert((state.uniform_cache_hits==std::array<u32,4>{0,0,1,2}));
+    assert((state.uniform_cache_shots==std::array<u32,4>{0,0,5,6}));
+    state.uniform_cache_hits={8,8,8,8};
+    state.uniform_cache_shots={4,4,4,4};
+    history.Tick();
+    assert(state.uniform_buffer_skip_cache_size==0);
+}
+"""
+with tempfile.TemporaryDirectory(prefix="eden-f07-buffer-history-") as d:
+    src=Path(d)/"history.cpp";src.write_text(history_cpp)
+    for native in (False,True):
+        for opt in ("-O0","-O2"):
+            out=Path(d)/(("native" if native else "desktop")+opt[1:])
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror","-fsanitize=undefined",
+                 "-fno-sanitize-recover=all",*(['-DPS5_NATIVE=1'] if native else []),str(src),"-o",str(out)]
+            built=subprocess.run(cmd,capture_output=True,text=True,timeout=40)
+            assert built.returncode==0,(native,opt,built.stderr[-3200:])
+            ran=subprocess.run([str(out)],capture_output=True,text=True,timeout=10)
+            assert ran.returncode==0,(native,opt,ran.stderr[-3200:])
+print("F07_UNIFORM_CACHE_ROLLING_WINDOW_PASS O0=1 O2=1 native=1 desktop=1 shifts=2 skip_decision=1")
