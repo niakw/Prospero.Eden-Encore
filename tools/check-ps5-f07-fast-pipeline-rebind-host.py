@@ -114,7 +114,13 @@ assert "optimized_ready.load(std::memory_order_acquire);" in generator
 assert graphics.count("if (!pipeline && !use_optimized)") == 1
 assert graphics.count("optimized_ready.store(true, std::memory_order_release);") == 1
 raster = (vulkan / "vulkan_rasterizer.cpp").read_text()
-assert raster.count("!pipeline || !pipeline->CanExecuteDraw()") == 4
+assert raster.count("!pipeline || !pipeline->CanExecuteRecordedDraw()") == 4
+assert "CanExecuteRecordedDraw() const noexcept" in admission
+assert "worker_draw_bind_valid" in admission
+assert "CanExecuteRecordedDraw() const noexcept" in generator
+assert "F07 native worker bound-pipeline validity publish" in generator
+assert "worker_draw_bind_valid = false;" in graphics
+assert "worker_draw_bind_valid = true;" in graphics
 assert "if (IsBuilt() && !pipeline && !optimized_ready.load(std::memory_order_acquire))" in graphics
 
 recovery_cpp = r"""
@@ -130,6 +136,9 @@ struct GraphicsPipeline {
     FakeVkPipeline pipeline{};
     std::atomic_bool is_built{false};
     std::atomic_bool optimized_ready{false};
+#ifdef PS5_NATIVE
+    bool worker_draw_bind_valid{};
+#endif
     unsigned optimized_driver_handle{};
 __ACTUAL_ADMISSION__
 };
@@ -188,3 +197,117 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-recovery-draw-") as directory:
             assert ran.returncode == 0, (define, opt, ran.stdout, ran.stderr[-5000:])
             assert "F07_OPTIMIZED_RECOVERY_DRAW_PASS" in ran.stdout
             print("F07_OPTIMIZED_RECOVERY_DRAW_PASS", "native" if define else "desktop", opt)
+
+
+# Source-extract the exact ordered Vulkan-worker decision. A replacement
+# published between the ConfigureDraw and Draw callbacks MUST NOT make a
+# previously skipped binding appear valid. Only the NEXT ConfigureDraw may
+# rebind it. This is a real FIFO regression, not a conceptual validity model.
+worker_start = "        const bool use_optimized = optimized_ready.load(std::memory_order_acquire);"
+worker_end = "        cmdbuf.PushConstants("
+worker_pos = graphics.index(worker_start, graphics.index("scheduler.Record([this, descriptor_data"))
+worker_segment = graphics[worker_pos:graphics.index(worker_end, worker_pos)]
+assert worker_segment.count("worker_draw_bind_valid = false;") == 1
+assert worker_segment.count("worker_draw_bind_valid = true;") == 1
+assert worker_segment.index("worker_draw_bind_valid = false;") < worker_segment.index(
+    "if (!pipeline && !use_optimized)"
+)
+assert worker_segment.index("worker_draw_bind_valid = true;") > worker_segment.index(
+    "cmdbuf.BindPipeline("
+)
+
+fifo_cpp = r"""
+#include <atomic>
+#include <cassert>
+#include <cstdio>
+struct FakeVkPipeline {
+    bool valid{};
+    int value{};
+    explicit operator bool() const noexcept { return valid; }
+    int operator*() const { assert(valid); return value; }
+};
+constexpr int VK_PIPELINE_BIND_POINT_GRAPHICS = 0;
+struct FakeCmd {
+    int bound{};
+    unsigned binds{};
+    void BindPipeline(int, int value) { bound = value; ++binds; }
+};
+namespace Eden::Performance {
+enum class GraphicsDrawDrop { WorkerPipelineFailed };
+inline unsigned failed{};
+inline void RecordGraphicsDrawDrop(GraphicsDrawDrop) { ++failed; }
+}
+struct GraphicsPipeline {
+    FakeVkPipeline pipeline{}, optimized_pipeline{};
+    std::atomic_bool is_built{true}, optimized_ready{false};
+#ifdef PS5_NATIVE
+    bool worker_draw_bind_valid{};
+#endif
+__ACTUAL_ADMISSION__
+    void BindRecorded(FakeCmd& cmdbuf, bool bind_pipeline,
+                      bool optimized_at_record) {
+__ACTUAL_WORKER_BODY__
+    }
+};
+int main() {
+    GraphicsPipeline p;
+    FakeCmd cmdbuf;
+    assert(!p.CanExecuteRecordedDraw());
+    p.BindRecorded(cmdbuf, true, false);
+    assert(cmdbuf.binds == 0);
+    assert(!p.CanExecuteRecordedDraw());
+    // Later driver success is NOT a retroactive bind for the previous Draw.
+    p.optimized_pipeline.valid = true;
+    p.optimized_pipeline.value = 0xBEEF;
+    p.optimized_ready.store(true, std::memory_order_release);
+#ifdef PS5_NATIVE
+    assert(p.CanExecuteDraw() && !p.CanExecuteRecordedDraw());
+#else
+    assert(!p.CanExecuteDraw() && !p.CanExecuteRecordedDraw());
+#endif
+    // Next FIFO ConfigureDraw detects the newly published variant and binds it.
+    p.BindRecorded(cmdbuf, false, false);
+    assert(cmdbuf.binds == 1 && cmdbuf.bound == 0xBEEF);
+#ifdef PS5_NATIVE
+    assert(p.CanExecuteRecordedDraw());
+#else
+    assert(!p.CanExecuteRecordedDraw());
+#endif
+    // A valid initial Vulkan build is also a legal selection.
+    p.optimized_ready.store(false, std::memory_order_release);
+    p.pipeline.valid = true;
+    p.pipeline.value = 0x1234;
+    p.BindRecorded(cmdbuf, true, false);
+    assert(cmdbuf.binds == 2 && cmdbuf.bound == 0x1234);
+    assert(p.CanExecuteRecordedDraw());
+    // Recheck failure on every ConfigureDraw: an earlier successful bind does
+    // not entitle an invalid later command to reuse that old VkPipeline.
+    p.pipeline.valid = false;
+    p.BindRecorded(cmdbuf, true, false);
+#ifdef PS5_NATIVE
+    assert(!p.CanExecuteRecordedDraw());
+#else
+    assert(!p.CanExecuteRecordedDraw());
+#endif
+    assert(Eden::Performance::failed == 2);
+    std::puts("F07_RECOVERED_WORKER_FIFO_BIND_PASS");
+}
+""".replace("__ACTUAL_ADMISSION__", admission).replace(
+    "__ACTUAL_WORKER_BODY__", worker_segment)
+with tempfile.TemporaryDirectory(prefix="eden-f07-recovered-worker-") as directory:
+    path = Path(directory) / "recovered.cpp"
+    path.write_text(fifo_cpp)
+    for define in ([], ["-DPS5_NATIVE=1"]):
+        for opt in ("-O0", "-O2"):
+            binary = Path(directory) / ("fifo" + opt[1:] +
+                                        ("-native" if define else "-desktop"))
+            built = subprocess.run(
+                [compiler, "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+                 "-fsanitize=undefined", "-fno-sanitize-recover=all",
+                 *define, str(path), "-o", str(binary)],
+                capture_output=True, text=True, timeout=40)
+            assert built.returncode == 0, (define, opt, built.stderr[-5000:])
+            ran = subprocess.run([str(binary)], capture_output=True, text=True, timeout=20)
+            assert ran.returncode == 0, (define, opt, ran.stdout, ran.stderr[-5000:])
+            assert "F07_RECOVERED_WORKER_FIFO_BIND_PASS" in ran.stdout
+            print("F07_RECOVERED_WORKER_FIFO_BIND_PASS", "native" if define else "desktop", opt)
