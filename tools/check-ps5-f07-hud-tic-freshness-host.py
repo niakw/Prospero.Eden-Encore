@@ -51,7 +51,7 @@ struct ImageViewBase {
     bool is_buffer{};
     bool IsBuffer() const { return is_buffer; }
 };
-struct Image { u32 flags{}; };
+struct Image { u32 flags{}; u32 scale_rating{}; };
 template<class P>
 class TextureCache {
 public:
