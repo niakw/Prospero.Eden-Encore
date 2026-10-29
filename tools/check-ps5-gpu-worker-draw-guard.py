@@ -10,14 +10,21 @@ generator=(root/'tools/prepare-vulkan-port.py').read_text()
 pipeline_cpp=(root/'vendor/encore-active/eden-vulkan/vk_graphics_pipeline_cost.cpp').read_text()
 start=header.index('    [[nodiscard]] bool CanExecuteDraw() const noexcept {')
 end=header.index('\n    }',start)+len('\n    }')
-method=header[start:end]
+general_method=header[start:end]
+recorded_start=header.index('    [[nodiscard]] bool CanExecuteRecordedDraw() const noexcept {')
+recorded_end=header.index('\n    }',recorded_start)+len('\n    }')
+recorded_method=header[recorded_start:recorded_end]
+method=general_method+'\n'+recorded_method
 assert 'is_built.load(std::memory_order::acquire)' in method
 assert 'static_cast<bool>(pipeline)' in method
 assert "CanExecuteDraw()" in generator
 assert 'build_condvar.wait(lock' in pipeline_cpp
 assert 'scheduler.Record([this](vk::CommandBuffer)' in pipeline_cpp
 assert raster.count("pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf)")==4
-assert raster.count("if (!pipeline || !pipeline->CanExecuteDraw()) {")==4
+assert raster.count("if (!pipeline || !pipeline->CanExecuteRecordedDraw()) {")==4
+assert "return worker_draw_bind_valid;" in recorded_method
+assert "return CanExecuteDraw();" in recorded_method
+assert "CanExecuteRecordedDraw()" in generator
 assert raster.count("::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);") >= 4
 # Guard must precede the first Vulkan draw command of each queue record.
 for name in ("Draw(", "DrawIndirectByteCountEXT(", "DrawIndexedIndirectCount(", "DrawIndexedIndirect("):
@@ -26,9 +33,9 @@ for name in ("Draw(", "DrawIndirectByteCountEXT(", "DrawIndexedIndirectCount(", 
     preceding=raster[:index].rfind("scheduler.Record([")
     relevant=raster[preceding:index]
     assert "pipeline = prepared_pipeline" in relevant, name
-    assert "pipeline->CanExecuteDraw()" in relevant, name
-    assert relevant.index("pipeline->CanExecuteDraw()") < relevant.index("return;"), name
-guard='''            if (!pipeline || !pipeline->CanExecuteDraw()) {
+    assert "pipeline->CanExecuteRecordedDraw()" in relevant, name
+    assert relevant.index("pipeline->CanExecuteRecordedDraw()") < relevant.index("return;"), name
+guard='''            if (!pipeline || !pipeline->CanExecuteRecordedDraw()) {
                 ::Eden::Performance::RecordGraphicsDrawDrop(
                     ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
                 return;
@@ -49,6 +56,10 @@ void RecordGraphicsDrawDrop(GraphicsDrawDrop) { dropped.fetch_add(1); }
 struct Pipeline {
     std::atomic<bool> is_built{false};
     bool pipeline{};
+    std::atomic_bool optimized_ready{false};
+#ifdef PS5_NATIVE
+    bool worker_draw_bind_valid{};
+#endif
 __REAL_READY_METHOD__
 };
 using GraphicsPipeline = Pipeline;
@@ -81,6 +92,9 @@ int main() {
         {
             std::lock_guard lock(m);
             ok.pipeline=true;
+#ifdef PS5_NATIVE
+            ok.worker_draw_bind_valid=true;
+#endif
             ok.is_built.store(true,std::memory_order_release);
         }
         cv.notify_all();
@@ -96,8 +110,11 @@ if sys.platform=='darwin' and not env.get('SDKROOT'):
 with tempfile.TemporaryDirectory(prefix='eden-r381-guard-') as d:
     cpp=Path(d)/'guard.cpp';exe=Path(d)/'guard'
     cpp.write_text(program)
-    subprocess.run(['c++','-std=c++20','-O1','-pthread','-Wall','-Wextra','-Werror',
-                    '-fsanitize=address,undefined',str(cpp),'-o',str(exe)],
-                   check=True,env=env,timeout=35)
-    subprocess.run([str(exe)],check=True,env=env,timeout=15)
+    for mode in ('native', 'desktop'):
+        target=Path(d)/('guard-'+mode)
+        flags=['-DPS5_NATIVE=1'] if mode=='native' else []
+        subprocess.run(['c++','-std=c++20','-O1','-pthread','-Wall','-Wextra','-Werror',
+                        '-fsanitize=address,undefined',*flags,str(cpp),'-o',str(target)],
+                       check=True,env=env,timeout=35)
+        subprocess.run([str(target)],check=True,env=env,timeout=15)
 print('PASS R381: 4 queued draw variants reject failed pipeline; success paths execute; release/acquire validated')
