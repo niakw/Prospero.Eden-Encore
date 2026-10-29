@@ -324,3 +324,88 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-native-staging-handle-") as di
         ran=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
         assert ran.returncode==0,(opt,ran.stderr[-5000:])
 print("F07_SYNC_STAGING_HANDLE_PASS null_full=1 short=1 empty=1 valid=1 O0=1 O2=1")
+
+# The Vulkan staging pool gives stream uploads exact subspans but
+# power-of-two pooled buffers return their WHOLE mapped allocation. Read
+# exactly MapSizeBytes(image), never its rounded staging capacity on PS5.
+upload_method_start = "void TextureCache<P>::UploadImageContents(Image& image, StagingBuffer& staging) {"
+upload_method_end = "\ntemplate <class P>\nImageViewId TextureCache<P>::CreateImageView("
+assert s.count(upload_method_start) == s.count(upload_method_end) == 1
+upload_method = s[s.index(upload_method_start):s.index(upload_method_end,s.index(upload_method_start))]
+accelerated_start = "    if (True(image.flags & ImageFlagBits::AcceleratedUpload)) {"
+accelerated_end = "        const auto uploads = FullUploadSwizzles(image.info);"
+accelerated = upload_method[upload_method.index(accelerated_start):
+                            upload_method.index(accelerated_end)]
+assert "F07 bound native accelerated texture guest read to requested upload size" in gen
+assert accelerated.count("gpu_memory->ReadBlock(") == 2
+assert accelerated.count("MapSizeBytes(image)") == 1
+assert accelerated.index("#ifdef PS5_NATIVE") < accelerated.index("MapSizeBytes(image)") < accelerated.index("#else")
+assert accelerated.index("mapped_span.size_bytes()") > accelerated.index("#else")
+assert body.index("staging.mapped_span.size_bytes() < upload_size") < body.index("UploadImageContents(image, staging);")
+read_branch = accelerated[accelerated.index("#ifdef PS5_NATIVE"):]
+cpp_accelerated = r"""
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <span>
+#include <vector>
+using GPUVAddr=std::uint64_t;
+using u8=std::uint8_t;
+namespace VideoCommon {enum class CacheType { NoTextureCache }; }
+struct Image {std::size_t upload_bytes{};};
+std::size_t MapSizeBytes(const Image& image) {return image.upload_bytes;}
+struct Memory {
+    std::size_t size_read{};
+    unsigned calls{};
+    void ReadBlock(GPUVAddr, u8* target, std::size_t size, VideoCommon::CacheType) {
+        assert(target); size_read=size; ++calls;
+    }
+};
+struct Cache {
+    Memory* gpu_memory;
+    void Upload(Image& image, std::span<u8> mapped_span) {
+        GPUVAddr gpu_addr=0x1000;
+__ACTUAL_READ__
+    }
+};
+int main() {
+    Memory memory;
+    Cache cache{&memory};
+    Image image{9};
+    std::vector<u8> pooled(16);
+    cache.Upload(image, pooled);
+    assert(memory.calls==1);
+#ifdef PS5_NATIVE
+    assert(memory.size_read==9); // full 16-byte pooled span is NOT guest data
+#else
+    assert(memory.size_read==16); // unchanged historical desktop
+#endif
+    pooled.resize(9); // an exact stream-buffer staging subspan
+    cache.Upload(image, pooled);
+    assert(memory.calls==2 && memory.size_read==9);
+    pooled.resize(16);
+    image.upload_bytes=13;
+    cache.Upload(image, pooled);
+#ifdef PS5_NATIVE
+    assert(memory.calls==3 && memory.size_read==13);
+#else
+    assert(memory.calls==3 && memory.size_read==16);
+#endif
+}
+""".replace("__ACTUAL_READ__",read_branch)
+with tempfile.TemporaryDirectory(prefix="eden-f07-accelerated-staging-read-") as directory:
+    fixture=Path(directory)/"accelerated.cpp"
+    fixture.write_text(cpp_accelerated)
+    for mode in (False,True):
+        for opt in ("-O0","-O2"):
+            executable=Path(directory)/(("ps5" if mode else "desktop")+opt[2:])
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                 "-fsanitize=undefined","-fno-sanitize-recover=all",
+                 *(["-DPS5_NATIVE=1"] if mode else []),
+                 str(fixture),"-o",str(executable)]
+            built=subprocess.run(cmd,capture_output=True,text=True,timeout=40)
+            assert built.returncode==0,(mode,opt,built.stderr[-5000:])
+            ran=subprocess.run([str(executable)],capture_output=True,text=True,timeout=15)
+            assert ran.returncode==0,(mode,opt,ran.stderr[-5000:])
+print("F07_ACCELERATED_TEXTURE_READ_BOUNDS_PASS pooled_9of16=1 pooled_13of16=1 desktop_original=1 O0=1 O2=1")
+

@@ -4377,6 +4377,28 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    if (any_rescaled) {",
     "F07 bypass recursive alias rescale checks when every source is unscaled")
 
+# F07 P0.4: the pooled staging span may be rounded up to the next
+# power of two. Read only the bytes requested by MapSizeBytes(image) in the
+# accelerated upload; RefreshContents already validates handle and length.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    if (True(image.flags & ImageFlagBits::AcceleratedUpload)) {\n"
+    "        gpu_memory->ReadBlock(gpu_addr, mapped_span.data(), mapped_span.size_bytes(),\n"
+    "                              VideoCommon::CacheType::NoTextureCache);\n"
+    "        const auto uploads = FullUploadSwizzles(image.info);",
+    "    if (True(image.flags & ImageFlagBits::AcceleratedUpload)) {\n"
+    "#ifdef PS5_NATIVE\n"
+    "        // A pooled staging buffer may be power-of-two rounded and expose\n"
+    "        // more mapped bytes than the image requested. Do not read unrelated\n"
+    "        // guest memory or waste CPU DMA time filling the unused tail.\n"
+    "        gpu_memory->ReadBlock(gpu_addr, mapped_span.data(), MapSizeBytes(image),\n"
+    "                              VideoCommon::CacheType::NoTextureCache);\n"
+    "#else\n"
+    "        gpu_memory->ReadBlock(gpu_addr, mapped_span.data(), mapped_span.size_bytes(),\n"
+    "                              VideoCommon::CacheType::NoTextureCache);\n"
+    "#endif\n"
+    "        const auto uploads = FullUploadSwizzles(image.info);",
+    "F07 bound native accelerated texture guest read to requested upload size")
+
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
 # extent fit checks, and reject unknown zero-sized block ratios early.
