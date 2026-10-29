@@ -34,6 +34,8 @@
 
 ### Correctifs déjà intégrés — ce qui avance sans fermer tout un chantier
 
+- [x] **V01 / Q01 — sondage GPU DEV sans appels pilote par timestamp :** `237bf981` regroupe jusqu'à 32 paires de timestamps disponibles dans `Scheduler::GpuTimeCollect` sur PS5 lorsque `gpu_time` est activé, sans modifier le mode silencieux ni le desktop. Source Vulkan, générateur strict et témoin C++ extrait O0/O2/UBSan intégrés ; **CI en attente, aucun gain FPS ni validation console**, V01 reste ouvert.
+
 - [x] **C05 / S01 — attribution cache/JIT :** `dd68b7e` corrige `tools/analyze-ps5-cache-contention.py` pour ignorer les fenêtres `detail=not_measured` et `counters_reset=1` dépourvues de véritables durées, au lieu de les convertir en faux zéros. `ce4b0d5` étend le témoin existant aux deux cas, au zéro réellement mesuré et aux données partielles. **Correction de l'analyse seulement : aucun gain FPS revendiqué ; CI du SHA final non vérifiée, C05 et S01 restent ouverts.**
 
 Les lignes **[x]** ci-dessous certifient **uniquement que le changement figure sur la branche**, et non la réussite de la CI du dernier SHA ou une amélioration en jeu. Les objectifs S/V/C/T/M auxquels ils contribuent restent ouverts tant que leur *critère de sortie complet* n'est pas atteint.
