@@ -4491,6 +4491,25 @@ apply_reviewed_delta("vk_buffer_cache_cost.cpp",
     "}",
     "F07 validate native upload and download buffer cache staging handles")
 
+# F07 P0.3: empty sampled/storage image descriptor batches only reset
+# the deletion retry latch. Avoid constructing the TIC memo under paired GPU
+# locks when the descriptor span is empty. Preserve desktop original loop.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "void TextureCache<P>::FillImageViews(std::span<ImageViewInOut> views, bool compute, bool blacklist) {\n"
+    "    bool has_blacklisted = false;",
+    "void TextureCache<P>::FillImageViews(std::span<ImageViewInOut> views, bool compute, bool blacklist) {\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // The empty descriptor pass only clears the deletion/retry latch.\n"
+    "    // Avoid initializing the draw-local TIC memo and entering the retry\n"
+    "    // loop when no view can possibly be visited or blacklisted.\n"
+    "    if (views.empty()) {\n"
+    "        has_deleted_images = false;\n"
+    "        return;\n"
+    "    }\n"
+    "#endif\n"
+    "    bool has_blacklisted = false;",
+    "F07 bypass draw-local texture memo on empty image descriptor batches")
+
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
 # extent fit checks, and reject unknown zero-sized block ratios early.

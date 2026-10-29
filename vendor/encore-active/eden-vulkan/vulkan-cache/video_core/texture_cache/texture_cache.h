@@ -458,6 +458,15 @@ void TextureCache<P>::MarkModification(ImageId id) noexcept {
 
 template <class P>
 void TextureCache<P>::FillImageViews(std::span<ImageViewInOut> views, bool compute, bool blacklist) {
+#ifdef PS5_NATIVE
+    // The empty descriptor pass only clears the deletion/retry latch.
+    // Avoid initializing the draw-local TIC memo and entering the retry
+    // loop when no view can possibly be visited or blacklisted.
+    if (views.empty()) {
+        has_deleted_images = false;
+        return;
+    }
+#endif
     bool has_blacklisted = false;
     do {
         has_deleted_images = false;
