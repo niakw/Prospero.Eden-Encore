@@ -5642,3 +5642,12 @@ apply_reviewed_delta(
 #endif
                 bytes += image.unswizzled_size_bytes;""",
     "F07 rollback partial Vulkan dirty GC prefetch before staging release")
+
+# F07 C01/C03: sampled frame-housekeeping ownership, GPU thread only.
+# Same texture-then-buffer acquisition and same TickFrame call ordering.
+# No driver wait, allocation or telemetry in the quiet path.
+apply_reviewed_delta(
+    "vulkan_rasterizer.cpp",
+    "void RasterizerVulkan::TickFrame() {\n    draw_counter = 0;\n    guest_descriptor_queue.TickFrame();\n    compute_pass_descriptor_queue.TickFrame();\n    descriptor_buffer_ring.TickFrame();\n    fence_manager.TickFrame();\n    staging_pool.TickFrame();\n    {\n        std::scoped_lock lock{texture_cache.mutex};\n        texture_cache.TickFrame();\n    }\n    {\n        std::scoped_lock lock{buffer_cache.mutex};\n        buffer_cache.TickFrame();\n    }\n}",
+    "void RasterizerVulkan::TickFrame() {\n    draw_counter = 0;\n    guest_descriptor_queue.TickFrame();\n    compute_pass_descriptor_queue.TickFrame();\n    descriptor_buffer_ring.TickFrame();\n    fence_manager.TickFrame();\n    staging_pool.TickFrame();\n#ifdef PS5_NATIVE\n    // C01/C03: identify who holds the cache lock during frame housekeeping.\n    // One of 16 frames with detailed logging; no clocks or changed locks in\n    // quiet release. Wait and held intervals use disjoint timer scopes.\n    const bool frame_sample = ::Eden::Performance::ShouldSampleCacheFrame();\n#endif\n    {\n#ifdef PS5_NATIVE\n        ::Eden::Performance::CachePhaseTimer texture_wait{\n            ::Eden::Performance::CachePhase::FrameTextureWait, frame_sample};\n#endif\n        std::scoped_lock lock{texture_cache.mutex};\n#ifdef PS5_NATIVE\n        texture_wait.Stop();\n        ::Eden::Performance::CachePhaseTimer texture_held{\n            ::Eden::Performance::CachePhase::FrameTextureHeld, frame_sample};\n#endif\n        texture_cache.TickFrame();\n    }\n    {\n#ifdef PS5_NATIVE\n        ::Eden::Performance::CachePhaseTimer buffer_wait{\n            ::Eden::Performance::CachePhase::FrameBufferWait, frame_sample};\n#endif\n        std::scoped_lock lock{buffer_cache.mutex};\n#ifdef PS5_NATIVE\n        buffer_wait.Stop();\n        ::Eden::Performance::CachePhaseTimer buffer_held{\n            ::Eden::Performance::CachePhase::FrameBufferHeld, frame_sample};\n#endif\n        buffer_cache.TickFrame();\n    }\n}",
+    "F07 frame GC texture and buffer lock ownership instrumentation")

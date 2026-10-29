@@ -211,7 +211,8 @@ enum class CachePhase : unsigned {
     ShaderSpirv, ShaderModule, GraphicsPipelineWait, ComputePipelineWait,
     TextureUploadStaging, TextureUploadContents,
     TextureUploadBarrier,
-    ComputePairWait, ComputePairHeld, ComputeConfigure, Count
+    ComputePairWait, ComputePairHeld, ComputeConfigure,
+    FrameTextureWait, FrameTextureHeld, FrameBufferWait, FrameBufferHeld, Count
 };
 struct CachePhaseTotal {
     std::atomic<unsigned long long> samples{}, total_ns{}, max_ns{};
@@ -229,6 +230,13 @@ inline bool ShouldSampleCacheDraw() noexcept {
     if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return false;
     static thread_local unsigned sequence = 0;
     // Sampling avoids injecting high-frequency clock calls into the render path.
+    return (++sequence & 15u) == 0u;
+}
+inline bool ShouldSampleCacheFrame() noexcept {
+    if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return false;
+    static thread_local unsigned sequence = 0;
+    // One cache-owner sample per 16 completed GPU frames, independent of
+    // sampled draws or guest writes. No wall-clock probes in quiet mode.
     return (++sequence & 15u) == 0u;
 }
 inline bool ShouldSampleGuestWrite() noexcept {
