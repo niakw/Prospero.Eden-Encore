@@ -22,7 +22,7 @@
 | --- | ---: | ---: | --- |
 | Revue source prioritaire B1–B4 | **38/38** | **0** | Fonctions inspectées ; ne signifie pas 38 accélérations prouvées |
 | Acquis historiques A01–A09 | **9/9** | **0** | Code et témoins historiques déjà disponibles |
-| Décisions PRÉ-BUILD S/V/C/T/J/H/I/G/M/Q | **6/28** | **22** | S03, S04, V02, G01, Q01, Q03 : décisions/protections prouvées côté hôte, **pas** sur console |
+| Décisions PRÉ-BUILD S/V/C/T/J/H/I/G/M/Q | **7/28** | **21** | S03, S04, V02, G01, H02, Q01, Q03 : décisions prouvées côté hôte, **pas** sur console |
 | Vérifications POST-BUILD | **0/12** | **12** | Mesures console impossibles avant le premier paquet |
 | Portes finales B01–B11 | **0/11** | **11** | Six gates avant compilation, puis build et tests réels |
 
@@ -108,7 +108,7 @@ Les lignes **[x]** ci-dessous certifient **uniquement que le changement figure s
 - [ ] **J02 [POST-BUILD]** — Qualifier alias RX/RW natif, engagement 2 Mio, trim quiescent et recommit.** **Sortie :** preuve firmware 13.60, droits W^X, durée de vie des blocs, relance après titre fermé.
 - [ ] **J03 [POST-BUILD]** — Auditer la vraie contention JIT/guest/GPU et la pression mémoire.** Pas de cache plus gros ni répartition CPU forcée sans mesure et budget sûr. **Sortie :** scénario saturé et absence de régression sous mémoire faible.
 - [ ] **H01 [POST-BUILD]** — Isoler la progression invité durant pause/mi-temps/freezes.** **Owner :** KThread/condition vars/HIPC/NvDisp/Host1x/BufferQueue, F05. **Sortie :** preuve de nouvel état jeu et de consommations de buffers, pas seulement de frames présentées.
-- [ ] **H02 [PRÉ-BUILD]** — Vérifier refus, réveils et reprises IPC/HLE.** **Sortie :** publication des waiters, fin de wait, timeout, fermeture et reprise exacts ; pas de réveils ou copies en double.
+- [x] **H02 [PRÉ-BUILD] — PUBLICATION ET RÉVEIL IPC/HLE TESTÉS SUR HÔTE.** Témoins source-extraits de la file de waiters, du chaînage `KServerSession::OnRequest → KThreadQueue::EndWait/CancelWait` (**192 cas**), des délais IPC/HLE saturés et des retraits de listes synchronisées sans alias interdit : `check-native-hle-wait-queue-publication-host.py`, `check-native-ipc-wake-chain-host.py`, `verify/hle/check-native-hle-ipc-timeout-host.py`, `verify/hle/check-native-hle-wait-timeout-host.py`, `verify/hle/check-native-hle-sync-unlink-host.py`. Tous **PASS** dans la sous-suite `source-audit` de [#40830618861](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40830618861) **avant** l'échec indépendant du témoin TFB. Fermeture/annulation et progression console restent **H01/G02**, pas une preuve de guérison du freeze FC27.
 - [ ] **I01 [POST-BUILD]** — Mesurer manette → NPad → action guest → image visible.** **Owner :** F06 et mapping normal. **Sortie :** commandes PS toujours correctes en match/pause, pas de remapping Switch imprévu.
 - [ ] **I02 [POST-BUILD]** — Déterminer si la latence de pause provient d'input, IPC, guest ou rendu.** **Sortie :** correctif ciblé seulement dans le propriétaire causal ; test de reprise, mi-temps et fin de partie.
 - [x] **G01 [PRÉ-BUILD] — 6/6 REPLAYS HÔTE VALIDÉS ENSEMBLE.** [Prévalidation #40831626518 — sous-suite source-f01-f06 SUCCESS](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40831626518) sur `941fa741` ; aucun changement de contrat F01–F06 dans ce lot, ni build console. **La progression réelle du jeu reste à prouver en G02/H01/I01**, pas dans une case pré-build impossible à fermer.
