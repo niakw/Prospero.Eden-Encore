@@ -121,7 +121,7 @@ using u32=std::uint32_t;
 using VkBuffer=std::uint64_t;
 constexpr VkBuffer VK_NULL_HANDLE=0;
 constexpr std::uint64_t VK_WHOLE_SIZE=~std::uint64_t{0};
-namespace VideoCommon {constexpr std::size_t NUM_VERTEX_BUFFERS=32;}
+namespace VideoCommon {[[maybe_unused]] constexpr std::size_t NUM_VERTEX_BUFFERS=32;}
 namespace boost {namespace container{
 template<class T,std::size_t Capacity>using static_vector=std::vector<T>;
 }}
@@ -232,7 +232,7 @@ tfb_cpp=r"""
 #include <cassert>
 #include <cstddef>
 #include <vector>
-namespace VideoCommon {constexpr std::size_t NUM_VERTEX_BUFFERS=32;}
+namespace VideoCommon {[[maybe_unused]] constexpr std::size_t NUM_VERTEX_BUFFERS=32;}
 struct HostBindings {
     std::vector<int> buffers,offsets,sizes;
 };
