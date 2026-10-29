@@ -15,6 +15,12 @@ import statistics
 
 FIELDS = re.compile(r"\b([A-Za-z][A-Za-z_0-9]*)=(-?[0-9]+(?:\.[0-9]+)?)")
 PHASE_NAME = re.compile(r"\bphase=([a-z_]+)\b")
+# Emitted exactly once per NEW graphics/compute key or permitted one-off
+# retry with Detailed Logging. Never join a miss to a late frame by log order.
+COLD_MISS = re.compile(
+    r"\bEDEN_VULKAN_SHADER_MISS kind=(graphics|compute) "
+    r"key=([0-9a-fA-F]{16}) retry=([01]) success=([01]) cpu_ns=([0-9]+)\b"
+)
 GPU_OWNER_PHASES = frozenset(("pair_wait", "pair_held", "compute_pair_wait", "compute_pair_held"))
 # These existing counters are *per reporting window*, not per shader hash.
 # Shader phases are nested in pipeline creation: never sum as wall time.
@@ -258,13 +264,45 @@ def report(rows: list[dict[str, float]]) -> str:
                "blocked_ms sums waits across guest threads. FPS near 30 is not smoothness.")
     return "\n".join(out)
 
+def cold_shader_misses(lines: list[str]) -> str:
+    """Per-pipeline-key cold CPU translation cost, never GPU worker time."""
+    misses: list[tuple[str, str, int, int, int]] = []
+    for line in lines:
+        match = COLD_MISS.search(line)
+        if match:
+            kind, key, retry, success, ns = match.groups()
+            misses.append((kind, key.lower(), int(retry), int(success), int(ns)))
+    if not misses:
+        return "shader_miss_cpu: not_measured (detailed cold-miss records absent)"
+    cold = [x for x in misses if x[2] == 0]
+    retried = [x for x in misses if x[2] == 1]
+    failed = [x for x in misses if x[3] == 0]
+    slowest = sorted(misses, key=lambda x: x[4], reverse=True)[:5]
+    rows = [
+        f"shader_miss_cpu: measured={len(misses)} "
+        f"new={len(cold)} retries={len(retried)} failed={len(failed)} "
+        f"graphics={sum(x[0] == 'graphics' for x in misses)} "
+        f"compute={sum(x[0] == 'compute' for x in misses)}"
+    ]
+    for kind, key, retry, success, ns in slowest:
+        rows.append(
+            f"shader_miss_cpu_top: kind={kind} key={key} retry={retry} "
+            f"success={success} cpu_ms={ns / 1_000_000:.3f}"
+        )
+    rows.append("NOTE: cold shader CPU time is keyed to one cache miss, "
+                "not GPU worker completion, not individual CFG/IR stages "
+                "and not proof that a particular presented frame was late.")
+    return "\n".join(rows)
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("logs", type=Path, nargs="+")
     args = parser.parse_args()
     for path in args.logs:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         print(path)
-        print(report(windows(path.read_text(encoding="utf-8", errors="replace").splitlines())))
+        print(report(windows(lines)))
+        print(cold_shader_misses(lines))
 
 if __name__ == "__main__":
     main()
