@@ -37,7 +37,15 @@ for phase, label, native in (
     selected = (root / "vendor/encore-active/eden-vulkan" / native).read_text()
     site = selected.index("scheduler.Record([this](vk::CommandBuffer) {")
     callback = selected[site:selected.index("        });", site)]
-    assert callback.index("if (is_built.load(std::memory_order_acquire)) return;") < callback.index("CachePhase::" + phase) < callback.index("std::unique_lock lock{build_mutex};")
+    # PS5: only a genuinely unfinished pipeline under the build mutex is
+    # charged to the worker wait. Desktop retains the original lock order.
+    ready = "if (is_built.load(std::memory_order_acquire)) return;"
+    assert callback.count(ready) == 2
+    assert callback.index(ready) < callback.index("std::unique_lock lock{build_mutex};")
+    assert callback.index("std::unique_lock lock{build_mutex};") < callback.rindex(ready)
+    assert callback.rindex(ready) < callback.index("CachePhase::" + phase)
+    assert callback.index("CachePhase::" + phase) < callback.index("build_condvar.wait(")
+    assert "#ifndef PS5_NATIVE\\n            std::unique_lock lock{build_mutex};" in callback
     assert callback.count("detailed_gpu_profile.load(std::memory_order_relaxed)") == 1
     assert "wait_phase = 'GraphicsPipelineWait' if name" in generator
 
