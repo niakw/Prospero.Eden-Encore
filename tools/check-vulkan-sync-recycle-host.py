@@ -91,6 +91,10 @@ struct FreeCV {
     }
     void notify_one() { ++notifications; condition.notify_one(); }
 };
+struct PresentReadyCV {
+    std::atomic<unsigned> notifications{0};
+    void notify_one() { notifications.fetch_add(1); }
+};
 struct Scheduler {
     unsigned drains=0;
     std::vector<std::function<void(vk::CommandBuffer)>> queued;
@@ -109,6 +113,7 @@ struct PresentManager {
     std::mutex queue_mutex;
     std::deque<Frame*> present_queue;
     std::condition_variable frame_cv;
+    PresentReadyCV present_ready_cv;
     std::exception_ptr present_failure;
     Scheduler scheduler;
     void CopyToSwapchain(Frame*) {
@@ -138,6 +143,7 @@ int main() {
         assert(received.load()==&frame && frame.present_done.waits==1);
         assert(frame.present_done.resets==1 && p.scheduler.drains==1);
         assert(p.copies==1 && p.free_cv.notifications.load()==1);
+        assert(p.present_ready_cv.notifications.load()==0);
         assert(p.free_mutex.locks.load()>=2 && p.free_queue.empty());
     }
     {
@@ -158,6 +164,7 @@ int main() {
         p.scheduler.queued.front()(0);
         assert(p.present_queue.size()==1 && p.present_queue.front()==&frame);
         assert(p.free_cv.notifications.load()==0);
+        assert(p.present_ready_cv.notifications.load()==1);
     }
 }
 """.replace("INJECT_METHODS",METHODS)
@@ -168,10 +175,13 @@ with tempfile.TemporaryDirectory(prefix="encore-sync-present-recycle-") as tmp:
     src=out/"witness.cpp"
     exe=out/"witness"
     src.write_text(CPP)
-    subprocess.run([compiler,"-std=c++20","-O1","-Wall","-Wextra","-Werror",
-                    "-pthread","-fsanitize=address,undefined",
-                    "-fno-sanitize-recover=all",str(src),"-o",str(exe)],
-                   check=True,capture_output=True,text=True,timeout=80)
+    compile_result=subprocess.run(
+        [compiler,"-std=c++20","-O1","-Wall","-Wextra","-Werror",
+         "-pthread","-fsanitize=address,undefined",
+         "-fno-sanitize-recover=all",str(src),"-o",str(exe)],
+        capture_output=True,text=True,timeout=80)
+    assert compile_result.returncode==0, (
+        compile_result.returncode,compile_result.stderr[-4000:])
     result=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
     assert result.returncode==0,(result.returncode,result.stdout[-1000:],result.stderr[-2000:])
 print("ENCORE_SYNC_PRESENT_RECYCLE_PASS source_extracted=1 mutex=1 wake=1 copy_failure=1 async_unchanged=1 asan_ubsan=1")
