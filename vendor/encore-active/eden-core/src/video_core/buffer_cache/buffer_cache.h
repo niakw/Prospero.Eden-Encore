@@ -99,7 +99,18 @@ void BufferCache<P>::TickFrame() {
 
     // If we can obtain the memory info, use it instead of the estimate.
     if (runtime.CanReportMemoryUsage()) {
+#ifdef PS5_NATIVE
+        // Memory-budget queries use the driver while the buffer cache mutex
+        // is held. Under low pressure, probe on alternating frames; near
+        // the GC watermark, preserve every-frame sampling and prompt reclaim.
+        const bool near_gc_watermark =
+            total_used_memory >= minimum_memory - minimum_memory / 3;
+        if (near_gc_watermark || (frame_tick & 1u) == 0) {
+            total_used_memory = runtime.GetDeviceMemoryUsage();
+        }
+#else
         total_used_memory = runtime.GetDeviceMemoryUsage();
+#endif
     }
     if (total_used_memory >= minimum_memory) {
         RunGarbageCollector();

@@ -117,6 +117,12 @@ mask_write_before = "    if (channel_state->enabled_uniform_buffer_masks != mask
 mask_write_after = "    if (channel_state->enabled_uniform_buffer_masks != mask) {\n        channel_state->fast_bound_uniform_buffers.fill(0);\n        if constexpr (HAS_PERSISTENT_UNIFORM_BUFFER_BINDINGS) {\n            channel_state->dirty_uniform_buffers.fill(~u32{0});\n            channel_state->uniform_buffer_binding_sizes.fill({});\n        }\n        // A repeat pipeline already has the mask: avoid rewriting all stage\n        // entries on every draw while the buffer/texture cache locks are held.\n        channel_state->enabled_uniform_buffer_masks = mask;\n    }\n    // Equal enabled masks do not imply equal uniform sizes across pipelines.\n    channel_state->uniform_buffer_sizes = sizes;"
 assert expected.count(mask_write_before) == 1
 expected = expected.replace(mask_write_before, mask_write_after)
+# Native buffer-cache memory budget sampling: mirror texture-cache policy
+# under low pressure, but never delay an above-watermark GC probe.
+budget_old = "    // If we can obtain the memory info, use it instead of the estimate.\n    if (runtime.CanReportMemoryUsage()) {\n        total_used_memory = runtime.GetDeviceMemoryUsage();\n    }\n    if (total_used_memory >= minimum_memory) {\n        RunGarbageCollector();\n    }"
+budget_new = "    // If we can obtain the memory info, use it instead of the estimate.\n    if (runtime.CanReportMemoryUsage()) {\n#ifdef PS5_NATIVE\n        // Memory-budget queries use the driver while the buffer cache mutex\n        // is held. Under low pressure, probe on alternating frames; near\n        // the GC watermark, preserve every-frame sampling and prompt reclaim.\n        const bool near_gc_watermark =\n            total_used_memory >= minimum_memory - minimum_memory / 3;\n        if (near_gc_watermark || (frame_tick & 1u) == 0) {\n            total_used_memory = runtime.GetDeviceMemoryUsage();\n        }\n#else\n        total_used_memory = runtime.GetDeviceMemoryUsage();\n#endif\n    }\n    if (total_used_memory >= minimum_memory) {\n        RunGarbageCollector();\n    }"
+assert expected.count(budget_old) == 1
+expected = expected.replace(budget_old, budget_new)
 assert maintained == expected, "R437 maintained header differs from reviewed transforms"
 assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm
