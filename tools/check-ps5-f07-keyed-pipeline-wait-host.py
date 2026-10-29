@@ -23,7 +23,7 @@ assert "if (!enabled) return;" in trace
 assert "wait_ns=%llu usable=%u" in trace
 assert "finished - started" in trace
 assert "lock_acquired - started" in trace
-assert "finished - lock_acquired" in trace
+assert "post_mutex_ns = elapsed - mutex_ns" in trace
 assert "mutex_ns=%llu post_mutex_ns=%llu" in trace
 assert "struct ShaderMissStageCosts" in perf
 assert "result->SetDiagnosticCacheKeyHash(key.Hash());" in cache
