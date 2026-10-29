@@ -2205,6 +2205,14 @@ void Image::AllocateComputeUnswizzleBuffer(u32 max_slices) {
 
 void Image::UploadMemory(VkBuffer buffer, VkDeviceSize offset,
                          std::span<const VideoCommon::BufferImageCopy> copies) {
+#ifdef PS5_NATIVE
+    // Empty guest upload regions cannot write any destination pixels. Avoid
+    // invalidating a valid MSAA resolve, rescaling, scratch acquisition and
+    // a Vulkan command with no copy regions.
+    if (copies.empty()) {
+        return;
+    }
+#endif
     // TODO: Move this to another API
     if (ENABLE_MSAA_RESOLVE_CONSUME && runtime != nullptr) {
         runtime->InvalidateResolveShadow(Handle());
