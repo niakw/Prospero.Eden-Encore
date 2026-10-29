@@ -963,6 +963,12 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
         // bind. Otherwise subsequent draws can accidentally reuse a previous
         // shader while the optimized rebuild is still missing.
         const bool use_optimized = optimized_ready.load(std::memory_order_acquire);
+#ifdef PS5_NATIVE
+        // Reset BEFORE any early failure. Availability observed by a later
+        // Draw callback is insufficient: its ConfigureDraw may already have
+        // returned without binding anything when the rebuild was still cold.
+        worker_draw_bind_valid = false;
+#endif
         if (!pipeline && !use_optimized) {
             ::Eden::Performance::RecordGraphicsDrawDrop(
                 ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
@@ -975,6 +981,12 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
             cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 use_optimized ? *optimized_pipeline : *pipeline);
         }
+#ifdef PS5_NATIVE
+        // This callback precedes its Draw/DrawIndirect in scheduler FIFO.
+        // A late optimized-ready signal cannot retroactively validate an
+        // earlier skipped BindPipeline.
+        worker_draw_bind_valid = true;
+#endif
         cmdbuf.PushConstants(*pipeline_layout, VK_SHADER_STAGE_ALL_GRAPHICS,
                              RESCALING_LAYOUT_WORDS_OFFSET, sizeof(rescaling_data),
                              rescaling_data.data());
