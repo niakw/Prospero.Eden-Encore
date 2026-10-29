@@ -4419,6 +4419,35 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    Tegra::Memory::GpuGuestMemory<u8, Tegra::Memory::GuestMemoryFlags::UnsafeRead> swizzle_data",
     "F07 avoid zero-filling native asynchronous texture decode input")
 
+# F07: Vulkan forbids VkBufferCopy.size==0. Filter empty regions in
+# one pass before recording native GPU uploads; preserve relative copy order
+# and the standalone barriers if the entire batch was filtered out.
+apply_reviewed_delta("vk_buffer_cache_cost.cpp",
+    "    boost::container::small_vector<VkBufferCopy, 8> vk_copies(copies.size());\n"
+    "    std::ranges::transform(copies, vk_copies.begin(), MakeBufferCopy);",
+    "#ifdef PS5_NATIVE\n"
+    "    // Zero-sized VkBufferCopy regions are invalid Vulkan commands. Build the\n"
+    "    // batch in one pass, retaining order and the original barrier contract.\n"
+    "    boost::container::small_vector<VkBufferCopy, 8> vk_copies;\n"
+    "    vk_copies.reserve(copies.size());\n"
+    "    for (const auto& copy : copies) {\n"
+    "        if (copy.size != 0) {\n"
+    "            vk_copies.push_back(MakeBufferCopy(copy));\n"
+    "        }\n"
+    "    }\n"
+    "    if (vk_copies.empty()) {\n"
+    "        if (barrier) {\n"
+    "            PreCopyBarrier();\n"
+    "            PostCopyBarrier();\n"
+    "        }\n"
+    "        return;\n"
+    "    }\n"
+    "#else\n"
+    "    boost::container::small_vector<VkBufferCopy, 8> vk_copies(copies.size());\n"
+    "    std::ranges::transform(copies, vk_copies.begin(), MakeBufferCopy);\n"
+    "#endif",
+    "F07 reject zero-sized Vulkan buffer copy regions")
+
 # F07: mapped staging without a real Vulkan buffer is invalid even when
 # its CPU span is large enough. Reject buffer-cache DMA/index/readback uploads
 # before recording GPU copies; return rejected deferred staging to the pool.
