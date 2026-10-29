@@ -2034,6 +2034,14 @@ VkImage TextureCacheRuntime::AcquireMsaaScratchImage(const VkImageCreateInfo& im
         .tick = (std::numeric_limits<u64>::max)(),
         .unused_frames = 0,
     };
+#ifdef PS5_NATIVE
+    // Some allocation backends report failure as an empty Vulkan image
+    // without throwing. Never cache it or submit a null VkImage as MSAA
+    // resolve scratch; the caller must take its existing failure path.
+    if (!scratch.image) {
+        throw std::bad_alloc{};
+    }
+#endif
     const VkImage handle = *scratch.image;
     msaa_scratch_images.push_back(std::move(scratch));
     return handle;
