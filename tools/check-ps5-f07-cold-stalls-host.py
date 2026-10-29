@@ -31,8 +31,13 @@ names = (
     ("TextureUploadContents", "texture_upload_contents"),
     ("TextureUploadBarrier", "texture_upload_barrier"),
 )
+enum_start = perf.index("enum class CachePhase : unsigned {")
+enum_end = perf.index("};", enum_start)
+enum_body = perf[enum_start:enum_end]
 for enum_name, log_name in names:
-    assert perf.count(enum_name) == 1, enum_name
+    # Later keyed-miss accounting legitimately refers to a phase again.
+    # Count only enum DECLARATIONS, not usages in the phase switch.
+    assert enum_body.count(enum_name) == 1, enum_name
     assert report.count('"' + log_name + '"') == 1, log_name
     assert enum_name in gen, enum_name
 
