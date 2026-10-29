@@ -364,6 +364,9 @@ struct Memory {
 struct Cache {
     Memory* gpu_memory;
     void Upload(Image& image, std::span<u8> mapped_span) {
+        // The historical desktop read uses the pooled span, not image size.
+        // Retain the parameter for the native size-bound source extraction.
+        static_cast<void>(image);
         GPUVAddr gpu_addr=0x1000;
 __ACTUAL_READ__
     }
