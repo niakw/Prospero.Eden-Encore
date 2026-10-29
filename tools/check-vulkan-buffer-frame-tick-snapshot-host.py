@@ -23,6 +23,9 @@ modified=extract(ACTIVE)
 assert "scheduler.IsFree(it->LastUsageTick())" in original
 assert "scheduler.GetMasterSemaphore().KnownGpuTick()" in modified
 assert "scheduler.IsFree(it->LastUsageTick())" not in modified
+assert "#ifdef PS5_NATIVE\n    // No tracked buffers" in modified
+assert modified.index("if (slot_buffers.begin() == slot_buffers.end())") < modified.index("KnownGpuTick()")
+assert "No tracked buffers: avoid even the GPU-completion semaphore snapshot" in GEN
 cpp=r"""
 #include <array>
 #include <cassert>
@@ -69,7 +72,13 @@ int main(){
   assert(sem.reads==2*FRAME_READS);
   buffers.clear();
   cache.TickFrame(buffers);
-  assert(sem.reads==EMPTY_READS);
+  assert(sem.reads==
+#ifdef PS5_NATIVE
+         EMPTY_NATIVE_READS
+#else
+         EMPTY_READS
+#endif
+  );
   std::puts("ENCORE_BUFFER_FRAME_TICK_SNAPSHOT_PASS");
 }
 """
@@ -77,12 +86,21 @@ compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("
 assert compiler
 with tempfile.TemporaryDirectory(prefix="eden-tick-snapshot-") as d:
     folder=Path(d)
-    for name,body,reads,empty in (("pinned",original,6,12),("native",modified,1,3)):
+    for name,body,reads,empty,native_empty,ps5 in (
+        ("pinned",original,6,12,12,False),
+        ("maintained-desktop",modified,1,3,3,False),
+        ("maintained-ps5",modified,1,3,2,True),
+    ):
         src=folder/(name+".cpp")
         binary=folder/name
-        src.write_text(cpp.replace("INJECT",body).replace("FRAME_READS",str(reads)).replace("EMPTY_READS",str(empty)))
+        program=(cpp.replace("INJECT",body)
+                    .replace("EMPTY_NATIVE_READS",str(native_empty))
+                    .replace("FRAME_READS",str(reads))
+                    .replace("EMPTY_READS",str(empty)))
+        src.write_text(program)
         subprocess.run([compiler,"-std=c++20","-O1","-g","-Wall","-Wextra","-Werror",
                         "-fsanitize=address,undefined","-fno-sanitize-recover=all",
+                        *(["-DPS5_NATIVE=1"] if ps5 else []),
                         str(src),"-o",str(binary)],check=True,timeout=90)
         subprocess.run([str(binary)],check=True,timeout=30)
-print("VULKAN_BUFFER_TICK_SNAPSHOT_HOST_PASS; PS5 FPS unmeasured")
+print("VULKAN_BUFFER_TICK_SNAPSHOT_HOST_PASS no_empty_ps5_poll=1 desktop_unchanged=1; PS5 FPS unmeasured")
