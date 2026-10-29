@@ -3157,7 +3157,20 @@ ImageId TextureCache<P>::FindDMAImage(const ImageInfo& info, GPUVAddr gpu_addr) 
         }
     }
     ImageId image_id{};
+#ifdef PS5_NATIVE
+    // The DMA match scan already visits every candidate under the cache lock.
+    // Keep the freshest image as it arrives; avoid an inline vector and a
+    // second max_element pass on a HUD/texture DMA lookup. Equal ticks retain
+    // the FIRST candidate, exactly as max_element does.
+    const auto consider_candidate = [&](ImageId id, const ImageBase& image) {
+        if (!image_id ||
+            slot_images[image_id].modification_tick < image.modification_tick) {
+            image_id = id;
+        }
+    };
+#else
     boost::container::small_vector<ImageId, 8> image_ids;
+#endif
     const auto lambda = [&](ImageId existing_image_id, ImageBase& existing_image) {
         if (True(existing_image.flags & ImageFlagBits::Remapped)) {
             return false;
@@ -3170,18 +3183,29 @@ ImageId TextureCache<P>::FindDMAImage(const ImageInfo& info, GPUVAddr gpu_addr) 
                 existing.pitch == info.pitch &&
                 IsPitchLinearSameSize(existing, info, strict_size) &&
                 IsViewCompatible(existing.format, info.format, false, true)) {
+#ifdef PS5_NATIVE
+                consider_candidate(existing_image_id, existing_image);
+#else
                 image_id = existing_image_id;
                 image_ids.push_back(existing_image_id);
+#endif
                 return true;
             }
         } else if (IsSubCopy(info, existing_image, gpu_addr)) {
+#ifdef PS5_NATIVE
+            consider_candidate(existing_image_id, existing_image);
+#else
             image_id = existing_image_id;
             image_ids.push_back(existing_image_id);
+#endif
             return true;
         }
         return false;
     };
     ForEachImageInRegion(*cpu_addr, CalculateGuestSizeInBytes(info), lambda);
+#ifdef PS5_NATIVE
+    return image_id;
+#else
     if (image_ids.size() <= 1) [[likely]] {
         return image_id;
     }
@@ -3191,6 +3215,7 @@ ImageId TextureCache<P>::FindDMAImage(const ImageInfo& info, GPUVAddr gpu_addr) 
         return image_a.modification_tick < image_b.modification_tick;
     };
     return *std::ranges::max_element(image_ids, image_ids_compare);
+#endif
 }
 
 template <class P>

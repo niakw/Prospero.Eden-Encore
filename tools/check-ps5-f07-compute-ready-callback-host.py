@@ -55,6 +55,9 @@ inline std::atomic<bool> detailed_gpu_profile{true};
 inline std::atomic<unsigned> measured_waits{0};
 inline std::atomic<unsigned> completed_traces{0};
 struct PipelineWaitTrace {
+    // The real V01 trace measures the lock phase; this fixture only
+    // verifies release/acquire publication and the optional early exit.
+    void MarkLockAcquired() noexcept {}
     void Complete(const char*, std::uint64_t, bool) {
         completed_traces.fetch_add(1, std::memory_order_relaxed);
     }
