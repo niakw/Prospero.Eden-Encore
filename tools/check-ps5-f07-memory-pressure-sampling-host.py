@@ -209,3 +209,82 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-buffer-history-") as d:
             ran=subprocess.run([str(out)],capture_output=True,text=True,timeout=10)
             assert ran.returncode==0,(native,opt,ran.stderr[-3200:])
 print("F07_UNIFORM_CACHE_ROLLING_WINDOW_PASS O0=1 O2=1 native=1 desktop=1 shifts=2 skip_decision=1")
+
+
+# The selected native BufferCache GC age must not wrap at launch. The source-
+# extracted method is executed in a mocked LRU with both pressure modes.
+gc_begin=buffer_src.index("void BufferCache<P>::RunGarbageCollector() {")
+gc_end=buffer_src.index("\ntemplate <class P>",gc_begin+1)
+gc_method=buffer_src[gc_begin:gc_end]
+assert "if (frame_tick < ticks_to_destroy)" in gc_method
+assert gc_method.index("if (frame_tick < ticks_to_destroy)") < gc_method.index("ForEachItemBelow(")
+gc_cpp=r"""
+#include <cassert>
+#include <cstdint>
+#include <functional>
+#include <vector>
+using u64=std::uint64_t;
+using BufferId=int;
+struct LruCache {
+    int calls{};
+    u64 threshold{};
+    template<class Func>void ForEachItemBelow(u64 before,Func func) {
+        ++calls;
+        threshold=before;
+        if (before>0) func(1);
+    }
+};
+template<class P>struct BufferCache {
+    u64 frame_tick{},total_used_memory{},critical_memory{100};
+    int downloads{},deletions{};
+    struct Buffer { int value{}; };
+    std::vector<Buffer> slot_buffers{{},{42}};
+    LruCache lru_cache{};
+    void DownloadBufferMemory(Buffer& buffer){assert(buffer.value==42);++downloads;}
+    void DeleteBuffer(BufferId id){assert(id==1);++deletions;}
+    void RunGarbageCollector();
+};
+""" + "template<class P>\n" + gc_method + r"""
+struct Mock{};
+int main(){
+    BufferCache<Mock> b;
+    b.total_used_memory=101;
+    for(u64 frame:{u64{0},u64{1},u64{59}}){
+        b.frame_tick=frame;b.RunGarbageCollector();
+    }
+#ifdef PS5_NATIVE
+    assert(b.lru_cache.calls==0 && b.downloads==0 && b.deletions==0);
+#else
+    assert(b.lru_cache.calls==3 && b.downloads==3 && b.deletions==3);
+#endif
+    b.frame_tick=60;b.RunGarbageCollector();
+    assert(b.lru_cache.threshold==0);
+    b.frame_tick=61;b.RunGarbageCollector();
+    assert(b.lru_cache.threshold==1);
+    b.total_used_memory=50; // ordinary GC requires 120 frames.
+    BufferCache<Mock> low;
+    low.total_used_memory=50;
+    low.frame_tick=119;low.RunGarbageCollector();
+#ifdef PS5_NATIVE
+    assert(low.lru_cache.calls==0);
+#else
+    assert(low.lru_cache.calls==1);
+#endif
+    low.frame_tick=120;low.RunGarbageCollector();
+    assert(low.lru_cache.threshold==0);
+    low.frame_tick=121;low.RunGarbageCollector();
+    assert(low.lru_cache.threshold==1);
+}
+"""
+with tempfile.TemporaryDirectory(prefix="eden-f07-buffer-gc-age-") as d:
+    src=Path(d)/"gc.cpp";src.write_text(gc_cpp)
+    for native in (False,True):
+        for opt in ("-O0","-O2"):
+            out=Path(d)/(("native" if native else "desktop")+opt[1:])
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror","-fsanitize=undefined",
+                 "-fno-sanitize-recover=all",*(['-DPS5_NATIVE=1'] if native else []),str(src),"-o",str(out)]
+            built=subprocess.run(cmd,capture_output=True,text=True,timeout=40)
+            assert built.returncode==0,(native,opt,built.stderr[-3200:])
+            ran=subprocess.run([str(out)],capture_output=True,text=True,timeout=10)
+            assert ran.returncode==0,(native,opt,ran.stderr[-3200:])
+print("F07_BUFFER_GC_EARLY_AGE_PASS native_no_underflow=1 desktop_original=1 normal=120 high_pressure=60 O0=1 O2=1")
