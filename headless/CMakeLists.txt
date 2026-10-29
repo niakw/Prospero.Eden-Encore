@@ -452,6 +452,10 @@ if(PS5_NATIVE)
     list(FILTER jit_sources EXCLUDE REGEX "(^|/)a32_interface\\.cpp$")
     set_property(TARGET dynarmic PROPERTY SOURCES "${jit_sources}")
     target_sources(dynarmic PRIVATE "${PORT_BUILD_DIR}/a32_interface.cpp")
+    if(EDEN_DEV_PROFILE)
+        set_property(SOURCE "${PORT_BUILD_DIR}/a32_interface.cpp"
+            TARGET_DIRECTORY dynarmic APPEND PROPERTY COMPILE_DEFINITIONS "EDEN_JIT_A32_DEV_PROFILE=1")
+    endif()
 endif()
 
 # Dynarmic keeps its Xbyak dependency PRIVATE; the PS5-specific core
