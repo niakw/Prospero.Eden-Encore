@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""C04: compile the real PS5/desktop layer-count resize decision.
+
+No GPU hardware, PS5 FPS, or on-screen pixel freshness is asserted here.
+"""
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+
+ROOT = Path(__file__).resolve().parents[1]
+blit = (ROOT / "vendor/encore-active/eden-vulkan/vulkan_blit_screen.cpp").read_text()
+header = (ROOT / "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_blit_screen.h").read_text()
+generator = (ROOT / "tools/prepare-vulkan-port.py").read_text()
+fast = (ROOT / ".github/workflows/encore-core-fast-gate.yml").read_text()
+full = (ROOT / ".github/workflows/encore-core-preflight.yml").read_text()
+command = "python3 -B tools/check-ps5-f07-present-layer-growth-host.py"
+assert command in fast and command in full
+assert "std::list<Layer> layers{};" in header
+assert "F07 C04 append-only presentation layers without device idle" in generator
+assert blit.count("    if (!resource_update_required && layers.size() < framebuffers.size()) {") == 1
+assert blit.index("    if (resource_update_required) {\n        WaitIdle(device);") < blit.index(
+    "    if (!resource_update_required && layers.size() < framebuffers.size()) {"
+)
+start = blit.index("    // Presentation layers live in std::list:")
+start = blit.rfind("#ifdef PS5_NATIVE", 0, start)
+end = blit.index("\n    window_adapt->Draw(", start)
+block = blit[start:end]
+assert block.count("layers.emplace_back(device, memory_allocator, scheduler, device_memory, image_count,") == 3
+assert "if (!resource_update_required && layers.size() < framebuffers.size())" in block
+assert "if (!layers.empty())" not in block
+assert "if (!resource_update_required && !layers.empty())" in block
+assert block.count("WaitIdle(device);") == 1
+assert "#else\n    if (layers.size() != framebuffers.size()) {" in block
+assert block.rstrip().endswith("#endif")
+
+code = r"""
+#include <cassert>
+#include <cstddef>
+#include <cstdio>
+#include <list>
+#include <vector>
+struct Device {};
+struct Allocator {};
+struct Scheduler {};
+struct Memory {};
+struct WindowSize {};
+struct Filters {};
+struct Adapt { int GetDescriptorSetLayout() const {return 7;} };
+struct Layer {
+    static inline unsigned made=0;
+    static inline unsigned destroyed=0;
+    unsigned generation{};
+    Layer(const Device&,Allocator&,Scheduler&,Memory&,std::size_t,
+          WindowSize,int,Filters&) : generation(++made) {}
+    Layer(const Layer&)=delete;
+    Layer& operator=(const Layer&)=delete;
+    ~Layer() {++destroyed;}
+};
+struct Screen {
+    Device device{};
+    Allocator memory_allocator{};
+    Scheduler scheduler{};
+    Memory device_memory{};
+    std::size_t image_count{3};
+    Filters filters{};
+    Adapt adapt{};
+    Adapt* window_adapt{&adapt};
+    std::list<Layer> layers{};
+    unsigned idle_calls{};
+    void WaitIdle(const Device&) {++idle_calls;}
+    void Apply(std::size_t n, bool resource_update_required) {
+        std::vector<int> framebuffers(n);
+        const WindowSize window_size{};
+__ACTUAL_DECISION__
+    }
+};
+int main() {
+    Screen b;
+    b.Apply(1,false);
+    assert(b.layers.size()==1 && b.idle_calls==0 && Layer::made==1);
+    const Layer* const first=&b.layers.front();
+    const unsigned generation=first->generation;
+    b.Apply(3,false);
+    assert(b.layers.size()==3);
+#ifdef PS5_NATIVE
+    assert(b.idle_calls==0 && Layer::made==3 && Layer::destroyed==0);
+    assert(&b.layers.front()==first && b.layers.front().generation==generation);
+#else
+    assert(b.idle_calls==0 && Layer::made==4 && Layer::destroyed==1);
+#endif
+    b.Apply(3,false);
+#ifdef PS5_NATIVE
+    assert(b.idle_calls==0 && Layer::made==3 && Layer::destroyed==0);
+#else
+    assert(b.idle_calls==0 && Layer::made==4 && Layer::destroyed==1);
+#endif
+    b.Apply(1,false);
+    assert(b.layers.size()==1);
+#ifdef PS5_NATIVE
+    assert(b.idle_calls==1 && Layer::made==4 && Layer::destroyed==3);
+#else
+    assert(b.idle_calls==0 && Layer::made==5 && Layer::destroyed==4);
+#endif
+    b.Apply(1,true);
+#ifdef PS5_NATIVE
+    // Caller already waited before a settings/descriptor-layout change.
+    // Rebuild exactly once even with unchanged frame count, not twice-idle.
+    assert(b.idle_calls==1 && Layer::made==5 && Layer::destroyed==4);
+#else
+    assert(b.idle_calls==0 && Layer::made==5 && Layer::destroyed==4);
+#endif
+    std::puts("F07_C04_LAYER_GROWTH_PASS");
+}
+""".replace("__ACTUAL_DECISION__",block)
+compiler=shutil.which("clang++") or shutil.which("g++")
+assert compiler, "C++20 compiler required"
+with tempfile.TemporaryDirectory(prefix="f07-c04-layer-growth-") as d:
+    source=Path(d)/"growth.cpp"
+    source.write_text(code)
+    for native in (False,True):
+        for opt in ("-O0","-O2"):
+            executable=Path(d)/("growth-"+str(int(native))+opt)
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                 "-fsanitize=undefined","-fno-sanitize-recover=all",
+                 *(["-DPS5_NATIVE=1"] if native else []),
+                 str(source),"-o",str(executable)]
+            built=subprocess.run(cmd,capture_output=True,text=True,timeout=60)
+            assert built.returncode==0,(native,opt,built.stderr[-6000:])
+            result=subprocess.run([str(executable)],capture_output=True,text=True,timeout=20)
+            assert result.returncode==0,(native,opt,result.stderr[-4000:])
+            assert "F07_C04_LAYER_GROWTH_PASS" in result.stdout
+            print("F07_C04_LAYER_GROWTH_PASS native="+str(int(native)),opt)
+print("F07_C04_NO_GPU_OR_CONSOLE_FRAME_PROOF")
