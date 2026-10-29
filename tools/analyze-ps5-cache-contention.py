@@ -28,7 +28,14 @@ WORKER_PHASES = frozenset(("graphics_pipeline_wait", "compute_pipeline_wait"))
 # scheduler.Finish executed with detailed profiling enabled. One is outside
 # the cache pair (preflight), the other is the under-lock exhaustion fallback.
 RING_PHASES = frozenset(("descriptor_ring_finish", "descriptor_ring_preflight"))
-PROFILE_PHASES = GPU_OWNER_PHASES | SHADER_PHASES | WORKER_PHASES | RING_PHASES
+# 1-in-16 *frame* samples from RasterizerVulkan::TickFrame, distinct from
+# 1-in-16 draw/compute pair samples. Wait and held timers are disjoint.
+FRAME_OWNER_PHASES = frozenset((
+    "frame_texture_wait", "frame_texture_held",
+    "frame_buffer_wait", "frame_buffer_held",
+))
+PROFILE_PHASES = (GPU_OWNER_PHASES | SHADER_PHASES | WORKER_PHASES |
+                  RING_PHASES | FRAME_OWNER_PHASES)
 
 def values(line: str) -> dict[str, float]:
     return {key: float(value) for key, value in FIELDS.findall(line)}
@@ -218,6 +225,10 @@ def report(rows: list[dict[str, float]]) -> str:
         out.append(" ".join(parts))
     selected_phases_report(SHADER_PHASES, "shader_phase_samples")
     selected_phases_report(WORKER_PHASES, "worker_wait_samples")
+    # A complete frame-housekeeping sample distinguishes time waiting for
+    # each cache mutex from time executing TickFrame while holding it.
+    # Missing phases must not be interpreted as zero contention.
+    selected_phases_report(FRAME_OWNER_PHASES, "frame_cache_owner_samples")
     # Preserve zero measured fallback invocations. Never convert an absent
     # counter to zero or an in-lock fallback into preflight time.
     ring_rows = [
@@ -246,9 +257,14 @@ def report(rows: list[dict[str, float]]) -> str:
                "shader translation, GPU completion or a specific draw.")
     out.append("NOTE: shader CFG/IR/SPIR-V/module counters have no shader-miss ID; "
                "these window sums are NOT a causal attribution to one cold miss.")
-    out.append("NOTE: GPU cache-owner phases sample 1-in-16 draws and nest within "
+    out.append("NOTE: GPU cache-owner draw phases sample 1-in-16 draws and nest within "
                "their parent operation; they are NOT all cache lock holders "
-               "or total frame elapsed time.")
+               "or total frame elapsed time (sample 1-in-16 draws).")
+    out.append("NOTE: frame_texture/frame_buffer wait and held phases sample "
+               "1-in-16 completed GPU frames only with Detailed Logging; "
+               "wait is outside the mutex, held is inside it. Their window "
+               "samples are NOT every frame, a full-frame duration, or proof "
+               "that a specific HUD update stalled.")
     out.append("NOTE: per-core JIT CPU time may overlap between cores; its maximum "
                "is NOT renderer wall time or the cause of a presentation gap.")
     out.append("NOTE: JIT and cache times aggregate many guest threads across "
