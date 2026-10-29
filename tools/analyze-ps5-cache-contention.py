@@ -16,6 +16,15 @@ import statistics
 FIELDS = re.compile(r"\b([A-Za-z][A-Za-z_0-9]*)=(-?[0-9]+(?:\.[0-9]+)?)")
 PHASE_NAME = re.compile(r"\bphase=([a-z_]+)\b")
 GPU_OWNER_PHASES = frozenset(("pair_wait", "pair_held", "compute_pair_wait", "compute_pair_held"))
+# These existing counters are *per reporting window*, not per shader hash.
+# Shader phases are nested in pipeline creation: never sum as wall time.
+SHADER_PHASES = frozenset((
+    "graphics_pipeline_create", "compute_pipeline_create",
+    "graphics_shader_environment", "shader_pool_reset", "shader_cfg",
+    "shader_ir", "shader_spirv", "shader_module",
+))
+WORKER_PHASES = frozenset(("graphics_pipeline_wait", "compute_pipeline_wait"))
+PROFILE_PHASES = GPU_OWNER_PHASES | SHADER_PHASES | WORKER_PHASES
 
 def values(line: str) -> dict[str, float]:
     return {key: float(value) for key, value in FIELDS.findall(line)}
@@ -86,7 +95,7 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
             phase = name.group(1) if name else None
             # These are 1-in-16 GPU-owner samples, not cumulative wall time.
             # ReportGpuThread emits them after the pressure/JIT quartet.
-            if phase not in GPU_OWNER_PHASES:
+            if phase not in PROFILE_PHASES:
                 continue
             if (snapshot.get("frame") != phase_row["total"]
                     or phase in seen_phases
@@ -171,6 +180,34 @@ def report(rows: list[dict[str, float]]) -> str:
         )
     else:
         out.append(f"gpu_cache_owner_samples: complete=0/{len(rows)} (not measured or incomplete)")
+    # The reporter prints all selected source phase snapshots consecutively.
+    # Partial logs must not silently turn missing stages/waits into zero costs.
+    def selected_phases_report(phases: frozenset[str], label: str) -> None:
+        complete = [
+            row for row in rows
+            if all(f"gpu_{phase}_samples" in row for phase in phases)
+        ]
+        if not complete:
+            out.append(f"{label}: complete=0/{len(rows)} (not measured or incomplete)")
+            return
+        parts = [f"{label}: complete={len(complete)}/{len(rows)}"]
+        for phase in sorted(phases):
+            parts.append(
+                f"{phase}_sample_ms="
+                f"{sum(row[f'gpu_{phase}_sample_ms'] for row in complete):.3f}"
+            )
+            parts.append(
+                f"{phase}_samples="
+                f"{sum(row[f'gpu_{phase}_samples'] for row in complete):.0f}"
+            )
+        out.append(" ".join(parts))
+    selected_phases_report(SHADER_PHASES, "shader_phase_samples")
+    selected_phases_report(WORKER_PHASES, "worker_wait_samples")
+    out.append("NOTE: graphics/compute pipeline waits are callbacks executed by "
+               "the Vulkan command worker; they do NOT measure GPU-owner "
+               "shader translation, GPU completion or a specific draw.")
+    out.append("NOTE: shader CFG/IR/SPIR-V/module counters have no shader-miss ID; "
+               "these window sums are NOT a causal attribution to one cold miss.")
     out.append("NOTE: GPU cache-owner phases sample 1-in-16 draws and nest within "
                "their parent operation; they are NOT all cache lock holders "
                "or total frame elapsed time.")
