@@ -69,7 +69,7 @@ struct Screen {
     std::list<Layer> layers{};
     unsigned idle_calls{};
     void WaitIdle(const Device&) {++idle_calls;}
-    void Apply(std::size_t n, bool resource_update_required) {
+    void Apply(std::size_t n, [[maybe_unused]] bool resource_update_required) {
         std::vector<int> framebuffers(n);
         const WindowSize window_size{};
 __ACTUAL_DECISION__
@@ -79,8 +79,8 @@ int main() {
     Screen b;
     b.Apply(1,false);
     assert(b.layers.size()==1 && b.idle_calls==0 && Layer::made==1);
-    const Layer* const first=&b.layers.front();
-    const unsigned generation=first->generation;
+    [[maybe_unused]] const Layer* const first=&b.layers.front();
+    [[maybe_unused]] const unsigned generation=first->generation;
     b.Apply(3,false);
     assert(b.layers.size()==3);
 #ifdef PS5_NATIVE
