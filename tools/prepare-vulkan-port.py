@@ -5337,6 +5337,40 @@ apply_reviewed_delta(
     "F07 record exact graphics bounded retry CPU cost")
 
 
+# F07 V01: measure only genuinely blocked FIFO pipeline callbacks, after
+# acquiring build completion. Never log/clock a hot draw or move a Vulkan wait.
+# This is worker wall-time, not the duration of a guest presentation frame.
+apply_reviewed_delta(
+    "vk_graphics_pipeline_cost.cpp",
+    "            if (is_built.load(std::memory_order_acquire)) return;\n            auto timer = Eden::Performance::VulkanTimer(16);", "            if (is_built.load(std::memory_order_acquire)) return;\n#ifdef PS5_NATIVE\n            ::Eden::Performance::PipelineWaitTrace keyed_wait;\n#endif\n            auto timer = Eden::Performance::VulkanTimer(16);",
+    "F07 keyed graphics worker-wait diagnostic admission")
+apply_reviewed_delta(
+    "vk_compute_pipeline_cost.cpp",
+    "            if (is_built.load(std::memory_order_acquire)) return;\n            auto timer = Eden::Performance::VulkanTimer(16);", "            if (is_built.load(std::memory_order_acquire)) return;\n#ifdef PS5_NATIVE\n            ::Eden::Performance::PipelineWaitTrace keyed_wait;\n#endif\n            auto timer = Eden::Performance::VulkanTimer(16);",
+    "F07 keyed compute worker-wait diagnostic admission")
+apply_reviewed_delta(
+    "vk_graphics_pipeline_cost.cpp",
+    "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n        });", "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n#ifdef PS5_NATIVE\n            lock.unlock();\n            pipeline_ready_wait.Stop();\n            keyed_wait.Complete(\"graphics\", key.Hash(), CanExecuteDraw());\n#endif\n        });",
+    "F07 keyed graphics worker-wait after mutex release")
+apply_reviewed_delta(
+    "vk_compute_pipeline_cost.cpp",
+    "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n        });", "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n#ifdef PS5_NATIVE\n            lock.unlock();\n            pipeline_ready_wait.Stop();\n            keyed_wait.Complete(\"compute\", diagnostic_cache_key_hash, IsBound());\n#endif\n        });",
+    "F07 keyed compute worker-wait after mutex release")
+apply_reviewed_delta(
+    "include/video_core/renderer_vulkan/vk_compute_pipeline.h",
+    "    void PreflightDescriptorScratch();\n    [[nodiscard]] bool HasDescriptorEntries() const noexcept {",
+    "    void PreflightDescriptorScratch();\n    // Set before publication from PipelineCache; read by the FIFO GPU callback.\n    void SetDiagnosticCacheKeyHash(u64 hash) noexcept { diagnostic_cache_key_hash = hash; }\n    [[nodiscard]] bool HasDescriptorEntries() const noexcept {",
+    "F07 exact compute key setter")
+apply_reviewed_delta(
+    "include/video_core/renderer_vulkan/vk_compute_pipeline.h",
+    "    u64 shader_hash{};\n    u32 num_descriptor_entries{};",
+    "    u64 shader_hash{};\n#ifdef PS5_NATIVE\n    u64 diagnostic_cache_key_hash{};\n#endif\n    u32 num_descriptor_entries{};",
+    "F07 exact compute key storage")
+apply_reviewed_delta(
+    "vk_pipeline_cache_cost.cpp",
+    "    return std::make_unique<ComputePipeline>(device, scheduler, vulkan_pipeline_cache, descriptor_pool,\n                                             guest_descriptor_queue, descriptor_buffer_ring,\n                                             thread_worker, statistics,\n                                             &shader_notify, program.info, std::move(spv_module),\n                                             key.unique_hash);", "#ifdef PS5_NATIVE\n    auto result = std::make_unique<ComputePipeline>(device, scheduler, vulkan_pipeline_cache, descriptor_pool,\n                                                    guest_descriptor_queue, descriptor_buffer_ring,\n                                                    thread_worker, statistics,\n                                                    &shader_notify, program.info, std::move(spv_module),\n                                                    key.unique_hash);\n    // The shader stage hash is not the compute CACHE key: include workgroup\n    // sizes and shared memory for correlation with S01's exact key.Hash().\n    result->SetDiagnosticCacheKeyHash(key.Hash());\n    return result;\n#else\n    return std::make_unique<ComputePipeline>(device, scheduler, vulkan_pipeline_cache, descriptor_pool,\n                                             guest_descriptor_queue, descriptor_buffer_ring,\n                                             thread_worker, statistics,\n                                             &shader_notify, program.info, std::move(spv_module),\n                                             key.unique_hash);\n#endif",
+    "F07 publish diagnostic compute cache key before first Configure")
+
 # F07: Vulkan worker callbacks are FIFO. Do not confuse a pipeline variant
 # published AFTER ConfigureDraw with one that ConfigureDraw actually bound.
 # The four raster Draw/DrawIndirect callbacks observe this per-worker latch.

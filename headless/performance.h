@@ -279,6 +279,22 @@ private:
     CachePhaseTotal* stats{};
     std::chrono::nanoseconds started{};
 };
+// V01: one diagnostic-only sample per genuinely blocked Vulkan pipeline.
+// This is worker wall time (mutex acquisition + condition wait), NOT shader CPU
+// translation or a presentation-frame stall. No logging on hot draw callbacks.
+struct PipelineWaitTrace {
+    const bool enabled{detailed_gpu_profile.load(std::memory_order_relaxed)};
+    const std::chrono::steady_clock::time_point started{
+        enabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{}};
+    void Complete(const char* kind, std::uint64_t cache_key, bool usable) const {
+        if (!enabled) return;
+        const auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now() - started).count();
+        std::printf("EDEN_VULKAN_PIPELINE_WAIT kind=%s key=%016llx wait_ns=%llu usable=%u\n",
+                    kind, static_cast<unsigned long long>(cache_key),
+                    static_cast<unsigned long long>(elapsed), unsigned(usable));
+    }
+};
 // R361: Count draws rejected before recording, including hidden HUD/pitch
 // candidates. Only increment on an actual rejected draw with diagnostics on.
 // In particular no atomic writes are added to the normal successful draw path.
