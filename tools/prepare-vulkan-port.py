@@ -4510,6 +4510,22 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    bool has_blacklisted = false;",
     "F07 bypass draw-local texture memo on empty image descriptor batches")
 
+# F07 P0.4: no pending async HUD decodes means no frame-local staging,
+# semaphore/barrier or completion scanning. Keep desktop source unchanged.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "void TextureCache<P>::TickAsyncDecode() {\n"
+    "    bool has_uploads{};",
+    "void TextureCache<P>::TickAsyncDecode() {\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // Usually no async decode is pending. Skip frame-local upload tracking\n"
+    "    // and completion machinery entirely until the worker queues a context.\n"
+    "    if (async_decodes.empty()) {\n"
+    "        return;\n"
+    "    }\n"
+    "#endif\n"
+    "    bool has_uploads{};",
+    "F07 skip idle native async texture decode completion machinery")
+
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
 # extent fit checks, and reject unknown zero-sized block ratios early.

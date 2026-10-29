@@ -24,6 +24,10 @@ old_method = pinned[pinned.index(start):pinned.index(end, pinned.index(start))]
 assert "lock.unlock();" not in old_method  # original reproducible lifetime hazard
 assert method.count("lock.unlock();") == 4
 assert "kMaxCompletedDecodesPerTick = 4" in method
+assert "F07 skip idle native async texture decode completion machinery" in generator
+assert "if (async_decodes.empty()) {" in method
+assert method.index("if (async_decodes.empty()) {") < method.index("std::array<ImageId, kMaxCompletedDecodesPerTick> submitted_images{}")
+assert method.index("#ifdef PS5_NATIVE") < method.index("if (async_decodes.empty()) {") < method.index("#endif")
 assert "completed_decodes == kMaxCompletedDecodesPerTick" in method
 assert "kMaxRetiredDecodesPerTick = 16" in method
 assert "retired_decodes == kMaxRetiredDecodesPerTick" in method
@@ -157,6 +161,15 @@ template<class P>struct TextureCache{
 };
 """ + method + r"""
 int main(){
+    // Idle frames must not touch decoder mutexes, staging or visibility
+    // barriers, even when the texture cache still owns resident images.
+    TextureCache<int> idle;
+    idle.slot_images.resize(1);
+    const unsigned idle_locks = CheckedMutex::lock_calls;
+    idle.TickAsyncDecode();
+    idle.TickAsyncDecode();
+    assert(idle.runtime.staging_calls == 0 && idle.runtime.barriers == 0);
+    assert(CheckedMutex::lock_calls == idle_locks);
     // The map can expose a full CPU span but contain no Vulkan VkBuffer.
     // Such an upload must keep CpuModified for the next refresh.
     TextureCache<int> invalid_handle;
