@@ -5370,6 +5370,16 @@ apply_reviewed_delta(
     "vk_compute_pipeline_cost.cpp",
     "            std::unique_lock lock{build_mutex};\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n        });", "#ifndef PS5_NATIVE\n            std::unique_lock lock{build_mutex};\n#endif\n            build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });\n#ifdef PS5_NATIVE\n            lock.unlock();\n            pipeline_ready_wait.Stop();\n            timer.reset(); // Exclude diagnostic print I/O from VulkanTimer(16).\n            keyed_wait.Complete(\"compute\", diagnostic_cache_key_hash, IsBound());\n#endif\n        });",
     "F07 keyed compute worker-wait after mutex release")
+# V01: align the keyed worker-wait timer's stated scope with the
+# actual GPU-owner mutex and condvar latency. The timer is completed only
+# after a genuinely unfinished builder; a racing ready build stays quiet.
+for pipeline_file in ("vk_graphics_pipeline_cost.cpp", "vk_compute_pipeline_cost.cpp"):
+    apply_reviewed_delta(
+        pipeline_file,
+        "            std::unique_lock lock{build_mutex};\n            if (is_built.load(std::memory_order_acquire)) return;\n            ::Eden::Performance::PipelineWaitTrace keyed_wait;",
+        "            // Include contention acquiring build_mutex in the keyed\n            // diagnostic; a genuinely blocked condvar wait must not omit\n            // the GPU worker's preceding mutex delay.\n            ::Eden::Performance::PipelineWaitTrace keyed_wait;\n            std::unique_lock lock{build_mutex};\n            if (is_built.load(std::memory_order_acquire)) return;",
+        f"F07 V01 include build mutex acquisition in keyed {pipeline_file} wait")
+
 apply_reviewed_delta(
     "include/video_core/renderer_vulkan/vk_compute_pipeline.h",
     "    void PreflightDescriptorScratch();\n    [[nodiscard]] bool HasDescriptorEntries() const noexcept {",
