@@ -895,8 +895,22 @@ void PresentManager::CopyToSwapchain(Frame* frame) {'''),
      '    lock.unlock();'),
     ('            present_queue.push_back(frame);',
      '            if (present_failure) return;\n            present_queue.push_back(frame);'),
+    # PresentThread and WaitPresent share frame_cv. Waking just one waiter
+    # on enqueue can wake WaitPresent instead of the presentation worker.
+    ('            present_queue.push_back(frame);\n            frame_cv.notify_one();',
+     '            present_queue.push_back(frame);\n'
+     '            // The present worker and WaitPresent share this CV. notify_one\n'
+     '            // could wake only the drain waiter and strand a queued frame.\n'
+     '            lock.unlock();\n'
+     '            frame_cv.notify_all();'),
+    ('            // Take the frame and notify anyone waiting',
+     '            // Take the frame; completion is signaled after the swapchain copy.'),
     ('            present_queue.pop_front();',
      '            present_queue.pop_front();\n            present_in_flight = true;'),
+    # WaitPresent's predicate remains false after dequeue while the frame
+    # is in flight; the early notify_one would only cause a spurious wake.
+    ('            present_in_flight = true;\n            frame_cv.notify_one();',
+     '            present_in_flight = true;'),
     ('            std::scoped_lock fl{free_mutex};\n'
      '            free_queue.push_back(frame);\n'
      '            free_cv.notify_one();',
@@ -913,6 +927,17 @@ void PresentManager::CopyToSwapchain(Frame* frame) {'''),
      '                present_in_flight = false;\n'
      '            }\n'
      '            frame_cv.notify_all();'),
+    # Release free_mutex before waking the producer of the next frame.
+    ('                free_queue.push_back(frame);\n'
+     '                free_cv.notify_one();\n'
+     '            }\n'
+     '            // Publish completion',
+     '                free_queue.push_back(frame);\n'
+     '            }\n'
+     '            // Notify only after releasing free_mutex to avoid waking into\n'
+     '            // an immediately contended queue lock.\n'
+     '            free_cv.notify_one();\n'
+     '            // Publish completion'),
     ('frame_cv.wait(queue_lock, [this] { return present_queue.empty(); });',
      'frame_cv.wait(queue_lock, [this] { return present_failure || '
      '(present_queue.empty() && !present_in_flight); });\n'

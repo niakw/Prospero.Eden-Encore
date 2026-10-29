@@ -93,6 +93,11 @@ assert wait_present.index("if (present_failure) std::rethrow_exception(present_f
 present_method = source.split("void PresentManager::Present(Frame* frame) {", 1)[1].split(
     "size_t PresentManager::MaxExtraFrames(", 1)[0]
 assert "scheduler.WaitWorker();" in present_method
+# The producer must wake both the presenter and WaitPresent, not just one.
+assert "frame_cv.notify_all();" in present_method
+assert "frame_cv.notify_one();" not in present_method
+assert present_method.index("present_queue.push_back(frame);") < present_method.index(
+    "lock.unlock();") < present_method.index("frame_cv.notify_all();")
 assert present_method.index("CopyToSwapchain(frame);") < present_method.index(
     "std::scoped_lock lock{free_mutex};")
 assert present_method.index("std::scoped_lock lock{free_mutex};") < present_method.index(
@@ -104,6 +109,11 @@ worker = source.split("void PresentManager::PresentThread(", 1)[1].split(
     "void PresentManager::RecreateSwapchain(", 1)[0]
 assert worker.index("present_queue.pop_front();") < worker.index("present_in_flight = true;")
 assert worker.index("present_in_flight = true;") < worker.index("CopyToSwapchain(frame);")
+assert "frame_cv.notify_one();" not in worker
+assert worker.index("free_queue.push_back(frame);") < worker.index(
+    "free_cv.notify_one();")
+assert worker.index("free_cv.notify_one();") > worker.index(
+    "// Notify only after releasing free_mutex")
 assert worker.index("CopyToSwapchain(frame);") < worker.index("free_queue.push_back(frame);")
 assert worker.index("free_queue.push_back(frame);") < worker.index("lock.unlock();")
 assert worker.index("lock.unlock();") < worker.index("std::lock_guard queue_lock{queue_mutex};")
