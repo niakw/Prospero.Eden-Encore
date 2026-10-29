@@ -829,6 +829,17 @@ void BufferCacheRuntime::BindTransformFeedbackBuffers(VideoCommon::HostBindings<
         // Already logged in the rasterizer
         return;
     }
+#ifdef PS5_NATIVE
+    // The guest may unbind transform feedback entirely or supply an invalid
+    // binding table. Do not record a zero-count Vulkan command, construct an
+    // over-capacity static_vector or read a missing offset/size under cache locks.
+    const size_t binding_count = bindings.buffers.size();
+    if (binding_count == 0 || binding_count > VideoCommon::NUM_VERTEX_BUFFERS ||
+        bindings.offsets.size() < binding_count ||
+        bindings.sizes.size() < binding_count) {
+        return;
+    }
+#endif
     boost::container::static_vector<VkBuffer, VideoCommon::NUM_VERTEX_BUFFERS> buffer_handles(bindings.buffers.size());
     for (u32 i = 0; i < bindings.buffers.size(); ++i) {
         auto handle = bindings.buffers[i]->Handle();
