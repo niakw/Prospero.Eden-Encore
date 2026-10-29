@@ -162,6 +162,37 @@ int main() {
         rejected.scheduler.Run();
         publisher.join();
     }
+#ifdef PS5_NATIVE
+    // Force a real build_mutex wait *before* the condition wait. The owner
+    // stays locked until the measured callback reaches its pre-lock hook.
+    // A timer incorrectly started AFTER mutex acquisition would undercount
+    // this 14-ms phase as only the subsequent 9-ms builder delay.
+    {
+        Pipeline contended;
+        contended.Queue();
+        std::atomic<bool> holder_ready{false};
+        std::atomic<bool> caller_at_lock{false};
+        std::thread holder([&] {
+            std::unique_lock mutex_hold{contended.build_mutex};
+            holder_ready.store(true,std::memory_order_release);
+            holder_ready.notify_one();
+            caller_at_lock.wait(false,std::memory_order_acquire);
+            std::this_thread::sleep_for(std::chrono::milliseconds(14));
+        });
+        holder_ready.wait(false,std::memory_order_acquire);
+        contended.on_before_lock = [&] {
+            caller_at_lock.store(true,std::memory_order_release);
+            caller_at_lock.notify_one();
+        };
+        std::thread publisher([&] {
+            holder.join();
+            std::this_thread::sleep_for(std::chrono::milliseconds(9));
+            contended.Publish();
+        });
+        contended.scheduler.Run();
+        publisher.join();
+    }
+#endif
     detailed_gpu_profile.store(false);
     {
         Pipeline no_work;
@@ -194,13 +225,18 @@ with tempfile.TemporaryDirectory(prefix="f07-v01-worker-keyed-") as tmp:
                 lines = [line for line in out.stdout.splitlines()
                          if line.startswith("EDEN_VULKAN_PIPELINE_WAIT ")]
                 if native:
-                    assert len(lines) == 2, (kind, opt, lines)
+                    assert len(lines) == 3, (kind, opt, lines)
                     assert all(f"kind={kind}" in line for line in lines)
                     expected_key = "0000000000001234" if kind == "graphics" else "000000000000abcd"
                     assert all(f"key={expected_key}" in line for line in lines)
                     assert "usable=1" in lines[0]
                     assert "usable=0" in lines[1]
+                    assert "usable=1" in lines[2]
                     assert all(int(line.split("wait_ns=")[1].split()[0]) > 0 for line in lines)
+                    # The new recorded wait combines the forced 14ms mutex
+                    # ownership plus 9ms condition wait; the old trace only
+                    # saw the latter. Use a conservative >=12ms floor.
+                    assert int(lines[2].split("wait_ns=")[1].split()[0]) >= 12_000_000
                 else:
                     assert not lines, (kind, opt, lines)
                 print(f"F07_KEYED_PIPELINE_WAIT_PASS kind={kind} native={int(native)} {opt}")
