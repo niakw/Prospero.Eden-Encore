@@ -106,6 +106,8 @@ begin = r"""
 #include <functional>
 #include <mutex>
 #include <new>
+#include <optional>
+#include <cstdint>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -114,8 +116,10 @@ namespace Eden::Performance {
 enum class CachePhase {GraphicsPipelineWait, ComputePipelineWait};
 inline std::atomic_bool detailed_gpu_profile{false};
 struct Timer { ~Timer() {} };
-Timer VulkanTimer(unsigned) {return {};}
-struct CachePhaseTimer {CachePhaseTimer(CachePhase,bool){} ~CachePhaseTimer(){} };
+std::optional<Timer> VulkanTimer(unsigned) {return std::nullopt;}
+struct CachePhaseTimer {CachePhaseTimer(CachePhase,bool){} void Stop() noexcept {} ~CachePhaseTimer(){} };
+// Diagnostic semantics are independently exercised by the keyed-wait witness.
+struct PipelineWaitTrace {void Complete(const char*,std::uint64_t,bool) const noexcept {}};
 }
 struct Scheduler {
     bool fail_next{};
@@ -126,8 +130,13 @@ struct Scheduler {
     }
     void Drain(){for(auto& j:jobs)j({});jobs.clear();}
 };
+struct Key {std::uint64_t Hash() const noexcept {return 0x1234;}};
 struct Pipeline {
     Scheduler& scheduler;
+    Key key;
+    std::uint64_t diagnostic_cache_key_hash{0xabcd};
+    bool CanExecuteDraw() const {return is_built.load(std::memory_order_acquire);}
+    bool IsBound() const {return is_built.load(std::memory_order_acquire);}
     explicit Pipeline(Scheduler& s):scheduler(s){}
     std::atomic_bool is_built{false};
     std::mutex build_mutex;
