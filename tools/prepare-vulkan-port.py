@@ -4233,6 +4233,37 @@ apply_reviewed_delta("vk_texture_cache_cost.cpp",
     "    // ReinterpretImage owns invalidation",
     "F07 skip empty size-compatible native Vulkan CopyImage without stale resolve")
 
+# F07 P0.1/P0.3: DrawTexture uses a self-contained raw blit pipeline.
+# On native PS5 its UpdateDynamicStates call previously queried a cold guest
+# graphics pipeline UNDER texture_cache.mutex, translating a shader that the
+# blit will never use. Guest PrepareDraw already selects the real pipeline
+# before taking paired cache locks; it alone needs dynamic vertex state.
+# Leave desktop behavior unchanged and keep all non-vertex states intact.
+apply_reviewed_delta("vulkan_rasterizer.cpp",
+    "    if (device.IsExtVertexInputDynamicStateSupported()) {\n"
+    "        if (auto* gp = prepared_pipeline ? prepared_pipeline : pipeline_cache.CurrentGraphicsPipeline();\n"
+    "            gp && gp->HasDynamicVertexInput()) {\n"
+    "            UpdateVertexInput(regs);\n"
+    "        }\n"
+    "    }",
+    "    if (device.IsExtVertexInputDynamicStateSupported()) {\n"
+    "#ifdef PS5_NATIVE\n"
+    "        // DrawTexture uses its own blit pipeline, not a guest graphics\n"
+    "        // pipeline. Do not translate a cold guest shader while holding the\n"
+    "        // texture-cache lock just to set unused vertex input state. The next\n"
+    "        // guest PrepareDraw has prepared_pipeline and will bind it normally.\n"
+    "        if (prepared_pipeline && prepared_pipeline->HasDynamicVertexInput()) {\n"
+    "            UpdateVertexInput(regs);\n"
+    "        }\n"
+    "#else\n"
+    "        if (auto* gp = prepared_pipeline ? prepared_pipeline : pipeline_cache.CurrentGraphicsPipeline();\n"
+    "            gp && gp->HasDynamicVertexInput()) {\n"
+    "            UpdateVertexInput(regs);\n"
+    "        }\n"
+    "#endif\n"
+    "    }",
+    "F07 bypass cold guest graphics shader lookup in native raw DrawTexture")
+
 # F07: empty MSAA copies are true no-ops; the helper's GPU pipeline
 # dispatch cannot mutate any destination pixels with no copy regions.
 # Preserve desktop's original path for source parity and diagnostics.
