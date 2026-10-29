@@ -139,6 +139,12 @@ unregister_budget_before = "    } else {\n        total_used_memory -= Common::A
 unregister_budget_after = "    } else {\n#ifdef PS5_NATIVE\n        // The driver budget snapshot is not an allocation ledger. A stale or\n        // smaller snapshot must not wrap unsigned usage to UINT64_MAX when\n        // removing a previously registered buffer (and trigger GC storms).\n        const u64 accounted_bytes = Common::AlignUp(size, 1024);\n        total_used_memory = total_used_memory >= accounted_bytes\n                                ? total_used_memory - accounted_bytes : 0;\n#else\n        total_used_memory -= Common::AlignUp(size, 1024);\n#endif\n        lru_cache.Free(buffer.getLRUID());\n    }"
 assert expected.count(unregister_budget_before) == 1
 expected = expected.replace(unregister_budget_before, unregister_budget_after)
+# Channel-less homebrew/title teardown must still advance deferred GPU
+# staging and destruction on PS5; desktop's original early exit is unchanged.
+no_channel_old = "    // Homebrew console apps don't create or bind any channels, so this will be nullptr.\n    if (!channel_state) {\n        return;\n    }\n    runtime.TickFrame(slot_buffers);"
+no_channel_new = "    // Homebrew console apps don't create or bind any channels, so this will be nullptr.\n    if (!channel_state) {\n#ifdef PS5_NATIVE\n        // The final channel can disappear while native Vulkan buffers and\n        // deferred staging remain alive. Advance the GPU lifetime scan and\n        // retirement rings even without uniform-cache statistics.\n        runtime.TickFrame(slot_buffers);\n        ++frame_tick;\n        delayed_destruction_ring.Tick();\n        for (auto& buffer : async_buffers_death_ring) {\n            runtime.FreeDeferredStagingBuffer(buffer);\n        }\n        async_buffers_death_ring.clear();\n#endif\n        return;\n    }\n    runtime.TickFrame(slot_buffers);"
+assert expected.count(no_channel_old) == 1
+expected = expected.replace(no_channel_old, no_channel_new)
 assert maintained == expected, "R437 maintained header differs from reviewed transforms"
 assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm

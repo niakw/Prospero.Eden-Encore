@@ -347,3 +347,75 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-buffer-unregister-") as d:
             ran=subprocess.run([str(out)],capture_output=True,text=True,timeout=10)
             assert ran.returncode==0,(native,opt,ran.stderr[-3200:])
 print("F07_BUFFER_USAGE_UNREGISTER_SATURATED_PASS O0=1 O2=1 native=1 desktop_original=1")
+
+
+# Source-extracted channel-less frame teardown: native must drain deferred
+# staging and advance retirement even after the last guest channel closes.
+# Desktop retains its exact historical return semantics.
+frame_begin=buffer_src.index("void BufferCache<P>::TickFrame() {")
+frame_limit=buffer_src.index("    // Calculate hits and shots and move hit bits to the right",frame_begin)
+frame_prelude=buffer_src[frame_begin:frame_limit]
+assert "if (!channel_state)" in frame_prelude
+assert "#ifdef PS5_NATIVE" in frame_prelude
+assert "delayed_destruction_ring.Tick();" in frame_prelude
+assert "runtime.FreeDeferredStagingBuffer(buffer);" in frame_prelude
+assert "async_buffers_death_ring.clear();" in frame_prelude
+assert frame_prelude.count("runtime.TickFrame(slot_buffers);")==2
+frame_cpp=r"""
+#include <cassert>
+#include <cstddef>
+#include <vector>
+struct Runtime {
+    int ticks{},releases{};
+    void TickFrame(std::vector<int>&){++ticks;}
+    void FreeDeferredStagingBuffer(int& b){assert(b>0);++releases;}
+};
+struct Ring {int ticks{};void Tick(){++ticks;}};
+template<class P>struct BufferCache {
+    void* channel_state{};
+    Runtime runtime;
+    std::vector<int> slot_buffers;
+    std::vector<int> async_buffers_death_ring{1,2};
+    Ring delayed_destruction_ring;
+    std::size_t frame_tick{};
+    void TickFrame();
+};
+"""+"template<class P>\n"+frame_prelude+r"""
+}
+struct Mock{};
+int main(){
+    BufferCache<Mock> c;
+    c.TickFrame();
+#ifdef PS5_NATIVE
+    assert(c.runtime.ticks==1 && c.runtime.releases==2);
+    assert(c.frame_tick==1 && c.delayed_destruction_ring.ticks==1);
+    assert(c.async_buffers_death_ring.empty());
+    c.TickFrame();
+    assert(c.runtime.ticks==2 && c.runtime.releases==2);
+    assert(c.frame_tick==2 && c.delayed_destruction_ring.ticks==2);
+#else
+    assert(c.runtime.ticks==0 && c.runtime.releases==0);
+    assert(c.frame_tick==0 && c.delayed_destruction_ring.ticks==0);
+    assert(c.async_buffers_death_ring.size()==2);
+#endif
+    c.channel_state=&c;
+    c.TickFrame();
+#ifdef PS5_NATIVE
+    assert(c.runtime.ticks==3);
+#else
+    assert(c.runtime.ticks==1);
+#endif
+}
+"""
+with tempfile.TemporaryDirectory(prefix="eden-f07-buffer-no-channel-") as d:
+    src=Path(d)/"channel.cpp";src.write_text(frame_cpp)
+    for native in (False,True):
+        for opt in ("-O0","-O2"):
+            out=Path(d)/(("native" if native else "desktop")+opt[1:])
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror","-fsanitize=undefined",
+                 "-fno-sanitize-recover=all",*(['-DPS5_NATIVE=1'] if native else []),str(src),"-o",str(out)]
+            built=subprocess.run(cmd,capture_output=True,text=True,timeout=40)
+            assert built.returncode==0,(native,opt,built.stderr[-3200:])
+            ran=subprocess.run([str(out)],capture_output=True,text=True,timeout=10)
+            assert ran.returncode==0,(native,opt,ran.stderr[-3200:])
+print("F07_BUFFER_NO_CHANNEL_DEFERRED_RECLAIM_PASS O0=1 O2=1 native=1 desktop_original=1 releases=2")
