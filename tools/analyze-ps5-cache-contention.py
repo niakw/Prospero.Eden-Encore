@@ -21,8 +21,13 @@ def values(line: str) -> dict[str, float]:
 def windows(lines: list[str]) -> list[dict[str, float]]:
     result = []
     pending = None
+    last_row = None  # measured pressure row owning the next four JIT-core records
+    jit_cores: dict[int, dict[str, float]] = {}
     for line in lines:
         if "EDEN_VULKAN_FRAME " in line:
+            # A new interval cannot inherit core data from an older window.
+            last_row = None
+            jit_cores = {}
             pending = values(line.partition("EDEN_VULKAN_FRAME ")[2])
         elif "EDEN_FRAME_PRESSURE " in line and pending is not None:
             pressure = values(line.partition("EDEN_FRAME_PRESSURE ")[2])
@@ -33,8 +38,39 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
             if (pending.get("total") is not None
                     and pending["total"] == pressure.get("frame")
                     and "cache_wait_ms" in pressure and "jit_ms" in pressure):
-                result.append({**pending, **pressure})
+                last_row = {**pending, **pressure}
+                result.append(last_row)
+                jit_cores = {}
+            else:
+                last_row = None
             pending = None
+        elif "EDEN_FRAME_JIT_CORE " in line and last_row is not None:
+            core_values = values(line.partition("EDEN_FRAME_JIT_CORE ")[2])
+            core = core_values.get("core")
+            fields = ("compile_ns", "compile_calls", "evacuations")
+            # Accept exactly the four production guest cores, once each, on
+            # the SAME measured interval. Partial/mixed sets are not evidence.
+            if (core_values.get("frame") != last_row["total"]
+                    or core not in (0.0, 1.0, 2.0, 3.0)
+                    or any(k not in core_values or core_values[k] < 0 for k in fields)
+                    or int(core) in jit_cores):
+                last_row = None
+                continue
+            jit_cores[int(core)] = core_values
+            if len(jit_cores) == 4:
+                cpu_ms = sum(x["compile_ns"] for x in jit_cores.values()) / 1_000_000
+                # The aggregate is formatted to three decimals in the PS5
+                # log. Reject an inconsistent quartet rather than inventing
+                # a CPU attribution by joining unrelated messages.
+                if abs(cpu_ms - last_row["jit_ms"]) <= 0.001:
+                    last_row["jit_core_cpu_sum_ms"] = cpu_ms
+                    last_row["jit_core_peak_ms"] = max(
+                        x["compile_ns"] for x in jit_cores.values()) / 1_000_000
+                    last_row["jit_core_calls"] = sum(
+                        x["compile_calls"] for x in jit_cores.values())
+                    last_row["jit_core_evacuations"] = sum(
+                        x["evacuations"] for x in jit_cores.values())
+                last_row = None
     return result
 
 def med(rows: list[dict[str, float]], key: str) -> float | None:
@@ -80,6 +116,20 @@ def report(rows: list[dict[str, float]]) -> str:
         f"median_stable_cache_ms={med(stable, 'cache_wait_ms')} "
         f"median_slow_cache_ms={med(extreme, 'cache_wait_ms')}"
     )
+    core_rows = [r for r in rows if "jit_core_peak_ms" in r]
+    if core_rows:
+        out.append(
+            f"jit_core_breakdown: complete={len(core_rows)}/{len(rows)} "
+            f"median_peak_cpu_core_ms={med(core_rows, 'jit_core_peak_ms'):.3f} "
+            f"max_peak_cpu_core_ms={max(r['jit_core_peak_ms'] for r in core_rows):.3f} "
+            f"sum_cpu_core_ms={sum(r['jit_core_cpu_sum_ms'] for r in core_rows):.3f} "
+            f"compile_calls={sum(r['jit_core_calls'] for r in core_rows):.0f} "
+            f"evacuations={sum(r['jit_core_evacuations'] for r in core_rows):.0f}"
+        )
+    else:
+        out.append(f"jit_core_breakdown: complete=0/{len(rows)} (not measured or incomplete)")
+    out.append("NOTE: per-core JIT CPU time may overlap between cores; its maximum "
+               "is NOT renderer wall time or the cause of a presentation gap.")
     out.append("NOTE: JIT and cache times aggregate many guest threads across "
                "a reporting window; concurrent peaks do not establish the "
                "precise cause of an individual late frame.")
