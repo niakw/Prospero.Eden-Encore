@@ -86,6 +86,10 @@ assert block.index("CachePhase::GraphicsPipelineCreate") < block.index(
 assert "detailed_gpu_profile.load(std::memory_order_relaxed)" in block
 assert "#ifdef PS5_NATIVE" in block and "#endif" in block
 assert "current_pipeline->AddTransition(pipeline.get());" in pipeline
+assert "first_use_cpu_phase.Stop();\n        cold_miss.Complete" in pipeline
+assert "first_use_compute_cost.Stop();\n        cold_miss.Complete" in pipeline
+assert "retry_cpu_cost.Stop();\n            cold_retry.Complete" in pipeline
+assert "retry_compute_cost.Stop();\n            cold_retry.Complete" in pipeline
 
 refresh_start = tex.index("void TextureCache<P>::RefreshContents(")
 refresh_end = tex.index("\ntemplate <class P>", refresh_start)
@@ -124,6 +128,7 @@ inline std::atomic<bool> detailed_gpu_profile{false};
 inline int profiled = 0;
 struct CachePhaseTimer {
     CachePhaseTimer(CachePhase, bool enabled) { if (enabled) ++profiled; }
+    void Stop() noexcept {}
 };
 }
 #ifdef PS5_NATIVE
