@@ -156,5 +156,45 @@ assert module.windows([
     "EDEN_VULKAN_FRAME total=930 fps=30 worst_ms=34",
     "EDEN_FRAME_PRESSURE frame=930 detail=not_measured",
 ] + phase_lines) == []
+# A detailed native snapshot publishes all cold shader stages and both
+# Vulkan command-worker wait phases. Require the whole subset for each
+# category; do not promote aggregate 5s samples to a per-miss causal trace.
+shader = (
+    "graphics_pipeline_create", "compute_pipeline_create",
+    "graphics_shader_environment", "shader_pool_reset", "shader_cfg",
+    "shader_ir", "shader_spirv", "shader_module",
+)
+worker = ("graphics_pipeline_wait", "compute_pipeline_wait")
+assert set(shader) == module.SHADER_PHASES
+assert set(worker) == module.WORKER_PHASES
+full_phase_lines = [gpu_phase(970, phase, 2_000_000)
+                    for phase in (*shader, *worker)]
+complete = module.windows(record(970, 27, 95, 100, 3) + full_phase_lines)
+assert len(complete) == 1
+phase_report = module.report(complete)
+assert "shader_phase_samples: complete=1/1" in phase_report
+assert "worker_wait_samples: complete=1/1" in phase_report
+assert "shader_cfg_sample_ms=2.000" in phase_report
+assert "shader_spirv_sample_ms=2.000" in phase_report
+assert "graphics_pipeline_wait_samples=3" in phase_report
+assert "compute_pipeline_wait_sample_ms=2.000" in phase_report
+assert "NOT a causal attribution to one cold miss" in phase_report
+assert "do NOT measure GPU-owner shader translation" in phase_report
+# A broken/truncated log may supply every shader stage but only one worker
+# wait: the shader subset is complete while worker attribution is not.
+partial = module.windows(record(970, 27, 95, 100, 3) + full_phase_lines[:-1])
+assert len(partial) == 1
+assert "shader_phase_samples: complete=1/1" in module.report(partial)
+assert "worker_wait_samples: complete=0/1" in module.report(partial)
+assert "shader_phase_samples: complete=0/1" in module.report(
+    module.windows(record(970, 27, 95, 100, 3) + full_phase_lines[1:])
+)
+# Duplicated shader stage must prevent acceptance of a full set even if
+# all expected names are present once.
+duplicate = module.windows(
+    record(970, 27, 95, 100, 3) + full_phase_lines[:2] +
+    [full_phase_lines[0]] + full_phase_lines[2:]
+)
+assert "shader_phase_samples: complete=0/1" in module.report(duplicate)
 assert module.report([]) == "NO_VALID_WINDOWS (requires matching frame totals)"
 print("PINNED_FC27_LONG_FRAME_CLASSIFIER_PASS")
