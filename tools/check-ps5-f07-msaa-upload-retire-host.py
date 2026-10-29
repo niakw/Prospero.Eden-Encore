@@ -406,3 +406,116 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-msaa-scratch-pool-") as d:
             assert result.returncode == 0, (mode, opt, result.stderr[-5000:])
             assert "F07_MSAA_SCRATCH_NULL_GUARD_PASS" in result.stdout
             print("F07_MSAA_SCRATCH_NULL_GUARD_PASS", mode, opt)
+
+
+# The per-frame cleanup side is the other half of scratch lifetime safety:
+# UINT64_MAX (in-use) cannot age out; a released tick ages only after GPU
+# completion, and resolve shadows must remain alive until their own fence.
+tick_begin = "void TextureCacheRuntime::TickFrame() {"
+tick_end = "\nImage::Image("
+assert source.count(tick_begin) == source.count(tick_end) == 1
+tick_frame = source[source.index(tick_begin):source.index(tick_end)]
+assert "std::erase_if(msaa_scratch_images" in tick_frame
+assert "std::erase_if(pending_resolve_shadows" in tick_frame
+assert "scratch.unused_frames = 0;" in tick_frame
+assert "++scratch.unused_frames > MAX_UNUSED_SCRATCH_FRAMES" in tick_frame
+assert "scheduler.GetMasterSemaphore().KnownGpuTick()" in tick_frame
+assert "F07 snapshot native MSAA scratch and resolve cleanup GPU completion" in generator
+assert "F07 skip MSAA GPU probe when every scratch image is checked out" in generator
+
+tick_cpp = r"""
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstdio>
+#include <limits>
+#include <utility>
+#include <vector>
+using u32 = std::uint32_t;
+using u64 = std::uint64_t;
+struct MsaaScratchImage {
+    u64 tick{(std::numeric_limits<u64>::max)()};
+    u32 unused_frames{};
+};
+struct MasterSemaphore {
+    u64 completed{20};
+    unsigned probes{};
+    u64 KnownGpuTick() { ++probes; return completed; }
+};
+struct Scheduler {
+    MasterSemaphore master;
+    MasterSemaphore& GetMasterSemaphore() { return master; }
+    bool IsFree(u64 tick) { return tick <= master.completed; }
+};
+struct TextureCacheRuntime {
+    Scheduler scheduler;
+    std::vector<MsaaScratchImage> msaa_scratch_images;
+    std::vector<std::pair<u64,int>> pending_resolve_shadows;
+    void TickFrame();
+};
+__ACTUAL_TICKFRAME__
+int main() {
+    TextureCacheRuntime r;
+    r.TickFrame();
+    assert(r.scheduler.master.probes == 0);
+    // Every scratch is checked out: a native frame does no semaphore query.
+    r.msaa_scratch_images.push_back({});
+    r.TickFrame();
+#ifdef PS5_NATIVE
+    assert(r.scheduler.master.probes == 0);
+#endif
+    assert(r.msaa_scratch_images.size() == 1);
+    assert(r.msaa_scratch_images[0].unused_frames == 0);
+
+    // A resolve shadow may retire even when every scratch is checked out.
+    r.pending_resolve_shadows.emplace_back(21, 42);
+    r.TickFrame();
+    assert(r.pending_resolve_shadows.size() == 1);
+    r.scheduler.master.completed = 21;
+    r.TickFrame();
+    assert(r.pending_resolve_shadows.empty());
+    assert(r.msaa_scratch_images.size() == 1);
+
+    // Checked-out scratch must never expire even after 61 more frames.
+    for (int i=0; i<61; ++i) r.TickFrame();
+    assert(r.msaa_scratch_images.size() == 1);
+    assert(r.msaa_scratch_images[0].unused_frames == 0);
+    // A released scratch is not aged while its GPU readers are in flight.
+    r.msaa_scratch_images[0].tick = 22;
+    for (int i=0; i<61; ++i) r.TickFrame();
+    assert(r.msaa_scratch_images.size() == 1);
+    assert(r.msaa_scratch_images[0].unused_frames == 0);
+    r.scheduler.master.completed = 22;
+    for (int i=0; i<60; ++i) r.TickFrame();
+    assert(r.msaa_scratch_images.size() == 1);
+    assert(r.msaa_scratch_images[0].unused_frames == 60);
+    r.TickFrame();
+    assert(r.msaa_scratch_images.empty());
+    // No work remains; native path must skip further GPU tick probes.
+    const unsigned probes = r.scheduler.master.probes;
+    r.TickFrame();
+#ifdef PS5_NATIVE
+    assert(r.scheduler.master.probes == probes);
+#else
+    (void)probes;
+#endif
+    std::puts("F07_MSAA_TICKFRAME_RETIRE_PASS");
+}
+""".replace("__ACTUAL_TICKFRAME__", tick_frame)
+with tempfile.TemporaryDirectory(prefix="eden-f07-msaa-frame-retire-") as d:
+    src = Path(d) / "frame.cpp"
+    src.write_text(tick_cpp)
+    for mode in ("native", "desktop"):
+        for opt in ("-O0", "-O2"):
+            exe = Path(d) / (mode + opt)
+            command = [compiler, "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+                       "-fsanitize=undefined", "-fno-sanitize-recover=all"]
+            if mode == "native":
+                command += ["-DPS5_NATIVE"]
+            command += [str(src), "-o", str(exe)]
+            result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+            assert result.returncode == 0, (mode, opt, result.stderr[-5000:])
+            result = subprocess.run([str(exe)], capture_output=True, text=True, timeout=15)
+            assert result.returncode == 0, (mode, opt, result.stderr[-5000:])
+            assert "F07_MSAA_TICKFRAME_RETIRE_PASS" in result.stdout
+            print("F07_MSAA_TICKFRAME_RETIRE_PASS", mode, opt)
