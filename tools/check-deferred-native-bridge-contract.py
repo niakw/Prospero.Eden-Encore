@@ -332,6 +332,9 @@ for selection in (original_m07, maintained_m07.read_text(), expected_m07):
     assert display.count("gpu_memory->FlushCaching();") == 1
     assert display.index("gpu_memory->FlushCaching();") < display.index(
         "std::scoped_lock lock{texture_cache.mutex};")
+    assert display.count("if (info.image == VK_NULL_HANDLE || info.image_view == VK_NULL_HANDLE)") == 1
+    assert display.index("if (info.image == VK_NULL_HANDLE || info.image_view == VK_NULL_HANDLE)") < display.index(
+        "query_cache.NotifySegment(false);")
 assert 'configure_file("${EDEN_DEFERRED_VULKAN_SOURCE}"' in code
 assert 'write_derived("${PORT_BUILD_DIR}/vulkan_rasterizer_deferred.cpp"' not in code
 assert 'target_include_directories(video_core PRIVATE "${EDEN_PORT_DIR}")' in base
