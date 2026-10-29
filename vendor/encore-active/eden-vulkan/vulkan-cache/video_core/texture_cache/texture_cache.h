@@ -180,6 +180,25 @@ void TextureCache<P>::RunGarbageCollector() {
         return high_priority_mode &&
                (total_used_memory >= critical_memory || !::Eden::Performance::KeepDirtyTextures());
     };
+#ifdef PS5_NATIVE
+    // Keep the expensive direct-memory pressure probe out of every dirty LRU
+    // candidate under texture_cache.mutex. Recheck after at most eight visits,
+    // immediately after a deletion, and at the critical-pass boundary.
+    // Critical pressure always bypasses the cached answer.
+    constexpr unsigned kDirtyProbeReuse = 8;
+    unsigned dirty_probe_remaining = 0;
+    bool dirty_evict_cached = false;
+    const auto DirtyEvictionsForCleanup = [&]() {
+        if (!high_priority_mode) return false;
+        if (total_used_memory >= critical_memory) return true;
+        if (dirty_probe_remaining == 0) {
+            dirty_evict_cached = !::Eden::Performance::KeepDirtyTextures();
+            dirty_probe_remaining = kDirtyProbeReuse;
+        }
+        --dirty_probe_remaining;
+        return dirty_evict_cached;
+    };
+#endif
     using DownloadMap = decltype(runtime.DownloadStagingBuffer(size_t{}));
     // Aggressive GC can process 40 images per pass. Keep those readbacks in
     // ONE scheduled batch instead of falling back to a Finish per image after
@@ -330,8 +349,13 @@ void TextureCache<P>::RunGarbageCollector() {
         // A clean image has no guest readback. Do not query PS5 direct-memory
         // pressure for it: the memory probe may be kernel-backed, and this
         // entire LRU sweep runs under texture_cache.mutex.
+#ifdef PS5_NATIVE
+        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||
+            (must_download && !DirtyEvictionsForCleanup())) {
+#else
         if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||
             (must_download && !DirtyEvictions())) {
+#endif
             ++skipped;
             return false;
         }
@@ -367,6 +391,9 @@ void TextureCache<P>::RunGarbageCollector() {
         UnregisterImage(image_id);
         DeleteImage(image_id, image.scale_tick > frame_tick + 5);
         ++evicted;
+#ifdef PS5_NATIVE
+        dirty_probe_remaining = 0;
+#endif
         if (aggressive_mode && total_used_memory < critical_memory) {
             num_iterations >>= 2;
             aggressive_mode = false;
@@ -383,6 +410,9 @@ void TextureCache<P>::RunGarbageCollector() {
     }
     if (total_used_memory >= critical_memory) {
         Configure(true);
+#ifdef PS5_NATIVE
+        dirty_probe_remaining = 0;
+#endif
         num_scanned = 0; // independent scan allowance for the aggressive pass
         PrefetchDownloads();
         if (frame_tick >= ticks_to_destroy) {

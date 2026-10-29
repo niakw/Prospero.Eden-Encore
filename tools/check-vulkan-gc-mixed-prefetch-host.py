@@ -61,8 +61,9 @@ assert gc.index("if (frame_tick < ticks_to_destroy) return;") < gc.index("const 
 assert gc.index("if (!prefetch_dirty) return;") < gc.index("lru_cache.ForEachItemBelow(")
 assert "(!DirtyEvictions() && dirty)) return false;" not in gc
 assert "if (!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad))" in gc
-# Only the prefetch forecast snapshots pressure; the actual Cleanup keeps
-# making independent current-pressure decisions as before.
+# Prefetch snapshots its own pressure forecast; native Cleanup refreshes the
+# kernel-backed dirty-pressure decision at most eight LRU visits later and
+# immediately after an eviction. Desktop retains its original live probe.
 assert "if (!dirty || !image.aliased_images.empty()" in gc
 assert "image.HasScaled() || image.info.num_samples != 1" not in gc
 assert "Scaled textures use the SAME Image::DownloadMemory path" in gc

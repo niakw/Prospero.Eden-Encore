@@ -544,6 +544,7 @@ jobs:
           python3 -B tools/check-vulkan-gc-prefetch-host.py
           python3 -B tools/check-vulkan-gc-mixed-prefetch-host.py
           python3 -B tools/check-ps5-f07-gc-dirty-eviction-rollback-host.py
+          python3 -B tools/check-ps5-f07-gc-pressure-probe-host.py
           python3 -B tools/check-ps5-f07-readback-dirty-rollback-host.py
           python3 -B tools/check-ps5-f07-download-staging-runtime-host.py
           python3 -B tools/check-ps5-f07-async-dma-rollback-host.py
