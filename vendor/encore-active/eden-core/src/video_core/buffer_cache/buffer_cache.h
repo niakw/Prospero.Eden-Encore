@@ -84,6 +84,18 @@ template <class P>
 void BufferCache<P>::TickFrame() {
     // Homebrew console apps don't create or bind any channels, so this will be nullptr.
     if (!channel_state) {
+#ifdef PS5_NATIVE
+        // The final channel can disappear while native Vulkan buffers and
+        // deferred staging remain alive. Advance the GPU lifetime scan and
+        // retirement rings even without uniform-cache statistics.
+        runtime.TickFrame(slot_buffers);
+        ++frame_tick;
+        delayed_destruction_ring.Tick();
+        for (auto& buffer : async_buffers_death_ring) {
+            runtime.FreeDeferredStagingBuffer(buffer);
+        }
+        async_buffers_death_ring.clear();
+#endif
         return;
     }
     runtime.TickFrame(slot_buffers);
