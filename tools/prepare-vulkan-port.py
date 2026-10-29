@@ -1500,7 +1500,6 @@ gc = gc.replace(cleanup_cutoff,
 # is held. Keep the desktop path and the historical pinned GC oracle intact.
 for old, new in [
     ("    const auto DirtyEvictions = [&] {\n        return high_priority_mode &&\n               (total_used_memory >= critical_memory || !::Eden::Performance::KeepDirtyTextures());\n    };", "    const auto DirtyEvictions = [&] {\n        return high_priority_mode &&\n               (total_used_memory >= critical_memory || !::Eden::Performance::KeepDirtyTextures());\n    };\n#ifdef PS5_NATIVE\n    // Keep the expensive direct-memory pressure probe out of every dirty LRU\n    // candidate under texture_cache.mutex. Recheck after at most eight visits,\n    // immediately after a deletion, and at the critical-pass boundary.\n    // Critical pressure always bypasses the cached answer.\n    constexpr unsigned kDirtyProbeReuse = 8;\n    unsigned dirty_probe_remaining = 0;\n    bool dirty_evict_cached = false;\n    const auto DirtyEvictionsForCleanup = [&]() {\n        if (!high_priority_mode) return false;\n        if (total_used_memory >= critical_memory) return true;\n        if (dirty_probe_remaining == 0) {\n            dirty_evict_cached = !::Eden::Performance::KeepDirtyTextures();\n            dirty_probe_remaining = kDirtyProbeReuse;\n        }\n        --dirty_probe_remaining;\n        return dirty_evict_cached;\n    };\n#endif"),
-    ("        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||\n            (must_download && !DirtyEvictions())) {", "#ifdef PS5_NATIVE\n        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||\n            (must_download && !DirtyEvictionsForCleanup())) {\n#else\n        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||\n            (must_download && !DirtyEvictions())) {\n#endif"),
     ("        ++evicted;\n        if (aggressive_mode", "        ++evicted;\n#ifdef PS5_NATIVE\n        dirty_probe_remaining = 0;\n#endif\n        if (aggressive_mode"),
     ("        Configure(true);\n        num_scanned = 0; // independent scan allowance for the aggressive pass", "        Configure(true);\n#ifdef PS5_NATIVE\n        dirty_probe_remaining = 0;\n#endif\n        num_scanned = 0; // independent scan allowance for the aggressive pass"),
 ]:
@@ -4146,6 +4145,13 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) || (!DirtyEvictions() && must_download)) {",
     "        // A clean image has no guest readback. Do not query PS5 direct-memory\n        // pressure for it: the memory probe may be kernel-backed, and this\n        // entire LRU sweep runs under texture_cache.mutex.\n        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||\n            (must_download && !DirtyEvictions())) {",
     "F07 skip texture GC memory pressure probes for clean LRU entries")
+# Apply the PS5 cleanup-only probe budget AFTER the older clean-image rewrite:
+# the early pinned GC builder still uses (!DirtyEvictions() && must_download).
+# Keep the two reversible deltas in their actual source-generation order.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||\n            (must_download && !DirtyEvictions())) {",
+    "#ifdef PS5_NATIVE\n        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||\n            (must_download && !DirtyEvictionsForCleanup())) {\n#else\n        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||\n            (must_download && !DirtyEvictions())) {\n#endif",
+    "F07 bound native dirty GC pressure checks after clean-image rewrite")
 
 # F07 P0.3: a missing guest compute-indirect buffer must not be dereferenced
 # or recorded under the paired texture/buffer cache mutexes on PS5. This is
