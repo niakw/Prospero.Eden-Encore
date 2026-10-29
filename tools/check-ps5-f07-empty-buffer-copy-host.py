@@ -21,6 +21,15 @@ assert invoke in fast and invoke in preflight
 ast.parse(generator)
 assert "F07 avoid barrier-free empty Vulkan buffer copies" in generator
 assert "F07 reject zero-sized Vulkan buffer copy regions" in generator
+assert "F07 preserve explicit barriers when deciding native staging upload reordering" in generator
+route_begin = "#ifdef PS5_NATIVE\\n    // An explicit transfer barrier"
+route_end = "        scheduler.RecordWithUploadBuffer("
+assert source.count(route_begin)==1
+route_start=source.index(route_begin)
+route=source[route_start:source.index(route_end,route_start)]
+assert "can_reorder_upload && !barrier" in route
+assert "can_reorder_upload) {" in route
+
 batch_begin="    boost::container::small_vector<VkBufferCopy, 8> vk_copies"
 batch_end="    if (src_buffer == staging_pool.StreamBuf() && can_reorder_upload) {"
 # The maintained native path constructs without an initial size, whereas
@@ -239,5 +248,49 @@ with tempfile.TemporaryDirectory(prefix="f07-nonzero-vk-copies-") as tmp:
             assert result.returncode==0,(ps5,opt,result.stderr[-4000:])
             ran=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
             assert ran.returncode==0,(ps5,opt,ran.stderr[-4000:])
+# Verify the actual source branch with a staging stream buffer and an
+# explicitly requested barrier, including the unchanged desktop behavior.
+route_cpp=r"""
+#include <cassert>
+#include <cstddef>
+using VkBuffer=std::size_t;
+struct StagingPool { VkBuffer StreamBuf() const {return 13;} };
+struct Runtime {
+    StagingPool staging_pool;
+    bool UseReorderedUpload(VkBuffer src_buffer,bool can_reorder_upload,
+                            [[maybe_unused]] bool barrier) {
+__ROUTE__
+        return true;
+    }
+        return false;
+    }
+};
+int main(){
+    Runtime r;
+    assert(r.UseReorderedUpload(13,true,false));
+#ifdef PS5_NATIVE
+    assert(!r.UseReorderedUpload(13,true,true));
+#else
+    assert(r.UseReorderedUpload(13,true,true));
+#endif
+    assert(!r.UseReorderedUpload(13,false,false));
+    assert(!r.UseReorderedUpload(17,true,false));
+}
+""".replace("__ROUTE__",route)
+with tempfile.TemporaryDirectory(prefix="f07-upload-reorder-") as tmp:
+    path=Path(tmp)/"route.cpp"
+    path.write_text(route_cpp)
+    for opt in ("-O0","-O2"):
+        for ps5 in (False,True):
+            binary=Path(tmp)/("route"+opt+("ps5" if ps5 else "desktop"))
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                 "-fsanitize=undefined","-fno-sanitize-recover=all",
+                 *(["-DPS5_NATIVE=1"] if ps5 else []),str(path),"-o",str(binary)]
+            result=subprocess.run(cmd,capture_output=True,text=True,timeout=40)
+            assert result.returncode==0,(ps5,opt,result.stderr[-4000:])
+            ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=20)
+            assert ran.returncode==0,(ps5,opt,ran.stderr[-4000:])
+print("F07_UPLOAD_REORDER_BARRIER_SOURCE_PASS native_barrier_forces_ordered=1 desktop_original=1 O0_O2=1")
+
 print("F07_EMPTY_BUFFER_COPY_HOST_PASS null=1 zero_no_barrier=1"
       " barrier_only_pre_post=1 no_empty_vulkan_copy=1 zero_regions_filtered=1 mixed_order_preserved=1 one=1 many=1 zero_fill=1 desktop=1 O0_O2=1")
