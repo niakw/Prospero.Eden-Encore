@@ -187,7 +187,7 @@ struct Runtime {
     std::vector<VkBufferCopy> last;
     void PreCopyBarrier() {++pre;}
     void PostCopyBarrier() {++post;}
-    void Copy(std::span<const Copy> copies,bool barrier) {
+    void Copy(std::span<const Copy> copies,[[maybe_unused]] bool barrier) {
 __BATCH__
         ++batches;
         last.assign(vk_copies.begin(),vk_copies.end());
