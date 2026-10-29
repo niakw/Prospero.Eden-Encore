@@ -2244,7 +2244,16 @@ void TextureCache<P>::QueueAsyncDecode(Image& image, ImageId image_id) {
     decode->image_id = image_id;
     async_decodes.push_back(std::move(decode));
 
+#ifdef PS5_NATIVE
+    // UnswizzleImage writes each copy's destination bytes before ConvertImage
+    // reads them. Avoid zero-filling the entire intermediate texture under
+    // the texture-cache mutex; the move-only scratch buffer is accepted by
+    // Common::UniqueFunction in the asynchronous decode worker queue.
+    Common::ScratchBuffer<u8> local_unswizzle_data_buffer;
+    local_unswizzle_data_buffer.resize_destructive(image.unswizzled_size_bytes);
+#else
     std::vector<u8> local_unswizzle_data_buffer(image.unswizzled_size_bytes, 0);
+#endif
     Tegra::Memory::GpuGuestMemory<u8, Tegra::Memory::GuestMemoryFlags::UnsafeRead> swizzle_data(*gpu_memory, image.gpu_addr, image.guest_size_bytes, &swizzle_data_buffer);
     auto copies = UnswizzleImage(*gpu_memory, image.gpu_addr, image.info, swizzle_data, local_unswizzle_data_buffer);
     const size_t out_size = MapSizeBytes(image);
