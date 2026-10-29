@@ -23,7 +23,10 @@ assert "F07 avoid barrier-free empty Vulkan buffer copies" in generator
 assert "F07 reject zero-sized Vulkan buffer copy regions" in generator
 batch_begin="    boost::container::small_vector<VkBufferCopy, 8> vk_copies"
 batch_end="    if (src_buffer == staging_pool.StreamBuf() && can_reorder_upload) {"
-assert source.count(batch_end)==1 and source.count(batch_begin)==1
+# The maintained native path constructs without an initial size, whereas
+# desktop constructs a sized vector. Both retain the common type declaration.
+assert source.count(batch_end)==1 and source.count(batch_begin)==2
+assert "vk_copies.reserve(copies.size());" in source
 batch_start_anchor="#ifdef PS5_NATIVE\n    // Zero-sized VkBufferCopy regions"
 assert source.count(batch_start_anchor)==1
 batch_method=source[source.index(batch_start_anchor):]
