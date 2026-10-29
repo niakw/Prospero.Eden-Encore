@@ -4419,6 +4419,49 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    Tegra::Memory::GpuGuestMemory<u8, Tegra::Memory::GuestMemoryFlags::UnsafeRead> swizzle_data",
     "F07 avoid zero-filling native asynchronous texture decode input")
 
+# F07: mapped staging without a real Vulkan buffer is invalid even when
+# its CPU span is large enough. Reject buffer-cache DMA/index/readback uploads
+# before recording GPU copies; return rejected deferred staging to the pool.
+# Desktop keeps pinned behavior.
+apply_reviewed_delta("vk_buffer_cache_cost.cpp",
+    "#include <cstring>\n#include <span>",
+    "#include <cstring>\n#include <new>\n#include <span>",
+    "F07 include buffer cache staging allocation exception")
+apply_reviewed_delta("vk_buffer_cache_cost.cpp",
+    "StagingBufferRef BufferCacheRuntime::UploadStagingBuffer(size_t size) {\n"
+    "    return staging_pool.Request(size, MemoryUsage::Upload);\n"
+    "}\n"
+    "\n"
+    "StagingBufferRef BufferCacheRuntime::DownloadStagingBuffer(size_t size, bool deferred) {\n"
+    "    return staging_pool.Request(size, MemoryUsage::Download, deferred);\n"
+    "}",
+    "StagingBufferRef BufferCacheRuntime::UploadStagingBuffer(size_t size) {\n"
+    "#ifdef PS5_NATIVE\n"
+    "    auto map = staging_pool.Request(size, MemoryUsage::Upload);\n"
+    "    // A mapped CPU span alone does not prove a valid Vulkan buffer handle.\n"
+    "    if (size != 0 && (!map.buffer || map.mapped_span.size_bytes() < size)) {\n"
+    "        throw std::bad_alloc{};\n"
+    "    }\n"
+    "    return map;\n"
+    "#else\n"
+    "    return staging_pool.Request(size, MemoryUsage::Upload);\n"
+    "#endif\n"
+    "}\n"
+    "\n"
+    "StagingBufferRef BufferCacheRuntime::DownloadStagingBuffer(size_t size, bool deferred) {\n"
+    "#ifdef PS5_NATIVE\n"
+    "    auto map = staging_pool.Request(size, MemoryUsage::Download, deferred);\n"
+    "    if (size != 0 && (!map.buffer || map.mapped_span.size_bytes() < size)) {\n"
+    "        if (deferred && map.buffer) staging_pool.FreeDeferred(map);\n"
+    "        throw std::bad_alloc{};\n"
+    "    }\n"
+    "    return map;\n"
+    "#else\n"
+    "    return staging_pool.Request(size, MemoryUsage::Download, deferred);\n"
+    "#endif\n"
+    "}",
+    "F07 validate native upload and download buffer cache staging handles")
+
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
 # extent fit checks, and reject unknown zero-sized block ratios early.
