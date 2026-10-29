@@ -204,11 +204,23 @@ int main() {
     guest.pipeline_cache.selected = &fixed;
     prepared_pipeline = &dynamic;
     guest.UpdateDynamicStates();
+#ifdef PS5_NATIVE
     assert(guest.CheckAlphaCoverage() && guest.CheckAlphaOne());
     assert(guest.pipeline_cache.lookups == 0 && guest.bindings == 1);
+#else
+    // Desktop keeps looking up its selected cached guest pipeline.
+    assert(!guest.CheckAlphaCoverage() && !guest.CheckAlphaOne());
+    assert(guest.pipeline_cache.lookups == 2 && guest.bindings == 1);
+#endif
     prepared_pipeline = &fixed;
     guest.UpdateDynamicStates();
-    assert(guest.pipeline_cache.lookups == 0 && guest.bindings == 1);
+    assert(guest.pipeline_cache.lookups ==
+#ifdef PS5_NATIVE
+           0
+#else
+           2
+#endif
+           && guest.bindings == 1);
     guest.device.enabled = false;
     prepared_pipeline = &dynamic;
     guest.UpdateDynamicStates();
