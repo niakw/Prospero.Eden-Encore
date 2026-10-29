@@ -147,3 +147,130 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-msaa-scratch-retire-") as d:
             assert result.returncode == 0, (mode, opt, result.stderr[-5000:])
             assert "F07_MSAA_UPLOAD_RETIRE_HOST_PASS" in result.stdout
             print("F07_MSAA_UPLOAD_RETIRE_HOST_PASS", mode, opt)
+
+
+# Same failure must be tested for MSAA readback, which reserves and releases
+# the identical scratch pool. A partially enqueued command can own the
+# returned tick; neither failure may instantly recycle the Vulkan image.
+readback_at = source.index("void Image::DownloadMemory(std::span<VkBuffer> buffers_span,")
+readback = source[readback_at:]
+read_begin = "            const VkImage temp_vk_image = runtime->AcquireMsaaScratchImage(image_ci);"
+read_end = "\n            const VkImageAspectFlags temp_aspect_mask = aspect_mask;"
+assert readback.count(read_begin) == 1
+read_guard = readback[readback.index(read_begin):readback.index(read_end)]
+read_normal_begin = "            runtime->ReleaseMsaaScratchImage(temp_vk_image);"
+read_normal_end = "\n        }\n        if (is_rescaled) {"
+assert readback.count(read_normal_end) == 1
+read_normal = readback[
+    readback.index(read_normal_begin):readback.index(
+        read_normal_end, readback.index(read_normal_begin)
+    )
+]
+assert "SCOPE_EXIT {" in read_guard
+assert "scratch_released = true;" in read_normal
+assert "F07 MSAA download scratch failure release" in generator
+assert "F07 MSAA download scratch success release unchanged" in generator
+assert read_guard in generator and read_normal in generator
+
+read_cpp = r"""
+#include <cassert>
+#include <cstdint>
+#include <cstdio>
+#include <limits>
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
+using u64 = std::uint64_t;
+using VkImage = int;
+struct VkImageCreateInfo {};
+struct ScopeTag {};
+template<class F> struct ScopeExit {
+    F fn;
+    ~ScopeExit() { fn(); }
+};
+template<class F> ScopeExit<std::decay_t<F>> operator+(ScopeTag, F&& fn) {
+    return {std::forward<F>(fn)};
+}
+#define SCOPE_EXIT auto guard = ScopeTag{} + [&]
+struct Scheduler {
+    u64 tick = 21;
+    u64 CurrentTick() const { return tick; }
+};
+struct Runtime {
+    Scheduler& scheduler;
+    u64 tick = (std::numeric_limits<u64>::max)();
+    u64 completed_tick = 20;
+    unsigned acquired{}, released{};
+    VkImage AcquireMsaaScratchImage(const VkImageCreateInfo&) {
+        ++acquired;
+        tick = (std::numeric_limits<u64>::max)();
+        return 41;
+    }
+    void ReleaseMsaaScratchImage(VkImage value) {
+        assert(value == 41);
+        ++released;
+        tick = scheduler.CurrentTick();
+    }
+    bool CanReuse() const { return tick <= completed_tick; }
+};
+struct Image {
+    Runtime* runtime;
+    Scheduler* scheduler;
+    void Download(bool throw_during_staging, bool throw_after_gpu_enqueue) {
+        const VkImageCreateInfo image_ci{};
+__READBACK_GUARD__
+        if (throw_during_staging) throw std::runtime_error("mock staging");
+        if (throw_after_gpu_enqueue) {
+            scheduler->tick = 22;
+            throw std::runtime_error("mock command enqueue");
+        }
+__READBACK_RELEASE__
+    }
+};
+int main() {
+    {
+        Scheduler scheduler;
+        Runtime runtime{scheduler};
+        Image image{&runtime, &scheduler};
+        image.Download(false, false);
+        assert(runtime.acquired == 1 && runtime.released == 1);
+        assert(runtime.tick == 21 && !runtime.CanReuse());
+    }
+    for (const bool after_enqueue : {false, true}) {
+        Scheduler scheduler;
+        Runtime runtime{scheduler};
+        Image image{&runtime, &scheduler};
+        bool threw = false;
+        try { image.Download(!after_enqueue, after_enqueue); }
+        catch (const std::runtime_error&) { threw = true; }
+        assert(threw && runtime.acquired == 1);
+#ifdef PS5_NATIVE
+        assert(runtime.released == 1 && runtime.tick == (after_enqueue ? 22u : 21u));
+        assert(!runtime.CanReuse());
+        runtime.completed_tick = runtime.tick;
+        assert(runtime.CanReuse());
+#else
+        assert(runtime.released == 0);
+#endif
+    }
+    std::puts("F07_MSAA_READBACK_RETIRE_HOST_PASS");
+}
+""".replace("__READBACK_GUARD__", read_guard).replace(
+    "__READBACK_RELEASE__", read_normal)
+with tempfile.TemporaryDirectory(prefix="eden-f07-msaa-readback-retire-") as d:
+    src = Path(d) / "readback.cpp"
+    src.write_text(read_cpp)
+    for mode in ("native", "desktop"):
+        for opt in ("-O0", "-O2"):
+            exe = Path(d) / (mode + opt)
+            command = [compiler, "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+                       "-fsanitize=undefined", "-fno-sanitize-recover=all"]
+            if mode == "native":
+                command += ["-DPS5_NATIVE"]
+            command += [str(src), "-o", str(exe)]
+            result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+            assert result.returncode == 0, (mode, opt, result.stderr[-5000:])
+            result = subprocess.run([str(exe)], capture_output=True, text=True, timeout=15)
+            assert result.returncode == 0, (mode, opt, result.stderr[-5000:])
+            assert "F07_MSAA_READBACK_RETIRE_HOST_PASS" in result.stdout
+            print("F07_MSAA_READBACK_RETIRE_HOST_PASS", mode, opt)
