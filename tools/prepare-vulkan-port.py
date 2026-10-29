@@ -4218,6 +4218,46 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        // The context owns async_decode->mutex.",
     "F07 increment successful async decode quota only after GPU submission")
 
+# F07 P0.3: no render-target channel was selected on a raw clear.
+# Preserve the pre-existing scheduler FlushWork and the desktop path. A
+# native masked-out clear does not read textures or modify GPU pixels, so
+# defer guest memory remap draining until the next real rendering operation.
+apply_reviewed_delta("vulkan_rasterizer.cpp",
+    "    FlushWork();\n"
+    "    gpu_memory->FlushCaching();\n"
+    "\n"
+    "    auto& regs = maxwell3d->regs;\n"
+    "    const bool use_color = regs.clear_surface.R || regs.clear_surface.G || regs.clear_surface.B ||\n"
+    "                           regs.clear_surface.A;\n"
+    "    const bool use_depth = regs.clear_surface.Z;\n"
+    "    const bool use_stencil = regs.clear_surface.S;\n"
+    "    if (!use_color && !use_depth && !use_stencil) {\n"
+    "        return;\n"
+    "    }\n"
+    "\n"
+    "    std::scoped_lock lock{texture_cache.mutex};",
+    "    FlushWork();\n"
+    "#ifndef PS5_NATIVE\n"
+    "    gpu_memory->FlushCaching();\n"
+    "#endif\n"
+    "\n"
+    "    auto& regs = maxwell3d->regs;\n"
+    "    const bool use_color = regs.clear_surface.R || regs.clear_surface.G || regs.clear_surface.B ||\n"
+    "                           regs.clear_surface.A;\n"
+    "    const bool use_depth = regs.clear_surface.Z;\n"
+    "    const bool use_stencil = regs.clear_surface.S;\n"
+    "    if (!use_color && !use_depth && !use_stencil) {\n"
+    "        return;\n"
+    "    }\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // An all-masked clear is not a GPU write. Preserve FlushWork and the\n"
+    "    // debug probe but do not pay for guest remap/invalidation processing here;\n"
+    "    // the next real rendering operation drains it before reading textures.\n"
+    "    gpu_memory->FlushCaching();\n"
+    "#endif\n"
+    "    std::scoped_lock lock{texture_cache.mutex};",
+    "F07 skip guest memory remap drain for all-masked native clear")
+
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
 # extent fit checks, and reject unknown zero-sized block ratios early.

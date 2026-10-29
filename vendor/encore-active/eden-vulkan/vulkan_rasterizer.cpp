@@ -635,7 +635,9 @@ void RasterizerVulkan::DrawTexture() {
 void RasterizerVulkan::Clear(u32 layer_count) {
     SCOPE_EXIT { SyncProbe(scheduler, "clear", nullptr); };
     FlushWork();
+#ifndef PS5_NATIVE
     gpu_memory->FlushCaching();
+#endif
 
     auto& regs = maxwell3d->regs;
     const bool use_color = regs.clear_surface.R || regs.clear_surface.G || regs.clear_surface.B ||
@@ -645,7 +647,12 @@ void RasterizerVulkan::Clear(u32 layer_count) {
     if (!use_color && !use_depth && !use_stencil) {
         return;
     }
-
+#ifdef PS5_NATIVE
+    // An all-masked clear is not a GPU write. Preserve FlushWork and the
+    // debug probe but do not pay for guest remap/invalidation processing here;
+    // the next real rendering operation drains it before reading textures.
+    gpu_memory->FlushCaching();
+#endif
     std::scoped_lock lock{texture_cache.mutex};
     texture_cache.UpdateRenderTargets(true);
     const Framebuffer* const framebuffer = texture_cache.GetFramebuffer();
