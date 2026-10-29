@@ -23,9 +23,11 @@ assert "F07 avoid barrier-free empty Vulkan buffer copies" in generator
 assert "F07 reject zero-sized Vulkan buffer copy regions" in generator
 batch_begin="    boost::container::small_vector<VkBufferCopy, 8> vk_copies"
 batch_end="    if (src_buffer == staging_pool.StreamBuf() && can_reorder_upload) {"
-assert source.count(batch_end)==1
-batch_method=source[source.index(begin):]
-batch_start=batch_method.index("#ifdef PS5_NATIVE\n    // Zero-sized VkBufferCopy regions")
+assert source.count(batch_end)==1 and source.count(batch_begin)==1
+batch_start_anchor="#ifdef PS5_NATIVE\n    // Zero-sized VkBufferCopy regions"
+assert source.count(batch_start_anchor)==1
+batch_method=source[source.index(batch_start_anchor):]
+batch_start=0
 batch=batch_method[batch_start:batch_method.index(batch_end)]
 assert "copy.size != 0" in batch and "std::ranges::transform" in batch
 assert "vk_copies.empty()" in batch
