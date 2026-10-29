@@ -1991,8 +1991,16 @@ void TextureCache<P>::UploadImageContents(Image& image, StagingBuffer& staging) 
     const GPUVAddr gpu_addr = image.gpu_addr;
 
     if (True(image.flags & ImageFlagBits::AcceleratedUpload)) {
+#ifdef PS5_NATIVE
+        // A pooled staging buffer may be power-of-two rounded and expose
+        // more mapped bytes than the image requested. Do not read unrelated
+        // guest memory or waste CPU DMA time filling the unused tail.
+        gpu_memory->ReadBlock(gpu_addr, mapped_span.data(), MapSizeBytes(image),
+                              VideoCommon::CacheType::NoTextureCache);
+#else
         gpu_memory->ReadBlock(gpu_addr, mapped_span.data(), mapped_span.size_bytes(),
                               VideoCommon::CacheType::NoTextureCache);
+#endif
         const auto uploads = FullUploadSwizzles(image.info);
         runtime.AccelerateImageUpload(image, staging, FixSmallVectorADL(uploads), 0, 0);
         return;
