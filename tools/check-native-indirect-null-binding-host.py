@@ -42,7 +42,13 @@ for profile in ("gl_rasterizer.cpp", "gl_rasterizer_dev.cpp"):
 
 # Disabled post-store experiment must not reintroduce a null Vulkan submit.
 deferred = (root / "vendor/encore-active/eden-core/guest-bridge/vulkan_rasterizer.cpp").read_text()
-assert method(deferred, "void RasterizerVulkan::DrawIndirect() {", "\nvoid RasterizerVulkan::DrawTexture()") == draw
+guest_draw = method(deferred, "void RasterizerVulkan::DrawIndirect() {", "\nvoid RasterizerVulkan::DrawTexture()")
+# The native command worker checks the pipeline bound by ConfigureDraw;
+# the disabled guest-bridge keeps its original CanExecuteDraw accessor.
+# Only that intentional three-call accessor difference is permitted.
+assert draw.count("CanExecuteRecordedDraw()") == 3
+assert guest_draw.count("CanExecuteDraw()") == 3
+assert guest_draw.replace("CanExecuteDraw()", "CanExecuteRecordedDraw()") == draw
 
 
 code = r"""
