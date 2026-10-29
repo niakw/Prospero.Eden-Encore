@@ -176,7 +176,7 @@ print("ENCORE_VULKAN_DEVICE_PRESENT_OWNER_PASS", f"sources={len(native_vk_source
 assert 'file(COPY "${EDEN_ACTIVE_VULKAN}/" DESTINATION "${PORT_BUILD_DIR}")' in vulkan_recipe
 assert 'target_include_directories(video_core BEFORE PUBLIC "${PORT_BUILD_DIR}/include")' in vulkan_recipe
 abi_headers = ("vk_scheduler.h", "vk_present_manager.h", "vk_descriptor_buffer.h",
-               "vk_blit_screen.h", "renderer_vulkan.h")
+               "vk_blit_screen.h", "vk_buffer_cache.h", "renderer_vulkan.h")
 for header in abi_headers:
     rel = "eden-vulkan/include/video_core/renderer_vulkan/" + header
     assert (active/rel).is_file() and rel in graph, ("missing selected Vulkan ABI owner", rel)
@@ -302,7 +302,7 @@ print("ENCORE_ACTIVE_CATALOG_SUMMARY_PASS",
 # configure-time copy has an exact source ownership record. This guards
 # coverage, not GPU forward progress or successful native device tests.
 vulkan_family = [p for p in physical if p.startswith("eden-vulkan/")]
-assert len(vulkan_family) == 42, ("Vulkan maintained footprint changed", len(vulkan_family))
+assert len(vulkan_family) == 43, ("Vulkan maintained footprint changed", len(vulkan_family))
 assert all(p in graph for p in vulkan_family), (
     "Vulkan maintained source lacks owner", [p for p in vulkan_family if p not in graph],
 )
