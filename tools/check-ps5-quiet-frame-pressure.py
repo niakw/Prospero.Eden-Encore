@@ -218,7 +218,7 @@ int main() {
     assert(quiet_resets == 1 && !witness.seeded);
     update(true, c, 200.0, 1009);
     assert(witness.seeded && !witness.captured);
-    update(true, d, 120.0, 1010); // decreasing counter must not create a peak
+    update(true, first, 120.0, 1010); // reset counters cannot create a false peak
     assert(!witness.captured);
     update(false, d, 0.0, 1011);
     update(false, d, 0.0, 1012);
