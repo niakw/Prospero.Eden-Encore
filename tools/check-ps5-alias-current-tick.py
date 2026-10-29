@@ -28,6 +28,8 @@ with tempfile.TemporaryDirectory(prefix="eden-r321-alias-tick-") as tmp:
     b=s.index("\ntemplate <class P>",a)
     body=s[a:b]
     assert body.index("if (image.modification_tick == modification_tick)") < body.index("for (const AliasedImage& aliased")
+    assert body.index("if (image.modification_tick == modification_tick)") < body.index("boost::container::small_vector<const AliasedImage*, 8> aliased_images;")
+    assert body.index("boost::container::small_vector<const AliasedImage*, 8> aliased_images;") < body.index("for (const AliasedImage& aliased")
     cpp=d/"alias.cpp"
     cpp.write_text(r"""
 #include <algorithm>

@@ -3650,7 +3650,6 @@ void TextureCache<P>::MarkModification(ImageBase& image) noexcept {
 
 template <class P>
 void TextureCache<P>::SynchronizeAliases(ImageId image_id) {
-    boost::container::small_vector<const AliasedImage*, 8> aliased_images;
     Image& image = slot_images[image_id];
 #ifdef PS5_NATIVE
     // MarkModification advances the cache-wide tick monotonically. If this
@@ -3660,6 +3659,8 @@ void TextureCache<P>::SynchronizeAliases(ImageId image_id) {
         return;
     }
 #endif
+    // Avoid constructing the inline alias vector on a common no-op HUD lookup.
+    boost::container::small_vector<const AliasedImage*, 8> aliased_images;
 #ifdef PS5_NATIVE
     ::Eden::Performance::CachePhaseTimer alias_scan_phase{
         ::Eden::Performance::CachePhase::TextureAliasScan};
