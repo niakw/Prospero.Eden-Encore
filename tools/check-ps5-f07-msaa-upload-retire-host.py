@@ -412,7 +412,7 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-msaa-scratch-pool-") as d:
 # UINT64_MAX (in-use) cannot age out; a released tick ages only after GPU
 # completion, and resolve shadows must remain alive until their own fence.
 tick_begin = "void TextureCacheRuntime::TickFrame() {"
-tick_end = "\nImage::Image("
+tick_end = "\nImage::Image(TextureCacheRuntime&"
 assert source.count(tick_begin) == source.count(tick_end) == 1
 tick_frame = source[source.index(tick_begin):source.index(tick_end)]
 assert "std::erase_if(msaa_scratch_images" in tick_frame
