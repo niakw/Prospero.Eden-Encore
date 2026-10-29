@@ -116,3 +116,4 @@
 | Date | HEAD | ID | Décision et preuve | Prochaine case / blocage |
 | --- | --- | --- | --- | --- |
 | 2026-10-29 | `52e3334` | CHECKLIST | Création du registre des chantiers connus ; aucun patch moteur, aucune compilation finale | Vérifier les gates existants ; puis S01/V01/C01/T01 selon la première preuve de coût |
+| 2026-10-29 | `398fb5b` | B03 / T04 | Fast gate précédent [40810682530](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40810682530) : le témoin MSAA échouait **à l'exécution** car il attendait la libération de scratch après un seul tick libre. Correctif du **témoin uniquement** : vérifier la rétention à 1 puis 60 frames libres et l'éviction à la 61e ; ordre, source native et générateur inchangés. CI du nouveau SHA [40811858092](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40811858092) démarrée ; pas encore un PASS. | Lire le résultat du fast gate, puis preflight ; pas de build |
