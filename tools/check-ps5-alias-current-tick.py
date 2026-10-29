@@ -28,13 +28,19 @@ with tempfile.TemporaryDirectory(prefix="eden-r321-alias-tick-") as tmp:
     b=s.index("\ntemplate <class P>",a)
     body=s[a:b]
     assert body.index("if (image.modification_tick == modification_tick)") < body.index("for (const AliasedImage& aliased")
-    assert body.index("if (image.modification_tick == modification_tick)") < body.index("boost::container::small_vector<const AliasedImage*, 8> aliased_images;")
+    # The immutable R321 backport inserts the early-return AFTER its existing
+    # inline vector declaration. The active F07 Vulkan overlay later moves the
+    # guard BEFORE that declaration; do not misattribute that newer placement
+    # to the pinned R321 patch, or the valid canonical patch fails this test.
+    assert body.index("boost::container::small_vector<const AliasedImage*, 8> aliased_images;") < body.index("if (image.modification_tick == modification_tick)")
     assert body.index("boost::container::small_vector<const AliasedImage*, 8> aliased_images;") < body.index("for (const AliasedImage& aliased")
     native=(root/"vendor/encore-active/eden-vulkan/vulkan-cache/video_core/texture_cache/texture_cache.h").read_text()
     generator=(root/"tools/prepare-vulkan-port.py").read_text()
     assert "F07 skip singleton native alias sort while preserving multi-alias order" in generator
     native_body=native[native.index("void TextureCache<P>::SynchronizeAliases("):]
     native_body=native_body[:native_body.index("\ntemplate <class P>")]
+    assert native_body.index("if (image.modification_tick == modification_tick)") < native_body.index("boost::container::small_vector<const AliasedImage*, 8> aliased_images;")
+
     sort_guard="#ifdef PS5_NATIVE\n    // Most alias refreshes have only one newer source."
     assert native_body.count(sort_guard)==1
     assert native_body.index("if (aliased_images.size() > 1)") < native_body.index("std::ranges::sort(aliased_images,")
