@@ -65,6 +65,16 @@ f07_texture_labels = (
     'F07 skip GPU completion probe on empty native MSAA GC frame',
     'F07 avoid native MSAA GPU completion probe without matching image key',
     'F07 skip MSAA GPU probe when every scratch image is checked out',
+    # Revert all later *independent* MSAA/readback patches before comparing
+    # the fixed historical deferred-copy ownership fingerprint. Do not
+    # relax the SHA or rebase it to a modified native module.
+    'F07 MSAA scratch failure-guard include',
+    'F07 MSAA upload scratch exception safe release',
+    'F07 MSAA upload scratch normal release unchanged',
+    'F07 MSAA download scratch failure release',
+    'F07 MSAA download scratch success release unchanged',
+    'F07 MSAA null scratch image rejected before caching',
+    'F07 empty and malformed GPU readback preflight',
 )
 f07_texture_deltas = []
 for statement in tree.body:
