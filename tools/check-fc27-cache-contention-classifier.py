@@ -302,5 +302,35 @@ assert module.windows([
     "EDEN_VULKAN_FRAME total=995 fps=30 worst_ms=34",
     "EDEN_FRAME_PRESSURE frame=995 detail=not_measured",
 ] + frame_lines) == []
+assert module.TEXTURE_EXACT_PHASES == frozenset(("texture_budget_query", "texture_gc_collect"))
+assert module.TEXTURE_SAMPLED_PHASES == frozenset(("texture_async_tick", "texture_runtime_tick"))
+texture_lines = [
+    "EDEN_GPU_CACHE_PHASE frame=999 phase=texture_budget_query samples=22 total_ns=123000000 window_samples=2 window_ns=14000000 max_ns=8000000",
+    "EDEN_GPU_CACHE_PHASE frame=999 phase=texture_gc_collect samples=6 total_ns=51000000 window_samples=1 window_ns=21000000 max_ns=21000000",
+    gpu_phase(999, "texture_async_tick", 5_000_000),
+    gpu_phase(999, "texture_runtime_tick", 7_000_000),
+]
+texture_rows = module.windows(record(999, 23, 300, 100, 7) + texture_lines)
+texture_report = module.report(texture_rows)
+assert "texture_exact_gc_events: complete=1/1" in texture_report
+assert "texture_budget_query_samples=2" in texture_report
+assert "texture_gc_collect_sample_ms=21.000" in texture_report
+assert "texture_housekeeping_samples: complete=1/1" in texture_report
+assert "texture_runtime_tick_sample_ms=7.000" in texture_report
+assert "do NOT subtract them from the whole mutex hold duration" in texture_report
+for corrupt in (
+    texture_lines[:3],
+    texture_lines + [texture_lines[0]],
+    texture_lines[:3] + [gpu_phase(1000, "texture_runtime_tick", 7_000_000)],
+):
+    assert "texture_housekeeping_samples: complete=0/1" in module.report(
+        module.windows(record(999, 23, 300, 100, 7) + corrupt))
+zero_texture = [
+    "EDEN_GPU_CACHE_PHASE frame=1000 phase=" + phase +
+    " samples=0 total_ns=0 window_samples=0 window_ns=0 max_ns=0"
+    for phase in module.TEXTURE_EXACT_PHASES
+]
+assert "texture_exact_gc_events: complete=1/1" in module.report(
+    module.windows(record(1000, 30, 33, 0, 0) + zero_texture))
 assert module.report([]) == "NO_VALID_WINDOWS (requires matching frame totals)"
 print("PINNED_FC27_LONG_FRAME_CLASSIFIER_PASS")

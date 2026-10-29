@@ -1431,7 +1431,8 @@ void ReportGpuThread(unsigned frame) {
             "graphics_pipeline_wait", "compute_pipeline_wait", "texture_upload_staging",
             "texture_upload_contents", "texture_upload_barrier",
             "compute_pair_wait", "compute_pair_held", "compute_configure",
-            "frame_texture_wait", "frame_texture_held", "frame_buffer_wait", "frame_buffer_held"
+            "frame_texture_wait", "frame_texture_held", "frame_buffer_wait", "frame_buffer_held",
+            "texture_budget_query", "texture_gc_collect", "texture_async_tick", "texture_runtime_tick"
         };
         static_assert(std::size(cache_phase_names) == cache_phase_totals.size());
         constexpr const char* drop_names[] = {

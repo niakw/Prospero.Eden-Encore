@@ -34,8 +34,12 @@ FRAME_OWNER_PHASES = frozenset((
     "frame_texture_wait", "frame_texture_held",
     "frame_buffer_wait", "frame_buffer_held",
 ))
+# Budget query and garbage collection are timed for each real invocation,
+# whereas async/runtime TickFrame phases are independently 1-in-16 sampled.
+TEXTURE_EXACT_PHASES = frozenset(("texture_budget_query", "texture_gc_collect"))
+TEXTURE_SAMPLED_PHASES = frozenset(("texture_async_tick", "texture_runtime_tick"))
 PROFILE_PHASES = (GPU_OWNER_PHASES | SHADER_PHASES | WORKER_PHASES |
-                  RING_PHASES | FRAME_OWNER_PHASES)
+                  RING_PHASES | FRAME_OWNER_PHASES | TEXTURE_EXACT_PHASES | TEXTURE_SAMPLED_PHASES)
 
 def values(line: str) -> dict[str, float]:
     return {key: float(value) for key, value in FIELDS.findall(line)}
@@ -229,6 +233,8 @@ def report(rows: list[dict[str, float]]) -> str:
     # each cache mutex from time executing TickFrame while holding it.
     # Missing phases must not be interpreted as zero contention.
     selected_phases_report(FRAME_OWNER_PHASES, "frame_cache_owner_samples")
+    selected_phases_report(TEXTURE_EXACT_PHASES, "texture_exact_gc_events")
+    selected_phases_report(TEXTURE_SAMPLED_PHASES, "texture_housekeeping_samples")
     # Preserve zero measured fallback invocations. Never convert an absent
     # counter to zero or an in-lock fallback into preflight time.
     ring_rows = [
@@ -265,6 +271,12 @@ def report(rows: list[dict[str, float]]) -> str:
                "wait is outside the mutex, held is inside it. Their window "
                "samples are NOT every frame, a full-frame duration, or proof "
                "that a specific HUD update stalled.")
+    out.append("NOTE: texture_budget_query and texture_gc_collect are exact "
+               "invocation counts only while Detailed Logging is enabled. "
+               "Zero recorded calls is not proof of no GPU memory pressure.")
+    out.append("NOTE: texture_async_tick and texture_runtime_tick are separate "
+               "1-in-16 texture frames, not the 1-in-16 draw/outer lock samples; "
+               "do NOT subtract them from the whole mutex hold duration.")
     out.append("NOTE: per-core JIT CPU time may overlap between cores; its maximum "
                "is NOT renderer wall time or the cause of a presentation gap.")
     out.append("NOTE: JIT and cache times aggregate many guest threads across "

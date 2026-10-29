@@ -212,7 +212,8 @@ enum class CachePhase : unsigned {
     TextureUploadStaging, TextureUploadContents,
     TextureUploadBarrier,
     ComputePairWait, ComputePairHeld, ComputeConfigure,
-    FrameTextureWait, FrameTextureHeld, FrameBufferWait, FrameBufferHeld, Count
+    FrameTextureWait, FrameTextureHeld, FrameBufferWait, FrameBufferHeld,
+    TextureBudgetQuery, TextureGcCollect, TextureAsyncTick, TextureRuntimeTick, Count
 };
 struct CachePhaseTotal {
     std::atomic<unsigned long long> samples{}, total_ns{}, max_ns{};
@@ -237,6 +238,12 @@ inline bool ShouldSampleCacheFrame() noexcept {
     static thread_local unsigned sequence = 0;
     // One cache-owner sample per 16 completed GPU frames, independent of
     // sampled draws or guest writes. No wall-clock probes in quiet mode.
+    return (++sequence & 15u) == 0u;
+}
+inline bool ShouldSampleTextureHousekeeping() noexcept {
+    if (!detailed_gpu_profile.load(std::memory_order_relaxed)) return false;
+    static thread_local unsigned sequence = 0;
+    // Sample texture housekeeping independently of the outer lock owner.
     return (++sequence & 15u) == 0u;
 }
 inline bool ShouldSampleGuestWrite() noexcept {
