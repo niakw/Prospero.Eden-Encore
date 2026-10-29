@@ -838,6 +838,7 @@ ComputePipeline* PipelineCache::CurrentComputePipeline() {
 #endif
         pipeline = CreateComputePipeline(key, shader);
 #ifdef PS5_NATIVE
+        first_use_compute_cost.Stop();
         cold_miss.Complete(static_cast<bool>(pipeline));
         if (!pipeline) {
             // Bound recovery metadata without starving the latest failed
@@ -872,6 +873,7 @@ ComputePipeline* PipelineCache::CurrentComputePipeline() {
                 ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
             ColdShaderMissTrace cold_retry{"compute", key.Hash(), true};
             pipeline = CreateComputePipeline(key, shader);
+            retry_compute_cost.Stop();
             cold_retry.Complete(static_cast<bool>(pipeline));
             // A consumed retry cannot repeat: the null compute_cache entry
             // is no longer marked retryable. Recycle its 32-key budget slot.
@@ -1216,6 +1218,7 @@ GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {
 #endif
         pipeline = CreateGraphicsPipeline();
 #ifdef PS5_NATIVE
+        first_use_cpu_phase.Stop();
         cold_miss.Complete(static_cast<bool>(pipeline));
         if (!pipeline) {
             // Failed-key retry metadata is capped, but a burst of >=64
@@ -1251,6 +1254,7 @@ GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {
                 ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
             ColdShaderMissTrace cold_retry{"graphics", graphics_key.Hash(), true};
             pipeline = CreateGraphicsPipeline();
+            retry_cpu_cost.Stop();
             cold_retry.Complete(static_cast<bool>(pipeline));
             // The null graphics_cache entry itself guarantees at most one
             // retry for this key. Retaining consumed retry metadata would
