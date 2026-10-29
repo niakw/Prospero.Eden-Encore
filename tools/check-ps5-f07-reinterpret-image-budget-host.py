@@ -52,6 +52,17 @@ assert size.index("if (copy_buffer == VK_NULL_HANDLE)") < size.index("Invalidate
 assert "F07 preserve resolve validity on rejected size-incompatible CopyImage" in generator
 assert "F07 skip empty size-compatible native Vulkan CopyImage without stale resolve" in generator
 assert "F07 skip empty native MSAA image copies before helper GPU dispatch" in generator
+assert "F07 skip zero-area native Vulkan image blits" in generator
+blit_header="void TextureCacheRuntime::BlitImage(Framebuffer* dst_framebuffer, ImageView& dst, ImageView& src,"
+blit_tail="    const VkImageAspectFlags aspect_mask = ImageAspectMask(src.format);"
+assert source.count(blit_header)==1
+blit_method=source[source.index(blit_header):]
+assert blit_method.count(blit_tail)==1
+blit_guard=blit_method[blit_method.index("{")+1:blit_method.index(blit_tail)]
+assert blit_guard.count("==") == 4 and blit_guard.count("return;") == 1
+assert blit_guard.index("#ifdef PS5_NATIVE") < blit_guard.index("if (dst_region.start.x")
+assert "src_region.start.y == src_region.end.y" in blit_guard
+
 msaa_start="void TextureCacheRuntime::CopyImageMSAA(Image& dst, Image& src,"
 assert source.count(msaa_start)==1
 msaa_source=source[source.index(msaa_start):]
@@ -88,6 +99,8 @@ inline constexpr bool ENABLE_MSAA_RESOLVE_CONSUME=true;
 struct Extent {u32 width{},height{},depth{};};
 struct ImageCopy {Extent extent{};};
 struct ImageInfo {u32 format{};};
+struct Offset2D {int x{},y{};};
+struct Region2D {Offset2D start{},end{};};
 struct Image {ImageInfo info{}; VkImage Handle() const {return 73;} };
 u32 BytesPerBlock(u32 format) {return format;}
 struct Runtime {
@@ -118,6 +131,11 @@ __SOURCE_COPY_GUARD__
         } else {
             ++direct_copies;
         }
+    }
+    std::size_t blits{};
+    void BlitImage(const Region2D& dst_region, const Region2D& src_region) {
+__SOURCE_BLIT_GUARD__
+        ++blits;
     }
     std::size_t msaa_copies{};
     void CopyImageMSAA(const std::vector<ImageCopy>& copies) {
@@ -158,6 +176,23 @@ int main() {
     // Desktop retains its historical empty-command and resolve invalidation.
     assert(empty_compatible.calls==0 && empty_compatible.invalidates==1 &&
            empty_compatible.direct_copies==1);
+#endif
+    Runtime blit;
+    const Region2D valid_region{{0,0},{12,9}};
+    const Region2D flipped_region{{12,9},{0,0}};
+    const Region2D no_x{{4,0},{4,9}};
+    const Region2D no_y{{0,4},{12,4}};
+    blit.BlitImage(valid_region,valid_region);
+    blit.BlitImage(flipped_region,valid_region);
+    blit.BlitImage(valid_region,flipped_region);
+    blit.BlitImage(no_x,valid_region);
+    blit.BlitImage(no_y,valid_region);
+    blit.BlitImage(valid_region,no_x);
+    blit.BlitImage(valid_region,no_y);
+#ifdef PS5_NATIVE
+    assert(blit.blits==3);
+#else
+    assert(blit.blits==7);
 #endif
     Runtime msaa_empty;
     msaa_empty.CopyImageMSAA({});
@@ -225,7 +260,7 @@ int main() {
     assert(aggregate.calls==0 && aggregate.invalidates==0);
 #endif
 }
-""".replace("__SOURCE_EMPTY_GUARD__",early).replace("__SOURCE_SIZE_GUARD__",size).replace("__SOURCE_COPY_GUARD__",copy_guard).replace("__SOURCE_MSAA_GUARD__",msaa_guard)
+""".replace("__SOURCE_EMPTY_GUARD__",early).replace("__SOURCE_SIZE_GUARD__",size).replace("__SOURCE_COPY_GUARD__",copy_guard).replace("__SOURCE_MSAA_GUARD__",msaa_guard).replace("__SOURCE_BLIT_GUARD__",blit_guard)
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler,"F07 reinterpret scratch witness needs C++20 compiler"
 with tempfile.TemporaryDirectory(prefix="eden-f07-vulkan-reinterpret-") as folder:
@@ -241,4 +276,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-vulkan-reinterpret-") as folde
             assert built.returncode==0,(native,opt,built.stderr[-6000:])
             ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
-print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 null_handle_not_submitted=1 copy_reinterpret_shadow=1 empty_copy_noop=1 empty_msaa_noop=1 valid=1 desktop_original=1 O0=1 O2=1")
+print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 null_handle_not_submitted=1 copy_reinterpret_shadow=1 empty_copy_noop=1 empty_msaa_noop=1 zero_area_blit_noop=1 flipped_blit_preserved=1 valid=1 desktop_original=1 O0=1 O2=1")

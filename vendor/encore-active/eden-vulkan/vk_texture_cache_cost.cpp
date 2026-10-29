@@ -1402,6 +1402,16 @@ void TextureCacheRuntime::BlitImage(Framebuffer* dst_framebuffer, ImageView& dst
                                     const Region2D& dst_region, const Region2D& src_region,
                                     Tegra::Engines::Fermi2D::Filter filter,
                                     Tegra::Engines::Fermi2D::Operation operation) {
+#ifdef PS5_NATIVE
+    // A collapsed source or destination axis cannot transfer image pixels.
+    // Keep flipped blits (reversed, nonempty coordinates) fully supported.
+    if (dst_region.start.x == dst_region.end.x ||
+        dst_region.start.y == dst_region.end.y ||
+        src_region.start.x == src_region.end.x ||
+        src_region.start.y == src_region.end.y) {
+        return;
+    }
+#endif
     const VkImageAspectFlags aspect_mask = ImageAspectMask(src.format);
     const bool is_dst_msaa = dst.Samples() != VK_SAMPLE_COUNT_1_BIT;
     const bool is_src_msaa = src.Samples() != VK_SAMPLE_COUNT_1_BIT;
