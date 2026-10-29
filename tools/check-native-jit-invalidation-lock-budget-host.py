@@ -255,10 +255,12 @@ model=r"""
 inline bool detailed=false;
 inline unsigned calls=0;
 inline unsigned long long cpu_ns=0;
-extern "C" bool eden_native_detailed_logging() noexcept {return detailed;}
-extern "C" void eden_jit_compile(unsigned core,unsigned long long ns){
-    assert(core==2);++calls;cpu_ns+=ns;
-}
+// Mock the weak native functions with nullable pointer slots, not strong
+// function definitions: Clang/GCC -Werror correctly reject always-true
+// strong function-address tests in the source-extracted RAII.
+inline bool (*eden_native_detailed_logging)() noexcept = +[]() noexcept {return detailed;};
+inline void (*eden_jit_compile)(unsigned,unsigned long long) =
+    +[](unsigned core,unsigned long long ns){assert(core==2);++calls;cpu_ns+=ns;};
 struct Config{unsigned processor_id{2};};
 int main(){
     Config conf;
