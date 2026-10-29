@@ -43,7 +43,11 @@ def callback_body(text, kind):
     assert "if (is_built.load(std::memory_order_acquire)) return;" in block
     assert block.count("std::unique_lock lock{build_mutex};") == 2
     assert block.count("if (is_built.load(std::memory_order_acquire)) return;") == 2
-    assert block.index("std::unique_lock lock{build_mutex};") < block.rindex("if (is_built.load(std::memory_order_acquire)) return;") < block.index("PipelineWaitTrace keyed_wait;")
+    assert block.index("if (is_built.load(std::memory_order_acquire)) return;") < block.index("PipelineWaitTrace keyed_wait;")
+    assert block.index("PipelineWaitTrace keyed_wait;") < block.index("std::unique_lock lock{build_mutex};") < block.rindex("if (is_built.load(std::memory_order_acquire)) return;")
+    # The first ready check is still before the timer, so completed builders
+    # skip diagnostics entirely. A publication after the first check but
+    # before locking remains a no-log fast exit under the mutex.
     assert "#ifndef PS5_NATIVE\n            std::unique_lock lock{build_mutex};" in block
     assert "build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });" in block
     assert "lock.unlock();" in block
