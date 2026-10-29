@@ -135,6 +135,10 @@ __SOURCE_COPY_GUARD__
     std::size_t blits{};
     void BlitImage(const Region2D& dst_region, const Region2D& src_region) {
 __SOURCE_BLIT_GUARD__
+        // Desktop intentionally has no native guard; mark fixture parameters
+        // used without altering either mode's source-extracted behavior.
+        static_cast<void>(dst_region);
+        static_cast<void>(src_region);
         ++blits;
     }
     std::size_t msaa_copies{};
