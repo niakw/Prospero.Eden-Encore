@@ -190,7 +190,6 @@ public:
         return static_cast<bool>(pipeline);
 #endif
     }
-
     // Native Vulkan worker must use the pipeline actually selected by its
     // preceding ConfigureDraw callback, not a variant published afterward.
     // Desktop keeps the original readiness check.
