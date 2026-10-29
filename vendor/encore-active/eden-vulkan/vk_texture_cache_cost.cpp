@@ -2001,8 +2001,17 @@ VkImage TextureCacheRuntime::AcquireMsaaScratchImage(const VkImageCreateInfo& im
         .usage = image_ci.usage,
         .flags = image_ci.flags,
     };
+#ifdef PS5_NATIVE
+    // One monotone GPU-completion snapshot for the scratch search. A fence
+    // completed during this scan becomes reusable at the next allocation.
+    const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();
+#endif
     for (MsaaScratchImage& scratch : msaa_scratch_images) {
+#ifdef PS5_NATIVE
+        if (scratch.key != key || scratch.tick > completed_tick) {
+#else
         if (scratch.key != key || !scheduler.IsFree(scratch.tick)) {
+#endif
             continue;
         }
         scratch.tick = (std::numeric_limits<u64>::max)();
@@ -2031,15 +2040,25 @@ void TextureCacheRuntime::ReleaseMsaaScratchImage(VkImage image) {
 
 void TextureCacheRuntime::TickFrame() {
     static constexpr u32 MAX_UNUSED_SCRATCH_FRAMES = 60;
-    std::erase_if(msaa_scratch_images, [this](MsaaScratchImage& scratch) {
-        if (!scheduler.IsFree(scratch.tick)) {
+#ifdef PS5_NATIVE
+    // One conservative GPU completion sample for both cleanup scans, not a
+    // semaphore query per scratch/resolve. Late completions wait one frame.
+    const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();
+    const auto is_free = [completed_tick](u64 tick) noexcept {
+        return tick <= completed_tick;
+    };
+#else
+    const auto is_free = [this](u64 tick) { return scheduler.IsFree(tick); };
+#endif
+    std::erase_if(msaa_scratch_images, [is_free](MsaaScratchImage& scratch) {
+        if (!is_free(scratch.tick)) {
             scratch.unused_frames = 0;
             return false;
         }
         return ++scratch.unused_frames > MAX_UNUSED_SCRATCH_FRAMES;
     });
-    std::erase_if(pending_resolve_shadows, [this](const auto& pending) {
-        return scheduler.IsFree(pending.first);
+    std::erase_if(pending_resolve_shadows, [is_free](const auto& pending) {
+        return is_free(pending.first);
     });
 }
 

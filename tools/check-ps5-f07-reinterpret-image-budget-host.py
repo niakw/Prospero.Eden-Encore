@@ -281,3 +281,147 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-vulkan-reinterpret-") as folde
             ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
 print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 null_handle_not_submitted=1 copy_reinterpret_shadow=1 empty_copy_noop=1 empty_msaa_noop=1 zero_area_blit_noop=1 flipped_blit_preserved=1 valid=1 desktop_original=1 O0=1 O2=1")
+
+
+# F07 P0.3: compile the selected scratch-reuse and frame-GC methods, not a
+# hand-copied implementation. The native path reads one monotone GPU tick per
+# pass; the desktop path keeps scheduler.IsFree for every candidate.
+gc_begin="VkImage TextureCacheRuntime::AcquireMsaaScratchImage("
+gc_end="\nvoid TextureCacheRuntime::ReleaseMsaaScratchImage("
+tick_begin="void TextureCacheRuntime::TickFrame() {"
+tick_end="\nImage::Image("
+assert source.count(gc_begin)==source.count(gc_end)==1
+assert source.count(tick_begin)==source.count(tick_end)==1
+gc_acquire=source[source.index(gc_begin):source.index(gc_end,source.index(gc_begin))]
+gc_tick=source[source.index(tick_begin):source.index(tick_end,source.index(tick_begin))]
+assert "F07 snapshot native MSAA scratch reuse GPU completion" in generator
+assert "F07 snapshot native MSAA scratch and resolve cleanup GPU completion" in generator
+assert gc_acquire.count("KnownGpuTick()")==1
+assert gc_tick.count("KnownGpuTick()")==1
+assert "scratch.tick > completed_tick" in gc_acquire
+assert "tick <= completed_tick" in gc_tick
+assert gc_tick.count("is_free(")==2
+gc_cpp=r"""
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstdio>
+#include <limits>
+#include <memory>
+#include <utility>
+#include <vector>
+using u32=std::uint32_t;
+using u64=std::uint64_t;
+using VkImage=u64;
+struct VkImageCreateInfo {
+    int format{},imageType{};
+    struct {u32 width{},height{},depth{};} extent;
+    u32 mipLevels{},arrayLayers{},usage{},flags{};
+};
+struct MsaaScratchKey {
+    int format{},type{};
+    u32 width{},height{},depth{},levels{},layers{},usage{},flags{};
+    bool operator==(const MsaaScratchKey&) const = default;
+};
+struct MsaaScratchImage {
+    MsaaScratchKey key{};
+    std::shared_ptr<VkImage> image{};
+    u64 tick{};
+    u32 unused_frames{};
+};
+struct Semaphore {
+    u64 completed{};
+    mutable u32 polls{};
+    u64 KnownGpuTick() const {++polls;return completed;}
+};
+struct Scheduler {
+    Semaphore semaphore{};
+    u32 is_free_calls{};
+    Semaphore& GetMasterSemaphore() {return semaphore;}
+    bool IsFree(u64 tick) {++is_free_calls;return tick<=semaphore.KnownGpuTick();}
+    u64 CurrentTick() {return 100;}
+};
+struct Allocator {
+    u64 next=1;
+    std::shared_ptr<VkImage> CreateImage(const VkImageCreateInfo&) {
+        return std::make_shared<VkImage>(next++);
+    }
+};
+struct TextureCacheRuntime {
+    Scheduler scheduler{};
+    Allocator memory_allocator{};
+    std::vector<MsaaScratchImage> msaa_scratch_images{};
+    std::vector<std::pair<u64,int>> pending_resolve_shadows{};
+    VkImage AcquireMsaaScratchImage(const VkImageCreateInfo&);
+    void TickFrame();
+};
+__GC_ACQUIRE__
+__GC_TICK__
+int main() {
+    TextureCacheRuntime r;
+    VkImageCreateInfo ci{};
+    ci.format=2;ci.imageType=3;ci.extent={64,32,1};
+    ci.mipLevels=1;ci.arrayLayers=1;ci.usage=7;ci.flags=0;
+    const MsaaScratchKey key{2,3,64,32,1,1,1,7,0};
+    for (u64 i=0;i<8;++i)
+        r.msaa_scratch_images.push_back({key,std::make_shared<VkImage>(100+i),
+                                        i==0?8:20,0});
+    r.scheduler.semaphore.completed=5;
+    assert(r.AcquireMsaaScratchImage(ci)==1);
+#ifdef PS5_NATIVE
+    assert(r.scheduler.semaphore.polls==1 && r.scheduler.is_free_calls==0);
+#else
+    assert(r.scheduler.is_free_calls==8);
+#endif
+    r.scheduler.semaphore.completed=8;
+    assert(r.AcquireMsaaScratchImage(ci)==100);
+    assert(r.msaa_scratch_images[0].tick==std::numeric_limits<u64>::max());
+    r.msaa_scratch_images[1].tick=9;
+    r.msaa_scratch_images[1].unused_frames=60;
+    r.msaa_scratch_images[2].tick=10;
+    r.msaa_scratch_images[2].unused_frames=60;
+    r.msaa_scratch_images[3].tick=7;
+    r.msaa_scratch_images[3].unused_frames=1;
+    r.pending_resolve_shadows={{7,1},{9,2},{10,3}};
+    r.scheduler.semaphore.completed=9;
+    const auto before_polls=r.scheduler.semaphore.polls;
+    const auto before_isfree=r.scheduler.is_free_calls;
+    r.TickFrame();
+    assert(r.msaa_scratch_images.size()==8);
+    assert(r.pending_resolve_shadows.size()==1);
+    assert(r.pending_resolve_shadows[0].first==10);
+    const auto find_image=[&](u64 id) {
+        return std::find_if(r.msaa_scratch_images.begin(),r.msaa_scratch_images.end(),
+                            [id](const auto& s){return *s.image==id;});
+    };
+    assert(find_image(101)==r.msaa_scratch_images.end());
+    assert(find_image(102)!=r.msaa_scratch_images.end());
+    assert(find_image(102)->unused_frames==0);
+    assert(find_image(103)->unused_frames==2);
+#ifdef PS5_NATIVE
+    assert(r.scheduler.semaphore.polls==before_polls+1);
+    assert(r.scheduler.is_free_calls==before_isfree);
+#else
+    assert(r.scheduler.is_free_calls>before_isfree+3);
+#endif
+    r.scheduler.semaphore.completed=10;
+    r.TickFrame();
+    assert(r.pending_resolve_shadows.empty());
+    assert(find_image(102)==r.msaa_scratch_images.end());
+    std::puts("F07_MSAA_COMPLETION_SNAPSHOT_PASS");
+}
+""".replace("__GC_ACQUIRE__",gc_acquire).replace("__GC_TICK__",gc_tick)
+with tempfile.TemporaryDirectory(prefix="eden-f07-msaa-snapshot-") as folder:
+    unit=Path(folder)/"msaa.cpp"
+    unit.write_text(gc_cpp)
+    for opt in ("-O0","-O2"):
+        for native in (False,True):
+            binary=Path(folder)/("msaa"+opt[1:]+("-ps5" if native else "-desktop"))
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                 "-fsanitize=undefined","-fno-sanitize-recover=all",
+                 *(['-DPS5_NATIVE=1'] if native else []),str(unit),"-o",str(binary)]
+            built=subprocess.run(cmd,capture_output=True,text=True,timeout=45)
+            assert built.returncode==0,(native,opt,built.stderr[-6000:])
+            ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
+            assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
+print("F07_MSAA_GC_SOURCE_EXTRACTED_PASS native_one_tick_per_scan=1 desktop_original=1 delayed_reuse_safe=1 O0=1 O2=1")
