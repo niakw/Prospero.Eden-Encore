@@ -24,7 +24,11 @@ SHADER_PHASES = frozenset((
     "shader_ir", "shader_spirv", "shader_module",
 ))
 WORKER_PHASES = frozenset(("graphics_pipeline_wait", "compute_pipeline_wait"))
-PROFILE_PHASES = GPU_OWNER_PHASES | SHADER_PHASES | WORKER_PHASES
+# Unlike the 1-in-16 draw samples, these are exact, one timer per actual
+# scheduler.Finish executed with detailed profiling enabled. One is outside
+# the cache pair (preflight), the other is the under-lock exhaustion fallback.
+RING_PHASES = frozenset(("descriptor_ring_finish", "descriptor_ring_preflight"))
+PROFILE_PHASES = GPU_OWNER_PHASES | SHADER_PHASES | WORKER_PHASES | RING_PHASES
 
 def values(line: str) -> dict[str, float]:
     return {key: float(value) for key, value in FIELDS.findall(line)}
@@ -214,6 +218,29 @@ def report(rows: list[dict[str, float]]) -> str:
         out.append(" ".join(parts))
     selected_phases_report(SHADER_PHASES, "shader_phase_samples")
     selected_phases_report(WORKER_PHASES, "worker_wait_samples")
+    # Preserve zero measured fallback invocations. Never convert an absent
+    # counter to zero or an in-lock fallback into preflight time.
+    ring_rows = [
+        row for row in rows
+        if all(f"gpu_{phase}_samples" in row for phase in RING_PHASES)
+    ]
+    if ring_rows:
+        out.append(
+            f"descriptor_ring_drain: complete={len(ring_rows)}/{len(rows)} "
+            f"under_lock_finish_calls="
+            f"{sum(r['gpu_descriptor_ring_finish_samples'] for r in ring_rows):.0f} "
+            f"under_lock_finish_ms="
+            f"{sum(r['gpu_descriptor_ring_finish_sample_ms'] for r in ring_rows):.3f} "
+            f"prelock_finish_calls="
+            f"{sum(r['gpu_descriptor_ring_preflight_samples'] for r in ring_rows):.0f} "
+            f"prelock_finish_ms="
+            f"{sum(r['gpu_descriptor_ring_preflight_sample_ms'] for r in ring_rows):.3f}"
+        )
+    else:
+        out.append(f"descriptor_ring_drain: complete=0/{len(rows)} (not measured or incomplete)")
+    out.append("NOTE: descriptor_ring_finish/preflight are exact timed Finish "
+               "calls (when detailed logging is enabled), not 1-in-16 "
+               "draw samples; preflight happens outside the guest cache pair.")
     out.append("NOTE: graphics/compute pipeline waits are callbacks executed by "
                "the Vulkan command worker; they do NOT measure GPU-owner "
                "shader translation, GPU completion or a specific draw.")
