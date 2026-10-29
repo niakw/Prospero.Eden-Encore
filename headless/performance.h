@@ -315,8 +315,10 @@ struct PipelineWaitTrace {
         // compilation. Post-mutex includes condition wake and callback work.
         const auto mutex_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
             lock_acquired - started).count();
-        const auto post_mutex_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-            finished - lock_acquired).count();
+        // Compute the remainder in integer nanoseconds to guarantee
+        // mutex_ns + post_mutex_ns == wait_ns on every steady_clock period,
+        // including clocks with a tick coarser than one nanosecond.
+        const auto post_mutex_ns = elapsed - mutex_ns;
         std::printf("EDEN_VULKAN_PIPELINE_WAIT kind=%s key=%016llx wait_ns=%llu usable=%u mutex_ns=%llu post_mutex_ns=%llu\n",
                     kind, static_cast<unsigned long long>(cache_key),
                     static_cast<unsigned long long>(elapsed), unsigned(usable),
