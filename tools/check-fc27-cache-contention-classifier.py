@@ -253,5 +253,54 @@ for corrupt in (
 ):
     candidate = module.windows(record(990, 24, 170, 100, 4) + corrupt)
     assert "descriptor_ring_drain: complete=0/1" in module.report(candidate)
+# Frame-housekeeping owner samples are not the graphics/compute draw-pair
+# samples. A complete quartet is required, including measured zeroes; never
+# mix a frame from another window or silently accept duplicate snapshots.
+frame_phases = (
+    "frame_texture_wait", "frame_texture_held",
+    "frame_buffer_wait", "frame_buffer_held",
+)
+assert set(frame_phases) == module.FRAME_OWNER_PHASES
+frame_lines = [
+    gpu_phase(995, "frame_buffer_held", 5_000_000),
+    gpu_phase(995, "frame_texture_wait", 2_000_000),
+    gpu_phase(995, "frame_buffer_wait", 3_000_000),
+    gpu_phase(995, "frame_texture_held", 7_000_000),
+]
+frame_rows = module.windows(record(995, 22, 175, 100, 4) + frame_lines)
+assert len(frame_rows) == 1
+assert frame_rows[0]["gpu_frame_texture_held_sample_ms"] == 7.0
+assert frame_rows[0]["gpu_frame_buffer_wait_samples"] == 3
+frame_report = module.report(frame_rows)
+assert "frame_cache_owner_samples: complete=1/1" in frame_report
+assert "frame_texture_held_sample_ms=7.000" in frame_report
+assert "frame_texture_wait_sample_ms=2.000" in frame_report
+assert "frame_buffer_held_sample_ms=5.000" in frame_report
+assert "frame_buffer_wait_sample_ms=3.000" in frame_report
+assert "1-in-16 completed GPU frames" in frame_report
+assert "specific HUD update stalled" in frame_report
+for broken in (
+    frame_lines[:3],
+    frame_lines + [frame_lines[0]],
+    frame_lines[:3] + [gpu_phase(996, "frame_texture_held", 7_000_000)],
+    frame_lines[:3] + [gpu_phase(995, "frame_texture_held", -1)],
+):
+    candidate = module.windows(record(995, 22, 175, 100, 4) + broken)
+    assert "frame_cache_owner_samples: complete=0/1" in module.report(candidate)
+zero_frame = [
+    "EDEN_GPU_CACHE_PHASE frame=996 phase=" + phase +
+    " samples=0 total_ns=0 window_samples=0 window_ns=0 max_ns=0"
+    for phase in frame_phases
+]
+zero_frame_rows = module.windows(record(996, 30, 33, 0, 0) + zero_frame)
+assert "frame_cache_owner_samples: complete=1/1" in module.report(zero_frame_rows)
+assert "frame_texture_held_sample_ms=0.000" in module.report(zero_frame_rows)
+assert "frame_cache_owner_samples: complete=0/1" in module.report(
+    module.windows(record(996, 30, 33, 0, 0) + frame_lines)
+)
+assert module.windows([
+    "EDEN_VULKAN_FRAME total=995 fps=30 worst_ms=34",
+    "EDEN_FRAME_PRESSURE frame=995 detail=not_measured",
+] + frame_lines) == []
 assert module.report([]) == "NO_VALID_WINDOWS (requires matching frame totals)"
 print("PINNED_FC27_LONG_FRAME_CLASSIFIER_PASS")
