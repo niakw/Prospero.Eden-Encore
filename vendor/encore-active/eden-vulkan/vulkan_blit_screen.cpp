@@ -137,19 +137,38 @@ void BlitScreen::DrawToFrame(const Device& device, RasterizerVulkan& rasterizer,
         .height = layout.screen.GetHeight(),
     };
 
-    if (layers.size() != framebuffers.size()) {
 #ifdef PS5_NATIVE
-        if (!layers.empty()) {
-            // Old layer resources can still be in queued Vulkan draws.
+    // Presentation layers live in std::list: appending one does not move
+    // existing Layer objects captured by queued Vulkan command callbacks.
+    // New HUD layers can be added without destroying old GPU resources or
+    // draining the entire device. A changed descriptor/layout contract
+    // still forces the existing idle + full rebuild below.
+    if (!resource_update_required && layers.size() < framebuffers.size()) {
+        for (size_t i = layers.size(); i < framebuffers.size(); ++i) {
+            layers.emplace_back(device, memory_allocator, scheduler, device_memory, image_count,
+                                window_size, window_adapt->GetDescriptorSetLayout(), filters);
+        }
+    } else if (resource_update_required || layers.size() != framebuffers.size()) {
+        // Removal destroys GPU-referenced descriptors/images. Reconfiguration
+        // has already waited in the resource_update_required block above.
+        if (!resource_update_required && !layers.empty()) {
             WaitIdle(device);
         }
-#endif
         layers.clear();
         for (size_t i = 0; i < framebuffers.size(); ++i) {
             layers.emplace_back(device, memory_allocator, scheduler, device_memory, image_count,
                                 window_size, window_adapt->GetDescriptorSetLayout(), filters);
         }
     }
+#else
+    if (layers.size() != framebuffers.size()) {
+        layers.clear();
+        for (size_t i = 0; i < framebuffers.size(); ++i) {
+            layers.emplace_back(device, memory_allocator, scheduler, device_memory, image_count,
+                                window_size, window_adapt->GetDescriptorSetLayout(), filters);
+        }
+    }
+#endif
 
     window_adapt->Draw(device, rasterizer, scheduler, image_index, layers, framebuffers, layout, frame, draw_hud);
 
