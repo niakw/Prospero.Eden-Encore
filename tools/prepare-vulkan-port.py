@@ -4258,6 +4258,35 @@ apply_reviewed_delta("vulkan_rasterizer.cpp",
     "    std::scoped_lock lock{texture_cache.mutex};",
     "F07 skip guest memory remap drain for all-masked native clear")
 
+# F07 P0.1/P0.3: native raw blits must not trigger either alpha-state guest
+# shader lookup under the texture cache mutex. A guest draw uses the already
+# prepared pipeline; desktop preserves its original lookup behavior.
+apply_reviewed_delta("vulkan_rasterizer.cpp",
+    "    GraphicsPipeline* const pipeline = pipeline_cache.CurrentGraphicsPipeline();\n"
+    "    const bool enable = pipeline != nullptr && pipeline->SupportsAlphaToCoverage() &&",
+    "#ifdef PS5_NATIVE\n"
+    "    // Guest draws have already selected their pipeline; raw DrawTexture blits\n"
+    "    // must not translate an unrelated cold guest shader under texture lock.\n"
+    "    GraphicsPipeline* const pipeline = prepared_pipeline;\n"
+    "#else\n"
+    "    GraphicsPipeline* const pipeline = pipeline_cache.CurrentGraphicsPipeline();\n"
+    "#endif\n"
+    "    const bool enable = pipeline != nullptr && pipeline->SupportsAlphaToCoverage() &&",
+    "F07 avoid raw blit guest shader lookup for native AlphaToCoverage")
+
+apply_reviewed_delta("vulkan_rasterizer.cpp",
+    "    GraphicsPipeline* const pipeline = pipeline_cache.CurrentGraphicsPipeline();\n"
+    "    const bool enable = pipeline != nullptr && pipeline->SupportsAlphaToOne() &&",
+    "#ifdef PS5_NATIVE\n"
+    "    // Guest draws have already selected their pipeline; raw DrawTexture blits\n"
+    "    // must not translate an unrelated cold guest shader under texture lock.\n"
+    "    GraphicsPipeline* const pipeline = prepared_pipeline;\n"
+    "#else\n"
+    "    GraphicsPipeline* const pipeline = pipeline_cache.CurrentGraphicsPipeline();\n"
+    "#endif\n"
+    "    const bool enable = pipeline != nullptr && pipeline->SupportsAlphaToOne() &&",
+    "F07 avoid raw blit guest shader lookup for native AlphaToOne")
+
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
 # extent fit checks, and reject unknown zero-sized block ratios early.

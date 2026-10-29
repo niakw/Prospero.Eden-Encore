@@ -2225,7 +2225,13 @@ void RasterizerVulkan::UpdateAlphaToCoverageEnable(Tegra::Engines::Maxwell3D::Re
     if (!device.SupportsDynamicState3AlphaToCoverageEnable()) {
         return;
     }
+#ifdef PS5_NATIVE
+    // Guest draws have already selected their pipeline; raw DrawTexture blits
+    // must not translate an unrelated cold guest shader under texture lock.
+    GraphicsPipeline* const pipeline = prepared_pipeline;
+#else
     GraphicsPipeline* const pipeline = pipeline_cache.CurrentGraphicsPipeline();
+#endif
     const bool enable = pipeline != nullptr && pipeline->SupportsAlphaToCoverage() &&
                         regs.anti_alias_alpha_control.alpha_to_coverage != 0;
     scheduler.Record([enable](vk::CommandBuffer cmdbuf) {
@@ -2245,7 +2251,13 @@ void RasterizerVulkan::UpdateAlphaToOneEnable(Tegra::Engines::Maxwell3D::Regs& r
         });
         return;
     }
+#ifdef PS5_NATIVE
+    // Guest draws have already selected their pipeline; raw DrawTexture blits
+    // must not translate an unrelated cold guest shader under texture lock.
+    GraphicsPipeline* const pipeline = prepared_pipeline;
+#else
     GraphicsPipeline* const pipeline = pipeline_cache.CurrentGraphicsPipeline();
+#endif
     const bool enable = pipeline != nullptr && pipeline->SupportsAlphaToOne() &&
                         regs.anti_alias_alpha_control.alpha_to_one != 0;
     scheduler.Record([enable](vk::CommandBuffer cmdbuf) {

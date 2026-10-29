@@ -41,6 +41,16 @@ assert "scheduler.InvalidateState();" in ordinary
 assert "PORT_BUILD_DIR" in cmake and "vulkan_rasterizer.cpp" in cmake
 assert '"    scheduler.InvalidateState();\\n"' in gen
 assert "F07 bypass cold guest graphics shader lookup in native raw DrawTexture" in gen
+for method_name,support in (("UpdateAlphaToCoverageEnable","SupportsAlphaToCoverage"),
+                            ("UpdateAlphaToOneEnable","SupportsAlphaToOne")):
+    assert f"F07 avoid raw blit guest shader lookup for native {method_name[6:]}" in gen
+    start_method="void RasterizerVulkan::"+method_name+"("
+    method=raster.split(start_method,1)[1].split("\nvoid RasterizerVulkan::",1)[0]
+    assert method.count("pipeline_cache.CurrentGraphicsPipeline()")==1
+    assert "GraphicsPipeline* const pipeline = prepared_pipeline;" in method
+    assert method.index("#ifdef PS5_NATIVE") < method.index("GraphicsPipeline* const pipeline = prepared_pipeline;") < method.index("#else")
+    assert "pipeline->"+support+"()" in method
+
 dmethod=fragment(raster, "void RasterizerVulkan::UpdateDynamicStates() {",
                  "\nvoid RasterizerVulkan::HandleTransformFeedback(")
 assert dmethod.count("if (device.IsExtVertexInputDynamicStateSupported()) {")==1
@@ -122,11 +132,23 @@ with tempfile.TemporaryDirectory(prefix="fc27-f07-raw-blit-") as td:
 # Prove the real native vertex-input branch never creates a cold guest shader
 # on a raw blit (where prepared_pipeline is null), while it still programs
 # dynamic vertex input for the next real guest draw. Desktop stays original.
+def alpha_selector(method_name, support):
+    m=raster.split("void RasterizerVulkan::"+method_name+"(",1)[1].split("\nvoid RasterizerVulkan::",1)[0]
+    begin=m.index("#ifdef PS5_NATIVE")
+    end=m.index("    const bool enable = pipeline != nullptr &&",begin)
+    selected=m[begin:end]
+    assert "prepared_pipeline;" in selected and "CurrentGraphicsPipeline()" in selected
+    return selected + "    const bool enable = pipeline != nullptr && pipeline->"+support+"();\n"
+alpha_coverage=alpha_selector("UpdateAlphaToCoverageEnable","SupportsAlphaToCoverage")
+alpha_one=alpha_selector("UpdateAlphaToOneEnable","SupportsAlphaToOne")
+
 dynamic_cpp = r"""
 #include <cassert>
 struct GraphicsPipeline {
     bool dynamic{};
     bool HasDynamicVertexInput() const { return dynamic; }
+    bool SupportsAlphaToCoverage() const { return dynamic; }
+    bool SupportsAlphaToOne() const { return dynamic; }
 };
 GraphicsPipeline* prepared_pipeline = nullptr;
 struct Device {
@@ -150,21 +172,39 @@ struct FakeRasterizer {
         int regs = 0;
 __DYNAMIC_BRANCH__
     }
+    bool CheckAlphaCoverage() {
+__ALPHA_COVERAGE__
+        return enable;
+    }
+    bool CheckAlphaOne() {
+__ALPHA_ONE__
+        return enable;
+    }
 };
 int main() {
     GraphicsPipeline dynamic{true}, fixed{false};
     FakeRasterizer raw;
     raw.pipeline_cache.selected = &dynamic;
     raw.UpdateDynamicStates();
+    bool raw_coverage=raw.CheckAlphaCoverage();
+    bool raw_one=raw.CheckAlphaOne();
+#ifdef PS5_NATIVE
+    assert(!raw_coverage && !raw_one);
+    assert(raw.pipeline_cache.lookups == 0);
+#else
+    assert(raw_coverage && raw_one);
+    assert(raw.pipeline_cache.lookups == 3);
+#endif
 #ifdef PS5_NATIVE
     assert(raw.pipeline_cache.lookups == 0 && raw.bindings == 0);
 #else
-    assert(raw.pipeline_cache.lookups == 1 && raw.bindings == 1);
+    assert(raw.pipeline_cache.lookups == 3 && raw.bindings == 1);
 #endif
     FakeRasterizer guest;
     guest.pipeline_cache.selected = &fixed;
     prepared_pipeline = &dynamic;
     guest.UpdateDynamicStates();
+    assert(guest.CheckAlphaCoverage() && guest.CheckAlphaOne());
     assert(guest.pipeline_cache.lookups == 0 && guest.bindings == 1);
     prepared_pipeline = &fixed;
     guest.UpdateDynamicStates();
@@ -175,7 +215,7 @@ int main() {
     assert(guest.bindings == 1);
     prepared_pipeline = nullptr;
 }
-""".replace("__DYNAMIC_BRANCH__", dynamic_branch)
+""".replace("__DYNAMIC_BRANCH__", dynamic_branch).replace("__ALPHA_COVERAGE__",alpha_coverage).replace("__ALPHA_ONE__",alpha_one)
 with tempfile.TemporaryDirectory(prefix="fc27-f07-raw-vertex-") as td:
     source = Path(td) / "dynamic.cpp"
     source.write_text(dynamic_cpp)
@@ -188,5 +228,5 @@ with tempfile.TemporaryDirectory(prefix="fc27-f07-raw-vertex-") as td:
                     str(source), "-o", str(executable)]
             subprocess.run(args, check=True, capture_output=True, text=True)
             subprocess.run([str(executable)], check=True, capture_output=True, text=True)
-print("FC27_F07_RAW_BLIT_PIPELINE_INVALIDATION_PASS source_extracted=3 raw_blit_avoids_guest_shader=1 desktop_original=1 O0=1 O2=1")
+print("FC27_F07_RAW_BLIT_PIPELINE_INVALIDATION_PASS source_extracted=3 raw_blit_avoids_guest_shader=1 alpha_state_avoids_cold_shader=2 desktop_original=1 O0=1 O2=1")
 
