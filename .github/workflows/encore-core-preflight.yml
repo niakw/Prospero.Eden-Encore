@@ -162,6 +162,7 @@ jobs:
           python3 -B tools/check-ps5-f07-keyed-shader-stages-host.py
           python3 -B tools/check-ps5-f07-keyed-pipeline-wait-host.py
           python3 -B tools/check-ps5-f07-frame-cache-ownership-host.py
+          python3 -B tools/check-ps5-f07-texture-frame-gc-phases-host.py
           python3 -B tools/check-ps5-f07-pipeline-wait-analysis-host.py
           python3 -B tools/check-ps5-build-sha-provenance.py
           python3 -B tools/check-ps5-guest-cache-domains.py

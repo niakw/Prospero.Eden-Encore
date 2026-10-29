@@ -472,6 +472,12 @@ void TextureCache<P>::RunGarbageCollector() {
 
 template <class P>
 void TextureCache<P>::TickFrame() {
+#ifdef PS5_NATIVE
+    // C03: exact driver budget/GC events plus 1-in-16 async/runtime samples.
+    // Timers run only in Detailed Logging; the order and cache locks remain.
+    const bool detailed = ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed);
+    const bool sample_housekeeping = detailed && ::Eden::Performance::ShouldSampleTextureHousekeeping();
+#endif
     // If we can obtain the memory info, use it instead of the estimate.
     if (runtime.CanReportMemoryUsage()) {
 #ifdef PS5_NATIVE
@@ -482,6 +488,8 @@ void TextureCache<P>::TickFrame() {
         const bool near_gc_watermark =
             total_used_memory >= minimum_memory - minimum_memory / 3;
         if (near_gc_watermark || (frame_tick & 1u) == 0) {
+            ::Eden::Performance::CachePhaseTimer budget_query{
+                ::Eden::Performance::CachePhase::TextureBudgetQuery, detailed};
             total_used_memory = runtime.GetDeviceMemoryUsage();
         }
 #else
@@ -489,15 +497,30 @@ void TextureCache<P>::TickFrame() {
 #endif
     }
     if (total_used_memory > minimum_memory) {
+#ifdef PS5_NATIVE
+        ::Eden::Performance::CachePhaseTimer gc_collect{
+            ::Eden::Performance::CachePhase::TextureGcCollect, detailed};
+#endif
         RunGarbageCollector();
     }
     sentenced_images.Tick();
     sentenced_framebuffers.Tick();
     sentenced_image_view.Tick();
+#ifdef PS5_NATIVE
+    ::Eden::Performance::CachePhaseTimer async_tick{
+        ::Eden::Performance::CachePhase::TextureAsyncTick, sample_housekeeping};
+#endif
     TickAsyncDecode();
     TickAsyncUnswizzle();
-
+#ifdef PS5_NATIVE
+    async_tick.Stop();
+    ::Eden::Performance::CachePhaseTimer runtime_tick{
+        ::Eden::Performance::CachePhase::TextureRuntimeTick, sample_housekeeping};
+#endif
     runtime.TickFrame();
+#ifdef PS5_NATIVE
+    runtime_tick.Stop();
+#endif
     ++frame_tick;
 
     if constexpr (IMPLEMENTS_ASYNC_DOWNLOADS) {
