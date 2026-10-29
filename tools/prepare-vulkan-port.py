@@ -5486,3 +5486,44 @@ apply_reviewed_delta(
 #endif
     const bool is_rescaled = True(flags & ImageFlagBits::Rescaled);""",
     "F07 empty and malformed GPU readback preflight")
+
+
+# F07 M02: empty download regions must not project dirty guest data as
+# evicted, or be swizzled from uninitialized Vulkan staging. The native-only
+# guards run before both GC prefetch and fallback dirty eviction.
+apply_reviewed_delta(
+    "vulkan-cache/video_core/texture_cache/texture_cache.h",
+    """                if (!dirty || !image.aliased_images.empty() || !image.overlapping_images.empty() ||
+                    image.info.num_samples != 1 ||
+                    image.unswizzled_size_bytes > 32_MiB)
+                    return NoteProjectedEviction(image);
+                // Full descriptor/byte capacity is a true batch boundary.""",
+    """                if (!dirty || !image.aliased_images.empty() || !image.overlapping_images.empty() ||
+                    image.info.num_samples != 1 ||
+                    image.unswizzled_size_bytes > 32_MiB)
+                    return NoteProjectedEviction(image);
+#ifdef PS5_NATIVE
+                // A no-region download is not a successful readback of dirty
+                // GPU bytes. Do not prefetch, or project this image evicted:
+                // Cleanup must leave it resident until guest copy regions
+                // can be represented.
+                if (FullDownloadCopies(image.info).empty()) return false;
+#endif
+                // Full descriptor/byte capacity is a true batch boundary.""",
+    "F07 preserve dirty image when prefetch has no readback copy regions")
+apply_reviewed_delta(
+    "vulkan-cache/video_core/texture_cache/texture_cache.h",
+    """        if (must_download && !UsePrefetched(image_id, image)) {
+#ifdef PS5_NATIVE
+            // Never evict dirty GPU bytes if the fallback guest readback could""",
+    """        if (must_download && !UsePrefetched(image_id, image)) {
+#ifdef PS5_NATIVE
+            // A zero-region readback leaves the staging bytes undefined.
+            // Never SwizzleImage those bytes or delete the only dirty GPU
+            // copy; keep it resident and retry on a later eligible frame.
+            if (FullDownloadCopies(image.info).empty()) {
+                ++skipped;
+                return false;
+            }
+            // Never evict dirty GPU bytes if the fallback guest readback could""",
+    "F07 preserve dirty image on zero-region fallback readback")
