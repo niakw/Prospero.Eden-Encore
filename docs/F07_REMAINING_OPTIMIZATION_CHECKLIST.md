@@ -22,7 +22,7 @@
 | --- | ---: | ---: | --- |
 | Revue source prioritaire B1–B4 | **38/38** | **0** | Fonctions inspectées ; ne signifie pas 38 accélérations prouvées |
 | Acquis historiques A01–A09 | **9/9** | **0** | Code et témoins historiques déjà disponibles |
-| Décisions PRÉ-BUILD S/V/C/T/J/H/I/G/M/Q | **21/28** | **7** | 19 décisions hôte qualifiées (dont C03 profils de frame et T07 DMA/BCn/MSAA) et M03 **SANS PATCH JUSTIFIÉ** ; preuve FC27 sur console toujours absente |
+| Décisions PRÉ-BUILD S/V/C/T/J/H/I/G/M/Q | **21/28** | **7** | 20 décisions hôte qualifiées (dont C03 profils de frame et T07 DMA/BCn/MSAA) et M03 **SANS PATCH JUSTIFIÉ** ; preuve FC27 sur console toujours absente |
 | Vérifications POST-BUILD | **0/12** | **12** | Mesures console impossibles avant le premier paquet |
 | Portes finales B01–B11 | **0/11** | **11** | Six gates avant compilation, puis build et tests réels |
 
@@ -139,7 +139,7 @@ Les lignes **[x]** ci-dessous certifient **uniquement que le changement figure s
 
 ## 5. P1 — JIT A32/A64, progression invitée, IPC et commandes
 
-- [ ] **J01 [PRÉ-BUILD]** — Attribuer compilation, évacuation et invalidation JIT dans les gros gaps.** **Owner :** Dynarmic A32/A64 natif, `block_of_code_native.cpp`, `headless/jit-allocator.h`. **Sortie :** coûts *par cœur* vs intervalle mur, sans addition abusive des workers.
+- [ ] **J01 [PRÉ-BUILD]** — Attribuer compilation, évacuation et invalidation JIT dans les gros gaps.** **Owner :** Dynarmic A32/A64 natif, `block_of_code_native.cpp`, `headless/jit-allocator.h`. **Sortie :** coûts *par cœur* vs intervalle mur, sans addition abusive des workers. **Correctif de preuve (29/10) :** la sonde DEV du pire intervalle `EDEN_PRESENT_INTERVAL_WITNESS` capturait déjà quatre cœurs dans `CaptureFramePressure`, mais imprimait seulement `jit0_ns/jit1_ns/jit2_ns`. Ajout de `jit3_ns` depuis `d[15]` sans compteur ni horloge supplémentaire. Le témoin `check-fc27-cache-contention-classifier.py` compile désormais le `printf` exact sous `-O0/-O2`/UBSan, vérifie les quatre valeurs, leur somme CPU et les compteurs d'appel/évacuation. **J01 reste [ ]** : nouveau verdict CI, véritables invalidations/évacuations et causalité console non prouvés.
 - [ ] **J02 [POST-BUILD]** — Qualifier alias RX/RW natif, engagement 2 Mio, trim quiescent et recommit.** **Sortie :** preuve firmware 13.60, droits W^X, durée de vie des blocs, relance après titre fermé.
 - [ ] **J03 [POST-BUILD]** — Auditer la vraie contention JIT/guest/GPU et la pression mémoire.** Pas de cache plus gros ni répartition CPU forcée sans mesure et budget sûr. **Sortie :** scénario saturé et absence de régression sous mémoire faible.
 - [ ] **H01 [POST-BUILD]** — Isoler la progression invité durant pause/mi-temps/freezes.** **Owner :** KThread/condition vars/HIPC/NvDisp/Host1x/BufferQueue, F05. **Sortie :** preuve de nouvel état jeu et de consommations de buffers, pas seulement de frames présentées.
