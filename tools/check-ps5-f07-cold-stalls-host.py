@@ -59,13 +59,27 @@ assert "texture_costs.append((" in gen
 assert "return (++sequence & 15u) == 0u;" in perf
 assert "explicit CachePhaseTimer(CachePhase phase, bool enabled = cache_draw_sample_active)" in perf
 
+# Native cold-miss keyed trace is exactly the maintained C++ helper
+# replayed by the strict Vulkan generator. It must not run on hot draws.
+trace_start = pipeline.index("struct ColdShaderMissTrace {")
+trace_end = pipeline.index("\n};\n#endif", trace_start) + len("\n};")
+cold_trace = pipeline[trace_start:trace_end]
+assert cold_trace in gen
+assert pipeline.count("ColdShaderMissTrace cold_miss{") == 2
+assert pipeline.count("ColdShaderMissTrace cold_retry{") == 2
+assert gen.count("F07 record exact graphics cold first-use CPU cost") == 1
+assert gen.count("F07 record exact compute cold first-use CPU cost") == 1
+assert "if (!enabled) return;" in cold_trace
+assert "steady_clock::now() - started" in cold_trace
+assert 'EDEN_VULKAN_SHADER_MISS kind=%s key=%016llx retry=%u ' in cold_trace
+assert "success=%u cpu_ns=%llu\\n" in cold_trace
 start = pipeline.index("    if (is_new) {\n#ifdef PS5_NATIVE\n        // F07:")
 # The slow path now has a separate, bounded failed-key recovery branch.
 # This older harness tests ONLY the original cold-miss timer contract;
 # the full retry block is source-extracted in its dedicated host test.
 first_create = "        pipeline = CreateGraphicsPipeline();"
-end = pipeline.index(first_create, start) + len(first_create)
-block = pipeline[start:end] + "\n    }"
+end = pipeline.index("        cold_miss.Complete(static_cast<bool>(pipeline));", start) + len("        cold_miss.Complete(static_cast<bool>(pipeline));")
+block = pipeline[start:end] + "\n#endif\n    }"
 assert block.count("pipeline = CreateGraphicsPipeline();") == 1
 assert block.index("CachePhase::GraphicsPipelineCreate") < block.index(
     "pipeline = CreateGraphicsPipeline();")
@@ -100,6 +114,10 @@ assert "    ::Eden::Performance::CachePhaseTimer upload_phase{" in refresh
 cpp = r"""
 #include <atomic>
 #include <cassert>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+using u64 = std::uint64_t;
 namespace Eden::Performance {
 enum class CachePhase { GraphicsPipelineCreate };
 inline std::atomic<bool> detailed_gpu_profile{false};
@@ -108,6 +126,11 @@ struct CachePhaseTimer {
     CachePhaseTimer(CachePhase, bool enabled) { if (enabled) ++profiled; }
 };
 }
+#ifdef PS5_NATIVE
+""" + cold_trace + r"""
+#endif
+struct GraphicsPipelineCacheKey { u64 Hash() const noexcept { return 0x1234; } };
+GraphicsPipelineCacheKey graphics_key;
 int creates = 0;
 int CreateGraphicsPipeline() { return ++creates; }
 void Check(bool is_new) {
@@ -143,7 +166,12 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-cold-stalls-") as d:
             [compiler, "-std=c++20", "-O2", "-Wall", "-Wextra", "-Werror",
              *defines, str(source), "-o", str(binary)], check=True, timeout=45
         )
-        subprocess.run([str(binary)], check=True, timeout=15)
+        executed = subprocess.run([str(binary)], capture_output=True, text=True, timeout=15)
+        assert executed.returncode == 0, (defines, executed.stderr[-3000:])
+        # Only the second, detailed/native cold miss prints; hot and quiet
+        # miss paths remain silent, and desktop is entirely unchanged.
+        assert executed.stdout.count("EDEN_VULKAN_SHADER_MISS") == (
+            1 if defines else 0), (defines, executed.stdout)
 
 # P0.1: compile the EXACT source-derived graphics shader failure handler.
 # In quiet PS5 mode it must not reconstruct CFGs or write .ash files.
