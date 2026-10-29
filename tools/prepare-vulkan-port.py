@@ -4448,6 +4448,22 @@ apply_reviewed_delta("vk_buffer_cache_cost.cpp",
     "#endif",
     "F07 reject zero-sized Vulkan buffer copy regions")
 
+# F07: a source staging buffer eligible for the upload command buffer can
+# still carry an explicit read/write barrier. Its barriers only exist on the
+# ordered graphics/compute path; do not silently reorder such copies on PS5.
+apply_reviewed_delta("vk_buffer_cache_cost.cpp",
+    "    if (src_buffer == staging_pool.StreamBuf() && can_reorder_upload) {\n"
+    "        scheduler.RecordWithUploadBuffer(",
+    "#ifdef PS5_NATIVE\n"
+    "    // An explicit transfer barrier cannot be represented by the reordered\n"
+    "    // upload queue. Keep its copy and synchronization in the ordered stream.\n"
+    "    if (src_buffer == staging_pool.StreamBuf() && can_reorder_upload && !barrier) {\n"
+    "#else\n"
+    "    if (src_buffer == staging_pool.StreamBuf() && can_reorder_upload) {\n"
+    "#endif\n"
+    "        scheduler.RecordWithUploadBuffer(",
+    "F07 preserve explicit barriers when deciding native staging upload reordering")
+
 # F07: mapped staging without a real Vulkan buffer is invalid even when
 # its CPU span is large enough. Reject buffer-cache DMA/index/readback uploads
 # before recording GPU copies; return rejected deferred staging to the pool.
