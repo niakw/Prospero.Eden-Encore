@@ -26,6 +26,8 @@
 | Vérifications POST-BUILD | **0/12** | **12** | Mesures console impossibles avant le premier paquet |
 | Portes finales B01–B11 | **0/11** | **11** | Six gates avant compilation, puis build et tests réels |
 
+**Pointage CI vérifié au 29/10 :** sur le SHA source/témoin `3584d5e2`, [prévalidation 40916659885](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40916659885) **SUCCESS 6/6** + `core-tests` SUCCESS (dont replay des deux blobs de présentation, recyclage source-extrait, ASan/UBSan/TSan), et [CodeQL 40916660159](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40916660159) **SUCCESS 3/3**. Le HEAD `8b231f79` ajoute seulement de la documentation ; **aucun fast gate de ce SHA, aucun build natif ni aucune preuve console**. Le score reste **18/28 PRÉ-BUILD** ; V01/C01/C04/T01/J01 et B01–B11 ne sont pas clos par ces seuls témoins. Voir le registre pour les limites et les propriétaires inspectés.
+
 **Prochain jalon concret :** qualifier le même SHA par fast gate, six suites hôte et CodeQL ; continuer **S01/V01/C01/T01/J01/H02** sans refaire les 38 revues. La recompilation **PS5 reste interdite** jusqu'aux décisions PRÉ-BUILD et aux gates B01–B06. Le 29/10, aucun gain FPS de FC27 ni correction durable de son freeze/HUD n'est démontré sur la console.
 
 **Éléments clos cette passe (preuves pré-build uniquement) :** S03 — préchauffage borné, admission et drain ; V02 — attente FIFO/rollback sans attente supplémentaire sûre à supprimer ; G01 — replay F01–F06 commun. Ces décisions réduisent les chantiers hôte ouverts, mais la mesure FPS, la progression invité et les tests froid/chaud restent POST-BUILD.
