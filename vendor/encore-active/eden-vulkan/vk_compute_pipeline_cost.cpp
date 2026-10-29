@@ -440,6 +440,9 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
             // Acquire its completion without taking a redundant build mutex.
             // An unfinished build still follows the original condition wait.
             if (is_built.load(std::memory_order_acquire)) return;
+#ifdef PS5_NATIVE
+            ::Eden::Performance::PipelineWaitTrace keyed_wait;
+#endif
             auto timer = Eden::Performance::VulkanTimer(16);
             // Only unfinished builds contribute a worker wait; no clock in quiet mode.
             ::Eden::Performance::CachePhaseTimer pipeline_ready_wait{
@@ -447,6 +450,11 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
                 ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
             std::unique_lock lock{build_mutex};
             build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });
+#ifdef PS5_NATIVE
+            lock.unlock();
+            pipeline_ready_wait.Stop();
+            keyed_wait.Complete("compute", diagnostic_cache_key_hash, IsBound());
+#endif
         });
 #ifdef PS5_NATIVE
         first_use_wait_recorded = true;

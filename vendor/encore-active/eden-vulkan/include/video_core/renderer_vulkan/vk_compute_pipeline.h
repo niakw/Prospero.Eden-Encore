@@ -57,6 +57,8 @@ public:
 #ifdef PS5_NATIVE
     // Called on the GPU owner before the paired buffer/texture cache locks.
     void PreflightDescriptorScratch();
+    // Set before publication from PipelineCache; read by the FIFO GPU callback.
+    void SetDiagnosticCacheKeyHash(u64 hash) noexcept { diagnostic_cache_key_hash = hash; }
     [[nodiscard]] bool HasDescriptorEntries() const noexcept {
         return num_descriptor_entries != 0;
     }
@@ -88,6 +90,9 @@ private:
     DescriptorBufferRing& descriptor_buffer_ring;
     Shader::Info info;
     u64 shader_hash{};
+#ifdef PS5_NATIVE
+    u64 diagnostic_cache_key_hash{};
+#endif
     u32 num_descriptor_entries{};
 #ifdef PS5_NATIVE
     // The last uploaded snapshot is valid only in its own ring generation.

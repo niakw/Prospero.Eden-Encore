@@ -898,6 +898,9 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
             // Acquire its completion without taking a redundant build mutex.
             // An unfinished build still follows the original condition wait.
             if (is_built.load(std::memory_order_acquire)) return;
+#ifdef PS5_NATIVE
+            ::Eden::Performance::PipelineWaitTrace keyed_wait;
+#endif
             auto timer = Eden::Performance::VulkanTimer(16);
             // Only unfinished builds contribute a worker wait; no clock in quiet mode.
             ::Eden::Performance::CachePhaseTimer pipeline_ready_wait{
@@ -905,6 +908,11 @@ bool GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
                 ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
             std::unique_lock lock{build_mutex};
             build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });
+#ifdef PS5_NATIVE
+            lock.unlock();
+            pipeline_ready_wait.Stop();
+            keyed_wait.Complete("graphics", key.Hash(), CanExecuteDraw());
+#endif
         });
 #ifdef PS5_NATIVE
         // Commit only after the callback was successfully enqueued.

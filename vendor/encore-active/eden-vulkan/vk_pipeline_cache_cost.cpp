@@ -1654,11 +1654,23 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
         spv_module.SetObjectNameEXT(name.c_str());
     }
     Common::ThreadWorker* const thread_worker{build_in_parallel ? &workers : nullptr};
+#ifdef PS5_NATIVE
+    auto result = std::make_unique<ComputePipeline>(device, scheduler, vulkan_pipeline_cache, descriptor_pool,
+                                                    guest_descriptor_queue, descriptor_buffer_ring,
+                                                    thread_worker, statistics,
+                                                    &shader_notify, program.info, std::move(spv_module),
+                                                    key.unique_hash);
+    // The shader stage hash is not the compute CACHE key: include workgroup
+    // sizes and shared memory for correlation with S01's exact key.Hash().
+    result->SetDiagnosticCacheKeyHash(key.Hash());
+    return result;
+#else
     return std::make_unique<ComputePipeline>(device, scheduler, vulkan_pipeline_cache, descriptor_pool,
                                              guest_descriptor_queue, descriptor_buffer_ring,
                                              thread_worker, statistics,
                                              &shader_notify, program.info, std::move(spv_module),
                                              key.unique_hash);
+#endif
 
 } catch (const Shader::Exception& exception) {
     LOG_ERROR(Render_Vulkan, "{}", exception.what());
