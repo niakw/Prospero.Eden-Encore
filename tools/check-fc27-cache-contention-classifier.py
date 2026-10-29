@@ -114,5 +114,47 @@ quiet_rows = module.windows([
     "EDEN_FRAME_PRESSURE frame=900 detail=not_measured",
 ] + quartet)
 assert quiet_rows == []
+# GPU-owner phase samples are printed after the JIT quartet by
+# ReportGpuThread. Match exact frame and unique phase; never treat these
+# sampled nested durations as the full five-second renderer wall time.
+def gpu_phase(frame: int, phase: str, ns: int) -> str:
+    return (f"EDEN_GPU_CACHE_PHASE frame={frame} phase={phase} "
+            f"samples=50 total_ns=500000000 window_samples=3 "
+            f"window_ns={ns} max_ns={ns // 2}")
+
+phase_lines = [
+    gpu_phase(930, "compute_pair_wait", 2_000_000),
+    gpu_phase(930, "pair_held", 18_000_000),
+    gpu_phase(930, "pair_wait", 4_000_000),
+    gpu_phase(930, "compute_pair_held", 6_000_000),
+]
+owner_rows = module.windows(record(930, 29, 125, 100, 3) + phase_lines)
+assert len(owner_rows) == 1
+assert owner_rows[0]["gpu_pair_held_sample_ms"] == 18.0
+assert owner_rows[0]["gpu_compute_pair_held_sample_ms"] == 6.0
+assert owner_rows[0]["gpu_pair_wait_samples"] == 3
+owner_report = module.report(owner_rows)
+assert "gpu_cache_owner_samples: complete=1/1" in owner_report
+assert "graphics_held_sample_ms=18.000" in owner_report
+assert "compute_held_sample_ms=6.000" in owner_report
+assert "graphics_wait_sample_ms=4.000" in owner_report
+assert "compute_wait_sample_ms=2.000" in owner_report
+assert "sample 1-in-16 draws" in owner_report
+# Incomplete, repeated or wrong-frame phase sets must not become a
+# misleading complete graphics/compute lock-holder attribution.
+bad_phase_sets = [
+    phase_lines[:3],
+    phase_lines[:3] + [phase_lines[0]],
+    phase_lines[:3] + [gpu_phase(931, "compute_pair_held", 6_000_000)],
+    phase_lines[:3] + [gpu_phase(930, "compute_pair_held", -1)],
+]
+for invalid in bad_phase_sets:
+    bad_rows = module.windows(record(930, 29, 125, 100, 3) + invalid)
+    assert len(bad_rows) == 1
+    assert "gpu_cache_owner_samples: complete=0/1" in module.report(bad_rows)
+assert module.windows([
+    "EDEN_VULKAN_FRAME total=930 fps=30 worst_ms=34",
+    "EDEN_FRAME_PRESSURE frame=930 detail=not_measured",
+] + phase_lines) == []
 assert module.report([]) == "NO_VALID_WINDOWS (requires matching frame totals)"
 print("PINNED_FC27_LONG_FRAME_CLASSIFIER_PASS")
