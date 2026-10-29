@@ -71,6 +71,22 @@ bool IsFile(const std::string& path) {
     return stat(path.c_str(), &info) == 0 && S_ISREG(info.st_mode);
 }
 
+#ifdef PS5_NATIVE
+bool IsReadableAvatarFile(const std::string& path) {
+    if (!IsFile(path)) return false;
+    // stat() can succeed even when a sandboxed title cannot open the
+    // privileged cache. Do not choose an unreadable PNG over a valid DDS.
+    const int fd = ::open(path.c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK);
+    if (fd < 0) return false;
+    struct stat info{};
+    const bool readable = ::fstat(fd, &info) == 0 &&
+                          S_ISREG(info.st_mode) && info.st_size >= 128 &&
+                          info.st_size <= 4 * 1024 * 1024;
+    (void)::close(fd);
+    return readable;
+}
+#endif
+
 std::uint64_t ResolveTitleId(const std::string& path, const std::string& file) {
     const std::uint64_t metadata_id = eden_game_title_id(path.c_str());
     if (metadata_id != 0) return metadata_id;
@@ -1506,7 +1522,10 @@ std::string EdenServices::profile_avatar() {
     // Query is deliberately issued on the launcher's background worker.
     // The controller can already have initialized UserService; calling
     // Initialize again must not cause it to be terminated underneath Pad.
-    (void)sceUserServiceInitialize(nullptr);
+    static std::once_flag user_service_once;
+    std::call_once(user_service_once, [] {
+        (void)sceUserServiceInitialize(nullptr);
+    });
     std::int32_t user_id = -1;
     if (sceUserServiceGetForegroundUser(&user_id) != 0 ||
         user_id == -1 || user_id == 0)
@@ -1519,13 +1538,13 @@ std::string EdenServices::profile_avatar() {
     constexpr const char* staged_marker="/data/NiakPS5/assets/niak-profile-source.txt";
     if (pe::ps5::avatar_owner_marker_matches(staged_marker,
             static_cast<std::uint32_t>(user_id), "png") &&
-        IsFile(std::string(staged_root)+"niak-profile.png")) {
+        IsReadableAvatarFile(std::string(staged_root)+"niak-profile.png")) {
         std::fprintf(stderr,"EDEN_PROFILE_AVATAR format=staged_png status=found\n");
         return std::string(staged_root)+"niak-profile.png";
     }
     if (pe::ps5::avatar_owner_marker_matches(staged_marker,
             static_cast<std::uint32_t>(user_id), "dds") &&
-        IsFile(std::string(staged_root)+"niak-profile.dds")) {
+        IsReadableAvatarFile(std::string(staged_root)+"niak-profile.dds")) {
         std::fprintf(stderr,"EDEN_PROFILE_AVATAR format=staged_dds status=found\n");
         return std::string(staged_root)+"niak-profile.dds";
     }
@@ -1543,13 +1562,13 @@ std::string EdenServices::profile_avatar() {
         for (const char* prefix : {"0x", "0X", ""}) {
             const std::string root =
                 std::string("/system_data/priv/cache/profile/") + prefix + id + "/";
-            if (IsFile(root + "avatar.png")) {
+            if (IsReadableAvatarFile(root + "avatar.png")) {
                 std::fprintf(stderr, "EDEN_PROFILE_AVATAR format=png status=found\n");
                 return root + "avatar.png";
             }
             for (const char* name : {"avatar128.dds", "avatar260.dds",
                                      "avatar64.dds", "avatar440.dds"}) {
-                if (IsFile(root + name)) {
+                if (IsReadableAvatarFile(root + name)) {
                     std::fprintf(stderr, "EDEN_PROFILE_AVATAR format=dds status=found\n");
                     return root + name;
                 }
