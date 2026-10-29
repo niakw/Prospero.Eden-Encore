@@ -4116,47 +4116,6 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        if (!async_decode->complete.load(std::memory_order_acquire)) {\n            ++i;\n            continue;\n        }\n        if (completed_decodes == kMaxCompletedDecodesPerTick) {\n            break;\n        }\n        ++completed_decodes;\n#endif\n        std::unique_lock lock{async_decode->mutex};",
     "F07 bounded ready decode completion under texture lock")
 
-# F07 P0.3/P0.4: stale HUD decode revisions and rejected staging are
-# cheap to retire and must not consume one of the four actual upload slots.
-# A separate 16-context completion budget protects the texture lock against
-# unbounded runs of expired/failed results on a single frame.
-apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
-    "    constexpr size_t kMaxCompletedDecodesPerTick = 4;\n"
-    "    size_t completed_decodes = 0;\n"
-    "    // Keep every successfully submitted native texture ID in fixed storage:",
-    "    constexpr size_t kMaxCompletedDecodesPerTick = 4;\n"
-    "    // Invalid/stale decodes must not consume the four REAL upload slots.\n"
-    "    // Still cap retirements to keep the texture mutex responsive on a burst.\n"
-    "    constexpr size_t kMaxRetiredDecodesPerTick = 16;\n"
-    "    size_t completed_decodes = 0;\n"
-    "    size_t retired_decodes = 0;\n"
-    "    // Keep every successfully submitted native texture ID in fixed storage:",
-    "F07 count only accepted async HUD uploads under independent retired decode budget")
-apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
-    "        if (completed_decodes == kMaxCompletedDecodesPerTick) {\n"
-    "            break;\n"
-    "        }\n"
-    "        ++completed_decodes;\n"
-    "#endif\n"
-    "        std::unique_lock lock{async_decode->mutex};",
-    "        if (completed_decodes == kMaxCompletedDecodesPerTick ||\n"
-    "            retired_decodes == kMaxRetiredDecodesPerTick) {\n"
-    "            break;\n"
-    "        }\n"
-    "        ++retired_decodes;\n"
-    "#endif\n"
-    "        std::unique_lock lock{async_decode->mutex};",
-    "F07 bound completion retirements while skipping invalid async decode slots")
-apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
-    "        submitted_images[submitted_count++] = async_decode->image_id;\n"
-    "#endif\n"
-    "        // The context owns async_decode->mutex.",
-    "        submitted_images[submitted_count++] = async_decode->image_id;\n"
-    "        ++completed_decodes;\n"
-    "#endif\n"
-    "        // The context owns async_decode->mutex.",
-    "F07 increment successful async decode quota only after GPU submission")
-
 # F07: do not queue native BCn-3D GPU unswizzle when the optional setting
 # was enabled after cache creation but chunk/slice budgets remain zero.
 apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
@@ -4217,6 +4176,47 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    if (has_uploads) {\n        runtime.InsertUploadMemoryBarrier();\n    }\n}",
     "    if (has_uploads) {\n#ifdef PS5_NATIVE\n        try {\n#endif\n            runtime.InsertUploadMemoryBarrier();\n#ifdef PS5_NATIVE\n        } catch (...) {\n            // Re-upload current guest revisions after a rejected visibility\n            // barrier. All decoder contexts were unlocked/erased above.\n            for (size_t j = 0; j < submitted_count; ++j) {\n                const ImageId id = submitted_images[j];\n                Image& image = slot_images[id];\n                image.flags |= ImageFlagBits::CpuModified;\n                if (True(image.flags & ImageFlagBits::Tracked)) {\n                    UntrackImage(image, id);\n                }\n            }\n        }\n#endif\n    }\n}",
     "F07 mark entire decoded texture batch dirty after barrier failure")
+
+# F07 P0.3/P0.4: stale HUD decode revisions and rejected staging are
+# cheap to retire and must not consume one of the four actual upload slots.
+# A separate 16-context completion budget protects the texture lock against
+# unbounded runs of expired/failed results on a single frame.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    constexpr size_t kMaxCompletedDecodesPerTick = 4;\n"
+    "    size_t completed_decodes = 0;\n"
+    "    // Keep every successfully submitted native texture ID in fixed storage:",
+    "    constexpr size_t kMaxCompletedDecodesPerTick = 4;\n"
+    "    // Invalid/stale decodes must not consume the four REAL upload slots.\n"
+    "    // Still cap retirements to keep the texture mutex responsive on a burst.\n"
+    "    constexpr size_t kMaxRetiredDecodesPerTick = 16;\n"
+    "    size_t completed_decodes = 0;\n"
+    "    size_t retired_decodes = 0;\n"
+    "    // Keep every successfully submitted native texture ID in fixed storage:",
+    "F07 count only accepted async HUD uploads under independent retired decode budget")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        if (completed_decodes == kMaxCompletedDecodesPerTick) {\n"
+    "            break;\n"
+    "        }\n"
+    "        ++completed_decodes;\n"
+    "#endif\n"
+    "        std::unique_lock lock{async_decode->mutex};",
+    "        if (completed_decodes == kMaxCompletedDecodesPerTick ||\n"
+    "            retired_decodes == kMaxRetiredDecodesPerTick) {\n"
+    "            break;\n"
+    "        }\n"
+    "        ++retired_decodes;\n"
+    "#endif\n"
+    "        std::unique_lock lock{async_decode->mutex};",
+    "F07 bound completion retirements while skipping invalid async decode slots")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        submitted_images[submitted_count++] = async_decode->image_id;\n"
+    "#endif\n"
+    "        // The context owns async_decode->mutex.",
+    "        submitted_images[submitted_count++] = async_decode->image_id;\n"
+    "        ++completed_decodes;\n"
+    "#endif\n"
+    "        // The context owns async_decode->mutex.",
+    "F07 increment successful async decode quota only after GPU submission")
 
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
