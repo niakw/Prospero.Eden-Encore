@@ -16,8 +16,20 @@ for flow in (".github/workflows/encore-core-fast-gate.yml", ".github/workflows/e
     assert "python3 -B tools/check-ps5-f07-memory-pressure-sampling-host.py" in (root/flow).read_text()
 cpp=r"""
 #include <cassert>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
+// This legacy fixture isolates the budget policy. The separate C03
+// source-extracted fixture compiles the REAL CachePhaseTimer and verifies
+// event counts, timer lifetimes, and silent-mode behavior.
+namespace Eden::Performance {
+inline std::atomic<bool> detailed_gpu_profile{false};
+inline bool ShouldSampleTextureHousekeeping() noexcept { return false; }
+enum class CachePhase { TextureBudgetQuery, TextureGcCollect };
+struct CachePhaseTimer {
+    explicit CachePhaseTimer(CachePhase, bool) noexcept {}
+};
+}
 struct Runtime {
     bool report{true};
     std::size_t reported{100};
