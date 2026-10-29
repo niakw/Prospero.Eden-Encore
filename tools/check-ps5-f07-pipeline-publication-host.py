@@ -119,7 +119,13 @@ struct Timer { ~Timer() {} };
 std::optional<Timer> VulkanTimer(unsigned) {return std::nullopt;}
 struct CachePhaseTimer {CachePhaseTimer(CachePhase,bool){} void Stop() noexcept {} ~CachePhaseTimer(){} };
 // Diagnostic semantics are independently exercised by the keyed-wait witness.
-struct PipelineWaitTrace {void Complete(const char*,std::uint64_t,bool) const noexcept {}};
+struct PipelineWaitTrace {
+    // This FIFO test uses a deliberately inert diagnostic. The actual
+    // mutex/post-lock timings are compiled from performance.h in the
+    // separate keyed-worker-wait source-extracted witness.
+    void MarkLockAcquired() noexcept {}
+    void Complete(const char*,std::uint64_t,bool) const noexcept {}
+};
 }
 struct Scheduler {
     bool fail_next{};
