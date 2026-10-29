@@ -95,7 +95,7 @@ struct ColdShaderMissTrace {
         const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::steady_clock::now() - started).count();
         std::printf("EDEN_VULKAN_SHADER_MISS kind=%s key=%016llx retry=%u "
-                    "success=%u cpu_ns=%llu\\n", kind,
+                    "success=%u cpu_ns=%llu\n", kind,
                     static_cast<unsigned long long>(key_hash), unsigned(retry),
                     unsigned(success), static_cast<unsigned long long>(ns));
     }
