@@ -14,6 +14,39 @@
 - **Reprise :** lire le HEAD, les gates en cours, ce fichier ; travailler de haut en bas uniquement sur une anomalie ou opportunité démontrée. Ne pas rouvrir en boucle les 38 revues déjà closes. Si une autre optimisation réelle apparaît, ajouter une case **ID stable** sous sa catégorie, sa justification et son test avant de la modifier.
 - **Limite d'inventaire :** les 38 fonctions B1–B4 ont une décision source ; la première passe de couverture moteur/launcher est un **audit de sources**, pas une preuve d'optimalité. Il n'existe pas de nombre démontrable de « toutes les optimisations possibles ». Le nombre de cases ouvertes ici décrit les **chantiers connus**, pas le nombre garanti de patchs nécessaires.
 
+## Tableau de bord — à lire en premier
+
+**Ce que « terminé » veut dire ici : trois niveaux distincts.** Un correctif peut être *intégré au code* sans que son chantier global soit *accepté*, ni son gain *confirmé sur PS5*. Les nombres ci-dessous mesurent ces niveaux séparément. Les cases de la fin B01–B11 sont des portes de sortie, **pas onze optimisations nouvelles**.
+
+| Niveau | Terminé | Reste | Comment lire |
+| --- | ---: | ---: | --- |
+| Revue source prioritaire B1–B4 | **38/38** | **0** | Fonctions inspectées ; ne signifie pas 38 accélérations prouvées |
+| Acquis historiques A01–A09 | **9/9** | **0** | Code et témoins historiques déjà disponibles |
+| Décisions PRÉ-BUILD S/V/C/T/J/H/I/G/M/Q | **1/28** | **27** | Q03 fermé sans patch justifié ; autres critères parfois *partiellement* couverts par du code |
+| Vérifications POST-BUILD | **0/12** | **12** | Mesures console impossibles avant le premier paquet |
+| Portes finales B01–B11 | **0/11** | **11** | Six gates avant compilation, puis build et tests réels |
+
+**Prochain jalon concret :** qualifier le même SHA par fast gate, six suites hôte et CodeQL ; continuer **S01/V01/C01/T01/J01/H02** sans refaire les 38 revues. La recompilation **PS5 reste interdite** jusqu'aux décisions PRÉ-BUILD et aux gates B01–B06. Le 29/10, aucun gain FPS de FC27 ni correction durable de son freeze/HUD n'est démontré sur la console.
+
+### Correctifs déjà intégrés — ce qui avance sans fermer tout un chantier
+
+Les lignes **[x]** ci-dessous certifient **uniquement que le changement figure sur la branche**, et non la réussite de la CI du dernier SHA ou une amélioration en jeu. Les objectifs S/V/C/T/M auxquels ils contribuent restent ouverts tant que leur *critère de sortie complet* n'est pas atteint.
+
+- [x] **M02 / C03 — cache texture et mémoire :** échantillonnage de la pression GC au lieu de sonder chaque candidat sale ; probe natif borné à 8 candidats, voie critique conservée (`3213cda`, `6109c1e` pour la reconstruction générateur).
+- [x] **C03 — MSAA :** pas de sondage GPU lorsque tous les scratchs sont empruntés, ni lorsque les files de résolution sont vides (`9f2db8e`, `2ea56ee`).
+- [x] **C03 / M02 — cache buffers :** optimisation des sondes GPU et des consultations de budget, avec sentinelle de retrait des buffers et reprise après nouvelle utilisation (`3ee7b0c`, `26c522e`).
+- [x] **M02 — mémoire et durée de vie :** décrément saturé du budget GPU et suppression d'un sous-débordement d'âge d'éviction (`6334a41`, `bc28eea`).
+- [x] **V05 — copie mémoire :** conservation du sens de copie correct lors du chevauchement des historiques d'uniformes (`c5af10f`).
+- [x] **T03 / C01 — HUD asynchrone :** mutex de worker de décodage acquis sans bloquer tout le cache texture ; contexte occupé repris au tick suivant (`1900d5f`).
+- [x] **V05 / T07 — transform feedback :** refus natif des tableaux vides, trop longs ou dont offsets/tailles sont manquants (`cc66316`).
+- [x] **V05 / T07 — index buffer :** remise à zéro de l'offset lorsque le handle invité nul est remplacé par le buffer de secours de 4 octets (`906843e`).
+
+**État des preuves au 29/10 (référence code `906843e`) :** fast gate [#40830618753](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40830618753), six suites [#40830618861](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40830618861) et CodeQL [#40830618790](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40830618790) étaient **en cours au relevé**. Ne pas les marquer verts par anticipation. Les commits `b7dd6ad`, `be6f9de` et `06a9c2f` ont réparé des témoins/catégories d'audit, **pas** des FPS. Les deux corrections de cette famille ne sont pas comptées comme nouveaux correctifs moteur.
+
+**Périmètre réellement non résolu :** shader du premier usage encore synchrone, attente de pipelines, contention sous verrous lors du HUD, fraîcheur réelle des pixels, pause/mi-temps/IPC et commandes Switch, plus l'acceptation hôte puis console. Chaque ligne détaillée ci-dessous a un ID stable et indique les preuves nécessaires. On ne cocherait pas S01 ou T03 uniquement parce qu'une petite garde a été ajoutée.
+
+---
+
 ## 0. Acquis — ne pas refaire
 
 - [x] **A-01** — B1 shader/cache : **7/7** décisions *revue source* consignées (pas console).
@@ -83,7 +116,7 @@
 - [ ] **M03 [PRÉ-BUILD]** — Arbitrage JIT ↔ GPU ↔ guest sous pression uniquement si sûreté démontrée.** **Sortie :** mécanisme borné/fallback testé ; sinon revue close `SANS PATCH JUSTIFIÉ` et dette explicite.
 - [ ] **Q01 [PRÉ-BUILD]** — S'assurer que RELEASE silencieux ne formate/loggue/flush pas par frame.** **Owner :** `headless/graphics.cpp`, native logpipe, GPU/JIT timers ; **sortie :** coût observé, diagnostics activables sans falsifier le mode silencieux.
 - [ ] **Q02 [POST-BUILD]** — Requalifier la topologie CPU et le placement des workers.** **Sortie :** utiliser seulement les affinités/coeurs réellement disponibles, A/B et pas d'hypothèse SMT.
-- [ ] **Q03 [PRÉ-BUILD]** — Contrôler le lanceur sans réouvrir son audit global.** Startup/médias UI OpenGL hors gameplay ; revue ciblée uniquement si anomalie de latence/consommation avérée dans le build unique.
+- [x] **Q03 [PRÉ-BUILD] — SANS PATCH JUSTIFIÉ.** Contrôle de périmètre terminé : [audit RELEASE du 26/10](EDEN_RELEASE_LAUNCHER_SOURCE_OPTIMIZATION_AUDIT_2026-10-26.md), 59 sources lanceur classées et 4 fonctions RELEASE optimisées avec témoins. Aucun indice documenté attribuant les saccades **en match** au code de lancement/menus ; ce chemin est hors boucle d'émulation. Reprendre uniquement si la mesure du build unique révèle une anomalie de startup/médias attribuable au lanceur ; ne confondre ni revue source et vitesse console, ni absence d'anomalie démontrée et absence de bug.
 
 - [ ] **M04 [PRÉ-BUILD] — Sondes de pression pendant l'éviction texture.** **Owner :** `TextureCache::RunGarbageCollector::Cleanup`. **Source modifiée :** `3213cda88a0f758e61f9fa6164423933bfcd7c62` ; limite à huit visites sales par sonde sous mutex, réinitialise après éviction/passe critique, bypass immédiat au seuil critique. Mini-harnais C++ isolé O0/O2 + UBSan passé localement ; **témoin source-extrait et gates GitHub encore non qualifiés**, console non mesurée. Décider la clôture seulement après verdict hôte et preuve d'absence de régression GC.\n\n## 7. B5 — campagne de validation groupée (DERNIÈRE étape)
 
