@@ -39,5 +39,13 @@ assert "No frame IDs" in output
 assert "NO_VALID_SHADER_MISSES malformed=1" == module.report([], 1)
 assert module.parse(["EDEN_VULKAN_SHADER_MISS kind=graphics key=0123456789abcdef retry=2 success=1 cpu_ns=1"]) == ([], 1)
 assert module.parse(["EDEN_VULKAN_SHADER_MISS kind=graphics key=0123456789abcdef retry=0 success=1 cpu_ns=-1"]) == ([], 1)
+# Pin the parser's contract to the actual native emitter. The marker has
+# no frame ID, and the four callsites are cold/retry graphics/compute only.
+source = (root / "vendor/encore-active/eden-vulkan/vk_pipeline_cache_cost.cpp").read_text(
+    encoding="utf-8"
+)
+assert "EDEN_VULKAN_SHADER_MISS kind=%s key=%016llx retry=%u " in source
+assert r"success=%u cpu_ns=%llu\n" in source
+assert source.count("ColdShaderMissTrace cold_") == 4
 print("PASS F07: keyed cold shader miss/retry accounting, malformed exclusion and no frame attribution")
 print("No PS5 runtime measurement or FPS gain claimed")
