@@ -440,7 +440,7 @@ int main() {
 #endif
     for (u64 i=0;i<8;++i)
         r.msaa_scratch_images.push_back({key,std::make_shared<VkImage>(100+i),
-                                        i==0?8:20,0});
+                                        i==0 ? u64{8} : u64{20}, 0});
     r.scheduler.semaphore.completed=5;
     assert(r.AcquireMsaaScratchImage(ci)==1);
 #ifdef PS5_NATIVE
