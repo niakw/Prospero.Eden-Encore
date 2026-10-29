@@ -292,4 +292,3 @@ with tempfile.TemporaryDirectory(prefix="f07-j01-a32-") as folder:
         assert run.returncode==0,(opt,run.stderr[-3000:])
         assert "F07_A32_JIT_ACCOUNTING_PASS" in run.stdout
         print(f"F07_A32_JIT_ACCOUNTING_PASS {opt} source_extracted=1 quiet=1")
-
