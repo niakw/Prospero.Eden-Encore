@@ -177,7 +177,18 @@ public:
 
     // Queued worker checks pipeline readiness AFTER async build wait.
     [[nodiscard]] bool CanExecuteDraw() const noexcept {
-        return is_built.load(std::memory_order::acquire) && static_cast<bool>(pipeline);
+        if (!is_built.load(std::memory_order::acquire)) return false;
+#ifdef PS5_NATIVE
+        // A fast-first driver build can fail without throwing while its
+        // independently queued optimized variant succeeds. ConfigureDraw
+        // already binds that published variant; do not discard the following
+        // Draw/DrawIndirect simply because the initial handle is null.
+        // The release/acquire flag publishes the optimized VkPipeline.
+        return static_cast<bool>(pipeline) ||
+               optimized_ready.load(std::memory_order_acquire);
+#else
+        return static_cast<bool>(pipeline);
+#endif
     }
 
     template <typename Spec>
