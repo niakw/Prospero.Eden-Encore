@@ -288,3 +288,62 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-buffer-gc-age-") as d:
             ran=subprocess.run([str(out)],capture_output=True,text=True,timeout=10)
             assert ran.returncode==0,(native,opt,ran.stderr[-3200:])
 print("F07_BUFFER_GC_EARLY_AGE_PASS native_no_underflow=1 desktop_original=1 normal=120 high_pressure=60 O0=1 O2=1")
+
+
+# Compile the selected native ChangeRegister decrement expression with an
+# artificially low driver snapshot. Desktop preserves its pinned behavior.
+change_start=buffer_src.index("void BufferCache<P>::ChangeRegister(BufferId buffer_id)")
+change_end=buffer_src.index("\ntemplate <class P>",change_start+1)
+change_method=buffer_src[change_start:change_end]
+assert "total_used_memory >= accounted_bytes" in change_method
+assert "lru_cache.Free(buffer.getLRUID());" in change_method
+dec_start=change_method.index("    } else {\n")
+dec_end=change_method.index("        lru_cache.Free(buffer.getLRUID());",dec_start)
+decrement=change_method[dec_start:dec_end]
+assert decrement.count("#ifdef PS5_NATIVE")==1
+decrement_cpp=r"""
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+using u64=std::uint64_t;
+namespace Common { constexpr u64 AlignUp(u64 n,u64 block){return (n+block-1)/block*block;} }
+struct Usage {
+    u64 total_used_memory{};
+    void Unregister(std::size_t size, bool insert){
+        if(insert){
+            total_used_memory+=Common::AlignUp(size,1024);
+"""+decrement+r"""
+        }
+    }
+};
+int main(){
+    Usage u{100};
+    u.Unregister(4096,false);
+#ifdef PS5_NATIVE
+    assert(u.total_used_memory==0);
+#else
+    assert(u.total_used_memory==u64{100}-u64{4096});
+#endif
+    u.total_used_memory=10000;
+    u.Unregister(4096,false);
+    assert(u.total_used_memory==5904);
+    u.total_used_memory=4096;
+    u.Unregister(4096,false);
+    assert(u.total_used_memory==0);
+    u.Unregister(0,false);
+    assert(u.total_used_memory==0);
+}
+"""
+with tempfile.TemporaryDirectory(prefix="eden-f07-buffer-unregister-") as d:
+    src=Path(d)/"budget.cpp";src.write_text(decrement_cpp)
+    for native in (False,True):
+        for opt in ("-O0","-O2"):
+            out=Path(d)/(("native" if native else "desktop")+opt[1:])
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                 "-fsanitize=undefined","-fno-sanitize-recover=all",
+                 *(['-DPS5_NATIVE=1'] if native else []),str(src),"-o",str(out)]
+            built=subprocess.run(cmd,capture_output=True,text=True,timeout=40)
+            assert built.returncode==0,(native,opt,built.stderr[-3200:])
+            ran=subprocess.run([str(out)],capture_output=True,text=True,timeout=10)
+            assert ran.returncode==0,(native,opt,ran.stderr[-3200:])
+print("F07_BUFFER_USAGE_UNREGISTER_SATURATED_PASS O0=1 O2=1 native=1 desktop_original=1")

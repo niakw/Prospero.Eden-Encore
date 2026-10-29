@@ -1818,7 +1818,16 @@ void BufferCache<P>::ChangeRegister(BufferId buffer_id) {
         total_used_memory += Common::AlignUp(size, 1024);
         buffer.setLRUID(lru_cache.Insert(buffer_id, frame_tick));
     } else {
+#ifdef PS5_NATIVE
+        // The driver budget snapshot is not an allocation ledger. A stale or
+        // smaller snapshot must not wrap unsigned usage to UINT64_MAX when
+        // removing a previously registered buffer (and trigger GC storms).
+        const u64 accounted_bytes = Common::AlignUp(size, 1024);
+        total_used_memory = total_used_memory >= accounted_bytes
+                                ? total_used_memory - accounted_bytes : 0;
+#else
         total_used_memory -= Common::AlignUp(size, 1024);
+#endif
         lru_cache.Free(buffer.getLRUID());
     }
     const DAddr device_addr_begin = buffer.CpuAddr();
