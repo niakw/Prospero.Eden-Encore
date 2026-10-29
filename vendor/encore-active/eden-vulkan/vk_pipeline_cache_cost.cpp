@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include "pipeline_trace_registry.h"
 #include "performance.h"
@@ -78,6 +79,28 @@ extern std::atomic<unsigned> pending_first_use_graphics_builds;
 #endif
 
 namespace {
+#ifdef PS5_NATIVE
+// Detailed-only, per-cache-key CPU translation/admission cost. This NEVER
+// waits for the Vulkan driver worker and does not run on cache-hit draws.
+// The timer ends before emitting its diagnostic, avoiding log-I/O inflation.
+struct ColdShaderMissTrace {
+    const char* kind;
+    u64 key_hash;
+    bool retry;
+    bool enabled{::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
+    std::chrono::steady_clock::time_point started{
+        enabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{}};
+    void Complete(bool success) const {
+        if (!enabled) return;
+        const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now() - started).count();
+        std::printf("EDEN_VULKAN_SHADER_MISS kind=%s key=%016llx retry=%u "
+                    "success=%u cpu_ns=%llu\\n", kind,
+                    static_cast<unsigned long long>(key_hash), unsigned(retry),
+                    unsigned(success), static_cast<unsigned long long>(ns));
+    }
+};
+#endif
 #ifdef PS5_NATIVE
 // Keep the OPTIONAL graphics optimizer away from foreground compute
 // CFG/IR/SPIR-V translation, before the Vulkan driver worker is enqueued.
@@ -810,8 +833,12 @@ ComputePipeline* PipelineCache::CurrentComputePipeline() {
             ::Eden::Performance::CachePhase::ComputePipelineCreate,
             ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
 #endif
+#ifdef PS5_NATIVE
+        ColdShaderMissTrace cold_miss{"compute", key.Hash(), false};
+#endif
         pipeline = CreateComputePipeline(key, shader);
 #ifdef PS5_NATIVE
+        cold_miss.Complete(static_cast<bool>(pipeline));
         if (!pipeline) {
             // Bound recovery metadata without starving the latest failed
             // compute shaders after 32 earlier failed keys. This scan runs
@@ -843,7 +870,9 @@ ComputePipeline* PipelineCache::CurrentComputePipeline() {
             ::Eden::Performance::CachePhaseTimer retry_compute_cost{
                 ::Eden::Performance::CachePhase::ComputePipelineCreate,
                 ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
+            ColdShaderMissTrace cold_retry{"compute", key.Hash(), true};
             pipeline = CreateComputePipeline(key, shader);
+            cold_retry.Complete(static_cast<bool>(pipeline));
             // A consumed retry cannot repeat: the null compute_cache entry
             // is no longer marked retryable. Recycle its 32-key budget slot.
             failed_compute_retries.erase(failed);
@@ -1182,8 +1211,12 @@ GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {
             ::Eden::Performance::CachePhase::GraphicsPipelineCreate,
             ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
 #endif
+#ifdef PS5_NATIVE
+        ColdShaderMissTrace cold_miss{"graphics", graphics_key.Hash(), false};
+#endif
         pipeline = CreateGraphicsPipeline();
 #ifdef PS5_NATIVE
+        cold_miss.Complete(static_cast<bool>(pipeline));
         if (!pipeline) {
             // Failed-key retry metadata is capped, but a burst of >=64
             // failures must not permanently deny NEW shaders their one
@@ -1216,7 +1249,9 @@ GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {
             ::Eden::Performance::CachePhaseTimer retry_cpu_cost{
                 ::Eden::Performance::CachePhase::GraphicsPipelineCreate,
                 ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
+            ColdShaderMissTrace cold_retry{"graphics", graphics_key.Hash(), true};
             pipeline = CreateGraphicsPipeline();
+            cold_retry.Complete(static_cast<bool>(pipeline));
             // The null graphics_cache entry itself guarantees at most one
             // retry for this key. Retaining consumed retry metadata would
             // exhaust the 64-key budget after unrelated transient failures.
