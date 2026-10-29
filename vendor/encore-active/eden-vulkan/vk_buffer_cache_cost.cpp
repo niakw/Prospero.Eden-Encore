@@ -705,6 +705,12 @@ void BufferCacheRuntime::BindIndexBuffer(PrimitiveTopology topology, IndexFormat
         // Vulkan doesn't support null index buffers. Replace it with our own null buffer.
         ReserveNullBuffer();
         vk_buffer = *null_buffer;
+#ifdef PS5_NATIVE
+        // The fallback buffer is only four bytes. A stale guest index
+        // offset must not survive the handle substitution or Vulkan may
+        // bind beyond that allocation (same rule as null vertex/TFB).
+        vk_offset = 0;
+#endif
     }
     scheduler.Record([vk_buffer, vk_offset, vk_index_type](vk::CommandBuffer cmdbuf) {
         cmdbuf.BindIndexBuffer(vk_buffer, vk_offset, vk_index_type);

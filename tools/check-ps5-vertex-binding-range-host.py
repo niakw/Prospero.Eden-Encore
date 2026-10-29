@@ -280,3 +280,67 @@ for mode in (False,True):
             run=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
             assert run.returncode==0,(mode,opt,run.stderr[-3200:])
 print("F07_NATIVE_TFB_BINDINGS_GUARD_PASS native_empty=1 overcapacity=1 short_arrays=1 desktop_original=1 O0=1 O2=1")
+
+# Source-extracted index fallback: preserving a stale guest offset after
+# replacing the lost VkBuffer with a 4-byte null buffer is invalid Vulkan.
+index_begin="void BufferCacheRuntime::BindIndexBuffer("
+index_end="\nvoid BufferCacheRuntime::BindQuadIndexBuffer("
+assert native.count(index_begin)==1 and native.count(index_end)==1
+index_method=native[native.index(index_begin):native.index(index_end,native.index(index_begin))]
+old_index="if (vk_buffer == VK_NULL_HANDLE) {"
+assert index_method.count(old_index)==1
+index_start=index_method.index("    "+old_index)
+index_stop=index_method.index("\n    scheduler.Record(",index_start)
+index_fallback=index_method[index_start:index_stop]
+assert "vk_offset = 0;" in index_fallback
+assert "F07 reset native null index fallback byte offset" in generator
+index_cpp=r"""
+#include <cassert>
+#include <cstdint>
+#include <memory>
+using VkBuffer=std::uint64_t;
+using VkDeviceSize=std::uint64_t;
+constexpr VkBuffer VK_NULL_HANDLE=0;
+struct Guard {
+    VkBuffer vk_buffer{};
+    VkDeviceSize vk_offset{};
+    std::unique_ptr<VkBuffer> null_buffer;
+    unsigned created{};
+    void ReserveNullBuffer() {
+        ++created;
+        null_buffer=std::make_unique<VkBuffer>(777);
+    }
+    void Bind() {
+__INDEX_FALLBACK__
+    }
+};
+int main(){
+    Guard missing;
+    missing.vk_buffer=VK_NULL_HANDLE;
+    missing.vk_offset=123456;
+    missing.Bind();
+    assert(missing.vk_buffer==777 && missing.created==1);
+#ifdef PS5_NATIVE
+    assert(missing.vk_offset==0);
+#else
+    assert(missing.vk_offset==123456);
+#endif
+    Guard valid;
+    valid.vk_buffer=12;valid.vk_offset=96;
+    valid.Bind();
+    assert(valid.vk_buffer==12 && valid.vk_offset==96 && valid.created==0);
+}
+""".replace("__INDEX_FALLBACK__",index_fallback)
+for mode in (False,True):
+    for opt in ("-O0","-O2"):
+        with tempfile.TemporaryDirectory(prefix="eden-f07-null-index-") as folder:
+            path=Path(folder)/"index.cpp";exe=Path(folder)/"index"
+            path.write_text(index_cpp)
+            cmd=[clang,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                 "-fsanitize=address,undefined","-fno-sanitize-recover=all",
+                 *(['-DPS5_NATIVE=1'] if mode else []),str(path),"-o",str(exe)]
+            built=subprocess.run(cmd,capture_output=True,text=True,timeout=45)
+            assert built.returncode==0,(mode,opt,built.stderr[-3600:])
+            run=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
+            assert run.returncode==0,(mode,opt,run.stderr[-3600:])
+print("F07_NATIVE_NULL_INDEX_OFFSET_PASS native_offset_reset=1 real_index_unchanged=1 desktop_original=1 O0=1 O2=1")
