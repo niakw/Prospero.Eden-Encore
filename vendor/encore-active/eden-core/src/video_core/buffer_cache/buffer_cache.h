@@ -85,12 +85,14 @@ void BufferCache<P>::TickFrame() {
                                  channel_state->uniform_cache_hits.end());
     const u32 shots = std::reduce(channel_state->uniform_cache_shots.begin(),
                                   channel_state->uniform_cache_shots.end());
-    std::copy_n(channel_state->uniform_cache_hits.begin(),
-                channel_state->uniform_cache_hits.size() - 1,
-                channel_state->uniform_cache_hits.begin() + 1);
-    std::copy_n(channel_state->uniform_cache_shots.begin(),
-                channel_state->uniform_cache_shots.size() - 1,
-                channel_state->uniform_cache_shots.begin() + 1);
+    // History shifts overlap their source ranges. Copy from the back so
+    // each previous interval is retained exactly once, even under -O2.
+    std::copy_backward(channel_state->uniform_cache_hits.begin(),
+                       channel_state->uniform_cache_hits.end() - 1,
+                       channel_state->uniform_cache_hits.end());
+    std::copy_backward(channel_state->uniform_cache_shots.begin(),
+                       channel_state->uniform_cache_shots.end() - 1,
+                       channel_state->uniform_cache_shots.end());
     channel_state->uniform_cache_hits[0] = 0;
     channel_state->uniform_cache_shots[0] = 0;
 

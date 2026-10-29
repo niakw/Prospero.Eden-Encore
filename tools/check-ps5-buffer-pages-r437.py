@@ -123,6 +123,11 @@ budget_old = "    // If we can obtain the memory info, use it instead of the est
 budget_new = "    // If we can obtain the memory info, use it instead of the estimate.\n    if (runtime.CanReportMemoryUsage()) {\n#ifdef PS5_NATIVE\n        // Memory-budget queries use the driver while the buffer cache mutex\n        // is held. Under low pressure, probe on alternating frames; near\n        // the GC watermark, preserve every-frame sampling and prompt reclaim.\n        const bool near_gc_watermark =\n            total_used_memory >= minimum_memory - minimum_memory / 3;\n        if (near_gc_watermark || (frame_tick & 1u) == 0) {\n            total_used_memory = runtime.GetDeviceMemoryUsage();\n        }\n#else\n        total_used_memory = runtime.GetDeviceMemoryUsage();\n#endif\n    }\n    if (total_used_memory >= minimum_memory) {\n        RunGarbageCollector();\n    }"
 assert expected.count(budget_old) == 1
 expected = expected.replace(budget_old, budget_new)
+# Preserve overlapping rolling uniform-hit windows without forward-copy UB.
+history_old = "    std::copy_n(channel_state->uniform_cache_hits.begin(),\n                channel_state->uniform_cache_hits.size() - 1,\n                channel_state->uniform_cache_hits.begin() + 1);\n    std::copy_n(channel_state->uniform_cache_shots.begin(),\n                channel_state->uniform_cache_shots.size() - 1,\n                channel_state->uniform_cache_shots.begin() + 1);"
+history_new = "    // History shifts overlap their source ranges. Copy from the back so\n    // each previous interval is retained exactly once, even under -O2.\n    std::copy_backward(channel_state->uniform_cache_hits.begin(),\n                       channel_state->uniform_cache_hits.end() - 1,\n                       channel_state->uniform_cache_hits.end());\n    std::copy_backward(channel_state->uniform_cache_shots.begin(),\n                       channel_state->uniform_cache_shots.end() - 1,\n                       channel_state->uniform_cache_shots.end());"
+assert expected.count(history_old) == 1
+expected = expected.replace(history_old, history_new)
 assert maintained == expected, "R437 maintained header differs from reviewed transforms"
 assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm
