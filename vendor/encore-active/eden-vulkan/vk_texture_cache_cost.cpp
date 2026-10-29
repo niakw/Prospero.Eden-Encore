@@ -2055,6 +2055,16 @@ void TextureCacheRuntime::TickFrame() {
     if (msaa_scratch_images.empty() && pending_resolve_shadows.empty()) {
         return;
     }
+    // A live scratch is marked UINT64_MAX until the caller releases it.
+    // With no released scratch and no pending resolve shadow, no frame can
+    // age or retire an image: skip the GPU completion probe entirely.
+    if (pending_resolve_shadows.empty() &&
+        std::all_of(msaa_scratch_images.begin(), msaa_scratch_images.end(),
+                    [](const MsaaScratchImage& scratch) {
+                        return scratch.tick == (std::numeric_limits<u64>::max)();
+                    })) {
+        return;
+    }
     // One conservative GPU completion sample for both cleanup scans, not a
     // semaphore query per scratch/resolve. Late completions wait one frame.
     const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();
