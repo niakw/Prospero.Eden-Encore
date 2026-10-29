@@ -4307,6 +4307,36 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "#endif",
     "F07 gate per-HUD native decode INFO log behind detailed profile")
 
+# F07 P0.3: the pinned alias backport already installs the tick short-
+# circuit, but the Vulkan generator otherwise leaves the small_vector
+# constructor ahead of it. Match the selected source and move construction
+# behind the no-op return. Keep source/patch/generator byte-identical.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "void TextureCache<P>::SynchronizeAliases(ImageId image_id) {\n"
+    "    boost::container::small_vector<const AliasedImage*, 8> aliased_images;\n"
+    "    Image& image = slot_images[image_id];\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // MarkModification advances the cache-wide tick monotonically. If this\n"
+    "    // image already owns the latest tick, no alias can have a strictly newer\n"
+    "    // modification, so the search, sort and copy cannot do useful work.\n"
+    "    if (image.modification_tick == modification_tick) {\n"
+    "        return;\n"
+    "    }\n"
+    "#endif",
+    "void TextureCache<P>::SynchronizeAliases(ImageId image_id) {\n"
+    "    Image& image = slot_images[image_id];\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // MarkModification advances the cache-wide tick monotonically. If this\n"
+    "    // image already owns the latest tick, no alias can have a strictly newer\n"
+    "    // modification, so the search, sort and copy cannot do useful work.\n"
+    "    if (image.modification_tick == modification_tick) {\n"
+    "        return;\n"
+    "    }\n"
+    "#endif\n"
+    "    // Avoid constructing the inline alias vector on a common no-op HUD lookup.\n"
+    "    boost::container::small_vector<const AliasedImage*, 8> aliased_images;",
+    "F07 avoid constructing alias vector on unchanged native image")
+
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
 # extent fit checks, and reject unknown zero-sized block ratios early.
