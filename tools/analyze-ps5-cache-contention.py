@@ -51,6 +51,8 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
     jit_cores: dict[int, dict[str, float]] = {}
     phase_row = None  # GPU-owner sampled phases emitted after the pressure line
     seen_phases: set[str] = set()
+    peak_seen = False
+    peak_invalid = False
     for line in lines:
         if "EDEN_VULKAN_FRAME " in line:
             # A new interval cannot inherit core data from an older window.
@@ -58,6 +60,8 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
             jit_cores = {}
             phase_row = None
             seen_phases = set()
+            peak_seen = False
+            peak_invalid = False
             pending = values(line.partition("EDEN_VULKAN_FRAME ")[2])
         elif "EDEN_FRAME_PRESSURE " in line and pending is not None:
             pressure = values(line.partition("EDEN_FRAME_PRESSURE ")[2])
@@ -110,6 +114,49 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
                         x["evacuations"] for x in jit_cores.values())
                 if "jit_core_cpu_sum_ms" not in last_row:
                     last_row = None
+        elif "EDEN_PRESENT_INTERVAL_WITNESS " in line and phase_row is not None:
+            # This DEV-only snapshot covers one *between-presentations*
+            # interval inside the reporting window, NOT a guest frame.
+            # Preserve the source's complete four-core CPU attribution;
+            # no timing is inferred from missing/quiet/duplicate records.
+            snapshot = values(line.partition("EDEN_PRESENT_INTERVAL_WITNESS ")[2])
+            required = ("frame", "interval_ms", "jit_ns", "jit_calls",
+                        "jit0_ns", "jit1_ns", "jit2_ns", "jit3_ns",
+                        "evacuations", "cache_wait_ns", "gpu_fence_ns",
+                        "gpu_dispatch_ns", "guest_sync_ns")
+            valid = (
+                not peak_seen and not peak_invalid
+                and "scope=between_presents" in line
+                and all(key in snapshot and snapshot[key] >= 0 for key in required)
+                and snapshot.get("frame", 0) > 0
+                and snapshot.get("frame", 0) <= phase_row["total"]
+                and snapshot.get("interval_ms", 0) >= 100
+                and snapshot.get("jit_ns") == sum(
+                    snapshot.get(f"jit{core}_ns", -1) for core in range(4))
+            )
+            if not valid:
+                # A second, malformed or cross-window peak invalidates only
+                # peak attribution, never a valid window/JIT/phase sample.
+                for field in ("peak_present_interval_ms",
+                              "peak_present_jit_cpu_ms",
+                              "peak_present_jit_core_max_ms",
+                              "peak_present_cache_wait_ms",
+                              "peak_present_gpu_fence_ms",
+                              "peak_present_guest_sync_ms"):
+                    phase_row.pop(field, None)
+                peak_invalid = True
+            else:
+                peak_seen = True
+                phase_row["peak_present_interval_ms"] = snapshot["interval_ms"]
+                phase_row["peak_present_jit_cpu_ms"] = snapshot["jit_ns"] / 1_000_000
+                phase_row["peak_present_jit_core_max_ms"] = max(
+                    snapshot[f"jit{core}_ns"] for core in range(4)) / 1_000_000
+                phase_row["peak_present_cache_wait_ms"] = (
+                    snapshot["cache_wait_ns"] / 1_000_000)
+                phase_row["peak_present_gpu_fence_ms"] = (
+                    snapshot["gpu_fence_ns"] / 1_000_000)
+                phase_row["peak_present_guest_sync_ms"] = (
+                    snapshot["guest_sync_ns"] / 1_000_000)
         elif "EDEN_GPU_CACHE_PHASE " in line and phase_row is not None:
             snapshot = values(line.partition("EDEN_GPU_CACHE_PHASE ")[2])
             name = PHASE_NAME.search(line)
@@ -190,6 +237,24 @@ def report(rows: list[dict[str, float]]) -> str:
         )
     else:
         out.append(f"jit_core_breakdown: complete=0/{len(rows)} (not measured or incomplete)")
+    # The optional DEV peak witness is measured between presentation
+    # callbacks. Its JIT sum is *CPU work across four parallel cores*, not
+    # elapsed renderer time, and its snapshot cannot identify the culprit.
+    peak_rows = [r for r in rows if "peak_present_interval_ms" in r]
+    if peak_rows:
+        out.append(
+            f"peak_present_interval: complete={len(peak_rows)}/{len(rows)} "
+            f"max_interval_ms={max(r['peak_present_interval_ms'] for r in peak_rows):.3f} "
+            f"max_jit_cpu_ms={max(r['peak_present_jit_cpu_ms'] for r in peak_rows):.3f} "
+            f"max_single_jit_core_ms={max(r['peak_present_jit_core_max_ms'] for r in peak_rows):.3f} "
+            f"max_cache_wait_ms={max(r['peak_present_cache_wait_ms'] for r in peak_rows):.3f} "
+            f"max_gpu_fence_ms={max(r['peak_present_gpu_fence_ms'] for r in peak_rows):.3f} "
+            f"max_guest_sync_ms={max(r['peak_present_guest_sync_ms'] for r in peak_rows):.3f}"
+        )
+    else:
+        out.append(
+            f"peak_present_interval: complete=0/{len(rows)} (not measured or incomplete)"
+        )
     owner_rows = [
         r for r in rows
         if all(f"gpu_{phase}_samples" in r for phase in GPU_OWNER_PHASES)
@@ -277,6 +342,9 @@ def report(rows: list[dict[str, float]]) -> str:
     out.append("NOTE: texture_async_tick and texture_runtime_tick are separate "
                "1-in-16 texture frames, not the 1-in-16 draw/outer lock samples; "
                "do NOT subtract them from the whole mutex hold duration.")
+    out.append("NOTE: peak_present_interval is an optional DEV-only snapshot "
+               "between presentation callbacks. JIT CPU time across the four "
+               "cores may overlap; it is not a guest frame or causal GPU proof.")
     out.append("NOTE: per-core JIT CPU time may overlap between cores; its maximum "
                "is NOT renderer wall time or the cause of a presentation gap.")
     out.append("NOTE: JIT and cache times aggregate many guest threads across "

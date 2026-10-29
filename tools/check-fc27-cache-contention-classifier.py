@@ -333,6 +333,63 @@ zero_texture = [
 assert "texture_exact_gc_events: complete=1/1" in module.report(
     module.windows(record(1000, 30, 33, 0, 0) + zero_texture))
 assert module.report([]) == "NO_VALID_WINDOWS (requires matching frame totals)"
+# J01/C05: only a complete, unambiguous four-core peak witness is
+# attributable to one reporting window. Do not mistake summed CPU nanoseconds
+# from concurrent JIT cores for 200 ms of blocked presentation.
+def peak_witness(frame=1005, jit3=400_000, scope="between_presents",
+                 total_jit=1_000_000, include_fourth=True):
+    cores = (100_000, 200_000, 300_000, jit3)
+    values = [f"EDEN_PRESENT_INTERVAL_WITNESS frame={frame} interval_ms=201.500",
+              f"jit_ns={total_jit}", "jit_calls=7",
+              *(f"jit{i}_ns={core}" for i, core in enumerate(cores)
+                if i < 3 or include_fourth),
+              "evacuations=1", "cache_wait_ns=5000000",
+              "gpu_fence_ns=2500000", "gpu_dispatch_ns=800000",
+              f"guest_sync_ns=400000 scope={scope}"]
+    return " ".join(values)
+
+peak_rows = module.windows(record(1010, 23, 220, 1, 2) +
+                           [peak_witness()])
+assert len(peak_rows) == 1
+assert peak_rows[0]["peak_present_interval_ms"] == 201.5
+assert peak_rows[0]["peak_present_jit_cpu_ms"] == 1.0
+assert peak_rows[0]["peak_present_jit_core_max_ms"] == 0.4
+assert peak_rows[0]["peak_present_gpu_fence_ms"] == 2.5
+peak_report = module.report(peak_rows)
+assert "peak_present_interval: complete=1/1" in peak_report
+assert "max_interval_ms=201.500" in peak_report
+assert "max_jit_cpu_ms=1.000" in peak_report
+assert "max_single_jit_core_ms=0.400" in peak_report
+assert "max_cache_wait_ms=5.000" in peak_report
+assert "not a guest frame or causal GPU proof" in peak_report
+for invalid in (
+    [peak_witness(), peak_witness()],
+    [peak_witness(frame=1011)],
+    [peak_witness(total_jit=999_999)],
+    [peak_witness(scope="window")],
+    [peak_witness(include_fourth=False)],
+    [peak_witness(jit3=-1)],
+    [peak_witness(frame=0)],
+):
+    bad = module.windows(record(1010, 23, 220, 1, 2) + invalid)
+    assert len(bad) == 1
+    assert "peak_present_interval_ms" not in bad[0]
+    assert "peak_present_interval: complete=0/1" in module.report(bad)
+# A bad peak must not erase a valid frame window or the four JIT core series.
+with_core = module.windows(record(1010, 23, 220, 100, 2) +
+                           [core_line(1010, 0, 25_000_000, 1, 0),
+                            core_line(1010, 1, 25_000_000, 1, 0),
+                            core_line(1010, 2, 25_000_000, 1, 0),
+                            core_line(1010, 3, 25_000_000, 1, 0),
+                            peak_witness(total_jit=123)])
+assert len(with_core) == 1
+assert "jit_core_peak_ms" in with_core[0]
+assert "peak_present_interval_ms" not in with_core[0]
+assert module.windows([
+    "EDEN_VULKAN_FRAME total=1010 fps=30 worst_ms=34",
+    "EDEN_FRAME_PRESSURE frame=1010 detail=not_measured",
+    peak_witness(),
+]) == []
 # J01: compile the production DEV-only printf for the largest presentation
 # gap. The four JIT cores were already sampled; do not silently omit core 3.
 import re
