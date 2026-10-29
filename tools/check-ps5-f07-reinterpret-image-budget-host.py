@@ -301,6 +301,7 @@ struct Image {
     unsigned invalidations{}, rescales{}, submissions{};
     void UploadMemory(std::span<const Copy> copies) {
 __UPLOAD_GUARD__
+        static_cast<void>(copies); // desktop retains the original no-guard path
         ++invalidations;
         ++rescales;
         ++submissions;
