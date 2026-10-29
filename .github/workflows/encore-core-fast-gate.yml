@@ -117,6 +117,7 @@ on:
       - 'tools/check-vulkan-fence-completed-wait-host.py'
       - 'tools/check-vulkan-pipeline-ready-publication-host.py'
       - 'tools/check-vulkan-buffer-frame-tick-snapshot-host.py'
+      - 'tools/check-vulkan-buffer-usage-reset-host.py'
       - 'tools/check-ps5-quad-index-initial-fence-host.py'
       - 'tools/check-launcher-gl-scissor-reuse-host.py'
       - 'headless/prosperoeden/pe/gfx/gl_batch.cpp'
