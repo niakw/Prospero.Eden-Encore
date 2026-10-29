@@ -58,6 +58,8 @@ f07_texture_labels = (
     'F07 reject null native BCn 3D output buffer handle',
     'F07 native image initialized only after accepted upload record',
     'F07 reject null native image reinterpret scratch handle',
+    'F07 snapshot native MSAA scratch reuse GPU completion',
+    'F07 snapshot native MSAA scratch and resolve cleanup GPU completion',
 )
 f07_texture_deltas = []
 for statement in tree.body:

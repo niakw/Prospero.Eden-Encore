@@ -4954,3 +4954,16 @@ apply_reviewed_delta("include/video_core/renderer_vulkan/vk_scheduler.h",
     "#include <memory>\n",
     "#include <memory>\n#include <new>\n",
     "F07 include bad_alloc declaration for native rejected scheduler rollover")
+
+# F07 P0.3: do not poll the GPU completion semaphore once per cached MSAA
+# scratch object or pending resolve during normal frame cleanup. A single
+# monotone completed tick is conservative: late completions wait one pass.
+# Preserve the original desktop scheduler.IsFree path.
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "    for (MsaaScratchImage& scratch : msaa_scratch_images) {\n        if (scratch.key != key || !scheduler.IsFree(scratch.tick)) {\n            continue;\n        }",
+    "#ifdef PS5_NATIVE\n    // One monotone GPU-completion snapshot for the scratch search. A fence\n    // completed during this scan becomes reusable at the next allocation.\n    const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();\n#endif\n    for (MsaaScratchImage& scratch : msaa_scratch_images) {\n#ifdef PS5_NATIVE\n        if (scratch.key != key || scratch.tick > completed_tick) {\n#else\n        if (scratch.key != key || !scheduler.IsFree(scratch.tick)) {\n#endif\n            continue;\n        }",
+    "F07 snapshot native MSAA scratch reuse GPU completion")
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "void TextureCacheRuntime::TickFrame() {\n    static constexpr u32 MAX_UNUSED_SCRATCH_FRAMES = 60;\n    std::erase_if(msaa_scratch_images, [this](MsaaScratchImage& scratch) {\n        if (!scheduler.IsFree(scratch.tick)) {\n            scratch.unused_frames = 0;\n            return false;\n        }\n        return ++scratch.unused_frames > MAX_UNUSED_SCRATCH_FRAMES;\n    });\n    std::erase_if(pending_resolve_shadows, [this](const auto& pending) {\n        return scheduler.IsFree(pending.first);\n    });\n}",
+    "void TextureCacheRuntime::TickFrame() {\n    static constexpr u32 MAX_UNUSED_SCRATCH_FRAMES = 60;\n#ifdef PS5_NATIVE\n    // One conservative GPU completion sample for both cleanup scans, not a\n    // semaphore query per scratch/resolve. Late completions wait one frame.\n    const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();\n    const auto is_free = [completed_tick](u64 tick) noexcept {\n        return tick <= completed_tick;\n    };\n#else\n    const auto is_free = [this](u64 tick) { return scheduler.IsFree(tick); };\n#endif\n    std::erase_if(msaa_scratch_images, [is_free](MsaaScratchImage& scratch) {\n        if (!is_free(scratch.tick)) {\n            scratch.unused_frames = 0;\n            return false;\n        }\n        return ++scratch.unused_frames > MAX_UNUSED_SCRATCH_FRAMES;\n    });\n    std::erase_if(pending_resolve_shadows, [is_free](const auto& pending) {\n        return is_free(pending.first);\n    });\n}",
+    "F07 snapshot native MSAA scratch and resolve cleanup GPU completion")
