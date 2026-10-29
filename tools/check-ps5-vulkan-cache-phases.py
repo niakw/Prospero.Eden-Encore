@@ -111,6 +111,7 @@ cpp = r"""
 #include <cassert>
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <thread>
 namespace Common {
 struct Clock {
