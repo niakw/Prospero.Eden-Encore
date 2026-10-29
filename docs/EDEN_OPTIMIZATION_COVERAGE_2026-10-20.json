@@ -4070,6 +4070,12 @@
       "contract_evidence": "headless/vulkan.cmake"
     },
     {
+      "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_buffer_cache.h",
+      "disposition": "new_source_issue_corrected",
+      "proof_ref": "tools/check-vulkan-buffer-usage-reset-host.py",
+      "evidence": "F07 PS5 native Vulkan Buffer::ResetUsageTracking marks GPU-completed tracker intervals inactive using a zero tick; future MarkUsage publishes the new current tick, desktop path unchanged. Generated Vulkan header and native C++ runtime covered by source-extracted O0/O2 UBSan host witness. Console performance not measured."
+    },
+    {
       "path": "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h",
       "disposition": "historical_native_selected_unit",
       "contract_id": "V41",
@@ -4443,6 +4449,7 @@
     "vendor/encore-active/eden-core/src/core/hle/service/nvnflinger/buffer_queue_consumer.cpp",
     "vendor/encore-active/eden-core/src/video_core/host1x/syncpoint_manager.cpp",
     "vendor/encore-active/eden-vulkan/vulkan_memory_allocator.cpp",
-    "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_pipeline_cache.h"
+    "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_pipeline_cache.h",
+    "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_buffer_cache.h"
   ]
 }
