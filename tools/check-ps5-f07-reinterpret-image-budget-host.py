@@ -482,6 +482,14 @@ int main() {
     r.scheduler.semaphore.completed=10;
     r.TickFrame();
     assert(r.pending_resolve_shadows.empty());
+    // The first completed tick starts the 60-frame idle counter. The scratch
+    // must NOT be retired after only one eligible frame (native and desktop).
+    assert(find_image(102)!=r.msaa_scratch_images.end());
+    assert(find_image(102)->unused_frames==1);
+    for (u32 frame=0;frame<59;++frame) r.TickFrame();
+    assert(find_image(102)!=r.msaa_scratch_images.end());
+    assert(find_image(102)->unused_frames==60);
+    r.TickFrame();
     assert(find_image(102)==r.msaa_scratch_images.end());
     // Also cover resolve-only cleanup, which must still query completion.
     TextureCacheRuntime resolve_only;
