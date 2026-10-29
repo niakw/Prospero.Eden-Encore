@@ -317,6 +317,7 @@ with tempfile.TemporaryDirectory(prefix="encore-c04-display-handle-") as d:
         for native in (True,False):
             exe=Path(d)/("display-"+opt[1:]+("-native" if native else "-desktop"))
             subprocess.run(["c++","-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                            "-Wno-unused-parameter",  # upstream ABI keeps pixel_stride
                             "-fsanitize=undefined","-fno-sanitize-recover=all",
                             *(["-DPS5_NATIVE=1"] if native else []),
                             str(src),"-o",str(exe)],check=True,timeout=60)
