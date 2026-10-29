@@ -3213,6 +3213,15 @@ apply_reviewed_delta(
     "    if (!framebuffer_addr) {\n        return {};\n    }\n#ifdef PS5_NATIVE\n    // Present may run after a guest page remap without another draw.\n    // Commit queued guest-memory invalidations before reading cached image\n    // flags, never while holding texture_cache.mutex (invalidation takes it).\n    gpu_memory->FlushCaching();\n#endif\n    std::scoped_lock lock{texture_cache.mutex};\n    const auto [image_view, scaled] =\n        texture_cache.TryFindFramebufferImageView(config, framebuffer_addr);",
     'F07 P0.4 present flushes remaps before inspecting image cache')
 
+# C04: Vulkan image/view handles may be lost independently of a clean
+# guest framebuffer candidate. The compositor must use raw guest upload
+# instead of a null accelerated image. No extra lock or driver wait.
+apply_reviewed_delta(
+    'vulkan_rasterizer.cpp',
+    "    query_cache.NotifySegment(false);\n\n    const auto& resolution = Settings::values.resolution_info;\n\n    FramebufferTextureInfo info{};\n    info.image = image_view->ImageHandle();\n    info.image_view = image_view->Handle(Shader::TextureType::Color2D);\n    info.width = image_view->size.width;",
+    "    FramebufferTextureInfo info{};\n    info.image = image_view->ImageHandle();\n    info.image_view = image_view->Handle(Shader::TextureType::Color2D);\n#ifdef PS5_NATIVE\n    // A valid guest image-map entry does not guarantee that its Vulkan image\n    // and color view survived GPU allocation/recreation. Never send a null\n    // attachment into the compositor; use the existing raw guest upload.\n    if (info.image == VK_NULL_HANDLE || info.image_view == VK_NULL_HANDLE) {\n        return {};\n    }\n#endif\n    query_cache.NotifySegment(false);\n\n    const auto& resolution = Settings::values.resolution_info;\n\n    info.width = image_view->size.width;",
+    'F07 C04 accelerated framebuffer rejects missing Vulkan handles')
+
 # Reviewed F04 scissor source body: reconstruct the exact overflow-safe
 # method from the pinned upstream method, WITHOUT consulting active code or
 # weakening the generated-versus-maintained source checker at runtime.
