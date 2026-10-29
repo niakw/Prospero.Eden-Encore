@@ -441,6 +441,11 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
             // An unfinished build still follows the original condition wait.
             if (is_built.load(std::memory_order_acquire)) return;
 #ifdef PS5_NATIVE
+            // Publication can race the initial fast acquire. The build owner
+            // holds this mutex when publishing, so a false result here means
+            // the condition wait must actually release the lock.
+            std::unique_lock lock{build_mutex};
+            if (is_built.load(std::memory_order_acquire)) return;
             ::Eden::Performance::PipelineWaitTrace keyed_wait;
 #endif
             auto timer = Eden::Performance::VulkanTimer(16);
@@ -448,7 +453,9 @@ bool ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
             ::Eden::Performance::CachePhaseTimer pipeline_ready_wait{
                 ::Eden::Performance::CachePhase::ComputePipelineWait,
                 ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
+#ifndef PS5_NATIVE
             std::unique_lock lock{build_mutex};
+#endif
             build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });
 #ifdef PS5_NATIVE
             lock.unlock();

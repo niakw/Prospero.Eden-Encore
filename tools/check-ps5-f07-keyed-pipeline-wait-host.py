@@ -41,7 +41,10 @@ def callback_body(text, kind):
     block = text[first:last]
     assert text.rfind("if (!is_built.load(std::memory_order_acquire)) {", 0, first) >= 0
     assert "if (is_built.load(std::memory_order_acquire)) return;" in block
-    assert "std::unique_lock lock{build_mutex};" in block
+    assert block.count("std::unique_lock lock{build_mutex};") == 2
+    assert block.count("if (is_built.load(std::memory_order_acquire)) return;") == 2
+    assert block.index("std::unique_lock lock{build_mutex};") < block.rindex("if (is_built.load(std::memory_order_acquire)) return;") < block.index("PipelineWaitTrace keyed_wait;")
+    assert "#ifndef PS5_NATIVE\n            std::unique_lock lock{build_mutex};" in block
     assert "build_condvar.wait(lock, [this] { return is_built.load(std::memory_order::relaxed); });" in block
     assert "lock.unlock();" in block
     assert block.index("lock.unlock();") < block.index("pipeline_ready_wait.Stop();") < block.index("timer.reset();") < block.index("keyed_wait.Complete")
@@ -93,6 +96,7 @@ struct Pipeline {
     Key key;
     u64 diagnostic_cache_key_hash{0xabcd};
     bool bound{true};
+    std::function<void()> on_before_lock = [] {};
     bool CanExecuteDraw() const {
         return is_built.load(std::memory_order_acquire) && bound;
     }
@@ -126,6 +130,14 @@ int main() {
         already.scheduler.Run();
         assert(already.IsBound());
     }
+    // Publication between the first acquire and the mutex must not emit a false wait.
+    {
+        Pipeline raced;
+        raced.Queue();
+        raced.on_before_lock = [&] { raced.Publish(); };
+        raced.scheduler.Run();
+        assert(raced.IsBound());
+    }
     // Publication really delayed while callback executes.
     {
         Pipeline blocked;
@@ -158,7 +170,9 @@ assert compiler, "C++20 compiler required"
 with tempfile.TemporaryDirectory(prefix="f07-v01-worker-keyed-") as tmp:
     for kind, callback in (("graphics", graphics), ("compute", compute)):
         source = Path(tmp) / f"{kind}.cpp"
-        source.write_text(cpp.replace("__ACTUAL_CALLBACK__", callback))
+        source.write_text(cpp.replace("__ACTUAL_CALLBACK__", callback.replace(
+            "            std::unique_lock lock{build_mutex};",
+            "            on_before_lock();\n            std::unique_lock lock{build_mutex};", 1)))
         for native in (False, True):
             for opt in ("-O0", "-O2"):
                 exe = Path(tmp) / f"{kind}-{'ps5' if native else 'desktop'}-{opt[1:]}"
