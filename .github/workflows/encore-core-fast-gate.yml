@@ -53,6 +53,9 @@ on:
       - 'tools/fixtures/legacy-guest-write-deferred-bridge.cmake'
       - 'tools/prepare-vulkan-port.py'
       - 'tools/check-vendored-vulkan-fork.py'
+      - 'tools/check-eden-backport-patch-integrity-host.py'
+      - 'headless/backports/**'
+      - 'vendor/encore-active/eden-backports/manifest.json'
       - 'tools/check-native-quiet-shutdown-heap-host.py'
       - 'tools/check-native-fastmem-signal-install-host.py'
       - 'tools/check-sparse-zero-bounds-host.py'
@@ -224,6 +227,9 @@ on:
       - 'tools/check-native-sparse-jit-release-selector-host.py'
       - 'tools/prepare-vulkan-port.py'
       - 'tools/check-vendored-vulkan-fork.py'
+      - 'tools/check-eden-backport-patch-integrity-host.py'
+      - 'headless/backports/**'
+      - 'vendor/encore-active/eden-backports/manifest.json'
       - '.github/workflows/encore-core-fast-gate.yml'
   workflow_dispatch:
 
@@ -258,6 +264,9 @@ jobs:
       # Gate the exact generated/native Vulkan translation units *before*
       # fast host fixtures. The earlier gate could be green while the full
       # preflight failed on an ordered generator replacement mismatch.
+      - name: Audited Eden backport syntax and receipts
+        run: |
+          python3 -B tools/check-eden-backport-patch-integrity-host.py
       - name: Pinned Vulkan source reproduction
         run: |
           set -euo pipefail
