@@ -26,7 +26,13 @@ def windows(lines: list[str]) -> list[dict[str, float]]:
             pending = values(line.partition("EDEN_VULKAN_FRAME ")[2])
         elif "EDEN_FRAME_PRESSURE " in line and pending is not None:
             pressure = values(line.partition("EDEN_FRAME_PRESSURE ")[2])
-            if pending.get("total") is not None and pending["total"] == pressure.get("frame"):
+            # Quiet PS5 runs emit detail=not_measured, and a counter reset
+            # emits counters_reset=1. Both carry a valid frame ID but NO
+            # measured JIT/cache durations: never report them as zero waits.
+            # The production measured record always supplies both fields.
+            if (pending.get("total") is not None
+                    and pending["total"] == pressure.get("frame")
+                    and "cache_wait_ms" in pressure and "jit_ms" in pressure):
                 result.append({**pending, **pressure})
             pending = None
     return result
