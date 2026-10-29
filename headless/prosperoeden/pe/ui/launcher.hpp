@@ -222,8 +222,16 @@ class Launcher
     std::chrono::steady_clock::time_point last_ui_hotspot_report_{};
     std::string clock_;
     std::string version_;
-    // Profile cache discovery is I/O and runs once outside the render thread.
-    std::future<std::string> profile_avatar_scan_;
+    struct ProfileAvatarProbe {
+        std::string path;
+        std::uint64_t device = 0, inode = 0, size = 0, mtime = 0, ctime = 0;
+        bool operator==(const ProfileAvatarProbe&) const = default;
+    };
+    static ProfileAvatarProbe probe_profile_avatar(Services &services);
+    // At most one worker; a missing profile is retried every five seconds.
+    std::future<ProfileAvatarProbe> profile_avatar_scan_;
+    ProfileAvatarProbe profile_avatar_active_{};
+    float profile_avatar_refresh_elapsed_ = 0.0f;
     std::string profile_avatar_path_;
 
     // navigation
