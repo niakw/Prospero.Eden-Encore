@@ -45,6 +45,14 @@ assert "ReleaseDownloads();" in record
 assert "catch (const std::bad_alloc&)" in record
 assert "catch (const std::invalid_argument&)" in record
 assert "F07 rollback partial Vulkan dirty GC prefetch before staging release" in generator
+# Enforce byte-for-byte replay of the actual guarded native record body:
+# a generator update cannot silently omit the drain or invert ownership.
+rollback_from = record.index("                // The pinned StagingBufferRef is a POD handle")
+rollback_to = record.index("                bytes += image.unswizzled_size_bytes;", rollback_from)
+assert record[rollback_from:rollback_to] in generator
+assert record.index("if (!gc_downloads.empty()) runtime.Finish();") < record.index("ReleaseDownloads();")
+assert record.index("gc_downloads.emplace_back(id, map);") < record.index("map_owned_by_batch = true;")
+assert record.index("map_owned_by_batch = true;") < record.index("image.DownloadMemory(map, copies);")
 assert record.index("return NoteProjectedEviction(image);") < record.index("return true;")
 assert record.index("if (!map.buffer || map.mapped_span.size_bytes() < image.unswizzled_size_bytes)") < record.rindex("return true;")
 assert gc.count("return NoteProjectedEviction(image);") == 2
