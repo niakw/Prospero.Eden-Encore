@@ -9,6 +9,7 @@
 #include "dev_vulkan.h"
 #include <array>
 #include <cstring>
+#include <new>
 #include <span>
 #include <vector>
 
@@ -381,11 +382,29 @@ BufferCacheRuntime::BufferCacheRuntime(const Device& device_, MemoryAllocator& m
 }
 
 StagingBufferRef BufferCacheRuntime::UploadStagingBuffer(size_t size) {
+#ifdef PS5_NATIVE
+    auto map = staging_pool.Request(size, MemoryUsage::Upload);
+    // A mapped CPU span alone does not prove a valid Vulkan buffer handle.
+    if (size != 0 && (!map.buffer || map.mapped_span.size_bytes() < size)) {
+        throw std::bad_alloc{};
+    }
+    return map;
+#else
     return staging_pool.Request(size, MemoryUsage::Upload);
+#endif
 }
 
 StagingBufferRef BufferCacheRuntime::DownloadStagingBuffer(size_t size, bool deferred) {
+#ifdef PS5_NATIVE
+    auto map = staging_pool.Request(size, MemoryUsage::Download, deferred);
+    if (size != 0 && (!map.buffer || map.mapped_span.size_bytes() < size)) {
+        if (deferred && map.buffer) staging_pool.FreeDeferred(map);
+        throw std::bad_alloc{};
+    }
+    return map;
+#else
     return staging_pool.Request(size, MemoryUsage::Download, deferred);
+#endif
 }
 
 VkFormat BufferCacheRuntime::TexelBufferFormat(VideoCore::Surface::PixelFormat format) const {

@@ -412,3 +412,80 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-accelerated-staging-read-") as
             assert ran.returncode==0,(mode,opt,ran.stderr[-5000:])
 print("F07_ACCELERATED_TEXTURE_READ_BOUNDS_PASS pooled_9of16=1 pooled_13of16=1 desktop_original=1 O0=1 O2=1")
 
+
+# Extract both real buffer-cache staging wrappers. Compile their native and
+# desktop guards in a minimal C++ model, including short/null allocations.
+buffer_runtime=(root/"vendor/encore-active/eden-vulkan/vk_buffer_cache_cost.cpp").read_text()
+a="StagingBufferRef BufferCacheRuntime::UploadStagingBuffer(size_t size) {"
+b="VkFormat BufferCacheRuntime::TexelBufferFormat("
+assert buffer_runtime.count(a)==buffer_runtime.count(b)==1
+methods=buffer_runtime[buffer_runtime.index(a):buffer_runtime.index(b)]
+assert "F07 validate native upload and download buffer cache staging handles" in gen
+assert methods.count("throw std::bad_alloc{};")==2
+assert methods.count("!map.buffer || map.mapped_span.size_bytes() < size")==2
+harness=r"""
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <new>
+#include <span>
+#include <vector>
+enum class MemoryUsage{Upload,Download};
+struct StagingBufferRef{std::size_t buffer{};std::span<std::uint8_t> mapped_span{};};
+struct Pool{
+ StagingBufferRef next{};
+ unsigned freed{};
+ StagingBufferRef Request(std::size_t,MemoryUsage,bool=false){return next;}
+ void FreeDeferred(StagingBufferRef&){++freed;}
+};
+struct BufferCacheRuntime{
+ Pool staging_pool;
+ StagingBufferRef UploadStagingBuffer(std::size_t);
+ StagingBufferRef DownloadStagingBuffer(std::size_t,bool);
+};
+__METHODS__
+int main(){
+ BufferCacheRuntime rt;
+ std::vector<std::uint8_t> bytes(12);
+ rt.staging_pool.next={0,{bytes.data(),bytes.size()}};
+#ifdef PS5_NATIVE
+ bool up=false,down=false;
+ try{rt.UploadStagingBuffer(8);}catch(const std::bad_alloc&){up=true;}
+ try{rt.DownloadStagingBuffer(8,true);}catch(const std::bad_alloc&){down=true;}
+ assert(up&&down&&rt.staging_pool.freed==0);
+#else
+ assert(rt.UploadStagingBuffer(8).buffer==0);
+ assert(rt.DownloadStagingBuffer(8,true).buffer==0);
+#endif
+ rt.staging_pool.next={1,{bytes.data(),4}};
+#ifdef PS5_NATIVE
+ bool small_up=false,small_down=false;
+ try{rt.UploadStagingBuffer(8);}catch(const std::bad_alloc&){small_up=true;}
+ try{rt.DownloadStagingBuffer(8,true);}catch(const std::bad_alloc&){small_down=true;}
+ assert(small_up&&small_down&&rt.staging_pool.freed==1);
+#else
+ assert(rt.UploadStagingBuffer(8).mapped_span.size()==4);
+ assert(rt.DownloadStagingBuffer(8,true).mapped_span.size()==4);
+#endif
+ rt.staging_pool.next={1,{bytes.data(),bytes.size()}};
+ assert(rt.UploadStagingBuffer(8).buffer==1);
+ assert(rt.DownloadStagingBuffer(8,true).buffer==1);
+ rt.staging_pool.next={0,{}};
+ assert(rt.UploadStagingBuffer(0).buffer==0);
+ assert(rt.DownloadStagingBuffer(0,true).buffer==0);
+}
+""".replace("__METHODS__",methods)
+with tempfile.TemporaryDirectory(prefix="eden-buffer-staging-") as folder:
+    path=Path(folder)/"staging.cpp"
+    path.write_text(harness)
+    for opt in ("-O0","-O2"):
+        for native in (False,True):
+            exe=Path(folder)/("staging"+opt[2:]+("native" if native else "desktop"))
+            args=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                  "-fsanitize=undefined","-fno-sanitize-recover=all",
+                  *(["-DPS5_NATIVE=1"] if native else []),str(path),"-o",str(exe)]
+            built=subprocess.run(args,capture_output=True,text=True,timeout=40)
+            assert built.returncode==0,(native,opt,built.stderr[-4500:])
+            ran=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
+            assert ran.returncode==0,(native,opt,ran.stderr[-4500:])
+print("F07_BUFFER_CACHE_STAGING_HANDLE_PASS null=1 short=1 deferred=1 desktop=1 O0=1 O2=1")
