@@ -5248,6 +5248,7 @@ apply_reviewed_delta(
 #endif
         pipeline = CreateComputePipeline(key, shader);
 #ifdef PS5_NATIVE
+        first_use_compute_cost.Stop();
         cold_miss.Complete(static_cast<bool>(pipeline));
         if (!pipeline) {''',
     "F07 record exact compute cold first-use CPU cost")
@@ -5257,6 +5258,7 @@ apply_reviewed_delta(
             // A consumed retry cannot repeat:''',
     r'''            ColdShaderMissTrace cold_retry{"compute", key.Hash(), true};
             pipeline = CreateComputePipeline(key, shader);
+            retry_compute_cost.Stop();
             cold_retry.Complete(static_cast<bool>(pipeline));
             // A consumed retry cannot repeat:''',
     "F07 record exact compute bounded retry CPU cost")
@@ -5270,6 +5272,7 @@ apply_reviewed_delta(
 #endif
         pipeline = CreateGraphicsPipeline();
 #ifdef PS5_NATIVE
+        first_use_cpu_phase.Stop();
         cold_miss.Complete(static_cast<bool>(pipeline));
         if (!pipeline) {''',
     "F07 record exact graphics cold first-use CPU cost")
@@ -5279,6 +5282,7 @@ apply_reviewed_delta(
             // The null graphics_cache entry itself guarantees at most one''',
     r'''            ColdShaderMissTrace cold_retry{"graphics", graphics_key.Hash(), true};
             pipeline = CreateGraphicsPipeline();
+            retry_cpu_cost.Stop();
             cold_retry.Complete(static_cast<bool>(pipeline));
             // The null graphics_cache entry itself guarantees at most one''',
     "F07 record exact graphics bounded retry CPU cost")
