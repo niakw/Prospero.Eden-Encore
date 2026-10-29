@@ -5430,3 +5430,32 @@ apply_reviewed_delta(
         }
         if (is_rescaled) {""",
     "F07 MSAA download scratch success release unchanged")
+
+
+# F07 T04: memory allocators can return a null Vulkan image without throwing.
+# A null scratch must not enter the cached MSAA pool, nor be used in blits.
+apply_reviewed_delta(
+    "vk_texture_cache_cost.cpp",
+    """    MsaaScratchImage scratch{
+        .key = key,
+        .image = memory_allocator.CreateImage(image_ci),
+        .tick = (std::numeric_limits<u64>::max)(),
+        .unused_frames = 0,
+    };
+    const VkImage handle = *scratch.image;""",
+    """    MsaaScratchImage scratch{
+        .key = key,
+        .image = memory_allocator.CreateImage(image_ci),
+        .tick = (std::numeric_limits<u64>::max)(),
+        .unused_frames = 0,
+    };
+#ifdef PS5_NATIVE
+    // Some allocation backends report failure as an empty Vulkan image
+    // without throwing. Never cache it or submit a null VkImage as MSAA
+    // resolve scratch; the caller must take its existing failure path.
+    if (!scratch.image) {
+        throw std::bad_alloc{};
+    }
+#endif
+    const VkImage handle = *scratch.image;""",
+    "F07 MSAA null scratch image rejected before caching")
