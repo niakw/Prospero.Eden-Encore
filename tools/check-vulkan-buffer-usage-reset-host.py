@@ -79,7 +79,8 @@ int main(){
     MasterSemaphore semaphore{15,0};
     Scheduler scheduler{semaphore};
     BufferCacheRuntime runtime{scheduler};
-    Common::SlotVector<Buffer> buffers(3);
+    Common::SlotVector<Buffer> buffers;
+    buffers.resize(3);
     buffers[0].last_usage_tick=0; // idle from construction
     buffers[1].MarkUsage(10);
     buffers[2].MarkUsage(20);
@@ -113,7 +114,7 @@ int main(){
     assert(buffers[1].last_usage_tick==0);
     assert(buffers[2].tracker.resets==1);
 #else
-    assert(!buffers[1].tracker.active && buffers[1].tracker.resets==5);
+    assert(!buffers[1].tracker.active && buffers[1].tracker.resets==4);
 #endif
 }
 """.replace("__RESET__",reset).replace("__TICK__",method)
