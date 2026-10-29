@@ -1747,14 +1747,16 @@ adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
      '        return static_cast<bool>(pipeline);\n'
      '#endif\n'
      '    }\n'
-     '#ifdef PS5_NATIVE\n'
-     '    // Vulkan command worker only. A recovered optimized handle may be\n'
-     '    // published BETWEEN ConfigureDraw and Draw: availability alone cannot\n'
-     '    // prove that a correct pipeline was already bound for that draw.\n'
+     '    // Native Vulkan worker must use the pipeline actually selected by its\n'
+     '    // preceding ConfigureDraw callback, not a variant published afterward.\n'
+     '    // Desktop keeps the original readiness check.\n'
      '    [[nodiscard]] bool CanExecuteRecordedDraw() const noexcept {\n'
+     '#ifdef PS5_NATIVE\n'
      '        return worker_draw_bind_valid;\n'
-     '    }\n'
-     '#endif'),
+     '#else\n'
+     '        return CanExecuteDraw();\n'
+     '#endif\n'
+     '    }'),
     ('    GraphicsPipeline(const GraphicsPipeline&) = delete;',
      '    GraphicsPipeline(const GraphicsPipeline&) = delete;\n    ~GraphicsPipeline();'),
     ("    void AddTransition(GraphicsPipeline* transition);", "    void AddTransition(GraphicsPipeline* transition);\n#ifdef PS5_NATIVE\n    // Reserve graphics descriptor scratch before acquiring both guest caches.\n    // No descriptor content is read outside the locks.\n    void PreflightDescriptorScratch();\n#endif"),
