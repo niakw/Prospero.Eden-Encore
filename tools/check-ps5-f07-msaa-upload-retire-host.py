@@ -555,6 +555,7 @@ struct Image {
     void DownloadMemory(std::span<int> buffers_span, std::span<size_t> offsets_span,
                         std::span<const int> copies) {
 __ACTUAL_READ_PREFLIGHT__
+        (void)buffers_span; (void)offsets_span; (void)copies;
         ++expensive_gpu_calls;
     }
 };
