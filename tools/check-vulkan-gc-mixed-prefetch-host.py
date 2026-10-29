@@ -225,7 +225,7 @@ struct Scenario {
             images[1].fail_mode = fail_second;
         }
 __PRODUCTION_DECLARATION__
-        const auto ReleaseDownloads = [&] {
+        [[maybe_unused]] const auto ReleaseDownloads = [&] {
             for (auto& [id, map] : gc_downloads) {
                 (void)id;
                 runtime.FreeDeferredStagingBuffer(map);
