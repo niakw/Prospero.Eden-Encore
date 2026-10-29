@@ -1,6 +1,6 @@
 --- a/src/video_core/texture_cache/texture_cache.h
 +++ b/src/video_core/texture_cache/texture_cache.h
-@@ -2450,8 +2450,16 @@
+@@ -2450,8 +2450,17 @@
  template <class P>
  void TextureCache<P>::SynchronizeAliases(ImageId image_id) {
 -    boost::container::small_vector<const AliasedImage*, 8> aliased_images;
