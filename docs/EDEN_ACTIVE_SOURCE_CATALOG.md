@@ -314,6 +314,7 @@ reste dans `docs/EDEN_OVERRIDE_MIGRATION_INVENTORY.md`.
 | `eden-vulkan/include/video_core/renderer_vulkan/renderer_vulkan.h` | `maintained-override` | V35 |
 | `eden-vulkan/include/video_core/renderer_vulkan/striped_wait.h` | `maintained-override` | V40 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_blit_screen.h` | `maintained-override` | V34 |
+| `eden-vulkan/include/video_core/renderer_vulkan/vk_buffer_cache.h` | `maintained-override` | — |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_compute_pipeline.h` | `maintained-override` | V41 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_descriptor_buffer.h` | `maintained-override` | V33 |
 | `eden-vulkan/include/video_core/renderer_vulkan/vk_graphics_pipeline.h` | `maintained-override` | V10 |
