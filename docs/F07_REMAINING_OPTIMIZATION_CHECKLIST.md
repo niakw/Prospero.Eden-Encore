@@ -22,11 +22,13 @@
 | --- | ---: | ---: | --- |
 | Revue source prioritaire B1–B4 | **38/38** | **0** | Fonctions inspectées ; ne signifie pas 38 accélérations prouvées |
 | Acquis historiques A01–A09 | **9/9** | **0** | Code et témoins historiques déjà disponibles |
-| Décisions PRÉ-BUILD S/V/C/T/J/H/I/G/M/Q | **1/28** | **27** | Q03 fermé sans patch justifié ; autres critères parfois *partiellement* couverts par du code |
+| Décisions PRÉ-BUILD S/V/C/T/J/H/I/G/M/Q | **4/28** | **24** | Q03, S03, V02 et G01 terminés **au niveau hôte** ; objectifs jeu toujours ouverts |
 | Vérifications POST-BUILD | **0/12** | **12** | Mesures console impossibles avant le premier paquet |
 | Portes finales B01–B11 | **0/11** | **11** | Six gates avant compilation, puis build et tests réels |
 
 **Prochain jalon concret :** qualifier le même SHA par fast gate, six suites hôte et CodeQL ; continuer **S01/V01/C01/T01/J01/H02** sans refaire les 38 revues. La recompilation **PS5 reste interdite** jusqu'aux décisions PRÉ-BUILD et aux gates B01–B06. Le 29/10, aucun gain FPS de FC27 ni correction durable de son freeze/HUD n'est démontré sur la console.
+
+**Éléments clos cette passe (preuves pré-build uniquement) :** S03 — préchauffage borné, admission et drain ; V02 — attente FIFO/rollback sans attente supplémentaire sûre à supprimer ; G01 — replay F01–F06 commun. Ces décisions réduisent les chantiers hôte ouverts, mais la mesure FPS, la progression invité et les tests froid/chaud restent POST-BUILD.
 
 ### Correctifs déjà intégrés — ce qui avance sans fermer tout un chantier
 
@@ -65,14 +67,14 @@ Les lignes **[x]** ci-dessous certifient **uniquement que le changement figure s
 
 - [ ] **S01 [PRÉ-BUILD]** — Séparer les coûts froids réels.** Attribuer `shader_cfg`, `shader_ir`, `shader_spirv`, `shader_module`, `graphics_pipeline_create` et compute à un **miss** précis plutôt qu'aux seuls intervalles de présentation. **Owner :** `vk_pipeline_cache_cost.cpp::CreateGraphicsPipeline/CreateComputePipeline`. **Sortie :** attribution reproductible, pas d'écriture/log par draw en mode silencieux.
 - [ ] **S02 [PRÉ-BUILD]** — Éliminer uniquement le coût de traduction évitable prouvé.** Examiner les mêmes shaders/keys réutilisés, invalidations et allocations récurrentes ; si aucun déplacement hors GPU-owner n'est thread-safe, documenter `SANS PATCH JUSTIFIÉ`. **Sortie :** hit/miss conservé, shader final identique, témoin O0/O2 et absence de race.
-- [ ] **S03 [PRÉ-BUILD]** — Qualifier le préchauffage persistant borné à 8.** Vérifier cache valide/miss/rejet, réouverture froid/chaud, survie du pool worker, arrêt et fermeture ; ne pas monter arbitrairement le quota. **Owner :** `LoadDiskResources`, `QueueVulkanPipelineCacheFlush`. **Sortie :** comparaison lancement/compilation et preuve de réutilisation.
+- [x] **S03 [PRÉ-BUILD] — PRÉCHAUFFAGE HÔTE QUALIFIÉ.** `LoadDiskResources` et `QueueVulkanPipelineCacheFlush` : quota de **8**, jeton d'arrêt limité au lecteur, workers conservés après préchauffage, drain sans use-after-scope, admission des pipelines valides seulement, échecs et relance du cache traités. Preuves source-extrait natives/desktop O0/O2 : `check-ps5-f07-bounded-prewarm-host.py`, `check-ps5-f07-prewarm-pipeline-admission-host.py`, `check-ps5-f07-driver-cache-flush-host.py`, `check-ps5-f07-shader-cache-drain-host.py` (exécutés dans les suites hôte, et prewarm/admission PASS sur la suite d'audit #40830618861 avant son échec ultérieur d'un autre témoin). **Ne revendique PAS de réutilisation GPU mesurée ni d'amélioration de démarrage** ; comparaison froid/chaud sur console réservée à **S05**, aucune augmentation arbitraire du quota.
 - [ ] **S04 [PRÉ-BUILD]** — Revalider priorités first-use vs optimiseur.** Constater l'absence de famine, de jobs spéculatifs en priorité et de retry storm après échec. **Owner :** `Current*Pipeline* / QueueOptimizedPipeline`. **Sortie :** commandes réelles préservées, quotas bornés, hôte puis console.
 - [ ] **S05 [POST-BUILD]** — Mesurer le résultat shader sur FC27 froid/chaud.** Le passage de compilation à un FPS régulier est **non prouvé**. **Sortie :** retards >50/>100 ms et temps shader comparables sur même build/scènes.
 
 ## 2. P0.2 — attente worker Vulkan / scheduler / descripteurs
 
 - [ ] **V01 [PRÉ-BUILD]** — Isoler attente worker pipeline vs CPU shader.** Tracer publication release/acquire, attente commandée et temps réel de complétion. **Owner :** `vk_graphics_pipeline_cost.cpp::ConfigureDraw`, `vk_compute_pipeline_cost.cpp::Configure`, scheduler. **Sortie :** coût d'attente correctement attribué à une frame, sans désordre FIFO.
-- [ ] **V02 [PRÉ-BUILD]** — Examiner les attente(s) supplémentaires démontrées sur les commandes acceptées.** Conserver la *seule attente ordonnée* intégrée ; aucun pipeline non construit exécuté, aucun `Record` refusé compté soumis. **Sortie :** O0/O2, refus puis reprise, hôte+console.
+- [x] **V02 [PRÉ-BUILD] — AUCUNE ATTENTE SUPPLÉMENTAIRE JUSTIFIÉE.** Graphics/compute n'enregistrent qu'**une attente FIFO** au premier usage ; `is_built` est publié `release` et consommé `acquire` ; un `Record` refusé invalide les états mémorisés, puis le rejeu reconstruit les commandes. Témoins hôte exacts O0/O2 et reprise/rejet : `check-ps5-f07-pipeline-publication-host.py`, `check-ps5-f07-scheduler-record-rollback-host.py`, `check-ps5-pipeline-build-handoff-host.py`. [Fast gate #40830618753 SUCCESS](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40830618753). **Le temps d'attente réel console reste V06.** Ne pas supprimer une barrière pour augmenter artificiellement le débit.
 - [ ] **V03 [PRÉ-BUILD]** — Quantifier les `Finish` / `Wait` de repli sous pair-lock.** **Owner :** `vk_descriptor_buffer_cost.cpp::PreflightFrameReuse/PreflightCapacity/Allocate`. Déplacer un wait uniquement si la réservation hors verrous est certaine. **Sortie :** tick/génération/identité descripteur préservés.
 - [ ] **V04 [PRÉ-BUILD]** — Requalifier la réutilisation des descripteurs graphiques/compute.** **Owner :** `GraphicsPipeline::ConfigureImpl/ConfigureDraw`, `ComputePipeline::Configure`. **Sortie :** payload, génération, lifetime et invalidation corrects après changement de HUD et échec de soumission.
 - [ ] **V05 [PRÉ-BUILD]** — Vérifier les frontières scheduler/submit/barrières de copies.** **Owner :** `vulkan_scheduler.cpp`, `vk_texture_cache_cost.cpp`. **Sortie :** aucune suppression de barrière buffer/image utile ; témoin refus, rollover, copies successives et rebind.
@@ -106,7 +108,7 @@ Les lignes **[x]** ci-dessous certifient **uniquement que le changement figure s
 - [ ] **H02 [PRÉ-BUILD]** — Vérifier refus, réveils et reprises IPC/HLE.** **Sortie :** publication des waiters, fin de wait, timeout, fermeture et reprise exacts ; pas de réveils ou copies en double.
 - [ ] **I01 [POST-BUILD]** — Mesurer manette → NPad → action guest → image visible.** **Owner :** F06 et mapping normal. **Sortie :** commandes PS toujours correctes en match/pause, pas de remapping Switch imprévu.
 - [ ] **I02 [POST-BUILD]** — Déterminer si la latence de pause provient d'input, IPC, guest ou rendu.** **Sortie :** correctif ciblé seulement dans le propriétaire causal ; test de reprise, mi-temps et fin de partie.
-- [ ] **G01 [PRÉ-BUILD]** — Valider F01–F06 ensemble sans changer leur contrat.** **Sortie :** 6/6 replays hôte toujours verts puis preuve matérielle de progression entrée et sortie.
+- [x] **G01 [PRÉ-BUILD] — 6/6 REPLAYS HÔTE VALIDÉS ENSEMBLE.** [Prévalidation #40831626518 — sous-suite source-f01-f06 SUCCESS](https://github.com/niakw/Prospero.Eden-Encore/actions/runs/40831626518) sur `941fa741` ; aucun changement de contrat F01–F06 dans ce lot, ni build console. **La progression réelle du jeu reste à prouver en G02/H01/I01**, pas dans une case pré-build impossible à fermer.
 - [ ] **G02 [POST-BUILD]** — Qualifier F01–F06 sur console : entrée, reprise, composition et sortie, sans confondre la preuve hôte et le jeu réel.
 
 ## 6. P2 — mémoire partagée, GC, modes extrêmes, bruit de production
