@@ -8,6 +8,12 @@ generator=(root/"tools/prepare-vulkan-port.py").read_text()
 a=src.index("void TextureCache<P>::TickFrame() {")
 b=src.index("    sentenced_images.Tick();",a)
 selected=src[a:b]
+# The fixture intentionally extracts only the early budget policy, not the
+# later async/runtime work where this C03 sample flag is consumed. The active
+# source has no unused variable; silence only its truncated fixture copy.
+sample_flag = "    const bool sample_housekeeping = detailed && ::Eden::Performance::ShouldSampleTextureHousekeeping();"
+assert selected.count(sample_flag) == 1
+selected = selected.replace(sample_flag, sample_flag + "\n    (void)sample_housekeeping;", 1)
 assert "F07 native memory pressure sampling outside near GC watermark" in generator
 assert "total_used_memory >= minimum_memory - minimum_memory / 3" in selected
 assert "(frame_tick & 1u) == 0" in selected
