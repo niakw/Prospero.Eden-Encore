@@ -1496,6 +1496,18 @@ gc = gc.replace(cleanup_cutoff,
                 "        lru_cache.ForEachItemBelow("
                 "::Eden::VulkanMemory::OldestEvictionTick(frame_tick, ticks_to_destroy), Cleanup);\n"
                 "    }")
+# F07: bound kernel-backed dirty-GC pressure probes while the texture mutex
+# is held. Keep the desktop path and the historical pinned GC oracle intact.
+for old, new in [
+    ("    const auto DirtyEvictions = [&] {\n        return high_priority_mode &&\n               (total_used_memory >= critical_memory || !::Eden::Performance::KeepDirtyTextures());\n    };", "    const auto DirtyEvictions = [&] {\n        return high_priority_mode &&\n               (total_used_memory >= critical_memory || !::Eden::Performance::KeepDirtyTextures());\n    };\n#ifdef PS5_NATIVE\n    // Keep the expensive direct-memory pressure probe out of every dirty LRU\n    // candidate under texture_cache.mutex. Recheck after at most eight visits,\n    // immediately after a deletion, and at the critical-pass boundary.\n    // Critical pressure always bypasses the cached answer.\n    constexpr unsigned kDirtyProbeReuse = 8;\n    unsigned dirty_probe_remaining = 0;\n    bool dirty_evict_cached = false;\n    const auto DirtyEvictionsForCleanup = [&]() {\n        if (!high_priority_mode) return false;\n        if (total_used_memory >= critical_memory) return true;\n        if (dirty_probe_remaining == 0) {\n            dirty_evict_cached = !::Eden::Performance::KeepDirtyTextures();\n            dirty_probe_remaining = kDirtyProbeReuse;\n        }\n        --dirty_probe_remaining;\n        return dirty_evict_cached;\n    };\n#endif"),
+    ("        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||\n            (must_download && !DirtyEvictions())) {", "#ifdef PS5_NATIVE\n        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||\n            (must_download && !DirtyEvictionsForCleanup())) {\n#else\n        if ((!aggressive_mode && True(image.flags & ImageFlagBits::CostlyLoad)) ||\n            (must_download && !DirtyEvictions())) {\n#endif"),
+    ("        ++evicted;\n        if (aggressive_mode", "        ++evicted;\n#ifdef PS5_NATIVE\n        dirty_probe_remaining = 0;\n#endif\n        if (aggressive_mode"),
+    ("        Configure(true);\n        num_scanned = 0; // independent scan allowance for the aggressive pass", "        Configure(true);\n#ifdef PS5_NATIVE\n        dirty_probe_remaining = 0;\n#endif\n        num_scanned = 0; // independent scan allowance for the aggressive pass"),
+]:
+    if gc.count(old) != 1:
+        raise RuntimeError(f'Pinned native GC pressure-probe anchor changed: {old[:72]}')
+    gc = gc.replace(old, new)
+
 texture_costs = []
 for signature, index in (
     ('RunGarbageCollector()', 13), ('DownloadMemory(DAddr cpu_addr, size_t size)', 14),
