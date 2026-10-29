@@ -84,7 +84,7 @@ print('AVATAR_DDS_HOST_OK formats=BC1,BC2,BC3,BGRA invalid=2')
 with tempfile.TemporaryDirectory(prefix="encore-avatar-owner-") as tmp:
     p = pathlib.Path(tmp)
     marker = p / "owner.txt"
-    marker.write_text("0x12345678 png\\n")
+    marker.write_text("0x12345678 png\n")
     fixture = p / "marker.cpp"
     fixture.write_text(r"""
 #include "ps5_profile_avatar_staging.hpp"
@@ -93,7 +93,7 @@ with tempfile.TemporaryDirectory(prefix="encore-avatar-owner-") as tmp:
 #include <cstdint>
 #include <unistd.h>
 int main(int argc, char** argv) {
-    assert(argc == 3);
+    assert(argc == 4);
     auto match = [](const char* p, std::uint32_t user, const char* type) {
         return pe::ps5::avatar_owner_marker_matches(p, user, type);
     };
@@ -101,12 +101,15 @@ int main(int argc, char** argv) {
     assert(!match(argv[1], 0x12345679u, "png"));
     assert(!match(argv[1], 0x12345678u, "dds"));
     assert(!match(argv[2], 0x12345678u, "png"));
+    assert(!match(argv[3], 0x12345678u, "png"));
 }
 """)
+    corrupt = p / "owner-corrupt.txt"
+    corrupt.write_text("0x12345678 png\ntrailer")
     symlink = p / "owner-link.txt"
     symlink.symlink_to(marker)
     binary = p / "marker-test"
     subprocess.run(["g++", "-std=c++20", "-Wall", "-Wextra", "-Werror",
                     "-I", str(ROOT / "headless/prosperoeden"), str(fixture),
                     "-o", str(binary)], check=True)
-    subprocess.run([str(binary), str(marker), str(symlink)], check=True)
+    subprocess.run([str(binary), str(marker), str(symlink), str(corrupt)], check=True)
