@@ -2386,9 +2386,20 @@ void TextureCache<P>::TickAsyncDecode() {
             retired_decodes == kMaxRetiredDecodesPerTick) {
             break;
         }
-        ++retired_decodes;
 #endif
+#ifdef PS5_NATIVE
+        // The worker publishes completion before releasing its mutex. Do
+        // not block texture_cache.mutex just because its final handoff is
+        // still locked: retry this completed item on the following frame.
+        std::unique_lock lock{async_decode->mutex, std::try_to_lock};
+        if (!lock.owns_lock()) {
+            ++i;
+            continue;
+        }
+        ++retired_decodes;
+#else
         std::unique_lock lock{async_decode->mutex};
+#endif
 #ifndef PS5_NATIVE
         if (!async_decode->complete) {
             ++i;

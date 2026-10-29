@@ -4252,6 +4252,13 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        // The context owns async_decode->mutex.",
     "F07 increment successful async decode quota only after GPU submission")
 
+# F07 P0.3: the decoder worker can publish complete=true while still
+# holding its context mutex. Under texture_cache.mutex, polling that worker
+# mutex must not block the GPU owner; skip the busy task and retry next frame.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        ++retired_decodes;\n#endif\n        std::unique_lock lock{async_decode->mutex};\n#ifndef PS5_NATIVE", "#endif\n#ifdef PS5_NATIVE\n        // The worker publishes completion before releasing its mutex. Do\n        // not block texture_cache.mutex just because its final handoff is\n        // still locked: retry this completed item on the following frame.\n        std::unique_lock lock{async_decode->mutex, std::try_to_lock};\n        if (!lock.owns_lock()) {\n            ++i;\n            continue;\n        }\n        ++retired_decodes;\n#else\n        std::unique_lock lock{async_decode->mutex};\n#endif\n#ifndef PS5_NATIVE",
+    "F07 nonblocking completed async texture decode worker handoff")
+
 # F07 P0.3: no render-target channel was selected on a raw clear.
 # Preserve the pre-existing scheduler FlushWork and the desktop path. A
 # native masked-out clear does not read textures or modify GPU pixels, so

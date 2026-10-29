@@ -35,7 +35,9 @@ assert "F07 count only accepted async HUD uploads under independent retired deco
 assert "F07 bound completion retirements while skipping invalid async decode slots" in generator
 assert "F07 increment successful async decode quota only after GPU submission" in generator
 assert method.index("++completed_decodes;") > method.index("submitted_images[submitted_count++]")
-assert method.index("++retired_decodes;") < method.index("std::unique_lock lock{async_decode->mutex}")
+assert method.index("std::unique_lock lock{async_decode->mutex, std::try_to_lock}") < method.index("++retired_decodes;")
+assert "if (!lock.owns_lock())" in method
+assert "F07 nonblocking completed async texture decode worker handoff" in generator
 assert "F07 bounded ready decode completion under texture lock" in generator
 assert "F07 gate per-HUD native decode INFO log behind detailed profile" in generator
 queue=active.split("void TextureCache<P>::QueueAsyncDecode(Image& image, ImageId image_id) {",1)[1].split("\ntemplate <class P>",1)[0]
@@ -61,7 +63,7 @@ assert "async_decode->decoded_data.size() != expected_size" in method
 assert "F07 atomic unfinished texture decode polling" in generator
 assert "async_decode->complete.load(std::memory_order_acquire)" in method
 assert method.index("async_decode->complete.load(std::memory_order_acquire)") < method.index(
-    "std::unique_lock lock{async_decode->mutex};")
+    "std::unique_lock lock{async_decode->mutex, std::try_to_lock};")
 assert "True(image.flags & ImageFlagBits::CpuModified)" in method
 assert "True(image.flags & ImageFlagBits::Remapped)" in method
 assert method.index("True(image.flags & ImageFlagBits::Remapped)") < method.index("std::memcpy(")
@@ -92,6 +94,7 @@ struct CheckedMutex {
     inline static unsigned lock_calls{};
     bool held{};
     void lock(){assert(!held);held=true;++lock_calls;}
+    bool try_lock(){if(held)return false;held=true;++lock_calls;return true;}
     void unlock(){assert(held);held=false;}
     ~CheckedMutex(){assert(!held && "decode mutex destroyed while still locked");}
 };
@@ -161,6 +164,31 @@ template<class P>struct TextureCache{
 };
 """ + method + r"""
 int main(){
+#ifdef PS5_NATIVE
+    // Completion can become visible while the worker still holds its mutex.
+    // The GPU owner must not wait while holding the entire texture cache.
+    TextureCache<int> contended;
+    contended.slot_images.resize(1);
+    contended.slot_images[0].size=4;
+    contended.slot_images[0].flags|=ImageFlagBits::IsDecoding;
+    auto published=std::make_unique<AsyncDecodeContext>();
+    published->image_id=0; published->decoded_data={1,2,3,4};
+    published->complete.store(true,std::memory_order_release);
+    auto* worker_context=published.get();
+    worker_context->mutex.lock(); // simulate a worker still publishing
+    contended.async_decodes.emplace_back(std::move(published));
+    const unsigned try_calls_before=CheckedMutex::lock_calls;
+    contended.TickAsyncDecode();
+    assert(CheckedMutex::lock_calls==try_calls_before);
+    assert(contended.async_decodes.size()==1);
+    assert(contended.slot_images[0].uploads==0);
+    assert(contended.runtime.staging_calls==0 && contended.runtime.barriers==0);
+    worker_context->mutex.unlock();
+    contended.TickAsyncDecode();
+    assert(contended.async_decodes.empty());
+    assert(contended.slot_images[0].uploads==1);
+    assert(contended.runtime.barriers==1);
+#endif
     // Idle frames must not touch decoder mutexes, staging or visibility
     // barriers, even when the texture cache still owns resident images.
     TextureCache<int> idle;
