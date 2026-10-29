@@ -196,5 +196,18 @@ duplicate = module.windows(
     [full_phase_lines[0]] + full_phase_lines[2:]
 )
 assert "shader_phase_samples: complete=0/1" in module.report(duplicate)
+# Reject a duplicate after ALL evidence was initially accepted too: the
+# previous complete snapshot must be revoked, not left in the result dict.
+late_duplicate = module.windows(
+    record(970, 27, 95, 100, 3) + full_phase_lines +
+    [gpu_phase(970, "shader_cfg", 2_000_000)]
+)
+assert "shader_phase_samples: complete=0/1" in module.report(late_duplicate)
+assert "worker_wait_samples: complete=0/1" in module.report(late_duplicate)
+jit_late_duplicate = module.windows(
+    record(900, 22, 500, 100, 4) + quartet +
+    [core_line(900, 0, 50_000_000, 1, 0)]
+)
+assert "jit_core_breakdown: complete=0/1" in module.report(jit_late_duplicate)
 assert module.report([]) == "NO_VALID_WINDOWS (requires matching frame totals)"
 print("PINNED_FC27_LONG_FRAME_CLASSIFIER_PASS")
