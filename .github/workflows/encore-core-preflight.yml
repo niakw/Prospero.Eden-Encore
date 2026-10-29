@@ -43,8 +43,16 @@ concurrency:
   group: encore-core-preflight-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
+# Independent source witnesses share no build products or test output.
+# Run on separate host runners so 10+ minutes of graphics/JIT fixtures do
+# not serialize behind startup audits or block F01-F06 results.
 jobs:
-  core-tests:
+  preflight-suites:
+    name: source-${{ matrix.suite }}
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [early, audit, memory, ux, baseline, f01-f06]
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -64,6 +72,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends nlohmann-json3-dev libboost-container-dev clang-18 libssl-dev libzstd-dev
 
       - name: Early audit and native source boundary witnesses
+        if: ${{ matrix.suite == 'early' }}
         run: |
           set -euo pipefail
           python3 -B tools/check-eden-backport-patch-integrity-host.py
@@ -138,6 +147,7 @@ jobs:
           python3 -B tools/check-ps5-pipeline-build-handoff-host.py
 
       - name: Audit generic graphics, JIT, runtime and filtered game networking
+        if: ${{ matrix.suite == 'audit' }}
         run: |
           set -euxo pipefail
           python3 -B tools/check-ci-neutral-labels.py
@@ -565,6 +575,7 @@ jobs:
           python3 -B tools/check-package-flexible-memory.py
 
       - name: Verify native memory arena ownership (host sanitizers only)
+        if: ${{ matrix.suite == 'memory' }}
         run: |
           set -euxo pipefail
           python3 -B tools/check-maintained-heap-sources.py
@@ -576,6 +587,7 @@ jobs:
           python3 -B tools/check-hle-tail-counters.py
 
       - name: Check approved user-facing UX invariants (no graphics compilation)
+        if: ${{ matrix.suite == 'ux' }}
         run: |
           set -euxo pipefail
           python3 -B tools/check-native-ui-focus.py
@@ -593,6 +605,7 @@ jobs:
           python3 -B tools/check-ps-glyph-cross-platform-index.py
 
       - name: Validate dev changes against archived release baseline
+        if: ${{ matrix.suite == 'baseline' }}
         run: |
           # The old fix branch was intentionally removed during the single-dev
           # cleanup. Compare to its preserved annotated tag, not a deleted ref.
@@ -601,13 +614,26 @@ jobs:
           # Keep strict diffs for all Encore-owned source, CI and vendor docs,
           # but never silently rewrite external pinned source snapshots or packs.
           git diff --check FETCH_HEAD HEAD -- . ':(exclude)vendor/sources/**' ':(exclude)vendor/objects/**' ':(exclude)vendor/encore-active/**'
-          echo CORE_PREFLIGHT_ALL_PASS
+          echo CORE_PREFLIGHT_BASELINE_PASS
 
       - name: Independently replay F01-F06 source-extracted technical subpaths
-        # Do not let a separate source-audit or generator failure hide which
-        # of the six native paths actually passed their focused host tests.
-        # This is still fail-closed; the job cannot turn green if one fails.
-        if: ${{ always() }}
+        # Separate runner: a failing graphics audit cannot hide these six
+        # independent technical outcomes. Every suite remains required.
+        if: ${{ matrix.suite == 'f01-f06' }}
         run: |
           set -euo pipefail
           python3 -B tools/check-fc27-six-gates-host.py
+
+  # Preserve the single historical required check name. It can only pass
+  # when ALL six independent suites finished successfully; no partial green
+  # result is mistaken for full native source qualification.
+  core-tests:
+    needs: preflight-suites
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Aggregate six mandatory source suites
+        run: |
+          test "${{ needs.preflight-suites.result }}" = "success"
+          echo CORE_PREFLIGHT_ALL_PASS
