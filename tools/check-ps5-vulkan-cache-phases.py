@@ -45,7 +45,7 @@ for phase, label, native in (
     assert callback.index("std::unique_lock lock{build_mutex};") < callback.rindex(ready)
     assert callback.rindex(ready) < callback.index("CachePhase::" + phase)
     assert callback.index("CachePhase::" + phase) < callback.index("build_condvar.wait(")
-    assert "#ifndef PS5_NATIVE\\n            std::unique_lock lock{build_mutex};" in callback
+    assert "#ifndef PS5_NATIVE\n            std::unique_lock lock{build_mutex};" in callback
     assert callback.count("detailed_gpu_profile.load(std::memory_order_relaxed)") == 1
     assert "wait_phase = 'GraphicsPipelineWait' if name" in generator
 
