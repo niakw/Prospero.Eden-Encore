@@ -5395,3 +5395,38 @@ apply_reviewed_delta(
 
         if (is_rescaled) {""",
     "F07 MSAA upload scratch normal release unchanged")
+
+
+# F07 T04: MSAA readback uses the same scratch-pool admission as uploads.
+# An exception during image-copy staging, Vulkan record or resolve must
+# retire the checked-out image against the GPU tick, not leak it forever.
+apply_reviewed_delta(
+    "vk_texture_cache_cost.cpp",
+    """            const VkImage temp_vk_image = runtime->AcquireMsaaScratchImage(image_ci);
+
+            const VkImageAspectFlags temp_aspect_mask = aspect_mask;""",
+    """            const VkImage temp_vk_image = runtime->AcquireMsaaScratchImage(image_ci);
+#ifdef PS5_NATIVE
+            // A rejected Record, failed blit or staging allocation must not
+            // strand this scratch at UINT64_MAX. The returned CurrentTick
+            // still protects commands already submitted to the GPU worker.
+            bool scratch_released = false;
+            SCOPE_EXIT {
+                if (!scratch_released) runtime->ReleaseMsaaScratchImage(temp_vk_image);
+            };
+#endif
+
+            const VkImageAspectFlags temp_aspect_mask = aspect_mask;""",
+    "F07 MSAA download scratch failure release")
+apply_reviewed_delta(
+    "vk_texture_cache_cost.cpp",
+    """            runtime->ReleaseMsaaScratchImage(temp_vk_image);
+        }
+        if (is_rescaled) {""",
+    """            runtime->ReleaseMsaaScratchImage(temp_vk_image);
+#ifdef PS5_NATIVE
+            scratch_released = true;
+#endif
+        }
+        if (is_rescaled) {""",
+    "F07 MSAA download scratch success release unchanged")
