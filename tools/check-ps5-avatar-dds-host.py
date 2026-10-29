@@ -14,10 +14,10 @@ assert 'sceUserServiceGetForegroundUser(&user_id)' in SERVICE
 assert 'avatar128.dds' in SERVICE
 assert 'load_avatar_dds(resolved, image)' in SERVICE
 
-// The native profile is resolved periodically, with image-source revision
-// tracking for profile switches and the optional NiakPS5 ownership stage.
-const launcher_cpp = (ROOT / "headless/prosperoeden/pe/ui/launcher.cpp").read_text()
-const launcher_hpp = (ROOT / "headless/prosperoeden/pe/ui/launcher.hpp").read_text()
+# The native profile is resolved periodically, with image-source revision
+# tracking for profile switches and the optional NiakPS5 ownership stage.
+launcher_cpp = (ROOT / "headless/prosperoeden/pe/ui/launcher.cpp").read_text()
+launcher_hpp = (ROOT / "headless/prosperoeden/pe/ui/launcher.hpp").read_text()
 assert "profile_avatar_refresh_elapsed_ >= 5.0f" in launcher_cpp
 assert "textures_.invalidate(profile_avatar_path_)" in launcher_cpp
 assert "probe.inode" in launcher_cpp and "probe.mtime" in launcher_cpp
@@ -77,3 +77,36 @@ int main(int argc, char** argv) {
                     ('bc1.dds', 'bc2.dds', 'bc3.dds', 'bgra.dds',
                      'truncated.dds', 'oversized.dds')]], check=True, env=env)
 print('AVATAR_DDS_HOST_OK formats=BC1,BC2,BC3,BGRA invalid=2')
+
+
+# Compile the real, read-only marker parser and exercise same-user, other-user,
+# corrupt marker, format mismatch and symlink denial without a PS5.
+with tempfile.TemporaryDirectory(prefix="encore-avatar-owner-") as tmp:
+    p = pathlib.Path(tmp)
+    marker = p / "owner.txt"
+    marker.write_text("0x12345678 png\\n")
+    fixture = p / "marker.cpp"
+    fixture.write_text(r"""
+#include "ps5_profile_avatar_staging.hpp"
+#include <cassert>
+#include <cstdio>
+#include <cstdint>
+#include <unistd.h>
+int main(int argc, char** argv) {
+    assert(argc == 3);
+    auto match = [](const char* p, std::uint32_t user, const char* type) {
+        return pe::ps5::avatar_owner_marker_matches(p, user, type);
+    };
+    assert(match(argv[1], 0x12345678u, "png"));
+    assert(!match(argv[1], 0x12345679u, "png"));
+    assert(!match(argv[1], 0x12345678u, "dds"));
+    assert(!match(argv[2], 0x12345678u, "png"));
+}
+""")
+    symlink = p / "owner-link.txt"
+    symlink.symlink_to(marker)
+    binary = p / "marker-test"
+    subprocess.run(["g++", "-std=c++20", "-Wall", "-Wextra", "-Werror",
+                    "-I", str(ROOT / "headless/prosperoeden"), str(fixture),
+                    "-o", str(binary)], check=True)
+    subprocess.run([str(binary), str(marker), str(symlink)], check=True)
