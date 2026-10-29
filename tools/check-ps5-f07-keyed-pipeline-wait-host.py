@@ -35,10 +35,14 @@ for phrase in (
     "F07 keyed graphics worker-wait after mutex release",
     "F07 keyed compute worker-wait after mutex release",
     "F07 publish diagnostic compute cache key before first Configure",
-    "F07 V01 keyed vk_graphics_pipeline_cost.cpp mutex-versus-postlock phase split",
-    "F07 V01 keyed vk_compute_pipeline_cost.cpp mutex-versus-postlock phase split",
 ):
     assert phrase in gen, phrase
+# Generator uses an f-string for the path-dependent label. Validate the
+# actual strict delta and both target filenames, rather than looking for
+# strings which are constructed only when prepare-vulkan-port.py runs.
+assert 'for pipeline_file in ("vk_graphics_pipeline_cost.cpp", "vk_compute_pipeline_cost.cpp"):' in gen
+assert 'f"F07 V01 keyed {pipeline_file} mutex-versus-postlock phase split"' in gen
+assert '"            keyed_wait.MarkLockAcquired();\\n"' in gen or 'keyed_wait.MarkLockAcquired();' in gen
 
 def callback_body(text, kind):
     first = text.index("        scheduler.Record([this](vk::CommandBuffer) {")
