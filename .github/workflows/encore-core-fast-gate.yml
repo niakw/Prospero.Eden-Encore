@@ -189,6 +189,7 @@ on:
       - 'vendor/encore-active/eden-core/src/video_core/texture_cache/util.cpp'
       - 'tools/check-vulkan-renderpass-clear-bounds-host.py'
       - 'tools/check-vulkan-worker-fatal-drain-host.py'
+      - 'tools/check-ps5-gpu-time-batch-host.py'
       - 'tools/check-vulkan-query-allocation-host.py'
       - 'tools/check-vulkan-query-grouping-host.py'
       - 'tools/check-vulkan-query-copy-plan-host.py'
@@ -371,6 +372,7 @@ jobs:
           python3 -B tools/check-vulkan-buffer-usage-reset-host.py
           python3 -B tools/check-ps5-quad-index-initial-fence-host.py
           python3 -B tools/check-vulkan-worker-fatal-drain-host.py
+          python3 -B tools/check-ps5-gpu-time-batch-host.py
           python3 -B tools/check-vulkan-query-allocation-host.py
           python3 -B tools/check-ps5-vulkan-oom-source.py
           python3 -B tools/ci/check-ftp-archive-root.py --self-test
