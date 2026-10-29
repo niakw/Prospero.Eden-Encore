@@ -1410,7 +1410,7 @@ void ReportGpuThread(unsigned frame) {
                     guest_ipc_overflow_calls.load(std::memory_order_relaxed));
     }
 #endif
-    // These are 1-in-16 GPU draw and 1-in-64 guest-write SAMPLES, not
+    // These are 1-in-16 GPU draw/frame and 1-in-64 guest-write SAMPLES, not
     // full totals. Each phase reports its own sample count and window cost.
     // Never issue a kernel query or print per-draw logging while the locks live.
     if (detailed_gpu_profile.load(std::memory_order_relaxed)) {
@@ -1430,7 +1430,8 @@ void ReportGpuThread(unsigned frame) {
             "shader_ir", "shader_spirv", "shader_module",
             "graphics_pipeline_wait", "compute_pipeline_wait", "texture_upload_staging",
             "texture_upload_contents", "texture_upload_barrier",
-            "compute_pair_wait", "compute_pair_held", "compute_configure"
+            "compute_pair_wait", "compute_pair_held", "compute_configure",
+            "frame_texture_wait", "frame_texture_held", "frame_buffer_wait", "frame_buffer_held"
         };
         static_assert(std::size(cache_phase_names) == cache_phase_totals.size());
         constexpr const char* drop_names[] = {

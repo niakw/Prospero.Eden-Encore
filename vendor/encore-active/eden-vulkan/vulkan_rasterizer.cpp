@@ -1374,12 +1374,36 @@ void RasterizerVulkan::TickFrame() {
     descriptor_buffer_ring.TickFrame();
     fence_manager.TickFrame();
     staging_pool.TickFrame();
+#ifdef PS5_NATIVE
+    // C01/C03: identify who holds the cache lock during frame housekeeping.
+    // One of 16 frames with detailed logging; no clocks or changed locks in
+    // quiet release. Wait and held intervals use disjoint timer scopes.
+    const bool frame_sample = ::Eden::Performance::ShouldSampleCacheFrame();
+#endif
     {
+#ifdef PS5_NATIVE
+        ::Eden::Performance::CachePhaseTimer texture_wait{
+            ::Eden::Performance::CachePhase::FrameTextureWait, frame_sample};
+#endif
         std::scoped_lock lock{texture_cache.mutex};
+#ifdef PS5_NATIVE
+        texture_wait.Stop();
+        ::Eden::Performance::CachePhaseTimer texture_held{
+            ::Eden::Performance::CachePhase::FrameTextureHeld, frame_sample};
+#endif
         texture_cache.TickFrame();
     }
     {
+#ifdef PS5_NATIVE
+        ::Eden::Performance::CachePhaseTimer buffer_wait{
+            ::Eden::Performance::CachePhase::FrameBufferWait, frame_sample};
+#endif
         std::scoped_lock lock{buffer_cache.mutex};
+#ifdef PS5_NATIVE
+        buffer_wait.Stop();
+        ::Eden::Performance::CachePhaseTimer buffer_held{
+            ::Eden::Performance::CachePhase::FrameBufferHeld, frame_sample};
+#endif
         buffer_cache.TickFrame();
     }
 }
