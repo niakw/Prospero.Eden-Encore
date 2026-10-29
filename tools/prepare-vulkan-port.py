@@ -5459,3 +5459,30 @@ apply_reviewed_delta(
 #endif
     const VkImage handle = *scratch.image;""",
     "F07 MSAA null scratch image rejected before caching")
+
+
+# F07 T04/M02: skip no-op readback before any rescale, MSAA scratch,
+# staging or Vulkan command. Malformed destination arrays must throw rather
+# than silently claim a dirty image's data was downloaded.
+apply_reviewed_delta(
+    "vk_texture_cache_cost.cpp",
+    """void Image::DownloadMemory(std::span<VkBuffer> buffers_span, std::span<size_t> offsets_span,
+                            std::span<const VideoCommon::BufferImageCopy> copies) {
+    const bool is_rescaled = True(flags & ImageFlagBits::Rescaled);""",
+    """void Image::DownloadMemory(std::span<VkBuffer> buffers_span, std::span<size_t> offsets_span,
+                            std::span<const VideoCommon::BufferImageCopy> copies) {
+#ifdef PS5_NATIVE
+    // A readback without copy regions has no guest bytes to return. Avoid
+    // scaling, a scratch acquisition and even a zero-command Vulkan Record.
+    if (copies.empty()) {
+        return;
+    }
+    // Every copy batch indexes both parallel destination arrays. A malformed
+    // caller must fail before recording GPU writes; a silent return here
+    // would let dirty texture eviction treat uncopied guest bytes as valid.
+    if (buffers_span.empty() || offsets_span.size() != buffers_span.size()) {
+        throw std::invalid_argument("Malformed Vulkan texture readback batch");
+    }
+#endif
+    const bool is_rescaled = True(flags & ImageFlagBits::Rescaled);""",
+    "F07 empty and malformed GPU readback preflight")
