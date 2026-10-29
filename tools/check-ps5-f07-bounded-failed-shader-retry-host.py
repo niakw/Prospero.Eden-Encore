@@ -15,6 +15,11 @@ hdr = (root / "vendor/sources/eden/src/video_core/renderer_vulkan/vk_pipeline_ca
 active = (root / "vendor/encore-active/eden-vulkan/include/video_core/renderer_vulkan/vk_pipeline_cache.h").read_text()
 cmake = (root / "headless/vulkan.cmake").read_text()
 gen = (root / "tools/prepare-vulkan-port.py").read_text()
+perf = (root / "headless/performance.h").read_text()
+stage_begin = perf.index("struct ShaderMissStageCosts {")
+stage_end = perf.index("inline thread_local ShaderMissStageCosts* shader_miss_stage_active{};", stage_begin)
+stage_end += len("inline thread_local ShaderMissStageCosts* shader_miss_stage_active{};")
+stage_declarations = perf[stage_begin:stage_end]
 trace_begin = src.index("struct ColdShaderMissTrace {")
 trace_end = src.index("\n};\n#endif", trace_begin) + len("\n};")
 cold_trace = src[trace_begin:trace_end]
@@ -56,13 +61,14 @@ cpp = r"""
 namespace Eden { namespace Performance {
 enum class CachePhase { GraphicsPipelineCreate };
 inline std::atomic_bool detailed_gpu_profile{false};
+__STAGE_DECLARATIONS__
 struct CachePhaseTimer {
     CachePhaseTimer(CachePhase, bool) {}
     void Stop() noexcept {}
 };
 }}
 using u64 = std::uint64_t;
-""" + cold_trace + r"""
+""" .replace("__STAGE_DECLARATIONS__", stage_declarations) + cold_trace + r"""
 struct MockGraphicsKey {
     int value{};
     MockGraphicsKey& operator=(int next) { value = next; return *this; }
