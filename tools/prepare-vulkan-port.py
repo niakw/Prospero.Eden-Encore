@@ -2930,6 +2930,34 @@ for name, index, expected in (
           ::Eden::Performance::CachePhase::DescriptorRingPreflight,
           ::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)};
       scheduler.Finish(); }''', 1)
+        # F07: the fallback Allocate can execute without a GPU-owner
+        # PreflightFrameReuse. Mirror the preflight's zero/completed tick
+        # safety predicate, but do not alter the desktop wait policy.
+        # The adapter runs after VulkanTimer wrapping, so both the selected
+        # source and the strict pinned-generator replay use the same body.
+        legacy_fallback = '''    if (frame_reused) {
+        frame_reused = false;
+        { auto timer = Eden::Performance::VulkanTimer(10); scheduler.Wait(frame_ticks[frame_index]); }
+    }'''
+        native_fallback = '''    if (frame_reused) {
+        frame_reused = false;
+#ifdef PS5_NATIVE
+        // This fallback can run without a preceding GPU-owner preflight.
+        // A zero tick has no prior frame, and an already-retired tick has no
+        // outstanding descriptor readers. Mirror PreflightFrameReuse's exact
+        // GPU completion test before issuing a potentially blocking Wait
+        // while the guest buffer/texture cache pair is held.
+        const u64 old_tick = frame_ticks[frame_index];
+        if (old_tick != 0 && !scheduler.IsFree(old_tick)) {
+            { auto timer = Eden::Performance::VulkanTimer(10); scheduler.Wait(old_tick); }
+        }
+#else
+        { auto timer = Eden::Performance::VulkanTimer(10); scheduler.Wait(frame_ticks[frame_index]); }
+#endif
+    }'''
+        if text.count(legacy_fallback) != 1:
+            raise RuntimeError('F07 descriptor ring retired-frame fallback anchor drift')
+        text = text.replace(legacy_fallback, native_fallback, 1)
     if name == 'vk_compute_pass':
         # ASTC decode has no CPU consumer. Its existing image barrier orders
         # later shaders, and staging/descriptor reuse is protected by ticks.
