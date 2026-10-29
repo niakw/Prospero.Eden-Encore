@@ -16,6 +16,7 @@ WAIT = re.compile(
     r"\bEDEN_VULKAN_PIPELINE_WAIT kind=(graphics|compute) "
     r"key=([0-9a-fA-F]{16}) wait_ns=([0-9]+) usable=([01])(?=\s|$)"
 )
+SPLIT = re.compile(r"^\s+mutex_ns=([0-9]+) post_mutex_ns=([0-9]+)\s*$")
 MISS = re.compile(
     r"\bEDEN_VULKAN_SHADER_MISS kind=(graphics|compute) "
     r"key=([0-9a-fA-F]{16}) retry=([01]) success=([01]) cpu_ns=([0-9]+)(?=\s|$)"
@@ -35,7 +36,19 @@ def parse(lines: list[str]):
                 malformed_waits += 1
                 continue
             kind, key, wait_ns, usable = m.groups()
-            waits.append((kind, key.lower(), int(wait_ns), usable == "1"))
+            tail = line[m.end():]
+            lock_ns = post_ns = None
+            if "mutex_ns=" in tail or "post_mutex_ns=" in tail:
+                split = SPLIT.fullmatch(tail)
+                if not split:
+                    malformed_waits += 1
+                    continue
+                lock_ns, post_ns = map(int, split.groups())
+                if lock_ns + post_ns != int(wait_ns):
+                    malformed_waits += 1
+                    continue
+            waits.append((kind, key.lower(), int(wait_ns), usable == "1",
+                          lock_ns, post_ns))
         if MISS_MARKER in line:
             m = MISS.search(line)
             if m:
@@ -55,12 +68,17 @@ def report(lines: list[str]) -> str:
             f"wait_sum_ms={sum(w[2] for w in own) / 1_000_000:.3f} "
             f"failed_pipeline={sum(not w[3] for w in own)}"
         )
-        for _, key, wait_ns, usable in sorted(own, key=lambda v: v[2], reverse=True)[:5]:
+        for _, key, wait_ns, usable, lock_ns, post_ns in sorted(own, key=lambda v: v[2], reverse=True)[:5]:
             cpu = cpu_by_key.get((kind, key), [])
             cost = f"{sum(x[0] for x in cpu)/1_000_000:.3f}" if cpu else "not_recorded"
             out.append(
                 f"  key={key} waited_ms={wait_ns/1_000_000:.3f} "
-                f"usable={int(usable)} cold_cpu_ms={cost} cpu_attempts={len(cpu)}"
+                f"usable={int(usable)} cold_cpu_ms={cost} cpu_attempts={len(cpu)} "
+                f"mutex_ms={lock_ns / 1_000_000:.3f} post_mutex_ms={post_ns / 1_000_000:.3f}"
+                if lock_ns is not None else
+                f"  key={key} waited_ms={wait_ns/1_000_000:.3f} "
+                f"usable={int(usable)} cold_cpu_ms={cost} cpu_attempts={len(cpu)} "
+                "mutex_ms=not_recorded post_mutex_ms=not_recorded"
             )
     out.append(
         "NOTE: CPU work and Vulkan worker wait can overlap; totals are NOT "
