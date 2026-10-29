@@ -253,5 +253,24 @@ for corrupt in (
 ):
     candidate = module.windows(record(990, 24, 170, 100, 4) + corrupt)
     assert "descriptor_ring_drain: complete=0/1" in module.report(candidate)
+# S01 keyed cold misses are independent from frame-window sampling.
+# Exact kind/key/retry/success/CPU duration are accepted; unmeasured runs
+# remain "not_measured", never a false zero-cost compilation.
+miss_lines = [
+    "EDEN_VULKAN_SHADER_MISS kind=graphics key=00000000000000ab retry=0 success=1 cpu_ns=12500000",
+    "EDEN_VULKAN_SHADER_MISS kind=compute key=000000000000000c retry=0 success=0 cpu_ns=25000000",
+    "EDEN_VULKAN_SHADER_MISS kind=compute key=000000000000000c retry=1 success=1 cpu_ns=7500000",
+]
+miss_report = module.cold_shader_misses(miss_lines)
+assert "measured=3 new=2 retries=1 failed=1 graphics=1 compute=2" in miss_report
+assert "key=000000000000000c retry=0 success=0 cpu_ms=25.000" in miss_report
+assert "key=00000000000000ab retry=0 success=1 cpu_ms=12.500" in miss_report
+assert "key=000000000000000c retry=1 success=1 cpu_ms=7.500" in miss_report
+assert "not GPU worker completion" in miss_report
+assert "shader_miss_cpu: not_measured" in module.cold_shader_misses([])
+assert "shader_miss_cpu: not_measured" in module.cold_shader_misses([
+    "EDEN_VULKAN_SHADER_MISS kind=graphics key=not_a_hash retry=0 success=1 cpu_ns=0",
+    "EDEN_VULKAN_SHADER_MISS kind=compute key=0000000000000001 retry=2 success=1 cpu_ns=9",
+])
 assert module.report([]) == "NO_VALID_WINDOWS (requires matching frame totals)"
 print("PINNED_FC27_LONG_FRAME_CLASSIFIER_PASS")
