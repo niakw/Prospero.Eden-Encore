@@ -4526,6 +4526,26 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    bool has_uploads{};",
     "F07 skip idle native async texture decode completion machinery")
 
+# F07 P0.4: a zero-region image upload cannot alter a texture.
+# Native PS5 skips resolve invalidation, MSAA scratch, rescale and command
+# recording entirely; desktop retains its historical behavior.
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "void Image::UploadMemory(VkBuffer buffer, VkDeviceSize offset,\n"
+    "                         std::span<const VideoCommon::BufferImageCopy> copies) {\n"
+    "    // TODO: Move this to another API",
+    "void Image::UploadMemory(VkBuffer buffer, VkDeviceSize offset,\n"
+    "                         std::span<const VideoCommon::BufferImageCopy> copies) {\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // Empty guest upload regions cannot write any destination pixels. Avoid\n"
+    "    // invalidating a valid MSAA resolve, rescaling, scratch acquisition and\n"
+    "    // a Vulkan command with no copy regions.\n"
+    "    if (copies.empty()) {\n"
+    "        return;\n"
+    "    }\n"
+    "#endif\n"
+    "    // TODO: Move this to another API",
+    "F07 avoid empty native image upload and unnecessary MSAA resolve invalidation")
+
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
 # extent fit checks, and reject unknown zero-sized block ratios early.

@@ -52,6 +52,16 @@ assert size.index("if (copy_buffer == VK_NULL_HANDLE)") < size.index("Invalidate
 assert "F07 preserve resolve validity on rejected size-incompatible CopyImage" in generator
 assert "F07 skip empty size-compatible native Vulkan CopyImage without stale resolve" in generator
 assert "F07 skip empty native MSAA image copies before helper GPU dispatch" in generator
+assert "F07 avoid empty native image upload and unnecessary MSAA resolve invalidation" in generator
+upload_start="void Image::UploadMemory(VkBuffer buffer, VkDeviceSize offset,"
+upload_end="    // TODO: Move this to another API"
+assert source.count(upload_start)==1
+upload=source[source.index(upload_start):]
+upload_guard=upload[upload.index("#ifdef PS5_NATIVE"):upload.index(upload_end)]
+assert upload_guard.count("if (copies.empty())")==1
+assert upload_guard.index("if (copies.empty())") < upload_guard.index("return;")
+assert upload.index("if (copies.empty())") < upload.index("InvalidateResolveShadow(Handle());")
+
 assert "F07 skip zero-area native Vulkan image blits" in generator
 blit_header="void TextureCacheRuntime::BlitImage(Framebuffer* dst_framebuffer, ImageView& dst, ImageView& src,"
 blit_tail="    const VkImageAspectFlags aspect_mask = ImageAspectMask(src.format);"
@@ -280,6 +290,54 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-vulkan-reinterpret-") as folde
             assert built.returncode==0,(native,opt,built.stderr[-6000:])
             ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
+# Execute the maintained native image upload no-op before any resolve,
+# rescale or GPU copy. The original desktop path still enters normally.
+upload_cpp = r"""
+#include <cassert>
+#include <cstddef>
+#include <span>
+struct Copy { unsigned pixels{}; };
+struct Image {
+    unsigned invalidations{}, rescales{}, submissions{};
+    void UploadMemory(std::span<const Copy> copies) {
+__UPLOAD_GUARD__
+        ++invalidations;
+        ++rescales;
+        ++submissions;
+    }
+};
+int main() {
+    Image image;
+    image.UploadMemory({});
+#ifdef PS5_NATIVE
+    assert(image.invalidations==0 && image.rescales==0 && image.submissions==0);
+#else
+    assert(image.invalidations==1 && image.rescales==1 && image.submissions==1);
+#endif
+    const Copy actual[]{Copy{64}};
+    image.UploadMemory(actual);
+#ifdef PS5_NATIVE
+    assert(image.invalidations==1 && image.rescales==1 && image.submissions==1);
+#else
+    assert(image.invalidations==2 && image.rescales==2 && image.submissions==2);
+#endif
+}
+""".replace("__UPLOAD_GUARD__", upload_guard)
+with tempfile.TemporaryDirectory(prefix="eden-f07-empty-upload-") as folder:
+    cpp_path=Path(folder)/"upload.cpp"
+    cpp_path.write_text(upload_cpp)
+    for opt in ("-O0","-O2"):
+        for native in (False,True):
+            binary=Path(folder)/("upload"+opt[2:]+("ps5" if native else "desktop"))
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                 "-fsanitize=undefined","-fno-sanitize-recover=all",
+                 *(["-DPS5_NATIVE=1"] if native else []),
+                 str(cpp_path),"-o",str(binary)]
+            run=subprocess.run(cmd,capture_output=True,text=True,timeout=45)
+            assert run.returncode==0,(native,opt,run.stderr[-5000:])
+            run=subprocess.run([str(binary)],capture_output=True,text=True,timeout=20)
+            assert run.returncode==0,(native,opt,run.stderr[-5000:])
+print("F07_NATIVE_EMPTY_IMAGE_UPLOAD_PASS no_resolve_drop=1 no_gpu_work=1 desktop_original=1 O0=1 O2=1")
 print("F07_REINTERPRET_SCRATCH_BOUNDS_PASS native_empty=1 zero_extents=1 invalid_format=1 overflow_product=1 overflow_sum=1 scratch_slot_ceiling=1 invalid_resolve_untouched=1 null_handle_not_submitted=1 copy_reinterpret_shadow=1 empty_copy_noop=1 empty_msaa_noop=1 zero_area_blit_noop=1 flipped_blit_preserved=1 valid=1 desktop_original=1 O0=1 O2=1")
 
 
