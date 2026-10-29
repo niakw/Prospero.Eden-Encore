@@ -191,14 +191,16 @@ public:
 #endif
     }
 
-#ifdef PS5_NATIVE
-    // Vulkan command worker only. A recovered optimized handle may be
-    // published BETWEEN ConfigureDraw and Draw: availability alone cannot
-    // prove that a correct pipeline was already bound for that draw.
+    // Native Vulkan worker must use the pipeline actually selected by its
+    // preceding ConfigureDraw callback, not a variant published afterward.
+    // Desktop keeps the original readiness check.
     [[nodiscard]] bool CanExecuteRecordedDraw() const noexcept {
+#ifdef PS5_NATIVE
         return worker_draw_bind_valid;
-    }
+#else
+        return CanExecuteDraw();
 #endif
+    }
 
     template <typename Spec>
     static auto MakeConfigureSpecFunc() {
