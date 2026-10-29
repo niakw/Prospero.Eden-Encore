@@ -20,6 +20,8 @@ invocation="python3 -B tools/check-ps5-f07-gc-dirty-eviction-rollback-host.py"
 assert invocation in fast and invocation in pre
 assert "F07 leave dirty GPU image resident on failed cleanup readback" in generator
 assert "F07 declare bad alloc for native dirty GC rollback" in generator
+assert "F07 preserve dirty image when prefetch has no readback copy regions" in generator
+assert "F07 preserve dirty image on zero-region fallback readback" in generator
 begin=source.index("void TextureCache<P>::RunGarbageCollector() {")
 end=source.index("\ntemplate <class P>",begin)
 gc=source[begin:end]
@@ -27,11 +29,13 @@ first="        if (must_download && !UsePrefetched(image_id, image)) {"
 last="        if (True(image.flags & ImageFlagBits::Tracked))"
 assert gc.count(first)==gc.count(last)==1
 block=gc[gc.index(first):gc.index(last)]
-for expected in ("catch (const std::bad_alloc&)",
+for expected in ("if (FullDownloadCopies(image.info).empty())", "catch (const std::bad_alloc&)",
                  "!map.buffer || map.mapped_span.size_bytes() < image.unswizzled_size_bytes",
                  "++skipped;", "image.DownloadMemory(map, copies);",
                  "runtime.Finish();", "SwizzleImage(*gpu_memory,"):
     assert expected in block,expected
+assert block.index("FullDownloadCopies(image.info).empty()") < block.index("runtime.DownloadStagingBuffer")
+assert gc.count("if (FullDownloadCopies(image.info).empty())") == 2
 assert block.index("!map.buffer ||") < block.index("image.DownloadMemory(map,")
 assert block.index("image.DownloadMemory(map,") < block.index("runtime.Finish()") < block.index("SwizzleImage(")
 assert block.index("#else\n            auto map = runtime.DownloadStagingBuffer") > block.index("#ifdef PS5_NATIVE")
@@ -43,7 +47,7 @@ cpp=r"""
 #include <span>
 #include <vector>
 using ImageId=std::size_t;
-struct Info {unsigned unused{};};
+struct Info {bool no_regions{};};
 struct GPU {};
 struct Map {std::size_t buffer{}; std::span<std::uint8_t> mapped_span{};};
 struct Runtime {
@@ -64,18 +68,21 @@ struct Image {
     std::size_t gpu_addr{1024};
     Info info{};
     unsigned downloads{};
-    void DownloadMemory(Map& map,int) {
+    void DownloadMemory(Map& map,std::vector<int> copies) {
+        assert(!copies.empty());
         assert(map.mapped_span.size()>=unswizzled_size_bytes);
         ++downloads;
         map.mapped_span.front()=19;
     }
 };
-int FullDownloadCopies(Info){return 1;}
-int FixSmallVectorADL(int n){return n;}
+std::vector<int> FullDownloadCopies(Info info){
+    return info.no_regions ? std::vector<int>{} : std::vector<int>{1};
+}
+std::vector<int> FixSmallVectorADL(std::vector<int> n){return n;}
 unsigned swizzle_calls{};
-void SwizzleImage(GPU&,std::size_t,Info,int,std::span<std::uint8_t> bytes,
+void SwizzleImage(GPU&,std::size_t,Info,std::vector<int> copies,std::span<std::uint8_t> bytes,
                   std::vector<std::uint8_t>&) {
-    assert(bytes.size()>=8 && bytes.front()==19);
+    assert(!copies.empty() && bytes.size()>=8 && bytes.front()==19);
     ++swizzle_calls;
 }
 struct Cache {
@@ -106,6 +113,11 @@ int main(){
     assert(prefetched.Cleanup() && prefetched.deletions==1);
     assert(prefetched.runtime.allocs==0 && prefetched.runtime.finishes==0);
 #ifdef PS5_NATIVE
+    Cache no_regions;
+    no_regions.image.info.no_regions = true;
+    assert(!no_regions.Cleanup());
+    assert(no_regions.deletions==0 && no_regions.skipped==1);
+    assert(no_regions.runtime.allocs==0 && no_regions.image.downloads==0);
     Cache rejected;
     rejected.runtime.throw_alloc=true;
     assert(!rejected.Cleanup());
