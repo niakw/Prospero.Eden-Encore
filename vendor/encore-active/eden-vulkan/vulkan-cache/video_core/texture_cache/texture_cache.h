@@ -3697,11 +3697,19 @@ void TextureCache<P>::SynchronizeAliases(ImageId image_id) {
     if (any_modified) {
         image.flags |= ImageFlagBits::GpuModified;
     }
+#ifdef PS5_NATIVE
+    // Most alias refreshes have only one newer source. Sorting a single
+    // entry cannot change upload ordering and adds work under texture lock.
+    if (aliased_images.size() > 1) {
+#endif
     std::ranges::sort(aliased_images, [this](const AliasedImage* lhs, const AliasedImage* rhs) {
         const ImageBase& lhs_image = slot_images[lhs->id];
         const ImageBase& rhs_image = slot_images[rhs->id];
         return lhs_image.modification_tick < rhs_image.modification_tick;
     });
+#ifdef PS5_NATIVE
+    }
+#endif
     const auto& resolution = Settings::values.resolution_info;
     for (const AliasedImage* const aliased : aliased_images) {
         if (!resolution.active || !any_rescaled) {
