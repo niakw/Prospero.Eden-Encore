@@ -1734,7 +1734,18 @@ adapt('src/video_core/renderer_vulkan/vk_graphics_pipeline.h',
      '        return is_built.load(std::memory_order::relaxed);\n    }\n\n'
      '    // Queued worker checks pipeline readiness AFTER async build wait.\n'
      '    [[nodiscard]] bool CanExecuteDraw() const noexcept {\n'
-     '        return is_built.load(std::memory_order::acquire) && static_cast<bool>(pipeline);\n'
+     '        if (!is_built.load(std::memory_order::acquire)) return false;\n'
+     '#ifdef PS5_NATIVE\n'
+     '        // A fast-first driver build can fail without throwing while its\n'
+     '        // independently queued optimized variant succeeds. ConfigureDraw\n'
+     '        // already binds that published variant; do not discard the following\n'
+     '        // Draw/DrawIndirect simply because the initial handle is null.\n'
+     '        // The release/acquire flag publishes the optimized VkPipeline.\n'
+     '        return static_cast<bool>(pipeline) ||\n'
+     '               optimized_ready.load(std::memory_order_acquire);\n'
+     '#else\n'
+     '        return static_cast<bool>(pipeline);\n'
+     '#endif\n'
      '    }'),
     ('    GraphicsPipeline(const GraphicsPipeline&) = delete;',
      '    GraphicsPipeline(const GraphicsPipeline&) = delete;\n    ~GraphicsPipeline();'),
