@@ -158,20 +158,12 @@ int main() {
         p.optimized_driver_handle = 0xBEEF;
         p.optimized_ready.store(true, std::memory_order_release);
     });
-#ifdef PS5_NATIVE
-    bool recovered = false;
-    for (unsigned tries = 0; tries != 1000000; ++tries) {
-        if (p.CanExecuteDraw()) {
-            recovered = true;
-            break;
-        }
-        std::this_thread::yield();
-    }
-    assert(recovered && p.optimized_driver_handle == 0xBEEF);
-#endif
+    // Join is deterministic and synchronizes the mock driver's published
+    // handle. The separate FIFO test below covers the earlier/later
+    // ConfigureDraw race without a timing-dependent busy-spin.
     builder.join();
 #ifdef PS5_NATIVE
-    assert(p.CanExecuteDraw());
+    assert(p.optimized_driver_handle == 0xBEEF && p.CanExecuteDraw());
 #else
     assert(!p.CanExecuteDraw());  // desktop behavior remains unchanged
 #endif
