@@ -21,7 +21,7 @@ assert "optimized_ready.load(std::memory_order_acquire)" in graphics_h
 assert "return static_cast<bool>(pipeline) ||" in graphics_h
 ready_signature = "    [[nodiscard]] bool CanExecuteDraw() const noexcept {"
 assert graphics_h.count(ready_signature) == 1
-ready_method = ready_signature + graphics_h.split(ready_signature, 1)[1].split("\\n    }\\n", 1)[0] + "\\n    }"
+ready_method = ready_signature + graphics_h.split(ready_signature, 1)[1].split("\n    }\n", 1)[0] + "\n    }"
 assert "return static_cast<bool>(pipeline);" in compute_h
 assert active.count("if (pipeline && pipeline->IsBound()) {") == 1
 assert active.count("if (pipeline && pipeline->CanExecuteDraw()) {") == 1
