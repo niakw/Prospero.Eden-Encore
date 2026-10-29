@@ -3,6 +3,8 @@ _Mis en place le 28 octobre 2026 — branche d'exécution unique : `dev/ps5-spar
 
 > **Document de reprise opérationnel** : lire ce fichier AVANT chaque nouvelle session `continue`, puis lire `docs/F07_FUNCTION_SCOPE_2026-10-28.md` et `docs/FC27_F07_MASTER_TRACKER.md`. Toujours relire le HEAD réel et les checks CI avant de modifier. Conserver la branche unique et le générateur du fork Vulkan en synchronisation avec les sources sélectionnées. **Reprise horaire programmée** : l'automatisation « Eden Encore — reprise F07 » lit ce registre et tente de progresser sur le dépôt une fois par heure. Elle n'assure pas une exécution ininterrompue ni une validation sur console ; conserver les checkpoints et poursuivre manuellement avec « continue » reste possible.
 
+**Checklist active des optimisations restantes :** [F07_REMAINING_OPTIMIZATION_CHECKLIST.md](F07_REMAINING_OPTIMIZATION_CHECKLIST.md). Elle sépare les décisions de code pré-build des validations console post-build, avec un ID et une case par contrôle. À chaque reprise, travailler depuis cette liste sans rouvrir les 38 revues source terminées.
+
 ## Objectif et périmètre
 
 Terminer **tous les changements identifiés, justifiés et sûrs** pour les 38 points de fonction / 8 fichiers recensés dans F07. **38 points ne signifient pas 38 corrections nouvelles**. Plusieurs protections sont déjà implémentées ; pour les autres, une revue sans modification est une issue valide. Le but n'est **pas** d'ajouter des optimisations spéculatives au détriment de l'exactitude des shaders, de la fraîcheur HUD, de l'ordre FIFO Vulkan, de la mémoire invitée ou de la stabilité.
