@@ -130,6 +130,8 @@ int main() {
         already.scheduler.Run();
         assert(already.IsBound());
     }
+    // The injected pre-lock publication hook exists only in the native branch.
+#ifdef PS5_NATIVE
     // Publication between the first acquire and the mutex must not emit a false wait.
     {
         Pipeline raced;
@@ -138,6 +140,7 @@ int main() {
         raced.scheduler.Run();
         assert(raced.IsBound());
     }
+#endif
     // Publication really delayed while callback executes.
     {
         Pipeline blocked;
