@@ -285,3 +285,139 @@ with tempfile.TemporaryDirectory(prefix="encore-f04-dma-alias-") as directory:
         assert "F04_DMA_BYTE_PARITY_PASS" in run.stdout
         print(run.stdout.strip(),opt,flush=True)
 print("F04_REAL_VULKAN_UPLOAD_AND_GUEST_PIXELS_NOT_PROVEN")
+
+
+# T01/F04: compile the actual FindDMAImage method with the original candidate
+# matching decisions. In the native path the newest matching image must be
+# selected during the first scan; equal ticks keep the first match. The
+# desktop still has the original multi-candidate max_element selection.
+dma_begin = "ImageId TextureCache<P>::FindDMAImage("
+dma_end = "\ntemplate <class P>\nstd::pair<u32, u32> TextureCache<P>::PrepareDmaImage"
+assert texture.count(dma_begin) == 1
+candidate_fn = texture.split(dma_begin, 1)[1].split(dma_end, 1)[0]
+candidate_fn = dma_begin + candidate_fn
+assert "const auto consider_candidate =" in candidate_fn
+assert candidate_fn.count("consider_candidate(existing_image_id, existing_image);") == 2
+assert "std::ranges::max_element(image_ids, image_ids_compare)" in candidate_fn
+assert "F07 T01 single-pass freshest DMA image candidate selection" in (
+    ROOT / "tools/prepare-vulkan-port.py").read_text()
+test_cpp = r"""
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <optional>
+#include <vector>
+using u32=std::uint32_t;
+using DAddr=std::uint64_t;
+using GPUVAddr=std::uint64_t;
+using ImageId=u32;
+enum class ImageType {Linear,Tiled};
+enum class ImageFlagBits : unsigned {None=0,Remapped=1,Strong=2};
+ImageFlagBits operator&(ImageFlagBits a,ImageFlagBits b) {
+    return ImageFlagBits(unsigned(a)&unsigned(b));
+}
+bool True(ImageFlagBits value) {return unsigned(value)!=0;}
+struct ImageInfo {ImageType type{ImageType::Tiled};size_t pitch{128};int format{7};};
+struct ImageBase {
+    ImageInfo info{};
+    GPUVAddr gpu_addr{42};
+    ImageFlagBits flags{ImageFlagBits::None};
+    std::uint64_t modification_tick{};
+};
+size_t CalculateGuestSizeInBytes(const ImageInfo&) {return 4096;}
+bool IsPitchLinearSameSize(const ImageInfo& a,const ImageInfo& b,bool strict) {
+    return a.pitch==b.pitch && (!strict || a.format==b.format);
+}
+bool IsViewCompatible(int a,int b,bool,bool) {return a==b;}
+bool IsSubCopy(const ImageInfo& info,const ImageBase& image,GPUVAddr gpu_addr) {
+    return info.type==image.info.type && image.gpu_addr==gpu_addr &&
+           image.info.format==info.format;
+}
+struct Gpu {
+    bool miss_first{},miss_all{};
+    std::optional<DAddr> GpuToCpuAddress(GPUVAddr) {
+        if(miss_first||miss_all)return {};
+        return DAddr{42};
+    }
+    std::optional<DAddr> GpuToCpuAddress(GPUVAddr,size_t) {
+        if(miss_all)return {};
+        return DAddr{42};
+    }
+};
+template<class P> struct TextureCache {
+    Gpu* gpu_memory{};
+    std::array<ImageBase,32> slot_images{};
+    std::vector<ImageId> ids;
+    template<class F> void ForEachImageInRegion(DAddr,size_t,F callback) {
+        for(ImageId id:ids) (void)callback(id,slot_images[id]);
+    }
+    ImageId FindDMAImage(const ImageInfo&,GPUVAddr);
+};
+__METHOD__
+int main() {
+    Gpu gpu;TextureCache<int> c; c.gpu_memory=&gpu;
+    ImageInfo linear{ImageType::Linear,128,7};
+    for(unsigned i=1;i<32;++i) {
+        c.slot_images[i].info=linear;
+        c.slot_images[i].gpu_addr=42;
+        c.slot_images[i].modification_tick=i*10;
+    }
+    assert(c.FindDMAImage(linear,42)==0);
+    c.ids={1};
+    assert(c.FindDMAImage(linear,42)==1);
+    c.ids={1,3,2};
+    assert(c.FindDMAImage(linear,42)==3);
+    c.slot_images[2].modification_tick=30; // equal timestamp: FIRST wins
+    c.ids={2,3,1};
+    assert(c.FindDMAImage(linear,42)==2);
+    c.slot_images[3].flags=ImageFlagBits::Remapped;
+    c.ids={3,1};
+    assert(c.FindDMAImage(linear,42)==1);
+    c.slot_images[3].flags=ImageFlagBits::None;
+    c.slot_images[3].info.pitch=256;
+    assert(c.FindDMAImage(linear,42)==1); // invalid linear pitch excluded
+    c.slot_images[3].info.pitch=128;
+    c.slot_images[1].flags=ImageFlagBits::Strong;
+    assert(c.FindDMAImage(linear,42)==3); // strongest compatible match
+    gpu.miss_first=true;
+    assert(c.FindDMAImage(linear,42)==3); // second GpuToCpu lookup
+    gpu.miss_all=true;
+    assert(c.FindDMAImage(linear,42)==0);
+    gpu.miss_all=false;gpu.miss_first=false;
+    ImageInfo tiled{ImageType::Tiled,128,7};
+    c.slot_images[4].info=tiled;
+    c.slot_images[5].info=tiled;
+    c.slot_images[4].modification_tick=51;
+    c.slot_images[5].modification_tick=53;
+    c.ids={4,5};
+    assert(c.FindDMAImage(tiled,42)==5);
+    c.ids.clear();
+    for(unsigned i=6;i<=20;i++){
+        c.slot_images[i].info=tiled;
+        c.ids.push_back(i);
+    }
+    assert(c.FindDMAImage(tiled,42)==20); // >8 matching images
+    std::puts("F07_T01_DMA_SINGLE_SCAN_PASS");
+}
+""".replace("__METHOD__",candidate_fn.replace(
+    "boost::container::small_vector<ImageId, 8> image_ids;",
+    "std::vector<ImageId> image_ids;"))
+with tempfile.TemporaryDirectory(prefix="encore-f07-dma-find-image-") as directory:
+    source=Path(directory)/"find_dma.cpp"
+    source.write_text(test_cpp)
+    for native in (False,True):
+        for opt in ("-O0","-O2"):
+            exe=Path(directory)/("find-"+str(int(native))+opt)
+            args=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                  "-fsanitize=undefined","-fno-sanitize-recover=all",
+                  *(["-DPS5_NATIVE=1"] if native else []),
+                  str(source),"-o",str(exe)]
+            built=subprocess.run(args,capture_output=True,text=True,timeout=60)
+            assert built.returncode==0,(native,opt,built.stderr[-5500:])
+            result=subprocess.run([str(exe)],capture_output=True,text=True,timeout=25)
+            assert result.returncode==0,(native,opt,result.stderr[-4000:])
+            assert "F07_T01_DMA_SINGLE_SCAN_PASS" in result.stdout
+            print("F07_T01_DMA_SINGLE_SCAN_PASS", "native",int(native),opt)
