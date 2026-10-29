@@ -10,6 +10,7 @@
 #include <cctype>
 #include <cmath>
 #include <utility>
+#include <sys/stat.h>
 
 namespace pe::ui
 {
@@ -44,15 +45,35 @@ std::string localized_clock(const std::string& value, const std::string& region)
 
 } // namespace
 
+Launcher::ProfileAvatarProbe Launcher::probe_profile_avatar(Services &services)
+{
+    ProfileAvatarProbe probe;
+    probe.path = services.profile_avatar();
+    if (probe.path.empty()) return probe;
+    // This worker-only file fingerprint makes an in-place NiakPS5 broker
+    // replacement visible without stat/decode work in the 60 Hz UI path.
+    struct stat file{};
+    if (::stat(probe.path.c_str(), &file) != 0 || !S_ISREG(file.st_mode)) {
+        probe.path.clear();
+        return probe;
+    }
+    probe.device = static_cast<std::uint64_t>(file.st_dev);
+    probe.inode = static_cast<std::uint64_t>(file.st_ino);
+    probe.size = static_cast<std::uint64_t>(file.st_size);
+    probe.mtime = static_cast<std::uint64_t>(file.st_mtime);
+    probe.ctime = static_cast<std::uint64_t>(file.st_ctime);
+    return probe;
+}
+
 Launcher::Launcher(Services &services, Textures &textures, const Fonts &fonts, bool first_start)
     : services_(services), textures_(textures), fonts_(fonts), first_start_(first_start)
 {
     version_ = services_.version();
     prefs_ = services_.preferences();
     clock_ = localized_clock(services_.clock(), services_.language_region(prefs_.language));
-    // Query platform user/cache only once; never block the render or input loop.
+    // Only the background worker queries the profile and its local cache.
     profile_avatar_scan_ = std::async(std::launch::async, [this] {
-        return services_.profile_avatar();
+        return probe_profile_avatar(services_);
     });
     apply_look();
     // Show the existing Home shell immediately; native recent-ROM metadata
@@ -454,14 +475,33 @@ void Launcher::update(float dt)
     textures_.pump(dt);
     if (profile_avatar_scan_.valid() &&
         profile_avatar_scan_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        ProfileAvatarProbe found;
         try {
-            profile_avatar_path_ = profile_avatar_scan_.get();
+            found = profile_avatar_scan_.get();
+        } catch (...) {
+            // A failed foreground-user lookup must never retain a stale portrait.
+        }
+        if (found != profile_avatar_active_) {
+            if (!profile_avatar_path_.empty())
+                textures_.invalidate(profile_avatar_path_);
+            profile_avatar_path_ = found.path;
+            profile_avatar_active_ = std::move(found);
             if (!profile_avatar_path_.empty())
                 (void)textures_.cover(profile_avatar_path_, 56.0f);
-        } catch (...) {
-            profile_avatar_path_.clear();
         }
     }
+#ifdef PS5_NATIVE
+    // Late account-cache mounting, broker staging and profile changes must
+    // not leave the startup silhouette permanently blank. Only a worker
+    // runs the PS5 user service, file I/O and avatar decoding.
+    profile_avatar_refresh_elapsed_ += std::clamp(dt, 0.0f, 1.0f);
+    if (!profile_avatar_scan_.valid() && profile_avatar_refresh_elapsed_ >= 5.0f) {
+        profile_avatar_refresh_elapsed_ = 0.0f;
+        profile_avatar_scan_ = std::async(std::launch::async, [this] {
+            return probe_profile_avatar(services_);
+        });
+    }
+#endif
     slow_stage("texture_upload", update_stage_begin);
     const auto media_started = std::chrono::steady_clock::now();
     finish_home_scan(); // nonblocking one-time Home application
