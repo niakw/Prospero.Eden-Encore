@@ -5527,3 +5527,57 @@ apply_reviewed_delta(
             }
             // Never evict dirty GPU bytes if the fallback guest readback could""",
     "F07 preserve dirty image on zero-region fallback readback")
+
+
+# F07 M02: dirty GC prefetch can enqueue GPU copies before the staging batch
+# fails. Drain partially queued commands and retire every held staging map,
+# then keep the dirty guest image resident. Preserve desktop unchanged.
+apply_reviewed_delta(
+    "vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "#ifdef PS5_NATIVE\n#include <exception>\n#include <new>\n#endif",
+    "#ifdef PS5_NATIVE\n#include <exception>\n#include <new>\n#include <stdexcept>\n#endif",
+    "F07 dirty GC prefetch exception type header")
+apply_reviewed_delta(
+    "vulkan-cache/video_core/texture_cache/texture_cache.h",
+    """                // The pinned StagingBufferRef is a POD handle, not a RAII
+                // owner. The pool tracks deferred lifetime until FreeDeferred.
+                gc_downloads.emplace_back(id, map);
+                const auto copies = FixSmallVectorADL(FullDownloadCopies(image.info));
+                image.DownloadMemory(map, copies);
+                bytes += image.unswizzled_size_bytes;""",
+    """                // The pinned StagingBufferRef is a POD handle, not a RAII
+                // owner. The pool tracks deferred lifetime until FreeDeferred.
+#ifdef PS5_NATIVE
+                // Do not let a failed Record/download advertise this texture
+                // as prefetched. Some commands may already be queued, so the
+                // staging maps must retire only AFTER draining those commands.
+                bool map_owned_by_batch = false;
+                SCOPE_EXIT {
+                    if (!map_owned_by_batch) runtime.FreeDeferredStagingBuffer(map);
+                };
+                const auto RetireFailedBatch = [&] {
+                    if (!gc_downloads.empty()) runtime.Finish();
+                    ReleaseDownloads();
+                };
+                try {
+                    gc_downloads.emplace_back(id, map);
+                    map_owned_by_batch = true;
+                    const auto copies = FixSmallVectorADL(FullDownloadCopies(image.info));
+                    image.DownloadMemory(map, copies);
+                } catch (const std::bad_alloc&) {
+                    RetireFailedBatch();
+                    return true;
+                } catch (const std::invalid_argument&) {
+                    RetireFailedBatch();
+                    return true;
+                } catch (...) {
+                    RetireFailedBatch();
+                    throw;
+                }
+#else
+                gc_downloads.emplace_back(id, map);
+                const auto copies = FixSmallVectorADL(FullDownloadCopies(image.info));
+                image.DownloadMemory(map, copies);
+#endif
+                bytes += image.unswizzled_size_bytes;""",
+    "F07 rollback partial Vulkan dirty GC prefetch before staging release")
