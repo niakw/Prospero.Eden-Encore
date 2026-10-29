@@ -85,7 +85,7 @@
 - [ ] **Q02 [POST-BUILD]** — Requalifier la topologie CPU et le placement des workers.** **Sortie :** utiliser seulement les affinités/coeurs réellement disponibles, A/B et pas d'hypothèse SMT.
 - [ ] **Q03 [PRÉ-BUILD]** — Contrôler le lanceur sans réouvrir son audit global.** Startup/médias UI OpenGL hors gameplay ; revue ciblée uniquement si anomalie de latence/consommation avérée dans le build unique.
 
-## 7. B5 — campagne de validation groupée (DERNIÈRE étape)
+- [ ] **M04 [PRÉ-BUILD] — Sondes de pression pendant l'éviction texture.** **Owner :** `TextureCache::RunGarbageCollector::Cleanup`. **Source modifiée :** `3213cda88a0f758e61f9fa6164423933bfcd7c62` ; limite à huit visites sales par sonde sous mutex, réinitialise après éviction/passe critique, bypass immédiat au seuil critique. Mini-harnais C++ isolé O0/O2 + UBSan passé localement ; **témoin source-extrait et gates GitHub encore non qualifiés**, console non mesurée. Décider la clôture seulement après verdict hôte et preuve d'absence de régression GC.\n\n## 7. B5 — campagne de validation groupée (DERNIÈRE étape)
 
 > **Verrou : ne pas cocher le build ni demander un test console tant que les optimisations sûres identifiées, leurs témoins et le gel des modifications moteur ne sont pas achevés.** On ne poursuit pas une optimisation infinie et spéculative pour prétendre à « zéro possible ». Une revue peut être close sans patch, avec preuve.
 
