@@ -245,7 +245,7 @@ __TFB_GUARD__
     }
 };
 int main(){
-    const auto check=[](std::size_t n,std::size_t off,std::size_t sz,bool accepted) {
+    const auto check=[](std::size_t n,std::size_t off,std::size_t sz,[[maybe_unused]] bool accepted) {
         Guard g;
         g.bindings.buffers.resize(n);
         g.bindings.offsets.resize(off);
