@@ -63,7 +63,9 @@ assert "scheduler.Finish();" in cpp
 assert "if name == 'vk_descriptor_buffer':" in gen
 assert "text = (output / 'vulkan_descriptor_buffer.cpp').read_text()" in gen
 assert "('vk_descriptor_buffer', 10, 4)" in gen
-assert cpp.count("scheduler.Wait(frame_ticks[frame_index]);") == 2
+assert cpp.count("scheduler.Wait(frame_ticks[frame_index]);") == 1
+assert cpp.count("scheduler.Wait(old_tick);") == 1
+assert "old_tick == 0 || scheduler.IsFree(old_tick)" in cpp
 assert cpp.count("scheduler.Finish();") == 2
 start=cpp.index("bool DescriptorBufferRing::PreflightFrameReuse(")
 end=cpp.index("\n}",start)+2
@@ -79,7 +81,10 @@ with tempfile.TemporaryDirectory(prefix="eden-r323-ring-") as tmp:
 using u64=std::uint64_t;
 struct Scheduler{
  int waits=0;
+ int isfree=0;
  u64 last=0;
+ u64 completed=0;
+ bool IsFree(u64 tick){++isfree;return tick<=completed;}
  void Wait(u64 tick){++waits;last=tick;}
 };
 class DescriptorBufferRing{
@@ -102,12 +107,20 @@ int main(){
  r.chunks.clear();
  assert(!r.PreflightFrameReuse(s) && r.frame_reused && s.waits==0);
  r.chunks.push_back(7);
+ // An untouched eight-frame slot requires neither a wait nor a duplicate
+ // pipeline/guest invalidation refresh.
+ assert(!r.PreflightFrameReuse(s) && s.waits==0 && !r.frame_reused);
+ r.frame_reused=true;
  r.frame_ticks[2]=421;
  assert(r.PreflightFrameReuse(s) && s.waits==1 && s.last==421);
  assert(!r.frame_reused && !r.PreflightFrameReuse(s) && s.waits==1);
  // An independent next-frame recycle must repeat the normal fence drain.
  r.frame_reused=true;r.frame_ticks[2]=623;
- assert(r.PreflightFrameReuse(s) && s.waits==2 && s.last==623);
+ s.completed=623;
+ assert(!r.PreflightFrameReuse(s) && s.waits==1 && !r.frame_reused);
+ assert(s.isfree==2);
+ r.frame_reused=true;r.frame_ticks[2]=624;
+ assert(r.PreflightFrameReuse(s) && s.waits==2 && s.last==624);
 #else
  assert(s.waits==0);
 #endif

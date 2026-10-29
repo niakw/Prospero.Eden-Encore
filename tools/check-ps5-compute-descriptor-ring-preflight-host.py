@@ -114,7 +114,9 @@ template<typename T>T AlignUp(T n,T a){return (n+a-1)/a*a;}
 static bool cache_locks_held=false;
 struct Scheduler {
     u64 tick{291};
-    int waits{}, finishes{}, waits_under_lock{};
+    u64 completed{};
+    int waits{}, finishes{}, waits_under_lock{}, free_queries{};
+    bool IsFree(u64 t) {++free_queries;return t<=completed;}
     void Wait(u64) { if (cache_locks_held) ++waits_under_lock; ++waits; }
     void Finish() { if(cache_locks_held) ++waits_under_lock; ++finishes; }
     u64 CurrentTick() const { return tick; }
@@ -181,6 +183,12 @@ int main() {
     assert(r.Allocate(s,p.DescriptorRingPreflightSize()).host);
     cache_locks_held=false;
     assert(s.waits_under_lock==0&&s.waits==1);
+    // Recycled slot already completed: no wait, no forced guest shader
+    // reselection. Allocations may still proceed normally.
+    r.frame_reused=true;
+    r.frame_ticks[0]=128;
+    s.completed=128;
+    assert(!r.PreflightFrameReuse(s) && s.waits==1 && !r.frame_reused);
     // No valid snapshot: full-ring allocation is guaranteed and pre-drained.
     r.chunk_cursor=1; r.cursor=96;
     assert(r.PreflightCapacity(s,p.DescriptorRingPreflightSize()));
