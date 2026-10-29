@@ -42,9 +42,9 @@ assert "PORT_BUILD_DIR" in cmake and "vulkan_rasterizer.cpp" in cmake
 assert '"    scheduler.InvalidateState();\\n"' in gen
 assert "F07 bypass cold guest graphics shader lookup in native raw DrawTexture" in gen
 dmethod=fragment(raster, "void RasterizerVulkan::UpdateDynamicStates() {",
-                 "\\nvoid RasterizerVulkan::HandleTransformFeedback(")
+                 "\nvoid RasterizerVulkan::HandleTransformFeedback(")
 assert dmethod.count("if (device.IsExtVertexInputDynamicStateSupported()) {")==1
-dynamic_branch=dmethod[dmethod.index("    if (device.IsExtVertexInputDynamicStateSupported()) {"):dmethod.rfind("\\n}")]
+dynamic_branch=dmethod[dmethod.index("    if (device.IsExtVertexInputDynamicStateSupported()) {"):dmethod.rfind("\n}")]
 assert "if (prepared_pipeline && prepared_pipeline->HasDynamicVertexInput())" in dynamic_branch
 assert dynamic_branch.count("pipeline_cache.CurrentGraphicsPipeline()")==1
 assert dynamic_branch.index("#ifdef PS5_NATIVE") < dynamic_branch.index("#else")
