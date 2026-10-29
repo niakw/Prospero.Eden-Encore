@@ -191,6 +191,15 @@ public:
 #endif
     }
 
+#ifdef PS5_NATIVE
+    // Vulkan command worker only. A recovered optimized handle may be
+    // published BETWEEN ConfigureDraw and Draw: availability alone cannot
+    // prove that a correct pipeline was already bound for that draw.
+    [[nodiscard]] bool CanExecuteRecordedDraw() const noexcept {
+        return worker_draw_bind_valid;
+    }
+#endif
+
     template <typename Spec>
     static auto MakeConfigureSpecFunc() {
         return [](GraphicsPipeline* pl, bool is_indexed) { return pl->ConfigureImpl<Spec>(is_indexed); };
@@ -263,6 +272,12 @@ private:
     std::shared_ptr<OptimizeState> optimize_state; // allocated ONLY for active R313 builds
     vk::Pipeline optimized_pipeline;
     std::atomic_bool optimized_ready{false};
+#ifdef PS5_NATIVE
+    // Set/read only on the ordered Vulkan command worker, immediately before
+    // each draw callback. Never use the later optimized_ready publication as
+    // proof that an earlier ConfigureDraw actually bound the recovered handle.
+    bool worker_draw_bind_valid{};
+#endif
 
     DescriptorBufferLayout descriptor_buffer_layout;
     std::vector<DescriptorUpdateEntry> last_descriptor_payload;
