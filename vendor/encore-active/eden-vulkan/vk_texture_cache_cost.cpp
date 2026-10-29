@@ -2002,16 +2002,22 @@ VkImage TextureCacheRuntime::AcquireMsaaScratchImage(const VkImageCreateInfo& im
         .flags = image_ci.flags,
     };
 #ifdef PS5_NATIVE
-    // One monotone GPU-completion snapshot for the scratch search. A fence
-    // completed during this scan becomes reusable at the next allocation.
-    // No candidate exists on the first allocation: avoid a semaphore
-    // probe until a cached scratch can actually be reused.
-    const u64 completed_tick = msaa_scratch_images.empty()
-        ? 0 : scheduler.GetMasterSemaphore().KnownGpuTick();
+    // A scratch with a different image key is never reusable. Avoid sampling
+    // GPU completion unless this allocation actually has a matching candidate;
+    // take at most one monotone snapshot, before comparing its usage tick.
+    u64 completed_tick = 0;
+    bool sampled_completed_tick = false;
 #endif
     for (MsaaScratchImage& scratch : msaa_scratch_images) {
 #ifdef PS5_NATIVE
-        if (scratch.key != key || scratch.tick > completed_tick) {
+        if (scratch.key != key) {
+            continue;
+        }
+        if (!sampled_completed_tick) {
+            completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();
+            sampled_completed_tick = true;
+        }
+        if (scratch.tick > completed_tick) {
 #else
         if (scratch.key != key || !scheduler.IsFree(scratch.tick)) {
 #endif

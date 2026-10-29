@@ -357,7 +357,9 @@ assert "F07 snapshot native MSAA scratch reuse GPU completion" in generator
 assert "F07 snapshot native MSAA scratch and resolve cleanup GPU completion" in generator
 assert "F07 skip GPU completion probe on empty native MSAA scratch list" in generator
 assert "F07 skip GPU completion probe on empty native MSAA GC frame" in generator
-assert "msaa_scratch_images.empty()" in gc_acquire
+assert "F07 avoid native MSAA GPU completion probe without matching image key" in generator
+assert "sampled_completed_tick" in gc_acquire
+assert gc_acquire.index("if (scratch.key != key)") < gc_acquire.index("KnownGpuTick()")
 assert "if (msaa_scratch_images.empty() && pending_resolve_shadows.empty())" in gc_tick
 assert gc_tick.index("if (msaa_scratch_images.empty() && pending_resolve_shadows.empty())") < gc_tick.index("KnownGpuTick()")
 assert gc_acquire.count("KnownGpuTick()")==1
@@ -438,6 +440,19 @@ int main() {
 #ifdef PS5_NATIVE
     assert(cold.scheduler.semaphore.polls==0);
 #endif
+    // Nonempty cache, no matching image key: the native GPU semaphore must
+    // not be sampled. The original desktop key rejection is unchanged.
+    TextureCacheRuntime no_match;
+    auto other_key=key;
+    other_key.format=999;
+    no_match.msaa_scratch_images.push_back(
+        {other_key,std::make_shared<VkImage>(777),0,0});
+    assert(no_match.AcquireMsaaScratchImage(ci)==1);
+#ifdef PS5_NATIVE
+    assert(no_match.scheduler.semaphore.polls==0);
+#else
+    assert(no_match.scheduler.is_free_calls==0);
+#endif
     for (u64 i=0;i<8;++i)
         r.msaa_scratch_images.push_back({key,std::make_shared<VkImage>(100+i),
                                         i==0 ? u64{8} : u64{20}, 0});
@@ -516,4 +531,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-msaa-snapshot-") as folder:
             assert built.returncode==0,(native,opt,built.stderr[-6000:])
             ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
-print("F07_MSAA_GC_SOURCE_EXTRACTED_PASS native_one_tick_per_scan=1 empty_scan_no_poll=1 resolve_only=1 desktop_original=1 delayed_reuse_safe=1 O0=1 O2=1")
+print("F07_MSAA_GC_SOURCE_EXTRACTED_PASS native_one_tick_per_scan=1 empty_scan_no_poll=1 wrong_key_no_poll=1 resolve_only=1 desktop_original=1 delayed_reuse_safe=1 O0=1 O2=1")
