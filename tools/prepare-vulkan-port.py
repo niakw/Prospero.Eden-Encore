@@ -5350,3 +5350,48 @@ apply_reviewed_delta(
 #endif
         cmdbuf.PushConstants""",
     "F07 native worker bound-pipeline validity publish")
+
+
+# F07 T04: the MSAA staging image is checked out with tick UINT64_MAX.
+# Exceptions while queuing upload/copy/blit must return it to the retirement
+# ring using the *current scheduler tick*, never to immediate GPU reuse.
+# Keep successful release at the original call site; the scope guard runs
+# only for failed work. No change to desktop code paths.
+apply_reviewed_delta(
+    "vk_texture_cache_cost.cpp",
+    "#include <algorithm>\n#include <cstdio>",
+    '#include <algorithm>\n#include "common/scope_exit.h"\n#include <cstdio>',
+    "F07 MSAA scratch failure-guard include")
+apply_reviewed_delta(
+    "vk_texture_cache_cost.cpp",
+    """        const VkImage temp_vk_image = runtime->AcquireMsaaScratchImage(image_ci);
+
+        scheduler->RequestOutsideRenderPassOperationContext();""",
+    """        const VkImage temp_vk_image = runtime->AcquireMsaaScratchImage(image_ci);
+#ifdef PS5_NATIVE
+        // An allocation, Vulkan Record or blit failure before the ordinary
+        // Release leaves this scratch at UINT64_MAX ("checked out") forever.
+        // Return it against CurrentTick even when partially enqueued GPU
+        // commands must still retire; never make it reusable immediately.
+        bool scratch_released = false;
+        SCOPE_EXIT {
+            if (!scratch_released) runtime->ReleaseMsaaScratchImage(temp_vk_image);
+        };
+#endif
+
+        scheduler->RequestOutsideRenderPassOperationContext();""",
+    "F07 MSAA upload scratch exception safe release")
+apply_reviewed_delta(
+    "vk_texture_cache_cost.cpp",
+    """        initialized = true;
+        runtime->ReleaseMsaaScratchImage(temp_vk_image);
+
+        if (is_rescaled) {""",
+    """        initialized = true;
+        runtime->ReleaseMsaaScratchImage(temp_vk_image);
+#ifdef PS5_NATIVE
+        scratch_released = true;
+#endif
+
+        if (is_rescaled) {""",
+    "F07 MSAA upload scratch normal release unchanged")
