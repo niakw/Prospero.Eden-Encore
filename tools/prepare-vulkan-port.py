@@ -4218,6 +4218,37 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        // The context owns async_decode->mutex.",
     "F07 increment successful async decode quota only after GPU submission")
 
+# F07: a cold MSAA allocation has no scratch candidates to test;
+# a completely idle MSAA/resolve GC frame has no retirement work either.
+# Avoid native semaphore samples in both empty cases; existing completion
+# comparisons and the desktop scheduler.IsFree path are unchanged.
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "    const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();\n"
+    "#endif\n"
+    "    for (MsaaScratchImage& scratch : msaa_scratch_images) {",
+    "    // No candidate exists on the first allocation: avoid a semaphore\n"
+    "    // probe until a cached scratch can actually be reused.\n"
+    "    const u64 completed_tick = msaa_scratch_images.empty()\n"
+    "        ? 0 : scheduler.GetMasterSemaphore().KnownGpuTick();\n"
+    "#endif\n"
+    "    for (MsaaScratchImage& scratch : msaa_scratch_images) {",
+    "F07 skip GPU completion probe on empty native MSAA scratch list")
+apply_reviewed_delta("vk_texture_cache_cost.cpp",
+    "void TextureCacheRuntime::TickFrame() {\n"
+    "    static constexpr u32 MAX_UNUSED_SCRATCH_FRAMES = 60;\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // One conservative GPU completion sample for both cleanup scans, not a",
+    "void TextureCacheRuntime::TickFrame() {\n"
+    "    static constexpr u32 MAX_UNUSED_SCRATCH_FRAMES = 60;\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // With neither MSAA scratch nor resolve retirements pending, there is\n"
+    "    // nothing to collect and no reason to sample the GPU semaphore.\n"
+    "    if (msaa_scratch_images.empty() && pending_resolve_shadows.empty()) {\n"
+    "        return;\n"
+    "    }\n"
+    "    // One conservative GPU completion sample for both cleanup scans, not a",
+    "F07 skip GPU completion probe on empty native MSAA GC frame")
+
 # F07 P0.3: no render-target channel was selected on a raw clear.
 # Preserve the pre-existing scheduler FlushWork and the desktop path. A
 # native masked-out clear does not read textures or modify GPU pixels, so

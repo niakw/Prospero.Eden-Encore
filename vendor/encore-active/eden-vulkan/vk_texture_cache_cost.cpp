@@ -2004,7 +2004,10 @@ VkImage TextureCacheRuntime::AcquireMsaaScratchImage(const VkImageCreateInfo& im
 #ifdef PS5_NATIVE
     // One monotone GPU-completion snapshot for the scratch search. A fence
     // completed during this scan becomes reusable at the next allocation.
-    const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();
+    // No candidate exists on the first allocation: avoid a semaphore
+    // probe until a cached scratch can actually be reused.
+    const u64 completed_tick = msaa_scratch_images.empty()
+        ? 0 : scheduler.GetMasterSemaphore().KnownGpuTick();
 #endif
     for (MsaaScratchImage& scratch : msaa_scratch_images) {
 #ifdef PS5_NATIVE
@@ -2041,6 +2044,11 @@ void TextureCacheRuntime::ReleaseMsaaScratchImage(VkImage image) {
 void TextureCacheRuntime::TickFrame() {
     static constexpr u32 MAX_UNUSED_SCRATCH_FRAMES = 60;
 #ifdef PS5_NATIVE
+    // With neither MSAA scratch nor resolve retirements pending, there is
+    // nothing to collect and no reason to sample the GPU semaphore.
+    if (msaa_scratch_images.empty() && pending_resolve_shadows.empty()) {
+        return;
+    }
     // One conservative GPU completion sample for both cleanup scans, not a
     // semaphore query per scratch/resolve. Late completions wait one frame.
     const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();

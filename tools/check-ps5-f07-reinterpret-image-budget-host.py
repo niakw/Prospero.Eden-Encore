@@ -296,6 +296,11 @@ gc_acquire=source[source.index(gc_begin):source.index(gc_end,source.index(gc_beg
 gc_tick=source[source.index(tick_begin):source.index(tick_end,source.index(tick_begin))]
 assert "F07 snapshot native MSAA scratch reuse GPU completion" in generator
 assert "F07 snapshot native MSAA scratch and resolve cleanup GPU completion" in generator
+assert "F07 skip GPU completion probe on empty native MSAA scratch list" in generator
+assert "F07 skip GPU completion probe on empty native MSAA GC frame" in generator
+assert "msaa_scratch_images.empty()" in gc_acquire
+assert "if (msaa_scratch_images.empty() && pending_resolve_shadows.empty())" in gc_tick
+assert gc_tick.index("if (msaa_scratch_images.empty() && pending_resolve_shadows.empty())") < gc_tick.index("KnownGpuTick()")
 assert gc_acquire.count("KnownGpuTick()")==1
 assert gc_tick.count("KnownGpuTick()")==1
 assert "scratch.tick > completed_tick" in gc_acquire
@@ -359,10 +364,21 @@ __GC_ACQUIRE__
 __GC_TICK__
 int main() {
     TextureCacheRuntime r;
+    // Native has no pending MSAA objects at startup. Both operations must
+    // avoid even the formerly unconditional GPU completion snapshot.
+    r.TickFrame();
+#ifdef PS5_NATIVE
+    assert(r.scheduler.semaphore.polls==0);
+#endif
     VkImageCreateInfo ci{};
     ci.format=2;ci.imageType=3;ci.extent={64,32,1};
     ci.mipLevels=1;ci.arrayLayers=1;ci.usage=7;ci.flags=0;
     const MsaaScratchKey key{2,3,64,32,1,1,1,7,0};
+    TextureCacheRuntime cold;
+    assert(cold.AcquireMsaaScratchImage(ci)==1);
+#ifdef PS5_NATIVE
+    assert(cold.scheduler.semaphore.polls==0);
+#endif
     for (u64 i=0;i<8;++i)
         r.msaa_scratch_images.push_back({key,std::make_shared<VkImage>(100+i),
                                         i==0?8:20,0});
@@ -408,6 +424,15 @@ int main() {
     r.TickFrame();
     assert(r.pending_resolve_shadows.empty());
     assert(find_image(102)==r.msaa_scratch_images.end());
+    // Also cover resolve-only cleanup, which must still query completion.
+    TextureCacheRuntime resolve_only;
+    resolve_only.pending_resolve_shadows={{1,1}};
+    resolve_only.scheduler.semaphore.completed=1;
+    resolve_only.TickFrame();
+    assert(resolve_only.pending_resolve_shadows.empty());
+#ifdef PS5_NATIVE
+    assert(resolve_only.scheduler.semaphore.polls==1);
+#endif
     std::puts("F07_MSAA_COMPLETION_SNAPSHOT_PASS");
 }
 """.replace("__GC_ACQUIRE__",gc_acquire).replace("__GC_TICK__",gc_tick)
@@ -424,4 +449,4 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-msaa-snapshot-") as folder:
             assert built.returncode==0,(native,opt,built.stderr[-6000:])
             ran=subprocess.run([str(binary)],capture_output=True,text=True,timeout=15)
             assert ran.returncode==0,(native,opt,ran.stderr[-6000:])
-print("F07_MSAA_GC_SOURCE_EXTRACTED_PASS native_one_tick_per_scan=1 desktop_original=1 delayed_reuse_safe=1 O0=1 O2=1")
+print("F07_MSAA_GC_SOURCE_EXTRACTED_PASS native_one_tick_per_scan=1 empty_scan_no_poll=1 resolve_only=1 desktop_original=1 delayed_reuse_safe=1 O0=1 O2=1")
