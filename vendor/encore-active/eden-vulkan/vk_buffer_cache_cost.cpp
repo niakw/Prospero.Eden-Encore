@@ -446,7 +446,15 @@ void BufferCacheRuntime::TickFrame(Common::SlotVector<Buffer>& slot_buffers) noe
     // per resident buffer. A completion during this pass is reclaimed next frame.
     const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();
     for (auto it = slot_buffers.begin(); it != slot_buffers.end(); it++) {
+#ifdef PS5_NATIVE
+        // Completed usage is marked inactive by ResetUsageTracking(). A
+        // resident idle buffer must not clear its per-page usage bits again
+        // on every later frame while buffer_cache.mutex is held.
+        const u64 last_tick = it->LastUsageTick();
+        if (last_tick != 0 && last_tick <= completed_tick) {
+#else
         if (it->LastUsageTick() <= completed_tick) {
+#endif
             it->ResetUsageTracking();
         }
     }

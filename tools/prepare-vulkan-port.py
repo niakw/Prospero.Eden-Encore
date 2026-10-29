@@ -1215,6 +1215,14 @@ adapt('src/video_core/renderer_vulkan/pipeline_helper.h',
     ('get_info.data.pUniformTexelBuffer = &address_info;', 'get_info.data.pUniformTexelBuffer = buffer_info;'),
     ('get_info.data.pStorageTexelBuffer = &address_info;', 'get_info.data.pStorageTexelBuffer = buffer_info;'),
 ])
+# F07: the buffer usage interval is already cleared after its GPU tick.
+# Keep the normal desktop history unchanged; native idle buffers retire once,
+# avoiding a repeated per-page tracker reset under buffer_cache.mutex.
+adapt('src/video_core/renderer_vulkan/vk_buffer_cache.h',
+      'include/video_core/renderer_vulkan/vk_buffer_cache.h', [
+    ("    void ResetUsageTracking() noexcept {\n        tracker.Reset();\n    }", "    void ResetUsageTracking() noexcept {\n        tracker.Reset();\n#ifdef PS5_NATIVE\n        // Sentinel 0 means no outstanding GPU usage after the completed\n        // interval has been cleared. MarkUsage publishes the next real tick.\n        last_usage_tick = 0;\n#endif\n    }"),
+])
+
 adapt('src/video_core/renderer_vulkan/vk_blit_screen.h',
       'include/video_core/renderer_vulkan/vk_blit_screen.h', [
     ('VkFormat current_swapchain_view_format);',
@@ -2791,7 +2799,7 @@ probes = {
     ],
     'vk_buffer_cache': [
         # Capture the completed GPU tick once per resident-buffer scan.
-        ("void BufferCacheRuntime::TickFrame(Common::SlotVector<Buffer>& slot_buffers) noexcept {\n    for (auto it = slot_buffers.begin(); it != slot_buffers.end(); it++) {\n        if (scheduler.IsFree(it->LastUsageTick())) {\n            it->ResetUsageTracking();\n        }\n    }\n}", "void BufferCacheRuntime::TickFrame(Common::SlotVector<Buffer>& slot_buffers) noexcept {\n#ifdef PS5_NATIVE\n    // No tracked buffers: avoid even the GPU-completion semaphore snapshot.\n    if (slot_buffers.begin() == slot_buffers.end()) {\n        return;\n    }\n#endif\n    // One monotone GPU completion snapshot per pass instead of an atomic load\n    // per resident buffer. A completion during this pass is reclaimed next frame.\n    const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();\n    for (auto it = slot_buffers.begin(); it != slot_buffers.end(); it++) {\n        if (it->LastUsageTick() <= completed_tick) {\n            it->ResetUsageTracking();\n        }\n    }\n}"),
+        ("void BufferCacheRuntime::TickFrame(Common::SlotVector<Buffer>& slot_buffers) noexcept {\n    for (auto it = slot_buffers.begin(); it != slot_buffers.end(); it++) {\n        if (scheduler.IsFree(it->LastUsageTick())) {\n            it->ResetUsageTracking();\n        }\n    }\n}", "void BufferCacheRuntime::TickFrame(Common::SlotVector<Buffer>& slot_buffers) noexcept {\n#ifdef PS5_NATIVE\n    // No tracked buffers: avoid even the GPU-completion semaphore snapshot.\n    if (slot_buffers.begin() == slot_buffers.end()) {\n        return;\n    }\n#endif\n    // One monotone GPU completion snapshot per pass instead of an atomic load\n    // per resident buffer. A completion during this pass is reclaimed next frame.\n    const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();\n    for (auto it = slot_buffers.begin(); it != slot_buffers.end(); it++) {\n#ifdef PS5_NATIVE\n        // Completed usage is marked inactive by ResetUsageTracking(). A\n        // resident idle buffer must not clear its per-page usage bits again\n        // on every later frame while buffer_cache.mutex is held.\n        const u64 last_tick = it->LastUsageTick();\n        if (last_tick != 0 && last_tick <= completed_tick) {\n#else\n        if (it->LastUsageTick() <= completed_tick) {\n#endif\n            it->ResetUsageTracking();\n        }\n    }\n}"),
         # An inverted/clipped guest vertex-binding range must not wrap u32.
         ("    const u32 min_binding = (std::min)(bindings.min_index, device_max);\n    const u32 max_binding = (std::min)(bindings.max_index, device_max);\n    const u32 binding_count = max_binding - min_binding;\n    if (binding_count == 0) {\n        return;\n    }", "    const u32 min_binding = (std::min)(bindings.min_index, device_max);\n    const u32 max_binding = (std::min)(bindings.max_index, device_max);\n    // Do not wrap a reversed binding range into a huge Vulkan binding count.\n    if (max_binding <= min_binding) {\n        return;\n    }\n    const u32 binding_count = max_binding - min_binding;"),
         # Incomplete quads and strips use the already-supported null index buffer.
