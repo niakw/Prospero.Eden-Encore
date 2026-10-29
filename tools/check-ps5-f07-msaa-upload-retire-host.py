@@ -274,3 +274,128 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-msaa-readback-retire-") as d:
             assert result.returncode == 0, (mode, opt, result.stderr[-5000:])
             assert "F07_MSAA_READBACK_RETIRE_HOST_PASS" in result.stdout
             print("F07_MSAA_READBACK_RETIRE_HOST_PASS", mode, opt)
+
+
+# The scratch pool itself must reject a null VkImage before the vector grows.
+# Compile its exact source method: a null image is not a valid cached candidate.
+acquire_begin = "VkImage TextureCacheRuntime::AcquireMsaaScratchImage(const VkImageCreateInfo& image_ci) {"
+acquire_end = "\nvoid TextureCacheRuntime::ReleaseMsaaScratchImage("
+assert source.count(acquire_begin) == source.count(acquire_end) == 1
+acquire_body = source[source.index(acquire_begin):source.index(acquire_end)]
+assert "if (!scratch.image) {" in acquire_body
+assert "throw std::bad_alloc{};" in acquire_body
+assert acquire_body.index("if (!scratch.image)") < acquire_body.index(
+    "msaa_scratch_images.push_back(std::move(scratch))"
+)
+assert "F07 MSAA null scratch image rejected before caching" in generator
+assert "#ifdef PS5_NATIVE\n    // Some allocation backends report failure" in acquire_body
+assert acquire_body in generator
+
+pool_cpp = r"""
+#include <cassert>
+#include <cstdint>
+#include <cstdio>
+#include <limits>
+#include <new>
+#include <utility>
+#include <vector>
+using u64 = std::uint64_t;
+using u32 = std::uint32_t;
+using VkImage = int;
+struct Extent {
+    u32 width{}, height{}, depth{};
+};
+struct VkImageCreateInfo {
+    int format{}, imageType{};
+    Extent extent{64,64,1};
+    u32 mipLevels{1}, arrayLayers{1}, usage{7}, flags{};
+};
+struct MsaaScratchKey {
+    int format{}, type{};
+    u32 width{}, height{}, depth{}, levels{}, layers{}, usage{}, flags{};
+    bool operator==(const MsaaScratchKey&) const = default;
+};
+struct MockVkImage {
+    int handle{};
+    explicit operator bool() const noexcept { return handle != 0; }
+    VkImage operator*() const noexcept { return handle; }
+};
+struct MsaaScratchImage {
+    MsaaScratchKey key{};
+    MockVkImage image{};
+    u64 tick{};
+    u32 unused_frames{};
+};
+struct MemoryAllocator {
+    bool fail{};
+    int next_handle{11};
+    MockVkImage CreateImage(const VkImageCreateInfo&) {
+        return MockVkImage{fail ? 0 : next_handle++};
+    }
+};
+struct MasterSemaphore {
+    u64 completed_tick{20};
+    int queries{};
+    u64 KnownGpuTick() { ++queries; return completed_tick; }
+};
+struct Scheduler {
+    MasterSemaphore semaphore;
+    MasterSemaphore& GetMasterSemaphore() { return semaphore; }
+    bool IsFree(u64 tick) { return tick <= semaphore.completed_tick; }
+};
+struct TextureCacheRuntime {
+    MemoryAllocator memory_allocator;
+    Scheduler scheduler;
+    std::vector<MsaaScratchImage> msaa_scratch_images;
+    VkImage AcquireMsaaScratchImage(const VkImageCreateInfo&);
+};
+__ACTUAL_ACQUIRE__
+int main() {
+    {
+        TextureCacheRuntime r;
+        VkImageCreateInfo ci;
+        assert(r.AcquireMsaaScratchImage(ci) == 11);
+        assert(r.msaa_scratch_images.size() == 1);
+        assert(r.AcquireMsaaScratchImage(ci) == 12);
+        assert(r.msaa_scratch_images.size() == 2);
+        r.msaa_scratch_images[0].tick = 21;
+        assert(r.AcquireMsaaScratchImage(ci) == 13); // old tick still in flight
+        r.scheduler.semaphore.completed_tick = 21;
+        assert(r.AcquireMsaaScratchImage(ci) == 11); // now safely recyclable
+        assert(r.msaa_scratch_images.size() == 3);
+    }
+    {
+        TextureCacheRuntime r;
+        VkImageCreateInfo ci;
+        r.memory_allocator.fail = true;
+#ifdef PS5_NATIVE
+        bool rejected = false;
+        try { (void)r.AcquireMsaaScratchImage(ci); }
+        catch (const std::bad_alloc&) { rejected = true; }
+        assert(rejected && r.msaa_scratch_images.empty());
+#else
+        // Desktop retains the pinned null-handling semantics.
+        assert(r.AcquireMsaaScratchImage(ci) == 0);
+        assert(r.msaa_scratch_images.size() == 1);
+#endif
+    }
+    std::puts("F07_MSAA_SCRATCH_NULL_GUARD_PASS");
+}
+""".replace("__ACTUAL_ACQUIRE__", acquire_body)
+with tempfile.TemporaryDirectory(prefix="eden-f07-msaa-scratch-pool-") as d:
+    src = Path(d) / "pool.cpp"
+    src.write_text(pool_cpp)
+    for mode in ("native", "desktop"):
+        for opt in ("-O0", "-O2"):
+            exe = Path(d) / (mode + opt)
+            command = [compiler, "-std=c++20", opt, "-Wall", "-Wextra", "-Werror",
+                       "-fsanitize=undefined", "-fno-sanitize-recover=all"]
+            if mode == "native":
+                command += ["-DPS5_NATIVE"]
+            command += [str(src), "-o", str(exe)]
+            result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+            assert result.returncode == 0, (mode, opt, result.stderr[-5000:])
+            result = subprocess.run([str(exe)], capture_output=True, text=True, timeout=15)
+            assert result.returncode == 0, (mode, opt, result.stderr[-5000:])
+            assert "F07_MSAA_SCRATCH_NULL_GUARD_PASS" in result.stdout
+            print("F07_MSAA_SCRATCH_NULL_GUARD_PASS", mode, opt)
