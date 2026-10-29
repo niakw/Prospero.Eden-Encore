@@ -460,7 +460,7 @@ void RasterizerVulkan::Draw(bool is_indexed, u32 instance_count) {
         const DrawParams draw_params{MakeDrawParams(draw_state, num_instances, is_indexed)};
 
         scheduler.Record([draw_params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {
-            if (!pipeline || !pipeline->CanExecuteDraw()) {
+            if (!pipeline || !pipeline->CanExecuteRecordedDraw()) {
                 ::Eden::Performance::RecordGraphicsDrawDrop(
                     ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
                 return;
@@ -508,7 +508,7 @@ void RasterizerVulkan::DrawIndirect() {
             scheduler.Record([buffer_obj = buffer->Handle(), offset,
                               stride = params.stride,
                               pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {
-                if (!pipeline || !pipeline->CanExecuteDraw()) {
+                if (!pipeline || !pipeline->CanExecuteRecordedDraw()) {
                     ::Eden::Performance::RecordGraphicsDrawDrop(
                         ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
                     return;
@@ -528,7 +528,7 @@ void RasterizerVulkan::DrawIndirect() {
             scheduler.Record([draw_buffer_obj = draw_buffer->Handle(),
                               buffer_obj = buffer->Handle(), offset_base, offset,
                               params, pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {
-                if (!pipeline || !pipeline->CanExecuteDraw()) {
+                if (!pipeline || !pipeline->CanExecuteRecordedDraw()) {
                     ::Eden::Performance::RecordGraphicsDrawDrop(
                         ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
                     return;
@@ -547,7 +547,7 @@ void RasterizerVulkan::DrawIndirect() {
         }
         scheduler.Record([buffer_obj = buffer->Handle(), offset, params,
                           pipeline = prepared_pipeline](vk::CommandBuffer cmdbuf) {
-            if (!pipeline || !pipeline->CanExecuteDraw()) {
+            if (!pipeline || !pipeline->CanExecuteRecordedDraw()) {
                 ::Eden::Performance::RecordGraphicsDrawDrop(
                     ::Eden::Performance::GraphicsDrawDrop::WorkerPipelineFailed);
                 return;
