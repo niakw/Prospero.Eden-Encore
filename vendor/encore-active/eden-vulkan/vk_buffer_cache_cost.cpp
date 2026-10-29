@@ -507,8 +507,27 @@ void BufferCacheRuntime::CopyBuffer(VkBuffer dst_buffer, VkBuffer src_buffer,
     };
 
     // Measuring a popular game, this number never exceeds the specified size once data is warmed up
+#ifdef PS5_NATIVE
+    // Zero-sized VkBufferCopy regions are invalid Vulkan commands. Build the
+    // batch in one pass, retaining order and the original barrier contract.
+    boost::container::small_vector<VkBufferCopy, 8> vk_copies;
+    vk_copies.reserve(copies.size());
+    for (const auto& copy : copies) {
+        if (copy.size != 0) {
+            vk_copies.push_back(MakeBufferCopy(copy));
+        }
+    }
+    if (vk_copies.empty()) {
+        if (barrier) {
+            PreCopyBarrier();
+            PostCopyBarrier();
+        }
+        return;
+    }
+#else
     boost::container::small_vector<VkBufferCopy, 8> vk_copies(copies.size());
     std::ranges::transform(copies, vk_copies.begin(), MakeBufferCopy);
+#endif
     if (src_buffer == staging_pool.StreamBuf() && can_reorder_upload) {
         scheduler.RecordWithUploadBuffer([src_buffer, dst_buffer, vk_copies = std::move(vk_copies)](
                                              vk::CommandBuffer, vk::CommandBuffer upload_cmdbuf) {

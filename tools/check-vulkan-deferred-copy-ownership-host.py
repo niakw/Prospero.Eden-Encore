@@ -86,6 +86,7 @@ f07_copy_labels = (
     'F07 skip zero-sized Vulkan buffer fill',
     'F07 reject empty vertex binding ranges before cache handle resolution',
     'F07 trim vertex handles after device limit clamp',
+    'F07 reject zero-sized Vulkan buffer copy regions',
     'F07 include buffer cache staging allocation exception',
     'F07 validate native upload and download buffer cache staging handles',
 )
