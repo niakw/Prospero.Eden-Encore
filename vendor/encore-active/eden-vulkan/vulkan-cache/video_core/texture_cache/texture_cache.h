@@ -2319,6 +2319,13 @@ void TextureCache<P>::QueueAsyncUnswizzle(Image& image, ImageId image_id) {
 
 template <class P>
 void TextureCache<P>::TickAsyncDecode() {
+#ifdef PS5_NATIVE
+    // Usually no async decode is pending. Skip frame-local upload tracking
+    // and completion machinery entirely until the worker queues a context.
+    if (async_decodes.empty()) {
+        return;
+    }
+#endif
     bool has_uploads{};
 #ifdef PS5_NATIVE
     // TickFrame holds texture_cache.mutex: cap completed async uploads so
