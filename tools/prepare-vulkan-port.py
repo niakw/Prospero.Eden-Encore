@@ -4287,6 +4287,26 @@ apply_reviewed_delta("vulkan_rasterizer.cpp",
     "    const bool enable = pipeline != nullptr && pipeline->SupportsAlphaToOne() &&",
     "F07 avoid raw blit guest shader lookup for native AlphaToOne")
 
+# F07: avoid a per-revision INFO log on the high-frequency native HUD
+# async decode queue when detailed GPU profiling is disabled. Preserve desktop
+# diagnostics and allow explicit native diagnostics when requested.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "void TextureCache<P>::QueueAsyncDecode(Image& image, ImageId image_id) {\n"
+    "    UNIMPLEMENTED_IF(False(image.flags & ImageFlagBits::Converted));\n"
+    "    LOG_INFO(HW_GPU, \"Queuing async texture decode\");",
+    "void TextureCache<P>::QueueAsyncDecode(Image& image, ImageId image_id) {\n"
+    "    UNIMPLEMENTED_IF(False(image.flags & ImageFlagBits::Converted));\n"
+    "#ifdef PS5_NATIVE\n"
+    "    // Dynamic HUD revisions can enqueue many decodes per second. Quiet\n"
+    "    // releases need no per-texture INFO formatting or log queue traffic.\n"
+    "    if (::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)) {\n"
+    "        LOG_INFO(HW_GPU, \"Queuing async texture decode\");\n"
+    "    }\n"
+    "#else\n"
+    "    LOG_INFO(HW_GPU, \"Queuing async texture decode\");\n"
+    "#endif",
+    "F07 gate per-HUD native decode INFO log behind detailed profile")
+
 # F07 P0.4: texture reinterpret bpp conversion precedes scratch validation.
 # Keep native scalar coordinates wide until the signed offset/unsigned Vk
 # extent fit checks, and reject unknown zero-sized block ratios early.

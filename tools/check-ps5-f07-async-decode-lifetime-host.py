@@ -33,6 +33,12 @@ assert "F07 increment successful async decode quota only after GPU submission" i
 assert method.index("++completed_decodes;") > method.index("submitted_images[submitted_count++]")
 assert method.index("++retired_decodes;") < method.index("std::unique_lock lock{async_decode->mutex}")
 assert "F07 bounded ready decode completion under texture lock" in generator
+assert "F07 gate per-HUD native decode INFO log behind detailed profile" in generator
+queue=active.split("void TextureCache<P>::QueueAsyncDecode(Image& image, ImageId image_id) {",1)[1].split("\ntemplate <class P>",1)[0]
+assert queue.count('LOG_INFO(HW_GPU, "Queuing async texture decode");') == 2
+assert queue.index("::Eden::Performance::detailed_gpu_profile.load(std::memory_order_relaxed)") < queue.index('LOG_INFO(HW_GPU, "Queuing async texture decode");')
+assert queue.index("#ifdef PS5_NATIVE") < queue.index("#else") < queue.index("#endif")
+
 assert method.count("i = async_decodes.erase(i);") == 4
 assert "F07 async decoded staging allocation failure and short span recovery" in generator
 assert "F07 async decoded Vulkan submission failure recovery" in generator
@@ -392,6 +398,55 @@ with tempfile.TemporaryDirectory(prefix="eden-f07-async-lifetime-") as directory
         assert ran.returncode==0,(optimization,ran.stdout,ran.stderr[-5000:])
 print("F07_ASYNC_TICK_LIFETIME_HOST_PASS unlock_before_erase=1 revision_size_guard=1 stale_same_size=1 stale_remapped_same_size=1 pending=1 staging_oom=1 short_span=1 failed_gpu_submission=1 retry=1 burst_quota_4=1 retired_quota_16=1 stale_budget_elision=1 burst_11_in_3_ticks=1 failed_barrier_dirty_batch=1 barrier_retry=1 O0=1 O2=1")
 
+
+# Execute the source-selected native/desktop logging branch with explicit
+# quiet/detailed GPU profile controls. Reproduce actual LOG_INFO side effects.
+queue_gate=queue[queue.index("#ifdef PS5_NATIVE"):queue.index("#endif",queue.index("#ifdef PS5_NATIVE"))+len("#endif")]
+log_cpp=r"""
+#include <atomic>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+namespace Eden::Performance {
+inline std::atomic_bool detailed_gpu_profile{false};
+}
+unsigned info_lines = 0;
+#define HW_GPU 1
+#define LOG_INFO(channel, message) do { (void)(channel); (void)(message); ++info_lines; } while (0)
+static void Probe() {
+__LOG_GUARD__
+}
+int main(){
+    Probe();
+#ifdef PS5_NATIVE
+    assert(info_lines==0);
+#else
+    assert(info_lines==1);
+#endif
+    Eden::Performance::detailed_gpu_profile.store(true);
+    Probe();
+#ifdef PS5_NATIVE
+    assert(info_lines==1);
+#else
+    assert(info_lines==2);
+#endif
+}
+""".replace("__LOG_GUARD__",queue_gate)
+with tempfile.TemporaryDirectory(prefix="eden-f07-async-quiet-") as directory:
+    path=Path(directory)/"logging.cpp"
+    path.write_text(log_cpp)
+    for opt in ("-O0","-O2"):
+        for native in (False,True):
+            exe=Path(directory)/("logging"+opt[2:]+("ps5" if native else "desktop"))
+            cmd=[compiler,"-std=c++20",opt,"-Wall","-Wextra","-Werror",
+                 "-fsanitize=undefined","-fno-sanitize-recover=all",
+                 *(["-DPS5_NATIVE=1"] if native else []),str(path),"-o",str(exe)]
+            built=subprocess.run(cmd,capture_output=True,text=True,timeout=40)
+            assert built.returncode==0,(native,opt,built.stderr[-4000:])
+            ran=subprocess.run([str(exe)],capture_output=True,text=True,timeout=20)
+            assert ran.returncode==0,(native,opt,ran.stderr[-4000:])
+print("F07_NATIVE_QUIET_ASYNC_DECODE_LOG_PASS quiet=0 detailed=1 desktop_original=1 O0=1 O2=1")
 
 # Extract the real queued native conversion lambda and execute both branches.
 # Conversions can throw after QueueWork has succeeded; the worker must publish
