@@ -128,6 +128,11 @@ history_old = "    std::copy_n(channel_state->uniform_cache_hits.begin(),\n     
 history_new = "    // History shifts overlap their source ranges. Copy from the back so\n    // each previous interval is retained exactly once, even under -O2.\n    std::copy_backward(channel_state->uniform_cache_hits.begin(),\n                       channel_state->uniform_cache_hits.end() - 1,\n                       channel_state->uniform_cache_hits.end());\n    std::copy_backward(channel_state->uniform_cache_shots.begin(),\n                       channel_state->uniform_cache_shots.end() - 1,\n                       channel_state->uniform_cache_shots.end());"
 assert expected.count(history_old) == 1
 expected = expected.replace(history_old, history_new)
+# Do not underflow unsigned frame age during early-pressure buffer GC.
+gc_age_old = "    const u64 ticks_to_destroy = aggressive_gc ? 60 : 120;\n    int num_iterations = aggressive_gc ? 64 : 32;"
+gc_age_new = "    const u64 ticks_to_destroy = aggressive_gc ? 60 : 120;\n#ifdef PS5_NATIVE\n    // Before a buffer reaches the GC age, subtracting from this unsigned\n    // frame tick wraps to a huge LRU threshold. On startup/pressure bursts\n    // that wrongly evicts young buffers and can force guest downloads.\n    if (frame_tick < ticks_to_destroy) {\n        return;\n    }\n#endif\n    int num_iterations = aggressive_gc ? 64 : 32;"
+assert expected.count(gc_age_old) == 1
+expected = expected.replace(gc_age_old, gc_age_new)
 assert maintained == expected, "R437 maintained header differs from reviewed transforms"
 assert maintained.count('::Eden::BufferPages::Mark(buffer.CpuAddr(), size);') == 1
 assert 'buffer-pages/video_core/buffer_cache/buffer_cache.h' in cm

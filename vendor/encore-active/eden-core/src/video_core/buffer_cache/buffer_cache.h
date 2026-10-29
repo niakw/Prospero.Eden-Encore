@@ -58,6 +58,14 @@ template <class P>
 void BufferCache<P>::RunGarbageCollector() {
     const bool aggressive_gc = total_used_memory >= critical_memory;
     const u64 ticks_to_destroy = aggressive_gc ? 60 : 120;
+#ifdef PS5_NATIVE
+    // Before a buffer reaches the GC age, subtracting from this unsigned
+    // frame tick wraps to a huge LRU threshold. On startup/pressure bursts
+    // that wrongly evicts young buffers and can force guest downloads.
+    if (frame_tick < ticks_to_destroy) {
+        return;
+    }
+#endif
     int num_iterations = aggressive_gc ? 64 : 32;
     const auto clean_up = [this, &num_iterations](BufferId buffer_id) {
         if (num_iterations == 0) {
