@@ -45,5 +45,25 @@ for token in (
 ):
     assert token in output, (token, output)
 assert module.windows(["EDEN_FRAME_PRESSURE frame=10 jit_ms=1"]) == []
+# The PS5 quiet path emits only a frame ID, not measured GPU/cache/JIT
+# durations. Counter resets are also invalid intervals, not zero waits.
+for sentinel in ("detail=not_measured", "counters_reset=1"):
+    assert module.windows([
+        "EDEN_VULKAN_FRAME total=450 fps=30 worst_ms=34",
+        f"EDEN_FRAME_PRESSURE frame=450 {sentinel}",
+    ]) == [], sentinel
+# Valid measured zeroes must remain valid; requiring strictly positive
+# durations would hide genuinely idle windows.
+measured_zero = module.windows([
+    "EDEN_VULKAN_FRAME total=600 fps=30 worst_ms=34",
+    "EDEN_FRAME_PRESSURE frame=600 jit_ms=0 cache_wait_ms=0",
+])
+assert len(measured_zero) == 1
+assert measured_zero[0]["jit_ms"] == measured_zero[0]["cache_wait_ms"] == 0
+# Partially parsed diagnostics must not silently invent missing durations.
+assert module.windows([
+    "EDEN_VULKAN_FRAME total=750 fps=30 worst_ms=34",
+    "EDEN_FRAME_PRESSURE frame=750 jit_ms=0",
+]) == []
 assert module.report([]) == "NO_VALID_WINDOWS (requires matching frame totals)"
 print("PINNED_FC27_LONG_FRAME_CLASSIFIER_PASS")
