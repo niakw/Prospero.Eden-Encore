@@ -1986,6 +1986,38 @@ mask_write_before = "    if (channel_state->enabled_uniform_buffer_masks != mask
 mask_write_after = "    if (channel_state->enabled_uniform_buffer_masks != mask) {\n        channel_state->fast_bound_uniform_buffers.fill(0);\n        if constexpr (HAS_PERSISTENT_UNIFORM_BUFFER_BINDINGS) {\n            channel_state->dirty_uniform_buffers.fill(~u32{0});\n            channel_state->uniform_buffer_binding_sizes.fill({});\n        }\n        // A repeat pipeline already has the mask: avoid rewriting all stage\n        // entries on every draw while the buffer/texture cache locks are held.\n        channel_state->enabled_uniform_buffer_masks = mask;\n    }\n    // Equal enabled masks do not imply equal uniform sizes across pipelines.\n    channel_state->uniform_buffer_sizes = sizes;"
 assert r437_expected.count(mask_write_before) == 1
 r437_expected = r437_expected.replace(mask_write_before, mask_write_after)
+# Reproduce the five later F07 native-only buffer-cache deltas independently
+# from the pinned backport. Keep these strict anchors in sync with the R437
+# source-extracted witness; the complete maintained header is compared below.
+# Native buffer-cache memory budget sampling: mirror texture-cache policy
+# under low pressure, but never delay an above-watermark GC probe.
+budget_old = "    // If we can obtain the memory info, use it instead of the estimate.\n    if (runtime.CanReportMemoryUsage()) {\n        total_used_memory = runtime.GetDeviceMemoryUsage();\n    }\n    if (total_used_memory >= minimum_memory) {\n        RunGarbageCollector();\n    }"
+budget_new = "    // If we can obtain the memory info, use it instead of the estimate.\n    if (runtime.CanReportMemoryUsage()) {\n#ifdef PS5_NATIVE\n        // Memory-budget queries use the driver while the buffer cache mutex\n        // is held. Under low pressure, probe on alternating frames; near\n        // the GC watermark, preserve every-frame sampling and prompt reclaim.\n        const bool near_gc_watermark =\n            total_used_memory >= minimum_memory - minimum_memory / 3;\n        if (near_gc_watermark || (frame_tick & 1u) == 0) {\n            total_used_memory = runtime.GetDeviceMemoryUsage();\n        }\n#else\n        total_used_memory = runtime.GetDeviceMemoryUsage();\n#endif\n    }\n    if (total_used_memory >= minimum_memory) {\n        RunGarbageCollector();\n    }"
+assert r437_expected.count(budget_old) == 1
+r437_expected = r437_expected.replace(budget_old, budget_new)
+# Preserve overlapping rolling uniform-hit windows without forward-copy UB.
+history_old = "    std::copy_n(channel_state->uniform_cache_hits.begin(),\n                channel_state->uniform_cache_hits.size() - 1,\n                channel_state->uniform_cache_hits.begin() + 1);\n    std::copy_n(channel_state->uniform_cache_shots.begin(),\n                channel_state->uniform_cache_shots.size() - 1,\n                channel_state->uniform_cache_shots.begin() + 1);"
+history_new = "    // History shifts overlap their source ranges. Copy from the back so\n    // each previous interval is retained exactly once, even under -O2.\n    std::copy_backward(channel_state->uniform_cache_hits.begin(),\n                       channel_state->uniform_cache_hits.end() - 1,\n                       channel_state->uniform_cache_hits.end());\n    std::copy_backward(channel_state->uniform_cache_shots.begin(),\n                       channel_state->uniform_cache_shots.end() - 1,\n                       channel_state->uniform_cache_shots.end());"
+assert r437_expected.count(history_old) == 1
+r437_expected = r437_expected.replace(history_old, history_new)
+# Do not underflow unsigned frame age during early-pressure buffer GC.
+gc_age_old = "    const u64 ticks_to_destroy = aggressive_gc ? 60 : 120;\n    int num_iterations = aggressive_gc ? 64 : 32;"
+gc_age_new = "    const u64 ticks_to_destroy = aggressive_gc ? 60 : 120;\n#ifdef PS5_NATIVE\n    // Before a buffer reaches the GC age, subtracting from this unsigned\n    // frame tick wraps to a huge LRU threshold. On startup/pressure bursts\n    // that wrongly evicts young buffers and can force guest downloads.\n    if (frame_tick < ticks_to_destroy) {\n        return;\n    }\n#endif\n    int num_iterations = aggressive_gc ? 64 : 32;"
+assert r437_expected.count(gc_age_old) == 1
+r437_expected = r437_expected.replace(gc_age_old, gc_age_new)
+# A fresh driver memory snapshot can be smaller than the previous buffer's
+# rounded size. Unregistering it must never underflow the shared usage counter.
+unregister_budget_before = "    } else {\n        total_used_memory -= Common::AlignUp(size, 1024);\n        lru_cache.Free(buffer.getLRUID());\n    }"
+unregister_budget_after = "    } else {\n#ifdef PS5_NATIVE\n        // The driver budget snapshot is not an allocation ledger. A stale or\n        // smaller snapshot must not wrap unsigned usage to UINT64_MAX when\n        // removing a previously registered buffer (and trigger GC storms).\n        const u64 accounted_bytes = Common::AlignUp(size, 1024);\n        total_used_memory = total_used_memory >= accounted_bytes\n                                ? total_used_memory - accounted_bytes : 0;\n#else\n        total_used_memory -= Common::AlignUp(size, 1024);\n#endif\n        lru_cache.Free(buffer.getLRUID());\n    }"
+assert r437_expected.count(unregister_budget_before) == 1
+r437_expected = r437_expected.replace(unregister_budget_before, unregister_budget_after)
+# Channel-less homebrew/title teardown must still advance deferred GPU
+# staging and destruction on PS5; desktop's original early exit is unchanged.
+no_channel_old = "    // Homebrew console apps don't create or bind any channels, so this will be nullptr.\n    if (!channel_state) {\n        return;\n    }\n    runtime.TickFrame(slot_buffers);"
+no_channel_new = "    // Homebrew console apps don't create or bind any channels, so this will be nullptr.\n    if (!channel_state) {\n#ifdef PS5_NATIVE\n        // The final channel can disappear while native Vulkan buffers and\n        // deferred staging remain alive. Advance the GPU lifetime scan and\n        // retirement rings even without uniform-cache statistics.\n        runtime.TickFrame(slot_buffers);\n        ++frame_tick;\n        delayed_destruction_ring.Tick();\n        for (auto& buffer : async_buffers_death_ring) {\n            runtime.FreeDeferredStagingBuffer(buffer);\n        }\n        async_buffers_death_ring.clear();\n#endif\n        return;\n    }\n    runtime.TickFrame(slot_buffers);"
+assert r437_expected.count(no_channel_old) == 1
+r437_expected = r437_expected.replace(no_channel_old, no_channel_new)
+
 assert (active / r437_rel).read_text() == r437_expected, (
     "R437 maintained buffer cache differs from source reconstruction; "
     "check BufferPages registration, DMA copy bounds and DMA clear bounds"
