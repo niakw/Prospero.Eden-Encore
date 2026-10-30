@@ -3834,6 +3834,11 @@ void TextureCache<P>::SynchronizeAliases(ImageId image_id) {
     if (image.modification_tick == modification_tick) {
         return;
     }
+    // No alias graph means no scan/copy, regardless of the global tick.
+    // Avoid constructing the vector and sampling the cache lock phase.
+    if (image.aliased_images.empty()) {
+        return;
+    }
 #endif
     // Avoid constructing the inline alias vector on a common no-op HUD lookup.
     boost::container::small_vector<const AliasedImage*, 8> aliased_images;

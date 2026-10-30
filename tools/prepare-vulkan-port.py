@@ -5741,3 +5741,10 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "        if (!freshest_found ||\n            slot_images[freshest_id].modification_tick < image.modification_tick) {\n            freshest_id = map.image_id;\n            freshest_found = true;\n        }",
     "        if (!freshest_found ||\n            freshest_tick < image.modification_tick) {\n            freshest_id = map.image_id;\n            freshest_tick = image.modification_tick;\n            freshest_found = true;\n        }",
     "F07 retain newest present candidate tick within cache scan comparison")
+
+# F07 texture hot path: most standalone HUD images have no alias graph.
+# This is a pure early return before allocating the scan vector.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    if (image.modification_tick == modification_tick) {\n        return;\n    }\n#endif\n    // Avoid constructing the inline alias vector on a common no-op HUD lookup.",
+    "    if (image.modification_tick == modification_tick) {\n        return;\n    }\n    // No alias graph means no scan/copy, regardless of the global tick.\n    // Avoid constructing the vector and sampling the cache lock phase.\n    if (image.aliased_images.empty()) {\n        return;\n    }\n#endif\n    // Avoid constructing the inline alias vector on a common no-op HUD lookup.",
+    "F07 avoid alias scan setup for native images without aliases")
