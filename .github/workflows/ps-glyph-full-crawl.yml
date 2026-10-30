@@ -21,6 +21,8 @@ on:
   push:
     branches: [dev/ps5-sparse-jit]
     paths:
+      - 'vendor'
+      - '.gitmodules'
       - .github/workflows/ps-glyph-full-crawl.yml
   workflow_dispatch:
 
@@ -42,6 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          submodules: true
           persist-credentials: true
       - name: Test full-crawl checkpoint/retry logic without Internet
         run: python3 -B tools/check-ps-glyph-long-crawl.py
@@ -84,6 +87,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          submodules: true
           fetch-depth: 1
           persist-credentials: true
       - name: Fetch latest durable checkpoint
