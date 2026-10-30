@@ -84,6 +84,10 @@ private:
     Settings::ScalingFilter scaling_filter{};
     std::unique_ptr<WindowAdaptPass> window_adapt{};
     std::list<Layer> layers{};
+#ifdef PS5_NATIVE
+    // Constructor size for FSR/SGSR layer resources, not swapchain extent.
+    VkExtent2D layer_window_size{};
+#endif
 };
 
 } // namespace Vulkan

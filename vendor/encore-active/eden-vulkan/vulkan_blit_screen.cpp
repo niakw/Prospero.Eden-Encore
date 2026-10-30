@@ -143,12 +143,24 @@ void BlitScreen::DrawToFrame(const Device& device, RasterizerVulkan& rasterizer,
     // New HUD layers can be added without destroying old GPU resources or
     // draining the entire device. A changed descriptor/layout contract
     // still forces the existing idle + full rebuild below.
-    if (!resource_update_required && layers.size() < framebuffers.size()) {
+    // FSR/SGSR allocate output-sized resources inside each Layer. The screen
+    // rectangle can change while the swapchain extent and layer count stay
+    // constant; keeping those old resources would mix incompatible sizes.
+    const bool output_sensitive =
+        scaling_filter == Settings::ScalingFilter::Fsr ||
+        scaling_filter == Settings::ScalingFilter::Sgsr ||
+        scaling_filter == Settings::ScalingFilter::SgsrEdge;
+    const bool output_size_changed =
+        !layers.empty() && (layer_window_size.width != window_size.width ||
+                            layer_window_size.height != window_size.height);
+    const bool rebuild_layers =
+        resource_update_required || (output_sensitive && output_size_changed);
+    if (!rebuild_layers && layers.size() < framebuffers.size()) {
         for (size_t i = layers.size(); i < framebuffers.size(); ++i) {
             layers.emplace_back(device, memory_allocator, scheduler, device_memory, image_count,
                                 window_size, window_adapt->GetDescriptorSetLayout(), filters);
         }
-    } else if (resource_update_required || layers.size() != framebuffers.size()) {
+    } else if (rebuild_layers || layers.size() != framebuffers.size()) {
         // Removal destroys GPU-referenced descriptors/images. Reconfiguration
         // has already waited in the resource_update_required block above.
         if (!resource_update_required && !layers.empty()) {
@@ -160,6 +172,7 @@ void BlitScreen::DrawToFrame(const Device& device, RasterizerVulkan& rasterizer,
                                 window_size, window_adapt->GetDescriptorSetLayout(), filters);
         }
     }
+    layer_window_size = window_size;
 #else
     if (layers.size() != framebuffers.size()) {
         layers.clear();
