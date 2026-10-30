@@ -7,6 +7,8 @@ on:
   push:
     branches: [dev/ps5-sparse-jit]
     paths:
+      - 'vendor'
+      - '.gitmodules'
       - ".github/workflows/launcher-production-preview.yml"
       - "headless/prosperoeden/**"
       - "tools/launcher/**"
@@ -36,6 +38,8 @@ jobs:
     steps:
       - name: Checkout actual launcher source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
 
       - name: Validate only the universal case renderer contract
         run: |
