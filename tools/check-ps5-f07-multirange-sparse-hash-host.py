@@ -22,7 +22,11 @@ body=source[begin:source.index("\nvoid MultiRangeBufferCache::MarkGathered(",beg
 assert body.count(start)==body.count(stop)==1
 block=body[body.index(start):body.index(stop)]
 assert block.index("it->second.sparse_handle") < block.index("const u64 content = HashContent(sources);")
-assert block.count("const u64 content = HashContent(sources);")==2
+assert block.count("const u64 content = HashContent(sources);")==1
+assert "const u64 content = same_geometry ? HashContent(sources) : 0;" in block
+assert "entry.content = HashContent(sources);" in body
+assert body.index("if (!entry.sparse_handle) {") < body.index("entry.content = HashContent(sources);")
+assert "F07 hash native multi-range content only for gathered fallback lookup" in gen and "F07 hash native multi-range content only for gathered fallback gather" in gen
 cpp=r"""
 #include <cassert>
 #include <cstdint>
@@ -94,7 +98,12 @@ int main() {
     MultiRangeBufferCache changed;
     changed.entries.emplace(42, Entry{13,8,11,Buffer{88}});
     auto c=changed.Probe(42,s,8);
-    assert(c.handle==5 && changed.content_calls==1);
+    assert(c.handle==5);
+#ifdef PS5_NATIVE
+    assert(changed.content_calls==0); // no hash until sparse creation/fallback
+#else
+    assert(changed.content_calls==1);
+#endif
 }
 """.replace("__SOURCE__",block)
 # source code keeps 'content' in scope after the guarded native early return.
