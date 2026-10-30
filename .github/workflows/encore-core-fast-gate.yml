@@ -236,6 +236,11 @@ on:
       - 'headless/backports/**'
       - 'vendor/encore-active/eden-backports/manifest.json'
       - '.github/workflows/encore-core-fast-gate.yml'
+  pull_request:
+    paths:
+      - 'vendor'
+      - '.gitmodules'
+      - '.github/workflows/encore-core-fast-gate.yml'
   workflow_dispatch:
 
 # Least privilege for the host-only gate (CodeQL workflow permissions #57).
