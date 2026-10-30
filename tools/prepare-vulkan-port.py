@@ -5763,3 +5763,11 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "            if (!blacklist && !has_deleted_images) {\n                auto& cached = view_memo[view.index & 15U];",
     "            if (view_memo && !has_deleted_images) {\n                auto& cached = (*view_memo)[view.index & 15U];",
     "F07 initialize native TIC memo only for multi-view non-blacklist draws 1")
+
+# F07 V05/C01: a writable multi-range cannot use the gathered fallback.
+# When the device has no sparse-binding capability, bypass the doomed GPU
+# allocation and its cache/retirement work. Read-only and desktop paths stay.
+apply_reviewed_delta("vk_buffer_cache_cost.cpp",
+    "    if (multi_range_sources.empty() || multi_range_total == 0) {\n        return false;\n    }\n    const MultiRangeRef ref = multi_range_buffers.Get(device, scheduler, memory_allocator, key,",
+    "    if (multi_range_sources.empty() || multi_range_total == 0) {\n        return false;\n    }\n#ifdef PS5_NATIVE\n    // A gathered buffer cannot be bound for GPU writes. If sparse binding\n    // is unavailable globally, don't construct and cache a doomed Vulkan\n    // fallback allocation just to reject it below while holding cache locks.\n    if (is_written && !multi_range_buffers.use_sparse) {\n        return false;\n    }\n#endif\n    const MultiRangeRef ref = multi_range_buffers.Get(device, scheduler, memory_allocator, key,",
+    "F07 reject unsupported native writable multirange before fallback allocation")
