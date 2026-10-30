@@ -37,8 +37,6 @@ on:
       - 'fixtures/**'
       - 'vendor/encore-active/**'
   workflow_dispatch:
-  schedule:
-    - cron: '37 4 * * 2'
 permissions:
   actions: read
   contents: read
