@@ -3,6 +3,8 @@ on:
   push:
     branches: [dev/ps5-sparse-jit]
     paths:
+      - 'vendor'
+      - '.gitmodules'
       - .github/workflows/check-ps-glyph-reconstruct.yml
       - tools/ps-glyph-scene-positions.py
       - tools/check-ps-glyph-scene-positions.py
@@ -55,6 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          submodules: true
           persist-credentials: false
       - name: Install host fixture dependencies (non-native)
         run: |

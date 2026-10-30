@@ -28,6 +28,15 @@ def main():
         rows, module["WORKFLOW"].read_text(), module["CATALOG"].read_text())
     tracked = set(subprocess.check_output(
         ["git", "ls-files", "-z"], cwd=ROOT).decode().split("\0")) - {""}
+    # The parent index records a submodule as the `vendor` gitlink, not
+    # each source file. Expand the pinned submodule index so the inventory
+    # retains the original vendor/encore-active ownership and file hashes.
+    if "vendor" in tracked:
+        vendor_paths = subprocess.check_output(
+            ["git", "-C", "vendor", "ls-files", "-z"], cwd=ROOT
+        ).decode().split("\0")
+        tracked.remove("vendor")  # gitlink is a directory, not a hashable file
+        tracked.update("vendor/" + path for path in vendor_paths if path)
     local = set(subprocess.check_output(
         ["git", "ls-files", "--others", "--exclude-standard", "-z"],
         cwd=ROOT).decode().split("\0")) - {""}

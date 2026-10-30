@@ -1291,13 +1291,22 @@ import subprocess
 def check_canonical_git_object(source, expected, label):
     """Prove stored Git object identity and working-tree consistency."""
     relative = source.relative_to(root).as_posix()
+    # Git stores vendor sources under the submodule's own HEAD once the
+    # parent tracks vendor as a 160000 gitlink. Keep the same canonical
+    # blob assertion in both layouts rather than weakening the proof.
+    vendor_entry = subprocess.run(
+        ["git", "ls-tree", "HEAD", "--", "vendor"], cwd=root,
+        check=True, capture_output=True, text=True).stdout.strip()
+    is_gitlink = vendor_entry.startswith("160000 commit ") and vendor_entry.endswith("\tvendor")
+    repository = root / "vendor" if is_gitlink and relative.startswith("vendor/") else root
+    git_path = relative.removeprefix("vendor/") if repository != root else relative
     actual = subprocess.run(
-        ["git", "rev-parse", f"HEAD:{relative}"], cwd=root,
+        ["git", "rev-parse", f"HEAD:{git_path}"], cwd=repository,
         check=True, capture_output=True, text=True).stdout.strip()
     assert actual == expected, (label, "Git source blob drift", relative, actual)
     # git diff uses tracked text filters, so this does not mistake a
     # checkout EOL conversion for an intentional source modification.
-    result = subprocess.run(["git", "diff", "--quiet", "HEAD", "--", relative], cwd=root)
+    result = subprocess.run(["git", "diff", "--quiet", "HEAD", "--", git_path], cwd=repository)
     assert result.returncode == 0, (label, "dirty canonical source", relative)
 
 
