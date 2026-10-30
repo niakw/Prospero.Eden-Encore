@@ -1,0 +1,36 @@
+name: Verify compact Encore clone and pinned vendor gitlink
+on:
+  push:
+    branches: [dev/ps5-sparse-jit]
+    paths: ['.github/workflows/verify-compact-history.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-clone:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Fetch all branch and tag history without pulling vendor sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Prove branch and tag pack size and exact vendor link
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fsck --connectivity-only --no-reflogs
+          size_kib="$(du -sk .git | awk '{print $1}')"
+          git count-objects -vH
+          echo "ENCORE_COMPACT_HISTORY_CLONE_KIB=${size_kib}"
+          test "${size_kib}" -lt 1048576
+          test "$(git ls-tree HEAD vendor)" = "160000 commit 8c354e6714558c3c88f7ca98d23551168cb680ea$(printf '\t')vendor"
+          grep -Fq 'https://github.com/niakw/Prospero.Eden-Encore-vendor.git' .gitmodules
+          {
+            echo '## Compact full-branches-and-tags clone'
+            echo "Git .git storage: ${size_kib} KiB (< 1 GiB)"
+            echo 'The current vendor/ path is still a commit-pinned submodule.'
+            echo 'This test does not claim GitHub has garbage-collected historical pull request refs.'
+          } >> "${GITHUB_STEP_SUMMARY}"
