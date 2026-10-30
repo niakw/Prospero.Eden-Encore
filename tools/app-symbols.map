@@ -1,2 +1,0 @@
-/* Native executable: no application exports (same policy as ps5-opengl). */
-{ local: *; };

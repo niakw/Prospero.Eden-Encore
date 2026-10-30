@@ -1,6 +1,0 @@
-* text=auto eol=lf
-
-# Unified diff files require single-space context lines; do not flag those as trailing whitespace.
-headless/backports/*.patch -whitespace
-# Pinned third-party CPM sources: preserve byte-for-byte original line endings.
-vendor/sources/eden-cpm/** -text
