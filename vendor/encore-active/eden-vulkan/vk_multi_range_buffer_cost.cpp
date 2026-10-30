@@ -357,6 +357,13 @@ MultiRangeRef MultiRangeBufferCache::Get(const Device& device, Scheduler& schedu
         entry.gathered = memory_allocator.CreateBuffer(gather_ci, MemoryUsage::DeviceLocal);
         entry.dirty = true;
     }
+#ifdef PS5_NATIVE
+    // A failed gathered fallback must not query a device address for a null
+    // VkBuffer or cache an invalid entry. Let the caller take its safe path.
+    if (!entry.sparse_handle && !entry.gathered) {
+        return MultiRangeRef{};
+    }
+#endif
     if (device.IsBufferDeviceAddressSupported()) {
         VkBuffer address_handle = *entry.sparse_handle;
         if (!entry.sparse_handle) {
