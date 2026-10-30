@@ -5748,3 +5748,18 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    if (image.modification_tick == modification_tick) {\n        return;\n    }\n#endif\n    // Avoid constructing the inline alias vector on a common no-op HUD lookup.",
     "    if (image.modification_tick == modification_tick) {\n        return;\n    }\n    // No alias graph means no scan/copy, regardless of the global tick.\n    // Avoid constructing the vector and sampling the cache lock phase.\n    if (image.aliased_images.empty()) {\n        return;\n    }\n#endif\n    // Avoid constructing the inline alias vector on a common no-op HUD lookup.",
     "F07 avoid alias scan setup for native images without aliases")
+
+# F07 C02: the per-draw TIC memo has no possible hit for one sampled
+# view or a blacklist pass. Preserve its full cache for multi-view draws.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        std::array<ViewMemo, 16> view_memo{};",
+    "        // A single view or blacklist pass never gets a memo hit. Avoid\n        // zeroing all 16 memo slots while holding the texture-cache lock.\n        std::optional<std::array<ViewMemo, 16>> view_memo;\n        if (!blacklist && views.size() > 1) {\n            view_memo.emplace();\n        }",
+    "F07 initialize native TIC memo only for multi-view non-blacklist draws storage")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "            if (!blacklist && !has_deleted_images) {\n                const auto& cached = view_memo[view.index & 15U];",
+    "            if (view_memo && !has_deleted_images) {\n                const auto& cached = (*view_memo)[view.index & 15U];",
+    "F07 initialize native TIC memo only for multi-view non-blacklist draws 0")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "            if (!blacklist && !has_deleted_images) {\n                auto& cached = view_memo[view.index & 15U];",
+    "            if (view_memo && !has_deleted_images) {\n                auto& cached = (*view_memo)[view.index & 15U];",
+    "F07 initialize native TIC memo only for multi-view non-blacklist draws 1")
