@@ -5793,3 +5793,14 @@ apply_reviewed_delta("vk_multi_range_buffer_cost.cpp",
     "        entry.gathered = memory_allocator.CreateBuffer(gather_ci, MemoryUsage::DeviceLocal);\n        entry.dirty = true;\n    }\n    if (device.IsBufferDeviceAddressSupported()) {",
     "        entry.gathered = memory_allocator.CreateBuffer(gather_ci, MemoryUsage::DeviceLocal);\n        entry.dirty = true;\n    }\n#ifdef PS5_NATIVE\n    // A failed gathered fallback must not query a device address for a null\n    // VkBuffer or cache an invalid entry. Let the caller take its safe path.\n    if (!entry.sparse_handle && !entry.gathered) {\n        return MultiRangeRef{};\n    }\n#endif\n    if (device.IsBufferDeviceAddressSupported()) {",
     "F07 reject null native multirange gather before device-address query")
+
+# F07 C01: new sparse bindings do not copy bytes, hence need no write-tick
+# hash. Recompute content for genuine gathered hits or after sparse fallback.
+apply_reviewed_delta("vk_multi_range_buffer_cost.cpp",
+    "    const u64 content = HashContent(sources);\n#else\n    const u64 content = HashContent(sources);",
+    "    // A new sparse allocation references guest backing directly; its content\n    // hash has no consumer. Compute the hash on cache hits that may gather.\n    const bool same_geometry = it != entries.end() &&\n        it->second.geometry == geometry && it->second.size == total;\n    const u64 content = same_geometry ? HashContent(sources) : 0;\n#else\n    const u64 content = HashContent(sources);",
+    "F07 hash native multi-range content only for gathered fallback lookup")
+apply_reviewed_delta("vk_multi_range_buffer_cost.cpp",
+    "    if (!entry.sparse_handle) {\n        VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT |",
+    "    if (!entry.sparse_handle) {\n#ifdef PS5_NATIVE\n        // Sparse allocation was unavailable: capture write ticks for the\n        // newly created gathered buffer before it enters the reuse cache.\n        entry.content = HashContent(sources);\n#endif\n        VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT |",
+    "F07 hash native multi-range content only for gathered fallback gather")

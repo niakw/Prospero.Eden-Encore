@@ -294,7 +294,11 @@ MultiRangeRef MultiRangeBufferCache::Get(const Device& device, Scheduler& schedu
             .needs_gather = false,
         };
     }
-    const u64 content = HashContent(sources);
+    // A new sparse allocation references guest backing directly; its content
+    // hash has no consumer. Compute the hash on cache hits that may gather.
+    const bool same_geometry = it != entries.end() &&
+        it->second.geometry == geometry && it->second.size == total;
+    const u64 content = same_geometry ? HashContent(sources) : 0;
 #else
     const u64 content = HashContent(sources);
     const auto it = entries.find(key);
@@ -338,6 +342,11 @@ MultiRangeRef MultiRangeBufferCache::Get(const Device& device, Scheduler& schedu
         entry.sparse_handle = CreateSparse(device, scheduler, sources, total);
     }
     if (!entry.sparse_handle) {
+#ifdef PS5_NATIVE
+        // Sparse allocation was unavailable: capture write ticks for the
+        // newly created gathered buffer before it enters the reuse cache.
+        entry.content = HashContent(sources);
+#endif
         VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
                                    VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
