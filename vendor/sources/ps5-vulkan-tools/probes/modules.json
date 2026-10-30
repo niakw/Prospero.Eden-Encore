@@ -1,7 +1,0 @@
-{
-  "modules": [
-    "libSceAgc.sprx",
-    "libSceAgcDriver.sprx",
-    "libSceVideoOut.sprx"
-  ]
-}

@@ -1,5 +1,0 @@
-hold 1
-capture
-m2-solid
-r61-one-layer-array
-exit

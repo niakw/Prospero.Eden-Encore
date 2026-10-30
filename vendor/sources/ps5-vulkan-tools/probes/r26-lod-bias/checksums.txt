@@ -1,2 +1,0 @@
-vertex 64676a4cfbb8e4f0
-pixel 34f24622c70b1e1e

@@ -1,3 +1,0 @@
-#ifndef VK_PHYSICAL_DEVICE_H
-#define VK_PHYSICAL_DEVICE_H
-#endif

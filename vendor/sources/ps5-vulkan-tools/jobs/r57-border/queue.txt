@@ -1,6 +1,0 @@
-hold 1
-capture
-m2-solid
-r57-border
-c7-mip-nearest
-exit

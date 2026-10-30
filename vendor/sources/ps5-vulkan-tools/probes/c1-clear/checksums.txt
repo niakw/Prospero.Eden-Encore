@@ -1,2 +1,0 @@
-vertex ddba9119af901329
-pixel 51f1827867be1343

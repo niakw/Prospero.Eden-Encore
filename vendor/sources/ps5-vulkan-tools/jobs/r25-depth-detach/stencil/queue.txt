@@ -1,5 +1,0 @@
-hold 1
-capture
-v0-stencil
-v0-depth-bias
-exit

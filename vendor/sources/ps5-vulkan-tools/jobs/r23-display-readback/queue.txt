@@ -1,6 +1,0 @@
-hold 1
-capture
-m2-solid
-c1-triangle
-c1-readback
-exit
