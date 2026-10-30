@@ -5730,3 +5730,14 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    const auto consider_candidate = [&](ImageId id, const ImageBase& image) {\n        if (!image_id ||\n            slot_images[image_id].modification_tick < image.modification_tick) {\n            image_id = id;\n        }\n    };",
     "    // Keep the winning timestamp in a register. Reloading the previous\n    // slot image for every candidate adds a cache lookup under texture lock.\n    std::uint64_t newest_candidate_tick = 0;\n    const auto consider_candidate = [&](ImageId id, const ImageBase& image) {\n        if (!image_id || newest_candidate_tick < image.modification_tick) {\n            image_id = id;\n            newest_candidate_tick = image.modification_tick;\n        }\n    };",
     "F07 reuse newest DMA candidate tick without slot vector relookup")
+
+# F07 C04: sample candidate modification_tick once; previous winner's tick
+# stays stable while the texture cache mutex owns this framebuffer selection.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    ImageId freshest_id{};\n    bool freshest_found = false;",
+    "    ImageId freshest_id{};\n    bool freshest_found = false;\n    std::uint64_t freshest_tick{};",
+    "F07 retain newest present candidate tick within cache scan declaration")
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "        if (!freshest_found ||\n            slot_images[freshest_id].modification_tick < image.modification_tick) {\n            freshest_id = map.image_id;\n            freshest_found = true;\n        }",
+    "        if (!freshest_found ||\n            freshest_tick < image.modification_tick) {\n            freshest_id = map.image_id;\n            freshest_tick = image.modification_tick;\n            freshest_found = true;\n        }",
+    "F07 retain newest present candidate tick within cache scan comparison")
