@@ -7,6 +7,8 @@ on:
     # other tools without special message suffixes. Docs-only/UI-only pushes
     # should not interrupt a running core validation.
     paths:
+      - 'vendor'
+      - '.gitmodules'
       - 'vendor/encore-active/**'
       - 'vendor/sources/eden/**'
       - 'headless/**'
@@ -58,6 +60,8 @@ jobs:
     steps:
       - name: Checkout source (GitHub only)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
 
       - name: Install host-only JSON, Boost.Container and clang sanitizer fixtures
         run: |

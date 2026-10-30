@@ -6,6 +6,8 @@ on:
   push:
     branches: [dev/ps5-sparse-jit]
     paths:
+      - 'vendor'
+      - '.gitmodules'
       - .github/workflows/discover-switch1-glyph-mods.yml
       - tools/ps-glyph-switch1-eligibility.py
       - tools/check-ps-glyph-switch1-eligibility.py
@@ -60,6 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          submodules: true
           persist-credentials: true
       - name: Validate sources, parsers, state and billing boundaries
         run: |

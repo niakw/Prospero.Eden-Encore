@@ -5,6 +5,8 @@ on:
     branches:
       - dev/ps5-sparse-jit
     paths:
+      - 'vendor'
+      - '.gitmodules'
       - 'vendor/encore-active/eden-core/src/dynarmic/**'
       - 'vendor/encore-active/eden-core/src/common/sparse_large_vector.h'
       - 'src/host_memory.cpp'
@@ -254,7 +256,7 @@ jobs:
       - name: Fetch source
         uses: actions/checkout@v7
         with:
-          submodules: false
+          submodules: true
           persist-credentials: false
       - name: Install host-only C++ fixture headers
         run: |
