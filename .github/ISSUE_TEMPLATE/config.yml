@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Eden Encore has moved — open issues in the independent repository
-    url: https://github.com/niakw/ProsperoEden-Encore/issues
-    about: This fork is a historical archive. Please submit all reports and requests in the active standalone repository.
-  - name: Security vulnerability — new repository disclosure policy
+  - name: Eden Encore — active issues and feature requests
+    url: https://github.com/niakw/ProsperoEden-Encore/issues/new/choose
+    about: Development moved to the independent repository. Open all new issues there.
+  - name: Report a security vulnerability
     url: https://github.com/niakw/ProsperoEden-Encore/blob/main/SECURITY.md
-    about: Please follow private disclosure instructions instead of filing a public issue.
+    about: Follow the active project's private security disclosure instructions.
