@@ -34,6 +34,11 @@ on:
       # The preflight audits neutral step descriptions across ALL workflows,
       # including this authentic-readme screenshot producer.
       - '.github/workflows/launcher-readme-home-screenshot.yml'
+  pull_request:
+    paths:
+      - 'vendor'
+      - '.gitmodules'
+      - '.github/workflows/encore-core-preflight.yml'
   workflow_dispatch:
 
 permissions:
