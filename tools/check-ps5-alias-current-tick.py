@@ -40,6 +40,8 @@ with tempfile.TemporaryDirectory(prefix="eden-r321-alias-tick-") as tmp:
     native_body=native[native.index("void TextureCache<P>::SynchronizeAliases("):]
     native_body=native_body[:native_body.index("\ntemplate <class P>")]
     assert native_body.index("if (image.modification_tick == modification_tick)") < native_body.index("boost::container::small_vector<const AliasedImage*, 8> aliased_images;")
+    assert "if (image.aliased_images.empty())" in native_body
+    assert native_body.index("if (image.aliased_images.empty())") < native_body.index("boost::container::small_vector<const AliasedImage*, 8> aliased_images;")
 
     sort_guard="#ifdef PS5_NATIVE\n    // Most alias refreshes have only one newer source."
     assert native_body.count(sort_guard)==1
