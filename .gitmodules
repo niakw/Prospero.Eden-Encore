@@ -1,0 +1,4 @@
+[submodule "ProsperoEden-Encore"]
+	path = ProsperoEden-Encore
+	url = https://github.com/niakw/ProsperoEden-Encore.git
+	branch = main
