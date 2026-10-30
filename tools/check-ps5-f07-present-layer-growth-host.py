@@ -17,8 +17,9 @@ full = (ROOT / ".github/workflows/encore-core-preflight.yml").read_text()
 command = "python3 -B tools/check-ps5-f07-present-layer-growth-host.py"
 assert command in fast and command in full
 assert "std::list<Layer> layers{};" in header
+assert "VkExtent2D layer_window_size{};" in header
 assert "F07 C04 append-only presentation layers without device idle" in generator
-assert blit.count("    if (!resource_update_required && layers.size() < framebuffers.size()) {") == 1
+assert blit.count("    if (!rebuild_layers && layers.size() < framebuffers.size()) {") == 1
 assert blit.index("    if (resource_update_required) {\n        WaitIdle(device);") < blit.index(
     "    if (!resource_update_required && layers.size() < framebuffers.size()) {"
 )
@@ -27,7 +28,9 @@ start = blit.rfind("#ifdef PS5_NATIVE", 0, start)
 end = blit.index("\n    window_adapt->Draw(", start)
 block = blit[start:end]
 assert block.count("layers.emplace_back(device, memory_allocator, scheduler, device_memory, image_count,") == 3
-assert "if (!resource_update_required && layers.size() < framebuffers.size())" in block
+assert "if (!rebuild_layers && layers.size() < framebuffers.size())" in block
+assert "output_sensitive && output_size_changed" in block
+assert "layer_window_size = window_size;" in block
 assert "if (!layers.empty())" not in block
 assert "if (!resource_update_required && !layers.empty())" in block
 assert block.count("WaitIdle(device);") == 1
@@ -44,15 +47,18 @@ struct Device {};
 struct Allocator {};
 struct Scheduler {};
 struct Memory {};
-struct WindowSize {};
+struct WindowSize { unsigned width{}, height{}; };
+using VkExtent2D = WindowSize;
+namespace Settings { enum class ScalingFilter { Bilinear, Fsr, Sgsr, SgsrEdge }; }
 struct Filters {};
 struct Adapt { int GetDescriptorSetLayout() const {return 7;} };
 struct Layer {
     static inline unsigned made=0;
     static inline unsigned destroyed=0;
     unsigned generation{};
+    WindowSize output{};
     Layer(const Device&,Allocator&,Scheduler&,Memory&,std::size_t,
-          WindowSize,int,Filters&) : generation(++made) {}
+          WindowSize size,int,Filters&) : generation(++made), output(size) {}
     Layer(const Layer&)=delete;
     Layer& operator=(const Layer&)=delete;
     ~Layer() {++destroyed;}
@@ -66,12 +72,15 @@ struct Screen {
     Filters filters{};
     Adapt adapt{};
     Adapt* window_adapt{&adapt};
+    Settings::ScalingFilter scaling_filter{Settings::ScalingFilter::Bilinear};
     std::list<Layer> layers{};
+    VkExtent2D layer_window_size{};
     unsigned idle_calls{};
     void WaitIdle(const Device&) {++idle_calls;}
-    void Apply(std::size_t n, [[maybe_unused]] bool resource_update_required) {
+    void Apply(std::size_t n, [[maybe_unused]] bool resource_update_required,
+               unsigned width=1280, unsigned height=720) {
         std::vector<int> framebuffers(n);
-        const WindowSize window_size{};
+        const WindowSize window_size{width,height};
 __ACTUAL_DECISION__
     }
 };
@@ -109,6 +118,34 @@ int main() {
     assert(b.idle_calls==1 && Layer::made==5 && Layer::destroyed==4);
 #else
     assert(b.idle_calls==0 && Layer::made==5 && Layer::destroyed==4);
+#endif
+#ifdef PS5_NATIVE
+    // FSR and both SGSR modes own output-sized images created by Layer.
+    // Same-size growth keeps identities; a changed screen rectangle must
+    // drain and rebuild even if the swapchain extent and layer count match.
+    for (const auto filter : {Settings::ScalingFilter::Fsr,
+                              Settings::ScalingFilter::Sgsr,
+                              Settings::ScalingFilter::SgsrEdge}) {
+        Screen f;
+        f.scaling_filter=filter;
+        f.Apply(1,false,1280,720);
+        const Layer* const first=&f.layers.front();
+        f.Apply(3,false,1280,720);
+        assert(f.idle_calls==0 && &f.layers.front()==first);
+        f.Apply(3,false,1920,1080);
+        assert(f.idle_calls==1 && f.layers.size()==3);
+        for (const Layer& layer : f.layers)
+            assert(layer.output.width==1920 && layer.output.height==1080);
+        const Layer* const refreshed=&f.layers.front();
+        f.Apply(4,false,1920,1080);
+        assert(f.idle_calls==1 && &f.layers.front()==refreshed);
+    }
+    // A bilinear layer has no output-sized constructor resources.
+    Screen plain;
+    plain.Apply(1,false,1280,720);
+    const Layer* const plain_first=&plain.layers.front();
+    plain.Apply(3,false,1920,1080);
+    assert(plain.idle_calls==0 && &plain.layers.front()==plain_first);
 #endif
     std::puts("F07_C04_LAYER_GROWTH_PASS");
 }
