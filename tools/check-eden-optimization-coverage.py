@@ -16,6 +16,15 @@ P=ROOT/"docs/EDEN_OPTIMIZATION_COVERAGE_2026-10-20.json"
 STATE=json.loads(P.read_text())
 assert STATE["schema_version"]==1
 tracked=set(subprocess.check_output(["git","ls-files","-z"],cwd=ROOT).decode().split("\0"))-{""}
+# When vendor is moved to an immutable gitlink, the parent index lists only
+# "vendor". Preserve the original vendor/… owner namespace by merging the
+# pinned submodule index; never infer source ownership from arbitrary disk files.
+if "vendor" in tracked:
+    vendor_paths = subprocess.check_output(
+        ["git", "-C", "vendor", "ls-files", "-z"], cwd=ROOT
+    ).decode().split("\0")
+    tracked.update("vendor/" + p for p in vendor_paths if p)
+
 suffixes={".c",".cpp",".cxx",".cc",".h",".hpp",".inc"}
 owners={p for p in tracked
         if p.startswith(("headless/","src/","vendor/encore-active/"))
