@@ -25,7 +25,7 @@ body = SOURCE[begin:end]
 guard = "#ifdef PS5_NATIVE\n    // A failed gathered fallback"
 query = "    if (device.IsBufferDeviceAddressSupported()) {"
 finish = "    MultiRangeRef ref{"
-assert body.count(guard) == body.count(finish) == 1
+assert body.count(guard) == 1 and body.count(finish) == 2  # cache-hit and new-entry refs
 assert body.count(query) == 2  # usage flags before allocation, then BDA
 first = body.index(guard)
 last = body.index(finish, first)
