@@ -3224,8 +3224,13 @@ std::pair<u32, u32> TextureCache<P>::PrepareDmaImage(ImageId dst_id, GPUVAddr ba
     const auto& image = slot_images[dst_id];
     const auto base = image.TryFindBase(base_addr);
     PrepareImage(dst_id, mark_as_modified, false);
+#ifndef PS5_NATIVE
     const auto& new_image = slot_images[dst_id];
     lru_cache.Touch(new_image.lru_index, frame_tick);
+#else
+    // PrepareImage already touched the same LRU entry at the end; a second
+    // immediate touch adds list work under the texture mutex for DMA uploads.
+#endif
     return std::make_pair(base->level, base->layer);
 }
 
