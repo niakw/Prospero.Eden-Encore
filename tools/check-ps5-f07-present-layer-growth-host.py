@@ -21,7 +21,7 @@ assert "VkExtent2D layer_window_size{};" in header
 assert "F07 C04 append-only presentation layers without device idle" in generator
 assert blit.count("    if (!rebuild_layers && layers.size() < framebuffers.size()) {") == 1
 assert blit.index("    if (resource_update_required) {\n        WaitIdle(device);") < blit.index(
-    "    if (!resource_update_required && layers.size() < framebuffers.size()) {"
+    "    if (!rebuild_layers && layers.size() < framebuffers.size()) {"
 )
 start = blit.index("    // Presentation layers live in std::list:")
 start = blit.rfind("#ifdef PS5_NATIVE", 0, start)
