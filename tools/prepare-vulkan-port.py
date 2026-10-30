@@ -5771,3 +5771,11 @@ apply_reviewed_delta("vk_buffer_cache_cost.cpp",
     "    if (multi_range_sources.empty() || multi_range_total == 0) {\n        return false;\n    }\n    const MultiRangeRef ref = multi_range_buffers.Get(device, scheduler, memory_allocator, key,",
     "    if (multi_range_sources.empty() || multi_range_total == 0) {\n        return false;\n    }\n#ifdef PS5_NATIVE\n    // A gathered buffer cannot be bound for GPU writes. If sparse binding\n    // is unavailable globally, don't construct and cache a doomed Vulkan\n    // fallback allocation just to reject it below while holding cache locks.\n    if (is_written && !multi_range_buffers.use_sparse) {\n        return false;\n    }\n#endif\n    const MultiRangeRef ref = multi_range_buffers.Get(device, scheduler, memory_allocator, key,",
     "F07 reject unsupported native writable multirange before fallback allocation")
+
+# F07 C01/V05: during a multi-range deferred-release scan, sample GPU
+# completion once. All entries have monotonically increasing fence ticks,
+# so one conservative snapshot can only delay, never prematurely free them.
+apply_reviewed_delta("vk_multi_range_buffer_cost.cpp",
+    "void MultiRangeBufferCache::DrainRetired(Scheduler& scheduler) {\n    size_t index = 0;\n    while (index < retired.size()) {\n        if (scheduler.IsFree(retired[index].tick)) {",
+    "void MultiRangeBufferCache::DrainRetired(Scheduler& scheduler) {\n#ifdef PS5_NATIVE\n    // A single conservative GPU completion snapshot avoids a driver query\n    // for every retired allocation while the guest cache owner is active.\n    if (retired.empty()) {\n        return;\n    }\n    const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();\n#endif\n    size_t index = 0;\n    while (index < retired.size()) {\n#ifdef PS5_NATIVE\n        if (retired[index].tick <= completed_tick) {\n#else\n        if (scheduler.IsFree(retired[index].tick)) {\n#endif",
+    "F07 snapshot native multi-range retirement GPU completion once per pass")
