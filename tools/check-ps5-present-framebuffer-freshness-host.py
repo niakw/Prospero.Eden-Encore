@@ -33,6 +33,7 @@ assert method.count(selection_anchor) == 1
 selection = method[method.index(selection_anchor)+1:method.rindex("\n}")]
 assert "ImageId freshest_id{};" in declaration
 assert "bool freshest_found = false;" in declaration
+assert "std::uint64_t freshest_tick{};" in declaration
 assert "#else\n    boost::container::small_vector<ImageId, 4> valid_image_ids;" in declaration
 assert loop.count("if (True(image.flags & ImageFlagBits::IsDecoding)) {") == 1
 assert loop.count("ImageFlagBits::Remapped | ImageFlagBits::CpuModified") == 1
@@ -40,7 +41,9 @@ assert ("if (True(image.flags & (ImageFlagBits::Remapped | ImageFlagBits::CpuMod
         "            return {};") in loop
 assert "return {};" in loop
 assert loop.count("if (!freshest_found ||") == 1
-assert loop.count("slot_images[freshest_id].modification_tick < image.modification_tick") == 1
+assert loop.count("freshest_tick < image.modification_tick") == 1
+assert "slot_images[freshest_id].modification_tick" not in loop
+assert "freshest_tick = image.modification_tick;" in loop
 assert loop.index("if (image.cpu_addr != cpu_addr)") < loop.index("ImageFlagBits::IsDecoding")
 assert loop.index("ImageFlagBits::IsDecoding") < loop.index("if (image.image_view_ids.empty())")
 assert "valid_image_ids.push_back(map.image_id);" in loop

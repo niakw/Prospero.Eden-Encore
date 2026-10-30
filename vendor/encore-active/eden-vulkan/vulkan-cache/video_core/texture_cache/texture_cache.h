@@ -1452,6 +1452,7 @@ std::pair<typename P::ImageView*, bool> TextureCache<P>::TryFindFramebufferImage
     // second pass while the compositor owns texture_cache.mutex.
     ImageId freshest_id{};
     bool freshest_found = false;
+    std::uint64_t freshest_tick{};
 #else
     boost::container::small_vector<ImageId, 4> valid_image_ids;
 #endif
@@ -1484,8 +1485,9 @@ std::pair<typename P::ImageView*, bool> TextureCache<P>::TryFindFramebufferImage
 #ifdef PS5_NATIVE
         // Match ranges::max_element: the first candidate wins equal ticks.
         if (!freshest_found ||
-            slot_images[freshest_id].modification_tick < image.modification_tick) {
+            freshest_tick < image.modification_tick) {
             freshest_id = map.image_id;
+            freshest_tick = image.modification_tick;
             freshest_found = true;
         }
 #else
