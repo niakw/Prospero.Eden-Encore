@@ -25,7 +25,16 @@ body=src[start:end]
 begin="#ifdef PS5_NATIVE\n    // Do not divide by an invalid format width"
 finish="    std::ranges::transform(copies, vk_out_copies.begin(),"
 assert body.count(begin)==body.count(finish)==1
-conversion=body[body.index(begin):body.index(finish)]
+# The optimized native path validates the full byte budget before
+# allocating VkBufferImageCopy arrays. Extract only the format preflight
+# and the later real input conversion into this focused C++ fixture.
+size_start="    const u32 img_bpp = BytesPerBlock(dst.info.format);"
+transform_start="    std::ranges::transform(copies, vk_in_copies.begin(),"
+assert body.count(size_start)==body.count(transform_start)==1
+assert body.index(size_start) < body.index(transform_start) < body.index(finish)
+assert body.index("if (total_size > scratch_max)") < body.index(transform_start)
+conversion=(body[body.index(begin):body.index(size_start)] +
+            body[body.index(transform_start):body.index(finish)])
 for token in ("if (src_block_width == 0 || dst_block_width == 0)",
               "if (bpp_in == 0 || bpp_out == 0)",
               "static_cast<s64>(copy.src_offset.x) < 0",
