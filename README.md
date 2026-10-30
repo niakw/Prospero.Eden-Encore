@@ -1,3 +1,11 @@
+> [!IMPORTANT]
+> **Eden Encore has moved to [niakw/ProsperoEden-Encore](https://github.com/niakw/ProsperoEden-Encore).**
+> This original fork is retained as a public **historical archive** (stars, older releases and PR discussions). New development, CI, issues, releases and contributions belong in the independent repository. **Do not start work from this fork.**
+>
+> **[OPEN THE ACTIVE EDEN ENCORE REPOSITORY](https://github.com/niakw/ProsperoEden-Encore)**
+
+---
+
 <div align="center">
   <img src="assets/icon0.png" alt="Prospero.Eden Encore logo" width="154">
 
