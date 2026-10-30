@@ -231,9 +231,21 @@ void MultiRangeBufferCache::RetireEntry(Scheduler& scheduler, Entry& entry) {
 }
 
 void MultiRangeBufferCache::DrainRetired(Scheduler& scheduler) {
+#ifdef PS5_NATIVE
+    // A single conservative GPU completion snapshot avoids a driver query
+    // for every retired allocation while the guest cache owner is active.
+    if (retired.empty()) {
+        return;
+    }
+    const u64 completed_tick = scheduler.GetMasterSemaphore().KnownGpuTick();
+#endif
     size_t index = 0;
     while (index < retired.size()) {
+#ifdef PS5_NATIVE
+        if (retired[index].tick <= completed_tick) {
+#else
         if (scheduler.IsFree(retired[index].tick)) {
+#endif
             if (index + 1 != retired.size()) {
                 retired[index] = std::move(retired.back());
             }
