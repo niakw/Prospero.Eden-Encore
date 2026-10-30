@@ -5804,3 +5804,10 @@ apply_reviewed_delta("vk_multi_range_buffer_cost.cpp",
     "    if (!entry.sparse_handle) {\n        VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT |",
     "    if (!entry.sparse_handle) {\n#ifdef PS5_NATIVE\n        // Sparse allocation was unavailable: capture write ticks for the\n        // newly created gathered buffer before it enters the reuse cache.\n        entry.content = HashContent(sources);\n#endif\n        VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT |",
     "F07 hash native multi-range content only for gathered fallback gather")
+
+# F07 C01: owner references only require membership for DropOwner.
+# Avoid repeated adjacent VkBuffer handles in their retirement vector.
+apply_reviewed_delta("vk_multi_range_buffer_cost.cpp",
+    "    entry.owners.reserve(sources.size());\n    for (const MultiRangeSource& source : sources) {\n        entry.owners.push_back(source.handle);\n    }",
+    "    entry.owners.reserve(sources.size());\n    for (const MultiRangeSource& source : sources) {\n#ifdef PS5_NATIVE\n        // The retirement lookup only tests ownership membership. Repeated\n        // contiguous segments of the same VkBuffer do not need duplicate\n        // owner entries (common with sparse/tiled guest buffer slices).\n        if (!entry.owners.empty() && entry.owners.back() == source.handle) {\n            continue;\n        }\n#endif\n        entry.owners.push_back(source.handle);\n    }",
+    "F07 deduplicate adjacent native multi-range buffer owners")

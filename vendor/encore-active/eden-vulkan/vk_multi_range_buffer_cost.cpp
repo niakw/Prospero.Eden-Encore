@@ -336,6 +336,14 @@ MultiRangeRef MultiRangeBufferCache::Get(const Device& device, Scheduler& schedu
     // DropOwner cannot retire a gathered buffer after its input is destroyed.
     entry.owners.reserve(sources.size());
     for (const MultiRangeSource& source : sources) {
+#ifdef PS5_NATIVE
+        // The retirement lookup only tests ownership membership. Repeated
+        // contiguous segments of the same VkBuffer do not need duplicate
+        // owner entries (common with sparse/tiled guest buffer slices).
+        if (!entry.owners.empty() && entry.owners.back() == source.handle) {
+            continue;
+        }
+#endif
         entry.owners.push_back(source.handle);
     }
     if (CanBindSparse(sources)) {
