@@ -32,7 +32,16 @@ early=method[method.index(early_start):method.index(early_end)]
 body_start="    const u32 img_bpp = BytesPerBlock(dst.info.format);"
 body_end="    const VkImage dst_image = dst.Handle();"
 assert method.count(body_start)==method.count(body_end)==1
-size=method[method.index(body_start):method.index(body_end)]
+# Allocation and input/output conversion now happen only after native
+# dimension/overflow checks. Keep the size-guard fixture restricted to
+# the real preflight plus the later scratch handle/resolve guard.
+copies_start="    // Rejected reinterpret copies must not allocate or convert while holding the texture lock."
+scratch_start="    const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);"
+assert method.count(copies_start)==method.count(scratch_start)==1
+assert method.index(body_start) < method.index(copies_start) < method.index(scratch_start) < method.index(body_end)
+size=(method[method.index(body_start):method.index(copies_start)] +
+      method[method.index(scratch_start):method.index(body_end)])
+assert method.index("if (total_size > scratch_max)") < method.index(copies_start)
 assert "if (copies.empty())" in early
 assert "if (total_size > max_size - bytes)" in size
 assert "width > max_size / height" in size
