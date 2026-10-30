@@ -2201,7 +2201,21 @@ ImageId TextureCache<P>::FindImage(const ImageInfo& info, GPUVAddr gpu_addr,
     const bool native_bgr = runtime.HasNativeBgr();
     const bool flexible_formats = True(options & RelaxedOptions::Format);
     ImageId image_id{};
+#ifdef PS5_NATIVE
+    // Keep the first highest-tick match during the existing region walk:
+    // no candidate vector, no second texture-cache slot scan under its mutex.
+    u64 newest_candidate_tick{};
+    bool has_candidate = false;
+    const auto SelectCandidate = [&](ImageId id, const ImageBase& image) {
+        if (!has_candidate || newest_candidate_tick < image.modification_tick) {
+            image_id = id;
+            newest_candidate_tick = image.modification_tick;
+            has_candidate = true;
+        }
+    };
+#else
     boost::container::small_vector<ImageId, 8> image_ids;
+#endif
     const auto lambda = [&](ImageId existing_image_id, ImageBase& existing_image) {
         if (True(existing_image.flags & ImageFlagBits::Remapped)) {
             return false;
@@ -2215,19 +2229,32 @@ ImageId TextureCache<P>::FindImage(const ImageInfo& info, GPUVAddr gpu_addr,
                 existing.pitch == info.pitch &&
                 IsPitchLinearSameSize(existing, info, strict_size) &&
                 IsViewCompatible(existing.format, info.format, broken_views, native_bgr)) {
+                #ifdef PS5_NATIVE
+                SelectCandidate(existing_image_id, existing_image);
+                #else
                 image_id = existing_image_id;
                 image_ids.push_back(existing_image_id);
+                #endif
                 return !flexible_formats && existing.format == info.format;
             }
         } else if (IsSubresource(info, existing_image, gpu_addr, options, broken_views,
                                  native_bgr)) {
+            #ifdef PS5_NATIVE
+            SelectCandidate(existing_image_id, existing_image);
+            #else
             image_id = existing_image_id;
             image_ids.push_back(existing_image_id);
+            #endif
             return !flexible_formats && existing_image.info.format == info.format;
         }
         return false;
     };
     ForEachImageInRegion(*cpu_addr, CalculateGuestSizeInBytes(info), lambda);
+#ifdef PS5_NATIVE
+    // A strict less-than comparison preserves the first equal-tick match,
+    // including ForEachImageInRegion's existing exact-match early exit.
+    return image_id;
+#else
     if (image_ids.size() <= 1) [[likely]] {
         return image_id;
     }
@@ -2237,6 +2264,7 @@ ImageId TextureCache<P>::FindImage(const ImageInfo& info, GPUVAddr gpu_addr,
         return image_a.modification_tick < image_b.modification_tick;
     };
     return *std::ranges::max_element(image_ids, image_ids_compare);
+#endif
 }
 
 template <class P>
