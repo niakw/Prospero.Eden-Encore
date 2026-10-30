@@ -265,6 +265,17 @@ MultiRangeRef MultiRangeBufferCache::Get(const Device& device, Scheduler& schedu
     }
     // Gathered fallbacks must obey the same destination bounds as sparse binds.
     // Reject an invalid source before allocating a GPU buffer or recording copies.
+#ifdef PS5_NATIVE
+    // A multi-range hit formerly scanned the same segments twice under the
+    // buffer-cache mutex: bounds/handle validation, then FNV geometry hash.
+    // Fuse both without changing hash order, invalid-input rejection or
+    // the desktop implementation.
+    u64 geometry = 0xcbf29ce484222325ULL;
+    const auto mix_geometry = [&geometry](u64 value) {
+        geometry ^= value;
+        geometry *= 0x100000001b3ULL;
+    };
+#endif
     VkDeviceSize covered = 0;
     for (const MultiRangeSource& source : sources) {
         if (source.handle == VK_NULL_HANDLE || source.size == 0 ||
@@ -272,12 +283,24 @@ MultiRangeRef MultiRangeBufferCache::Get(const Device& device, Scheduler& schedu
             source.offset > std::numeric_limits<VkDeviceSize>::max() - source.size) {
             return MultiRangeRef{};
         }
+#ifdef PS5_NATIVE
+        mix_geometry(u64(source.handle));
+        mix_geometry(u64(source.memory));
+        mix_geometry(u64(source.memory_offset));
+        mix_geometry(u64(source.memory_type));
+        mix_geometry(u64(source.offset));
+        mix_geometry(u64(source.size));
+#endif
         covered += source.size;
     }
     if (!retired.empty()) {
         DrainRetired(scheduler);
     }
+#ifndef PS5_NATIVE
     const u64 geometry = HashSources(sources);
+#else
+    // geometry was computed in the validation walk above.
+#endif
 #ifdef PS5_NATIVE
     const auto it = entries.find(key);
     // A sparse binding reads its original backing memory directly. Guest

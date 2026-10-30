@@ -15,7 +15,7 @@ fast=(root/".github/workflows/encore-core-fast-gate.yml").read_text()
 pre=(root/".github/workflows/encore-core-preflight.yml").read_text()
 assert "python3 -B tools/check-ps5-f07-multirange-sparse-hash-host.py" in fast and "python3 -B tools/check-ps5-f07-multirange-sparse-hash-host.py" in pre
 assert "F07 omit native sparse multi-range content hash on stable geometry hits" in gen
-start="    const u64 geometry = HashSources(sources);"
+start="#ifdef PS5_NATIVE\n    const auto it = entries.find(key);"
 stop="    if (it != entries.end() && it->second.geometry == geometry && it->second.size == total) {"
 begin=source.index("MultiRangeRef MultiRangeBufferCache::Get(")
 body=source[begin:source.index("\nvoid MultiRangeBufferCache::MarkGathered(",begin)]
@@ -25,6 +25,8 @@ assert block.index("it->second.sparse_handle") < block.index("const u64 content 
 assert block.count("const u64 content = HashContent(sources);")==1
 assert "const u64 content = same_geometry ? HashContent(sources) : 0;" in block
 assert "entry.content = HashContent(sources);" in body
+assert "mix_geometry(u64(source.size));" in body
+assert "const u64 geometry = HashSources(sources);" in body
 assert body.index("if (!entry.sparse_handle) {") < body.index("entry.content = HashContent(sources);")
 assert "F07 hash native multi-range content only for gathered fallback lookup" in gen and "F07 hash native multi-range content only for gathered fallback gather" in gen
 cpp=r"""
@@ -105,7 +107,7 @@ int main() {
     assert(changed.content_calls==1);
 #endif
 }
-""".replace("__SOURCE__",block)
+""".replace("__SOURCE__","    const u64 geometry = HashSources(sources);\n"+block)
 # source code keeps 'content' in scope after the guarded native early return.
 compiler=shutil.which("clang++-18") or shutil.which("clang++") or shutil.which("g++")
 assert compiler
