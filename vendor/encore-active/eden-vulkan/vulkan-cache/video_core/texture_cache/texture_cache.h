@@ -3162,10 +3162,13 @@ ImageId TextureCache<P>::FindDMAImage(const ImageInfo& info, GPUVAddr gpu_addr) 
     // Keep the freshest image as it arrives; avoid an inline vector and a
     // second max_element pass on a HUD/texture DMA lookup. Equal ticks retain
     // the FIRST candidate, exactly as max_element does.
+    // Keep the winning timestamp in a register. Reloading the previous
+    // slot image for every candidate adds a cache lookup under texture lock.
+    std::uint64_t newest_candidate_tick = 0;
     const auto consider_candidate = [&](ImageId id, const ImageBase& image) {
-        if (!image_id ||
-            slot_images[image_id].modification_tick < image.modification_tick) {
+        if (!image_id || newest_candidate_tick < image.modification_tick) {
             image_id = id;
+            newest_candidate_tick = image.modification_tick;
         }
     };
 #else

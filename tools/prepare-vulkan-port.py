@@ -5723,3 +5723,10 @@ apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
     "    PrepareImage(dst_id, mark_as_modified, false);\n    const auto& new_image = slot_images[dst_id];\n    lru_cache.Touch(new_image.lru_index, frame_tick);\n    return std::make_pair(base->level, base->layer);",
     "    PrepareImage(dst_id, mark_as_modified, false);\n#ifndef PS5_NATIVE\n    const auto& new_image = slot_images[dst_id];\n    lru_cache.Touch(new_image.lru_index, frame_tick);\n#else\n    // PrepareImage already touched the same LRU entry at the end; a second\n    // immediate touch adds list work under the texture mutex for DMA uploads.\n#endif\n    return std::make_pair(base->level, base->layer);",
     "F07 avoid duplicate native DMA image LRU touch")
+
+# F07 T01: the texture mutex keeps candidate ticks stable for this DMA scan.
+# Track the winning tick locally, rather than reindexing SlotVector for each match.
+apply_reviewed_delta("vulkan-cache/video_core/texture_cache/texture_cache.h",
+    "    const auto consider_candidate = [&](ImageId id, const ImageBase& image) {\n        if (!image_id ||\n            slot_images[image_id].modification_tick < image.modification_tick) {\n            image_id = id;\n        }\n    };",
+    "    // Keep the winning timestamp in a register. Reloading the previous\n    // slot image for every candidate adds a cache lookup under texture lock.\n    std::uint64_t newest_candidate_tick = 0;\n    const auto consider_candidate = [&](ImageId id, const ImageBase& image) {\n        if (!image_id || newest_candidate_tick < image.modification_tick) {\n            image_id = id;\n            newest_candidate_tick = image.modification_tick;\n        }\n    };",
+    "F07 reuse newest DMA candidate tick without slot vector relookup")
