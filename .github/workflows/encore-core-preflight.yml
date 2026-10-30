@@ -124,6 +124,7 @@ jobs:
           python3 -B tools/check-ps5-f07-dma-image-prelock-span-host.py
           python3 -B tools/check-ps5-f07-multirange-write-preflight-host.py
           python3 -B tools/check-ps5-f07-multirange-retire-snapshot-host.py
+          python3 -B tools/check-ps5-f07-multirange-sparse-hash-host.py
           python3 -B tools/check-ps5-empty-image-stage-host.py
           python3 -B tools/check-ps5-consecutive-sampler-reuse-host.py
           python3 -B tools/check-ps5-f07-graphics-hud-scratch-host.py

@@ -278,8 +278,27 @@ MultiRangeRef MultiRangeBufferCache::Get(const Device& device, Scheduler& schedu
         DrainRetired(scheduler);
     }
     const u64 geometry = HashSources(sources);
+#ifdef PS5_NATIVE
+    const auto it = entries.find(key);
+    // A sparse binding reads its original backing memory directly. Guest
+    // write ticks cannot stale it, unlike the gathered copy. Skip the
+    // second source walk and dirty-state bookkeeping on a sparse cache hit.
+    if (it != entries.end() && it->second.geometry == geometry &&
+        it->second.size == total && it->second.sparse_handle) {
+        const Entry& entry = it->second;
+        return MultiRangeRef{
+            .handle = *entry.sparse_handle,
+            .address = entry.address,
+            .size = entry.size,
+            .sparse = true,
+            .needs_gather = false,
+        };
+    }
+    const u64 content = HashContent(sources);
+#else
     const u64 content = HashContent(sources);
     const auto it = entries.find(key);
+#endif
     if (it != entries.end() && it->second.geometry == geometry && it->second.size == total) {
         Entry& entry = it->second;
         if (entry.content != content) {
