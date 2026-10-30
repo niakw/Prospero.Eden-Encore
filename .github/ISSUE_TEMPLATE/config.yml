@@ -1,8 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Open new issue in the official Eden Encore repository
-    url: https://github.com/niakw/ProsperoEden-Encore/issues/new/choose
-    about: This fork is archived in place as a redirect. All new issues belong to the independent repository.
-  - name: Report a security vulnerability to the active project
-    url: https://github.com/niakw/ProsperoEden-Encore/blob/main/SECURITY.md
-    about: Security disclosures must be sent to the active project's private disclosure channel.
