@@ -24,11 +24,13 @@ assert "view_memo" not in baseline
 assert "previous_view_id" in method(backports)
 assert "previous_view_id" not in source
 assert method(backports) != source
-assert source.count("view_memo[view.index & 15U]")==2
-assert source.count("std::array<ViewMemo, 16> view_memo{}")==1
+assert source.count("(*view_memo)[view.index & 15U]")==2
+assert source.count("std::optional<std::array<ViewMemo, 16>> view_memo;")==1
+assert source.count("if (!blacklist && views.size() > 1) {")==1
+assert source.index("view_memo.emplace();") < source.index("for (ImageViewInOut& view : views)")
 assert "F07 bypass draw-local texture memo on empty image descriptor batches" in gen
 assert source.count("if (views.empty()) {")==1
-assert source.index("if (views.empty()) {") < source.index("std::array<ViewMemo, 16> view_memo{}")
+assert source.index("if (views.empty()) {") < source.index("std::optional<std::array<ViewMemo, 16>> view_memo;")
 empty_guard=source[source.index("#ifdef PS5_NATIVE"):source.index("    bool has_blacklisted = false;")]
 assert "has_deleted_images = false;" in empty_guard
 assert "return;" in empty_guard
@@ -36,7 +38,7 @@ assert "previous_view_id" not in source
 assert source.count("PrepareImageView(cached.id, false, false);") == 1
 assert "ImageFlagBits::Remapped" in source
 assert source.index("const bool remapped") < source.index("PrepareImageView(cached.id, false, false);")
-assert source.index("!blacklist && !has_deleted_images")<source.index("VisitImageView(view.index, compute)")
+assert source.index("if (view_memo && !has_deleted_images)")<source.index("VisitImageView(view.index, compute)")
 assert source.count("cached.id != NULL_IMAGE_VIEW_ID")==1
 code=r"""
 #include <array>
@@ -44,6 +46,7 @@ code=r"""
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <optional>
 using u32=std::uint32_t; using ImageViewId=std::size_t;
 constexpr ImageViewId NULL_IMAGE_VIEW_ID=0;
 struct ImageViewInOut {u32 index{};bool blacklist{};ImageViewId id{};};

@@ -577,12 +577,17 @@ void TextureCache<P>::FillImageViews(std::span<ImageViewInOut> views, bool compu
             u32 index{};
             ImageViewId id{NULL_IMAGE_VIEW_ID};
         };
-        std::array<ViewMemo, 16> view_memo{};
+        // A single view or blacklist pass never gets a memo hit. Avoid
+        // zeroing all 16 memo slots while holding the texture-cache lock.
+        std::optional<std::array<ViewMemo, 16>> view_memo;
+        if (!blacklist && views.size() > 1) {
+            view_memo.emplace();
+        }
 #endif
         for (ImageViewInOut& view : views) {
 #ifdef PS5_NATIVE
-            if (!blacklist && !has_deleted_images) {
-                const auto& cached = view_memo[view.index & 15U];
+            if (view_memo && !has_deleted_images) {
+                const auto& cached = (*view_memo)[view.index & 15U];
                 if (cached.id != NULL_IMAGE_VIEW_ID && cached.index == view.index) {
                     const auto& cached_view = slot_image_views[cached.id];
                     // A different TIC can remap this image during the pass.
@@ -601,8 +606,8 @@ void TextureCache<P>::FillImageViews(std::span<ImageViewInOut> views, bool compu
 #endif
             view.id = VisitImageView(view.index, compute);
 #ifdef PS5_NATIVE
-            if (!blacklist && !has_deleted_images) {
-                auto& cached = view_memo[view.index & 15U];
+            if (view_memo && !has_deleted_images) {
+                auto& cached = (*view_memo)[view.index & 15U];
                 cached.index = view.index;
                 cached.id = view.id;
             }

@@ -18,7 +18,9 @@ end = file.index("\n}\n", begin) + 2
 actual = file[begin:end]
 assert "if (views.empty()) {" in actual
 assert "has_deleted_images = false;" in actual
-assert "std::array<ViewMemo, 16> view_memo{};" in actual
+assert "std::optional<std::array<ViewMemo, 16>> view_memo;" in actual
+assert "view_memo.emplace();" in actual
+assert "if (!blacklist && views.size() > 1)" in actual
 assert "cached_view.IsBuffer()" in actual
 assert "ImageFlagBits::Remapped" in actual
 assert "PrepareImageView(cached.id, false, false);" in actual
@@ -31,6 +33,7 @@ code = r"""
 #include <cassert>
 #include <cstdint>
 #include <span>
+#include <optional>
 #include <vector>
 using u32 = std::uint32_t;
 using ImageViewId = u32;
