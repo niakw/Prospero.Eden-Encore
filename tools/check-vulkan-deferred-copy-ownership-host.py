@@ -75,6 +75,9 @@ f07_texture_labels = (
     'F07 MSAA download scratch success release unchanged',
     'F07 MSAA null scratch image rejected before caching',
     'F07 empty and malformed GPU readback preflight',
+    # Undo the newer allocation-before-conversion preflight first, then
+    # replay the unchanged older fingerprint in strict reverse order.
+    'F07 preflight reinterpret before allocating Vulkan copy vectors',
 )
 f07_texture_deltas = []
 for statement in tree.body:
