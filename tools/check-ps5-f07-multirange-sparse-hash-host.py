@@ -56,8 +56,15 @@ struct MultiRangeBufferCache {
     MultiRangeRef Probe(u64 key,const std::vector<MultiRangeSource>& sources,u64 total) {
 __SOURCE__
         (void)content;
-        if (it != entries.end()) return MultiRangeRef{5,11,total,false,true};
-        return MultiRangeRef{};
+        if (it != entries.end() && it->second.geometry == geometry &&
+            it->second.size == total) {
+            if (it->second.sparse_handle) {
+                return MultiRangeRef{*it->second.sparse_handle,it->second.address,
+                                     it->second.size,true,false};
+            }
+            return MultiRangeRef{5,11,total,false,true};
+        }
+        return MultiRangeRef{5,11,total,false,true};
     }
 };
 int main() {
